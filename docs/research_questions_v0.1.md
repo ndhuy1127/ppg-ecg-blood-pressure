@@ -30,7 +30,7 @@ Các nguyên tắc phương pháp luận bắt buộc:
 - **Giả thuyết không ($H_{0, \text{RQ1}}$):**
   Mô hình kết hợp đa phương thức ($\text{ECG} + \text{PPG} + \text{PAT}$) không làm giảm sai số tuyệt đối trung bình (MAE) trong việc dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ ở các phiên đo tương lai so với mô hình tối ưu chỉ dùng tín hiệu quang học $\text{PPG}$ ($\text{MAE}_{\text{ECG+PPG}} \ge \text{MAE}_{\text{PPG-only}}$ trên cả hai chỉ số).
 - **Giả thuyết đối ($H_{1, \text{RQ1}}$):**
-  Mô hình kết hợp ($\text{ECG} + \text{PPG} + \text{PAT}$) cải thiện độ chính xác dự đoán biến thiên huyết áp một cách có ý nghĩa thống kê ($p < 0.05$ qua kiểm định cặp Wilcoxon signed-rank test trên từng đối tượng), đồng thời giảm MAE tối thiểu $1.5\text{ mmHg}$ đối với $\Delta\text{SBP}$ và $1.0\text{ mmHg}$ đối với $\Delta\text{DBP}$ so với mô hình chỉ dùng PPG.
+  Mô hình kết hợp ($\text{ECG} + \text{PPG} + \text{PAT}$) có MAE dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ thấp hơn mô hình PPG-only trên các phiên đo tương lai. Mức cải thiện sẽ được báo cáo bằng chênh lệch MAE theo người, khoảng tin cậy 95% bootstrap theo người và kiểm định cặp Wilcoxon mang tính hỗ trợ. Không khóa ngưỡng $1.5/1.0\text{ mmHg}$ khi chưa có phân tích pilot, power và phê duyệt của nhóm/giảng viên.
 
 #### B. Biến nghiên cứu
 - **Biến đầu vào (Inputs):**
@@ -56,11 +56,11 @@ Các nguyên tắc phương pháp luận bắt buộc:
 - Tỷ lệ sai số nằm trong khoảng chuẩn y tế $\le 5\text{ mmHg}, \le 10\text{ mmHg}$ theo hướng chuẩn AAMI/ISO.
 
 #### E. Điều kiện bác bỏ hoặc chấp nhận giả thuyết
-- **Chấp nhận $H_1$ (Bác bỏ $H_0$):** Khi và chỉ khi:
+- **Kết luận có bằng chứng ủng hộ $H_1$:** khi các điều kiện chính sau được đáp ứng:
   1. Mô hình kết hợp $\text{ECG} + \text{PPG}$ vượt trội hơn Baseline Zero-Change trên cả SBP và DBP.
-  2. $\text{MAE}_{\text{ECG+PPG}} < \text{MAE}_{\text{PPG-only}}$ trên tập kiểm tra cross-session với $p < 0.05$ (Wilcoxon signed-rank test).
-  3. Mức giảm MAE đạt ngưỡng có ý nghĩa thực tế: $\Delta\text{MAE}_{\text{SBP}} \ge 1.5\text{ mmHg}$ và $\Delta\text{MAE}_{\text{DBP}} \ge 1.0\text{ mmHg}$.
-- **Ngược lại:** Nếu không đạt mức giảm có ý nghĩa thống kê hoặc sai số tương đương, ta giữ nguyên giả thuyết không $H_0$ và kết luận rằng việc bổ sung ECG không đem lại lợi ích bù đắp cho sự phức tạp phần cứng tại cổ tay.
+  2. Chênh lệch MAE theo người giữa mô hình ECG+PPG và PPG-only có hướng cải thiện nhất quán; báo cáo ước lượng hiệu ứng, khoảng tin cậy 95% bootstrap theo người và $p$-value của Wilcoxon signed-rank test như phân tích hỗ trợ.
+  3. Ngưỡng ý nghĩa thực tiễn, nếu sử dụng, phải được xác định trước trên dữ liệu pilot/validation và được khóa trước khi mở test set; không lựa chọn ngưỡng sau khi xem kết quả kiểm thử.
+- **Ngược lại:** Nếu bằng chứng chưa đủ mạnh, không bác bỏ $H_0$; báo cáo trung thực độ bất định và không khẳng định ECG/PAT mang lại lợi ích vượt trội.
 
 #### F. Rủi ro phương pháp
 - Hiện tượng biến thiên thời gian tiền tống máu ($\text{PEP}$ drift): Khi người tham gia thay đổi trạng thái căng thẳng hoặc tư thế, PEP thay đổi làm triệt tiêu tương quan giữa PAT và huyết áp.
@@ -149,9 +149,9 @@ Các nguyên tắc phương pháp luận bắt buộc:
 - Tỷ lệ phát hiện đúng các mẫu có sai số lớn ($> 10\text{ mmHg}$).
 
 #### E. Điều kiện bác bỏ hoặc chấp nhận giả thuyết
-- **Chấp nhận $H_1$:** Khi chứng minh được rằng:
-  1. Chiến lược từ chối đề xuất vượt trội rõ rệt so với Baseline Random Rejection ($p < 0.01$).
-  2. Khi từ chối $15\%$ mẫu không đạt chuẩn, MAE của SBP giảm ít nhất $1.5\text{ mmHg}$ và DBP giảm ít nhất $1.0\text{ mmHg}$ trên tập giữ lại.
+- **Kết luận có bằng chứng ủng hộ $H_1$:** khi:
+  1. Chiến lược từ chối đề xuất cải thiện đường cong risk–coverage so với Baseline Random Rejection và SQI-only; báo cáo khoảng tin cậy theo người thay vì khóa trước một ngưỡng $p$ tùy ý.
+  2. Đường cong risk–coverage của phương pháp đề xuất tốt hơn các baseline: tại cùng mức coverage, MAE thấp hơn; hoặc tại cùng mức MAE mục tiêu, coverage cao hơn. Một mức vận hành cụ thể chỉ được chọn trên validation set, sau đó đánh giá duy nhất trên test set đã khóa.
 
 #### F. Rủi ro phương pháp
 - Thiết lập ngưỡng quá khắt khe khiến tỷ lệ từ chối quá cao (ví dụ từ chối $> 40\%$ mẫu), làm mất đi tính khả dụng liên tục của thiết bị đeo.
@@ -179,5 +179,5 @@ Các nguyên tắc phương pháp luận bắt buộc:
 > [!IMPORTANT]
 > **Checklist xác nhận bản v0.1:**
 > 1. [ ] **Thống nhất về đại lượng dự đoán:** Xác nhận dự đoán biến thiên $\Delta\text{SBP}$ và $\Delta\text{DBP}$ có hiệu chuẩn cá nhân thay vì cố gắng dự đoán huyết áp tuyệt đối không hiệu chuẩn.
-> 2. [ ] **Mức sai số kỳ vọng:** Xác nhận tiêu chí giảm MAE tối thiểu $1.5\text{ mmHg}$ (SBP) và $1.0\text{ mmHg}$ (DBP) khi thêm ECG/PAT có đủ ý nghĩa lâm sàng/kỹ thuật cho bài báo hay chưa.
-> 3. [ ] **Tỷ lệ từ chối tối đa:** Thống nhất mức trần tỷ lệ từ chối dự đoán (ví dụ không quá $15\% - 20\%$) để đảm bảo thiết bị vẫn cung cấp đủ số lần đo hữu ích cho người dùng.
+> 2. [ ] **Mức cải thiện thực tiễn:** Thống nhất có sử dụng ngưỡng cải thiện MAE hay không; nếu có, phải nêu căn cứ tài liệu/pilot, phân tích cỡ mẫu và khóa ngưỡng trước khi mở test set.
+> 3. [ ] **Tỷ lệ từ chối tối đa:** Chọn mức coverage/tỷ lệ từ chối trên validation set dựa trên đường cong risk–coverage; test set chỉ dùng một lần để báo cáo kết quả cuối.
