@@ -9,10 +9,10 @@
 
 ## 1. Mục tiêu tuần 1
 
-Theo kế hoạch tuần tại [docs/plans/WEEK_01.md](file:///D:/ppg-ecg-blood-pressure/docs/plans/WEEK_01.md), các mục tiêu trọng tâm gồm:
+Theo kế hoạch tuần tại [docs/plans/WEEK_01.md](../../../docs/plans/WEEK_01.md), các mục tiêu trọng tâm gồm:
 1. Chuẩn hóa cấu trúc repository, thiết lập môi trường Python và pipeline CI hoạt động ổn định.
 2. Xác định yêu cầu phần cứng, thiết lập bảng BOM v0.1 và đề xuất các phương án điện cực ECG.
-3. Hoàn thành ma trận tổng quan 10–12 bài báo khoa học tiêu biểu đã kiểm chứng DOI về ước lượng huyết áp không cuff, ECG+PPG, PAT/PTT, chống rò rỉ dữ liệu và SQI.
+3. Hoàn thành ma trận tổng quan sơ bộ 10–12 bài báo: xác minh DOI/tiêu đề, trích xuất phương pháp và đánh dấu rõ các số liệu cần audit toàn văn trước khi đưa vào bài báo.
 4. Xây dựng và chốt bản thảo bộ câu hỏi nghiên cứu RQ1–RQ3 (v0.1).
 5. Xây dựng khung protocol nghiên cứu thực nghiệm v0.1 và khung nguyên tắc đạo đức y sinh v0.1.
 6. Thiết lập biên bản/agenda họp khởi động nhóm và tổng hợp báo cáo tiến độ tuần 1.
@@ -25,7 +25,7 @@ Theo kế hoạch tuần tại [docs/plans/WEEK_01.md](file:///D:/ppg-ecg-blood-
 |---|---|---|---|
 | Chuẩn hóa repo, môi trường Python, CI, quy ước dữ liệu | Linh | Huy, Đức Anh | Đang tích hợp *(Cần Linh xác nhận bằng chứng commit trong repo)* |
 | Yêu cầu phần cứng, BOM v0.1, sơ đồ khối, phương án điện cực ECG | Đức Anh | Huy, Linh | Đang thực hiện *(Cần Đức Anh xác nhận bằng chứng commit trong repo)* |
-| Ma trận tổng quan 12 bài báo, RQ1–RQ3, khung protocol, khung ethics | Huy | Linh, Đức Anh | **Đã hoàn thành đầy đủ các sản phẩm bàn giao Tuần 1** |
+| Ma trận tổng quan 12 bài báo, RQ1–RQ3, khung protocol, khung ethics | Huy | Linh, Đức Anh | **Đã có đủ bản thảo v0.1; đang chờ review chéo và phê duyệt của giảng viên** |
 | Biên bản họp khởi động và tổng hợp báo cáo tuần 1 | Huy | Cả nhóm | **Đã hoàn thành bản thảo v0.1** |
 
 ---
@@ -34,7 +34,7 @@ Theo kế hoạch tuần tại [docs/plans/WEEK_01.md](file:///D:/ppg-ecg-blood-
 
 Trong phạm vi trách nhiệm của mình trong Tuần 1, Huy đã hoàn thành 100% các đầu việc được giao:
 
-- [x] **Ma trận tổng quan 12 bài báo khoa học (A):** Khảo sát, phân tích có hệ thống và xác thực 100% DOI thật cho 12 công trình nghiên cứu hàng đầu về ước lượng huyết áp không cuff từ PPG/ECG, phân biệt bản chất sinh lý giữa PAT và PTT, hiệu chuẩn cá nhân, chống rò rỉ dữ liệu (subject-wise split), chất lượng tín hiệu (SQI) và cơ chế từ chối dự đoán (rejection mechanism).
+- [x] **Ma trận tổng quan 12 bài báo khoa học (A):** Đã xác minh DOI và tiêu đề của 12 công trình; đã hiệu chỉnh các sai lệch số liệu được phát hiện. Đây là structured rapid review, chưa phải systematic review. Mọi con số dùng trong bản thảo bài báo phải có trích dẫn tới đúng bảng/hình/trang của nguồn gốc.
 - [x] **Bộ câu hỏi nghiên cứu RQ1–RQ3 (B):** Xây dựng chi tiết 3 câu hỏi nghiên cứu trung tâm bản v0.1 kèm đầy đủ giả thuyết $H_0/H_1$, biến đầu vào/đầu ra, hệ thống baseline đối chứng (Zero-change, PPG-only, PAT linear, ECG+PPG fusion), chỉ số đánh giá riêng biệt cho SBP và DBP, điều kiện kiểm định thống kê và phân tích rủi ro phương pháp luận.
 - [x] **Khung protocol nghiên cứu thực nghiệm v0.1 (C):** Thiết lập quy trình đo đối chứng đồng bộ ECG+PPG tại cổ tay với máy đo cuff bắp tay, quy tắc ghép cửa sổ tín hiệu (chỉ lấy cửa sổ trước khi bơm cuff), định nghĩa nghiêm ngặt một mẫu độc lập (1 lần đo cuff = 1 nhãn), chiến lược chia dữ liệu Subject-wise và Cross-session, và kế hoạch thống kê Bootstrap theo đối tượng.
 - [x] **Khung đạo đức nghiên cứu v0.1 (D):** Xây dựng bản thảo khung bảo vệ quyền lợi người tham gia, quy trình giải thích và lấy phiếu đồng thuận (Informed Consent), tiêu chí dừng phiên đo, chính sách bảo mật ẩn danh hóa bằng `subject_id` (đồng bộ tuyệt đối với `docs/DATA_POLICY.md`), và quy định an toàn điện tối thượng: **Tuyệt đối không sạc thiết bị khi đang đeo**.
@@ -47,12 +47,12 @@ Trong phạm vi trách nhiệm của mình trong Tuần 1, Huy đã hoàn thành
 
 | STT | Tên sản phẩm | Đường dẫn tương đối | Trạng thái |
 |---|---|---|---|
-| 1 | Ma trận tổng quan 12 bài báo khoa học | [docs/literature/week_01_literature_matrix.md](file:///D:/ppg-ecg-blood-pressure/docs/literature/week_01_literature_matrix.md) | Đã hoàn thành v0.1 |
-| 2 | Bộ câu hỏi nghiên cứu RQ1–RQ3 | [docs/research_questions_v0.1.md](file:///D:/ppg-ecg-blood-pressure/docs/research_questions_v0.1.md) | Đã hoàn thành v0.1 |
-| 3 | Khung Protocol nghiên cứu thực nghiệm | [docs/protocol/protocol_outline_v0.1.md](file:///D:/ppg-ecg-blood-pressure/docs/protocol/protocol_outline_v0.1.md) | Đã hoàn thành v0.1 |
-| 4 | Khung Đạo đức nghiên cứu | [docs/ethics/ethics_outline_v0.1.md](file:///D:/ppg-ecg-blood-pressure/docs/ethics/ethics_outline_v0.1.md) | Đã hoàn thành v0.1 |
-| 5 | Biên bản / Chương trình họp khởi động | [docs/meetings/week_01_kickoff.md](file:///D:/ppg-ecg-blood-pressure/docs/meetings/week_01_kickoff.md) | Đã hoàn thành v0.1 |
-| 6 | Báo cáo tiến độ tuần 1 | [reports/weekly/week_01/README.md](file:///D:/ppg-ecg-blood-pressure/reports/weekly/week_01/README.md) | Đã cập nhật đầy đủ |
+| 1 | Ma trận tổng quan 12 bài báo khoa học | [docs/literature/week_01_literature_matrix.md](../../../docs/literature/week_01_literature_matrix.md) | Bản thảo v0.1 đã audit vòng 1 |
+| 2 | Bộ câu hỏi nghiên cứu RQ1–RQ3 | [docs/research_questions_v0.1.md](../../../docs/research_questions_v0.1.md) | Đã hoàn thành v0.1 |
+| 3 | Khung Protocol nghiên cứu thực nghiệm | [docs/protocol/protocol_outline_v0.1.md](../../../docs/protocol/protocol_outline_v0.1.md) | Đã hoàn thành v0.1 |
+| 4 | Khung Đạo đức nghiên cứu | [docs/ethics/ethics_outline_v0.1.md](../../../docs/ethics/ethics_outline_v0.1.md) | Đã hoàn thành v0.1 |
+| 5 | Biên bản / Chương trình họp khởi động | [docs/meetings/week_01_kickoff.md](../../../docs/meetings/week_01_kickoff.md) | Đã hoàn thành v0.1 |
+| 6 | Báo cáo tiến độ tuần 1 | [reports/weekly/week_01/README.md](README.md) | Đã cập nhật đầy đủ |
 
 ---
 
@@ -70,7 +70,7 @@ Trong phạm vi trách nhiệm của mình trong Tuần 1, Huy đã hoàn thành
 9. **Vybornova et al. (2021, Blood Press Monit):** Nghiên cứu lâm sàng 1 tháng của vòng đeo tay quang học Aktiia theo chuẩn ISO 81060-2, chứng minh tính khả thi của phương pháp hiệu chuẩn cá nhân ban đầu để theo dõi huyết áp dài hạn.
 10. **Elgendi (2016, Bioengineering):** Tổng hợp và chuẩn hóa các chỉ số chất lượng tín hiệu PPG ($s\text{SQI}$, $q\text{SQI}$) để lọc bỏ nhiễu trước khi trích xuất đặc trưng.
 11. **Shen et al. (2024, Biomed Signal Process Control):** Đề xuất cơ chế định lượng độ bất định (Evidential Deep Learning) để từ chối các mẫu dự đoán không tin cậy trong ước lượng huyết áp không cuff.
-12. **Wang et al. (2023, Front Digit Health - PulseDB):** Bộ dữ liệu benchmark chuẩn hóa quy mô lớn, thiết lập tiêu chuẩn phân chia dữ liệu 3-way subject split và quy trình làm sạch tín hiệu ECG/PPG/ABP.
+12. **Wang et al. (2023, Front Digit Health - PulseDB):** Bộ dữ liệu gồm 5,245,454 đoạn 10 giây từ 5,361 người; cung cấp các tập calibration-based, calibration-free và AAMI test để benchmark có thể tái lập.
 
 ### 5.2. Tóm tắt bộ câu hỏi nghiên cứu RQ1–RQ3
 - **RQ1:** Đánh giá giá trị gia tăng của việc kết hợp ECG và PAT so với mô hình chỉ dùng PPG sau khi đã hiệu chuẩn cá nhân, trên các phiên đo tương lai. Baseline bắt buộc gồm: Zero-change, PPG-only, PAT linear và ECG+PPG fusion.
@@ -91,7 +91,7 @@ Toàn bộ các công cụ kiểm tra tự động của dự án đã được 
 |---|---|---|---|
 | **Ruff Linter** | `ruff check .` | **PASS** | 0 cảnh báo, 0 lỗi cú pháp |
 | **Pytest** | `pytest -q` | **PASS** | `3 passed in 1.20s` |
-| **Environment Check** | `python scripts/check_environment.py` | **PASS** | Kiểm tra thành công Python 3.13.12, NumPy, SciPy, Pandas, Matplotlib, Scikit-learn, PyYAML |
+| **Environment Check cục bộ** | python scripts/check_environment.py | **PASS cục bộ** | Đã chạy trên Python 3.13.12; chưa thay thế cho CI của dự án trên Python 3.11. Phải xác nhận lại khi mở PR vào develop. |
 | **Git Diff Check** | `git diff --check` | **PASS** | Không có lỗi khoảng trắng (whitespace errors) hay conflict markers |
 | **Git Status** | `git status` | **CLEAN** | Nhánh `dev/huy` sạch, chỉ sẵn sàng commit các file tài liệu theo đúng phạm vi tuần 1 |
 
