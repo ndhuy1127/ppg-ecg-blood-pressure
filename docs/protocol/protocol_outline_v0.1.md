@@ -66,7 +66,7 @@
 
 ### 5.2. Vị trí vòng bít đo đối chứng (Reference Cuff)
 - Sử dụng máy đo huyết áp bắp tay tự động đạt chuẩn chứng nhận y tế (Omron HEM-series đã kiểm định theo chuẩn AAMI/ESH/ISO).
-- Vòng bít (cuff) được đặt ở **bắp tay đối diện (tay phải)**, hoặc cùng tay nhưng đo so le tuần tự (ưu tiên đo tay đối diện để có thể ghi tín hiệu liên tục ở tay đeo vòng mà không bị cản trở bởi lực ép dồn máu của cuff).
+- **Bố trí chính được khóa cho toàn bộ nghiên cứu:** prototype đeo ở cổ tay trái; cuff đối chứng đặt ở bắp tay phải. Không đổi bên tùy từng lượt đo. Trong phiên đầu, ghi nhận các phép đo sàng lọc hai tay theo quy trình được giảng viên phê duyệt để mô tả chênh lệch giữa hai tay; mọi thay đổi tiêu chí chọn bên hoặc loại trừ phải được khóa trước khi thu dữ liệu chính.
 - Kích thước vòng bít phải phù hợp với chu vi bắp tay của người tham gia.
 
 ### 5.3. Tư thế người tham gia
@@ -100,14 +100,16 @@
 ### 6.2. Trình tự một lượt đo (Measurement Event)
 Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, gồm 3 giai đoạn:
 1. **Giai đoạn 1 - Ghi tín hiệu trước đo cuff (Baseline Signal Window - $60\text{s}$):**
-   - Thiết bị thu nhận tín hiệu PPG và ECG đồng bộ liên tục trong 60 giây ở trạng thái người tham gia ngồi yên tĩnh tuyệt đối.
-   - Đây là **cửa sổ vàng** dùng để ghép cặp với nhãn huyết áp, vì lúc này huyết động hoàn toàn tự nhiên, không bị biến dạng do áp lực bẹp mạch máu của vòng bít.
+   - Thiết bị thu nhận tín hiệu PPG và ECG đồng bộ liên tục trong 60 giây trước khi bắt đầu bơm cuff. Toàn bộ 60 giây được lưu để kiểm soát chất lượng và phân tích độ nhạy.
+   - Đây là **cửa sổ tín hiệu ứng viên trước cuff**, không phải phép đo huyết áp đồng thời. Cửa sổ phân tích chính dự kiến là 20–30 giây ngay trước thời điểm bơm cuff và chỉ được chấp nhận khi SQI đạt yêu cầu, nhịp tim/xung tương đối ổn định và không có chuyển động. Phải lưu độ lệch thời gian giữa cuối cửa sổ tín hiệu và thời điểm máy cuff trả kết quả.
 2. **Giai đoạn 2 - Bơm đo huyết áp đối chứng bằng Cuff ($45 - 60\text{s}$):**
    - Kích hoạt máy đo bắp tay. Ghi nhận thời điểm bắt đầu bơm và kết thúc xả.
-   - Tín hiệu thu được trong giai đoạn này được gắn cờ `cuff_inflating = True` và KHÔNG dùng để huấn luyện mô hình (do áp lực cuff làm xáo trộn tuần hoàn hệ thống).
+   - Tín hiệu thu được trong giai đoạn này được gắn cờ cuff_inflating = True; không dùng làm đầu vào chính cho mô hình. Dữ liệu chỉ được giữ cho kiểm soát chất lượng và phân tích độ nhạy vì cuff, thao tác chạm điện cực và độ trễ nhãn có thể làm thay đổi trạng thái đo.
 3. **Giai đoạn 3 - Ghi nhãn và nghỉ hồi phục ($30\text{s}$):**
    - Ghi nhận kết quả SBP, DBP và Pulse Rate từ màn hình máy đo đối chứng vào biểu mẫu nghiên cứu.
    - Nghỉ tối thiểu 2 phút trước khi lặp lại lượt đo tiếp theo.
+
+- **Phân tích độ nhạy ghép nhãn:** So sánh kết quả khi dùng cửa sổ 10, 20, 30 và 60 giây trước cuff, đồng thời loại riêng các lượt không đạt tiêu chí plateau. Nếu kết quả thay đổi đáng kể theo cửa sổ, phải báo cáo đây là bất định do nhãn không đồng thời, không được chọn hậu nghiệm cửa sổ cho kết quả đẹp nhất.
 
 ### 6.3. Đồng bộ thời gian phần cứng giữa ECG và PPG
 - Tín hiệu ECG và PPG phải được lấy mẫu trên cùng một bộ vi điều khiển (MCU) sử dụng chung một khối định thời phần cứng (Hardware Timer).
@@ -125,7 +127,7 @@ Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, g�
 > **Nguyên tắc cốt lõi chống thổi phồng dữ liệu:**
 > - **Mỗi lần đo bằng cuff đối chứng chỉ tạo ra DUY NHẤT 1 nhãn huyết áp độc lập ($\text{SBP}_i, \text{DBP}_i$).**
 > - Tuyệt đối **KHÔNG** được cắt đoạn tín hiệu 60 giây trước đó thành 12 cửa sổ nhỏ (mỗi cửa sổ 5 giây) rồi gán cùng giá trị $(\text{SBP}_i, \text{DBP}_i)$ cho cả 12 cửa sổ và coi đó là 12 mẫu độc lập. Cách làm sai lầm này sẽ gây rò rỉ dữ liệu nghiêm trọng và thổi phồng sai lệch kích thước mẫu.
-> - Các đặc trưng hình thái PPG và đại lượng PAT trong cửa sổ 30–60 giây trước đo cuff phải được tính toán trung bình hoặc trung vị (median) để đại diện cho trạng thái huyết động của lượt đo đó.
+> - Trong phân tích chính, các đặc trưng PPG và PAT được tổng hợp bằng trung vị trong cửa sổ 20–30 giây ngay trước bơm cuff. Nhóm phải thực hiện phân tích độ nhạy với các cửa sổ 10, 20, 30 và 60 giây; mỗi event_id vẫn chỉ đóng góp một nhãn cuff độc lập.
 
 ### 7.2. Định danh cấu trúc dữ liệu phân cấp
 Mỗi bản ghi phải chứa khóa định danh duy nhất theo cấu trúc:
@@ -147,9 +149,9 @@ Một cửa sổ tín hiệu bị loại bỏ (`flag_reject = True`) nếu vi ph
 ## 8. Phương pháp tính toán đại lượng PAT và Cảnh báo vật lý
 
 ### 8.1. Công thức xác định PAT
-$$\text{PAT} = t_{\text{PPG\_foot}} - t_{\text{ECG\_Rpeak}}$$
-- $t_{\text{ECG\_Rpeak}}$: Thời điểm đỉnh sóng R của phức bộ QRS (xác định bằng thuật toán Pan-Tompkins hiệu chỉnh).
-- $t_{\text{PPG\_foot}}$: Thời điểm chân sóng (foot) của nhịp PPG tương ứng, xác định bằng phương pháp tiếp tuyến giao cắt (intersecting tangent method) hoặc đạo hàm bậc hai cực đại ($d^2\text{PPG}/dt^2$).
+$$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
+- $t_{\mathrm{ECG,Rpeak}}$: Thời điểm đỉnh sóng R của phức bộ QRS (xác định bằng thuật toán Pan-Tompkins hiệu chỉnh).
+- $t_{\mathrm{PPG,foot}}$: Thời điểm chân sóng (foot) của nhịp PPG tương ứng, xác định bằng phương pháp tiếp tuyến giao cắt (intersecting tangent method) hoặc đạo hàm bậc hai cực đại ($d^2\text{PPG}/dt^2$).
 
 ### 8.2. Cảnh báo phương pháp luận: $\text{PAT} \neq \text{PTT}$
 - Nhóm nghiên cứu ghi nhận rõ ràng:
