@@ -14,7 +14,7 @@
 
 ## 1. Bối cảnh và nguyên tắc thiết lập câu hỏi nghiên cứu
 
-Dự án hướng tới việc giải quyết bài toán cốt lõi: **Xây dựng nguyên mẫu thiết bị đeo cổ tay thu nhận đồng bộ PPG và ECG để ước lượng biến thiên huyết áp ($\Delta\text{SBP}$, $\Delta\text{DBP}$) giữa các phiên đo sau khi đã hiệu chuẩn cá nhân hóa.**
+Dự án hướng tới việc giải quyết bài toán cốt lõi: **Xây dựng nguyên mẫu thiết bị đeo cổ tay thu nhận đồng bộ PPG và ECG để ước lượng biến thiên huyết áp ($`\Delta\text{SBP}`$, $`\Delta\text{DBP}`$) giữa các phiên đo sau khi đã hiệu chuẩn cá nhân hóa.**
 
 Các nguyên tắc phương pháp luận bắt buộc:
 
@@ -30,12 +30,12 @@ Các nguyên tắc phương pháp luận bắt buộc:
 
 > **Nội dung câu hỏi:**
 >
-> *Sau khi thực hiện hiệu chuẩn cá nhân ban đầu, việc bổ sung kênh ECG và đại lượng PAT có mang lại cải thiện có ý nghĩa thống kê trong việc dự đoán biến thiên huyết áp ($\Delta\text{SBP}$ và $\Delta\text{DBP}$) ở các phiên đo tương lai so với mô hình chỉ sử dụng đặc trưng hình thái từ PPG hay không?*
+> *Sau khi thực hiện hiệu chuẩn cá nhân ban đầu, việc bổ sung kênh ECG và đại lượng PAT có mang lại cải thiện có ý nghĩa thống kê trong việc dự đoán biến thiên huyết áp ($`\Delta\text{SBP}`$ và $`\Delta\text{DBP}`$) ở các phiên đo tương lai so với mô hình chỉ sử dụng đặc trưng hình thái từ PPG hay không?*
 
 #### A. Giả thuyết nghiên cứu
 
 - **Giả thuyết không ($H_{0, \text{RQ1}}$):**
-  Mô hình kết hợp đa phương thức ($\text{ECG} + \text{PPG} + \text{PAT}$) không làm giảm sai số tuyệt đối trung bình (MAE) trong việc dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ ở các phiên đo tương lai so với mô hình tối ưu chỉ dùng tín hiệu quang học $\text{PPG}$ ($\text{MAE}_{\text{ECG+PPG}} \ge \text{MAE}_{\text{PPG-only}}$ trên cả hai chỉ số).
+  Mô hình kết hợp đa phương thức ($\text{ECG} + \text{PPG} + \text{PAT}$) không làm giảm sai số tuyệt đối trung bình (MAE) trong việc dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ ở các phiên đo tương lai so với mô hình tối ưu chỉ dùng tín hiệu quang học $\text{PPG}$ ($`\text{MAE}_{\text{ECG+PPG}} \ge \text{MAE}_{\text{PPG-only}}`$ trên cả hai chỉ số).
 
 - **Giả thuyết đối ($H_{1, \text{RQ1}}$):**
   Mô hình kết hợp ($\text{ECG} + \text{PPG} + \text{PAT}$) có MAE dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ thấp hơn mô hình PPG-only trên các phiên đo tương lai. Mức cải thiện sẽ được báo cáo bằng chênh lệch MAE theo người, khoảng tin cậy 95% bootstrap theo người và kiểm định cặp Wilcoxon mang tính hỗ trợ. Không khóa ngưỡng $1.5/1.0\text{ mmHg}$ khi chưa có phân tích pilot, power và phê duyệt của nhóm/giảng viên.
@@ -43,15 +43,15 @@ Các nguyên tắc phương pháp luận bắt buộc:
 #### B. Biến nghiên cứu
 
 - **Biến đầu vào (Inputs):**
-    - Tín hiệu PPG cổ tay: Các đặc trưng hình thái chu kỳ xung (thời gian dốc lên $T_r$, độ rộng xung tại 50% biên độ $W_{50}$, tỷ số diện tích tâm thu/tâm trương, chỉ số suy giảm dicrotic notch, tỷ số cường độ quang học PIR).
+    - Tín hiệu PPG cổ tay: Các đặc trưng hình thái chu kỳ xung (thời gian dốc lên $`T_r`$, độ rộng xung tại 50% biên độ $`W_{50}`$, tỷ số diện tích tâm thu/tâm trương, chỉ số suy giảm dicrotic notch, tỷ số cường độ quang học PIR).
     - Tín hiệu ECG: Khoảng cách R-R (nhịp tim tức thời HR), biến thiên nhịp tim HRV ngắn hạn.
-    - Đại lượng phối hợp: PAT (tính từ đỉnh R của ECG đến chân sóng foot của PPG cùng chu kỳ tim), $\Delta\text{PAT} = \text{PAT}_{\text{current}} - \text{PAT}_{\text{calib}}$.
-    - Thông tin hiệu chuẩn cá nhân: Giá trị huyết áp mốc ban đầu ($\text{SBP}_0$, $\text{DBP}_0$).
+    - Đại lượng phối hợp: PAT (tính từ đỉnh R của ECG đến chân sóng foot của PPG cùng chu kỳ tim), $`\Delta\text{PAT} = \text{PAT}_{\text{current}} - \text{PAT}_{\text{calib}}`$.
+    - Thông tin hiệu chuẩn cá nhân: Giá trị huyết áp mốc ban đầu ($`\text{SBP}_0`$, $`\text{DBP}_0`$).
 
 - **Biến đầu ra (Outputs):**
-    - Biến thiên huyết áp tâm thu: $\Delta\text{SBP} = \text{SBP}_{\text{target}} - \text{SBP}_0$ (đơn vị: $\text{mmHg}$).
-    - Biến thiên huyết áp tâm trương: $\Delta\text{DBP} = \text{DBP}_{\text{target}} - \text{DBP}_0$ (đơn vị: $\text{mmHg}$).
-    - *Lưu ý:* Giá trị huyết áp ước tính cuối cùng được tái tạo bởi $\widehat{\text{SBP}} = \text{SBP}_0 + \Delta\widehat{\text{SBP}}$ và $\widehat{\text{DBP}} = \text{DBP}_0 + \Delta\widehat{\text{DBP}}$.
+    - Biến thiên huyết áp tâm thu: $`\Delta\text{SBP} = \text{SBP}_{\text{target}} - \text{SBP}_0`$ (đơn vị: $\text{mmHg}$).
+    - Biến thiên huyết áp tâm trương: $`\Delta\text{DBP} = \text{DBP}_{\text{target}} - \text{DBP}_0`$ (đơn vị: $\text{mmHg}$).
+    - *Lưu ý:* Giá trị huyết áp ước tính cuối cùng được tái tạo bởi $`\widehat{\text{SBP}} = \text{SBP}_0 + \Delta\widehat{\text{SBP}}`$ và $`\widehat{\text{DBP}} = \text{DBP}_0 + \Delta\widehat{\text{DBP}}`$.
 
 #### C. Hệ thống Baseline đối chứng bắt buộc
 
@@ -62,9 +62,9 @@ Các nguyên tắc phương pháp luận bắt buộc:
 
 #### D. Chỉ số đánh giá
 
-- Sai số tuyệt đối trung bình: $\text{MAE} = \frac{1}{N}\sum |y_i - \hat{y}_i|$ (đánh giá riêng cho SBP và DBP).
+- Sai số tuyệt đối trung bình: $`\text{MAE} = \frac{1}{N}\sum |y_i - \hat{y}_i|`$ (đánh giá riêng cho SBP và DBP).
 - Sai số chuẩn hóa và độ lệch chuẩn: $\text{ME} \pm \text{STD}$.
-- Hệ số tương quan Pearson ($r$) giữa $\Delta\text{BP}_{\text{true}}$ và $\Delta\text{BP}_{\text{pred}}$.
+- Hệ số tương quan Pearson ($r$) giữa $`\Delta\text{BP}_{\text{true}}`$ và $`\Delta\text{BP}_{\text{pred}}`$.
 - Tỷ lệ sai số nằm trong khoảng chuẩn y tế $\le 5\text{ mmHg}, \le 10\text{ mmHg}$ theo hướng chuẩn AAMI/ISO.
 
 #### E. Điều kiện bác bỏ hoặc chấp nhận giả thuyết
@@ -112,7 +112,7 @@ Các nguyên tắc phương pháp luận bắt buộc:
     2. *Strategy B (Subject-wise Split - Không rò rỉ người):* Leave-One-Subject-Out (LOSO) hoặc chia theo danh sách người tham gia ($k$-fold theo subject_id).
     3. *Strategy C (Cross-session / Temporal Split - Không rò rỉ thời gian):* Với mỗi người, phiên đo thứ nhất (Session 1) dùng để huấn luyện/hiệu chuẩn, các phiên đo sau (Session 2, Session 3...) độc lập hoàn toàn dùng để kiểm thử.
 
-- **Biến đầu ra:** Độ biến thiên sai số ($\Delta\text{MAE} = \text{MAE}_{\text{Subject-wise}} - \text{MAE}_{\text{Window-wise}}$) phân tích riêng cho SBP và DBP.
+- **Biến đầu ra:** Độ biến thiên sai số ($`\Delta\text{MAE} = \text{MAE}_{\text{Subject-wise}} - \text{MAE}_{\text{Window-wise}}`$) phân tích riêng cho SBP và DBP.
 
 #### C. Baseline so sánh
 
@@ -123,11 +123,11 @@ Các nguyên tắc phương pháp luận bắt buộc:
 
 - Sai số MAE (mmHg), RMSE (mmHg) cho SBP và DBP.
 - Hệ số tương quan Pearson ($r$) và biểu đồ Bland-Altman (độ lệch trung bình và khoảng tin cậy 95%).
-- Mức độ suy giảm hiệu năng: $\text{Degradation Ratio} = \frac{\text{MAE}_{\text{Strict}} - \text{MAE}_{\text{Random}}}{\text{MAE}_{\text{Random}}} \times 100\%$.
+- Mức độ suy giảm hiệu năng: $`\text{Degradation Ratio} = \frac{\text{MAE}_{\text{Strict}} - \text{MAE}_{\text{Random}}}{\text{MAE}_{\text{Random}}} \times 100\%`$.
 
 #### E. Điều kiện bác bỏ hoặc chấp nhận giả thuyết
 
-- **Chấp nhận $H_1$:** Khi chứng minh được $\text{MAE}_{\text{Subject-wise}}$ và $\text{MAE}_{\text{Cross-session}}$ lớn hơn $\text{MAE}_{\text{Window-wise}}$ có ý nghĩa thống kê ($p < 0.001$), khẳng định rằng việc chia ngẫu nhiên cửa sổ gây rò rỉ nhận dạng cá nhân và tạo ra độ chính xác ảo.
+- **Chấp nhận $H_1$:** Khi chứng minh được $`\text{MAE}_{\text{Subject-wise}}`$ và $`\text{MAE}_{\text{Cross-session}}`$ lớn hơn $`\text{MAE}_{\text{Window-wise}}`$ có ý nghĩa thống kê ($p < 0.001$), khẳng định rằng việc chia ngẫu nhiên cửa sổ gây rò rỉ nhận dạng cá nhân và tạo ra độ chính xác ảo.
 
 #### F. Rủi ro phương pháp
 
@@ -149,12 +149,12 @@ Các nguyên tắc phương pháp luận bắt buộc:
 #### A. Giả thuyết nghiên cứu
 
 - **Giả thuyết không ($H_{0, \text{RQ3}}$):**
-  Việc áp dụng ngưỡng lọc SQI và độ bất định để từ chối dự đoán (rejection mechanism) không mang lại sự suy giảm sai số MAE có ý nghĩa thống kê trên tập các mẫu được chấp nhận so với việc giữ lại toàn bộ mẫu đo ($\text{MAE}_{\text{accepted}} \approx \text{MAE}_{\text{all}}$).
+  Việc áp dụng ngưỡng lọc SQI và độ bất định để từ chối dự đoán (rejection mechanism) không mang lại sự suy giảm sai số MAE có ý nghĩa thống kê trên tập các mẫu được chấp nhận so với việc giữ lại toàn bộ mẫu đo ($`\text{MAE}_{\text{accepted}} \approx \text{MAE}_{\text{all}}`$).
 
 - **Giả thuyết đối ($H_{1, \text{RQ3}}$):**
   Tồn tại một cơ chế từ chối chọn lọc (selective prediction) hiệu quả:
     - Bằng cách từ chối tối đa $15\% - 20\%$ số mẫu có SQI thấp hoặc độ bất định dự đoán cao nhất, sai số MAE trên tập mẫu giữ lại giảm tối thiểu $20\%$ đối với cả SBP và DBP.
-    - Các mẫu bị từ chối có tương quan thuận rõ rệt với độ lớn sai số thực tế ($|y_i - \hat{y}_i|$).
+    - Các mẫu bị từ chối có tương quan thuận rõ rệt với độ lớn sai số thực tế ($`|y_i - \hat{y}_i|`$).
 
 #### B. Biến nghiên cứu
 
