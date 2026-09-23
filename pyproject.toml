@@ -1,16 +1,29 @@
-[project]
-name = "ppg-ecg-blood-pressure"
-version = "0.1.0"
-description = "Research scaffold for wrist-worn PPG and ECG blood-pressure variation estimation."
-requires-python = ">=3.11"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-ra"
+[project]
+name = "ppg-ecg-bp-estimation"
+version = "0.1.0"
+description = "PPG-ECG Blood Pressure Estimation Project"
+authors = [{ name = "Nguyen Ngoc Linh" }]
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.2.1",
+    "scipy==1.12.0",
+    "matplotlib==3.8.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.0.2",
+    "ruff==0.3.0",
+]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 88
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
