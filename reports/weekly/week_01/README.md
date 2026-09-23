@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Báo cáo tuần 1
 
 > Đây là template. Chỉ đánh dấu hoàn thành khi có đầu ra và bằng chứng kiểm tra.
@@ -46,7 +45,7 @@
 ## Công việc chuyển sang tuần 2
 
 -
-=======
+
 ﻿# Báo cáo tiến độ Tuần 1
 
 > **Giai đoạn:** Tuần 1 / 28 tuần
@@ -173,4 +172,3 @@ Toàn bộ các công cụ kiểm tra tự động của dự án đã được 
    - Tính toán đại lượng PAT trên dữ liệu mẫu `data/sample/`.
 3. Chuẩn bị biểu mẫu phiếu đồng thuận (Informed Consent Form template) chi tiết cho hồ sơ đạo đức.
 4. Phối hợp với Đức Anh để kiểm tra các phương án điện cực ECG thử nghiệm trên bo mạch thử nghiệm (breadboard).
->>>>>>> develop

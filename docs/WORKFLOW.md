@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Quy trình làm việc
 
 ## Luồng thay đổi
@@ -38,7 +37,7 @@ refactor: tai cau truc ma nguon
 
 Pull request cần mô tả cách kiểm tra, kết quả kiểm tra và tác động tới dữ liệu,
 phần cứng hoặc protocol nếu có.
-=======
+
 # Quy trình làm việc trên GitHub
 
 Tài liệu này dành cho cả thành viên mới dùng GitHub. Mục tiêu là không mất code, không ghi đè công việc của nhau và mọi thay đổi đều được kiểm tra trước khi ghép vào dự án.
@@ -237,4 +236,4 @@ Xem thêm docs/DATA_POLICY.md.
 - Đã chọn người review.
 
 Nếu chưa chắc một thao tác Git có an toàn hay không, dừng lại và hỏi nhóm trước khi dùng force, reset, rebase hoặc xóa nhánh.
->>>>>>> develop
+
