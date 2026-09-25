@@ -1,8 +1,10 @@
 # Thiết bị đeo cổ tay ước lượng biến thiên huyết áp từ PPG và ECG
 
+
 [![CI](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/actions/workflows/ci.yml)
 
 **Thành viên mới:** đọc [Quy trình làm việc GitHub](docs/WORKFLOW.md) trước khi tạo commit hoặc Pull Request.
+
 
 ## Mục tiêu
 

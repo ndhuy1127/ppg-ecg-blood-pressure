@@ -35,6 +35,14 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
+      - name: Check for unresolved git conflict markers
+        run: |
+          echo "Checking for conflict markers..."
+          if grep -rnE "^(<<<<<<<|=======|>>>>>>>)" --exclude-dir=.venv .; then
+            echo "Error: Found unresolved Git conflict markers!"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
