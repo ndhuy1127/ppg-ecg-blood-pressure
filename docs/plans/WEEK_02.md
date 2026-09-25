@@ -13,14 +13,14 @@
 | --- | --- | --- | --- |
 | Linh | Xác nhận quyền sử dụng và nguồn PulseDB; ghi phiên bản, checksum; viết trình đọc metadata, ECG, PPG, ABP và nhãn; notebook khám phá ít nhất 1.000 đoạn; test file thiếu, metadata trùng và sai kênh. | Mã đọc + test + notebook có thể chạy lại, báo cáo ánh xạ `subject_id`, độ dài, missing value, đơn vị và tần số lấy mẫu. | **Chưa xác nhận:** chưa có dataset, manifest hoặc trình đọc trong repo. Cần đối chiếu điều khoản của đúng bản dữ liệu trước khi tải. |
 | Đức Anh | Lắp và kiểm tra board v0, nguồn, giao tiếp, cấu hình cảm biến, nhiễu và bão hòa; xuất bản ghi PPG/ECG ngắn với timestamp và nhật ký cấu hình. | Log cấu hình, bằng chứng hai kênh nhận diện được, không bão hòa kéo dài, timestamp tăng đơn điệu; file thô lưu ngoài Git nếu là dữ liệu thật. | **Đã có BOM v0.1 trong repo; chưa xác nhận** firmware, board hoạt động hay bản ghi v0. Việc đo trên người phụ thuộc phê duyệt đạo đức và kiểm tra an toàn. |
-| Huy | Tổng hợp PAT/PTT/PEP/PWA; định nghĩa lần đo cuff, quan sát, nhãn, các cửa sổ ứng viên 10/20/30/60 giây; kiểm tra trực quan lỗi R peak, baseline wander và PPG foot khi có bản ghi v0. | Tài liệu định nghĩa mẫu, nhãn và glossary; phiếu kiểm tra trực quan đã điền khi nhận được bản ghi. | **Chưa xác nhận:** cần review định nghĩa, Linh xác nhận ánh xạ PulseDB và Đức Anh xác nhận timestamp/logger; chưa có kiểm tra tín hiệu v0. |
+| Huy | Tổng hợp PAT/PTT/PEP/PWA; định nghĩa lần đo cuff, quan sát, nhãn, các cửa sổ ứng viên 10/20/30/60 giây; kiểm tra trực quan lỗi R peak, baseline wander và PPG foot khi có bản ghi v0. | [Tài liệu định nghĩa mẫu, nhãn và glossary](../protocol/week_02_sample_label_glossary.md); phiếu kiểm tra trực quan đã điền khi nhận được bản ghi. | **Đã có bản thảo định nghĩa, chưa được review; chưa có kiểm tra tín hiệu v0.** Cần Linh xác nhận ánh xạ PulseDB và Đức Anh xác nhận timestamp/logger. |
 
 ## Việc chung và mốc đóng tuần
 
 1. Review chéo notebook PulseDB và một bản ghi v0; ghi tên người review, commit hoặc phiên bản file, lỗi và quyết định vào báo cáo tuần.
 2. Đối chiếu quy ước nhãn PulseDB với nhãn cuff của prototype. PulseDB có ABP waveform; không dùng đoạn ABP như một lần đo cuff độc lập.
 3. Chỉ đánh dấu mốc Tuần 2 đạt khi notebook đọc lại được ít nhất 1.000 đoạn ánh xạ đúng người và có bản ghi v0 đạt tiêu chí kênh/timestamp trong phạm vi được phép thu.
-4. Ghi các vấn đề cần sửa trước Tuần 3 vào báo cáo Tuần 2 khi báo cáo được tạo trên `develop`.
+4. Ghi các vấn đề cần sửa trước Tuần 3 vào [báo cáo Tuần 2](../../reports/weekly/week_02/README.md).
 
 ## Vấn đề cần nhóm quyết định
 
