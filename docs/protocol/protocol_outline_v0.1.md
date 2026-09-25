@@ -43,7 +43,7 @@
 - Cỡ mẫu này phù hợp cho giai đoạn thử nghiệm nguyên mẫu kỹ thuật (feasibility phase), đủ cung cấp $60 - 100$ lượt đo đối chứng độc lập phục vụ kiểm định thống kê cặp.
 
 ### 4.2. Tiêu chí lựa chọn (Inclusion Criteria)
-- Độ tuổi từ 18 đến 40 tuổi, có đầy đủ năng lực hành vi dân sự.
+- Độ tuổi từ 18 đến 35 tuổi, có đầy đủ năng lực hành vi dân sự.
 - Tự nguyện ký vào phiếu đồng thuận tham gia nghiên cứu (Informed Consent).
 - Nhịp tim xoang bình thường, không có tiền sử bệnh lý tim mạch đã được chẩn đoán.
 
