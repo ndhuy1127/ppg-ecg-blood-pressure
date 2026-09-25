@@ -31,6 +31,6 @@
 
 ## Nguồn đối chiếu
 
-- `Phan_cong_cong_viec_chi_tiet_28_tuan_Linh_Duc_Anh_Huy.docx`, mục “Tuần 2 — Dữ liệu công khai và tín hiệu v0 đầu tiên” (tệp do người dùng cung cấp, không commit vì nằm ngoài repo).
+- Mục “Tuần 2 — Dữ liệu công khai và tín hiệu v0 đầu tiên” (tệp do người dùng cung cấp, không commit vì nằm ngoài repo).
 - [Protocol v0.1](../protocol/protocol_outline_v0.1.md), [chính sách dữ liệu](../DATA_POLICY.md), [câu hỏi nghiên cứu](../research_questions_v0.1.md).
 - [Bài công bố PulseDB](https://doi.org/10.3389/fdgth.2022.1090854) và [repository của tác giả](https://github.com/pulselabteam/PulseDB).
