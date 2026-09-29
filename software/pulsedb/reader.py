@@ -99,8 +99,7 @@ class PulseDBReader:
 
         signals = np.asarray(subset["Signals"])
 
-        # Signals must have:
-        # (number_of_segments, channels, samples)
+        # Signals must have: (number_of_segments, channels, samples)
         if signals.ndim != 3:
             raise ValueError(
                 f"Signals must be 3-dimensional, got {signals.shape}"
@@ -120,7 +119,10 @@ class PulseDBReader:
                 f"per segment, got {signals.shape[2]}"
             )
 
-        # Convert metadata to numpy arrays
+        # 1. Lấy tổng số segments gốc trong file .mat
+        total_segments = signals.shape[0]
+
+        # 2. Chuyển đổi toàn bộ mảng metadata gốc
         subjects = subset["Subject"]
         sbp = np.asarray(subset["SBP"], dtype=float).reshape(-1)
         dbp = np.asarray(subset["DBP"], dtype=float).reshape(-1)
@@ -128,14 +130,9 @@ class PulseDBReader:
         height = np.asarray(subset["Height"], dtype=float).reshape(-1)
         weight = np.asarray(subset["Weight"], dtype=float).reshape(-1)
         bmi = np.asarray(subset["BMI"], dtype=float).reshape(-1)
-
         genders = subset["Gender"]
 
-        n_segments = signals.shape[0]
-        if limit is not None:
-            n_segments = min(limit, n_segments)
-
-        # Check metadata lengths
+        # 3. Kiểm tra độ dài metadata với tổng số segments gốc
         metadata_lengths = {
             "Subject": len(subjects),
             "SBP": len(sbp),
@@ -148,14 +145,29 @@ class PulseDBReader:
         }
 
         for field, length in metadata_lengths.items():
-            if length != n_segments:
+            if length != total_segments:
                 raise ValueError(
                     f"{field} has {length} entries, "
-                    f"but Signals has {n_segments} segments"
+                    f"but Signals has {total_segments} segments"
                 )
 
-        segments = []
+        # 4. Tối ưu cắt Slicing (Early Slicing) ngay lập tức nếu truyền limit
+        n_segments = total_segments
+        if limit is not None:
+            n_segments = min(limit, total_segments)
 
+        signals = signals[:n_segments]
+        subjects = subjects[:n_segments]
+        sbp = sbp[:n_segments]
+        dbp = dbp[:n_segments]
+        age = age[:n_segments]
+        height = height[:n_segments]
+        weight = weight[:n_segments]
+        bmi = bmi[:n_segments]
+        genders = genders[:n_segments]
+
+        # 5. Khởi tạo đối tượng PulseSegment chỉ cho n_segments đã cắt
+        segments = []
         for i in range(n_segments):
             subject_id = self._get_subject_id(subjects[i])
             gender = self._get_gender(genders[i])
