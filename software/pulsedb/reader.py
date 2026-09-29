@@ -5,12 +5,24 @@ import mat73
 import numpy as np
 
 
+# =========================
+# PulseDB constants
+# =========================
+
 EXPECTED_SAMPLING_RATE_HZ = 125
 EXPECTED_SAMPLES_PER_SEGMENT = 1250
 EXPECTED_CHANNELS = 3
 
+# Official PulseDB subset channel order:
+# 0 -> ECG_F
+# 1 -> PPG_F
+# 2 -> ABP_Raw
 CHANNEL_NAMES = ("ecg", "ppg", "abp")
 
+
+# =========================
+# One PulseDB segment
+# =========================
 
 @dataclass
 class PulseSegment:
@@ -30,6 +42,10 @@ class PulseSegment:
     bmi_kg_m2: float
 
 
+# =========================
+# PulseDB Reader
+# =========================
+
 class PulseDBReader:
     REQUIRED_FIELDS = {
         "Subject",
@@ -45,6 +61,10 @@ class PulseDBReader:
 
     def __init__(self, path):
         self.path = Path(path)
+
+    # -------------------------
+    # Load raw .mat file
+    # -------------------------
 
     def load_raw(self):
         if not self.path.is_file():
@@ -70,28 +90,37 @@ class PulseDBReader:
 
         return subset
 
-    def read(self):
+    # -------------------------
+    # Read and validate dataset
+    # -------------------------
+
+    def read(self, limit=None):
         subset = self.load_raw()
 
         signals = np.asarray(subset["Signals"])
 
+        # Signals must have:
+        # (number_of_segments, channels, samples)
         if signals.ndim != 3:
             raise ValueError(
                 f"Signals must be 3-dimensional, got {signals.shape}"
             )
 
+        # Check number of channels
         if signals.shape[1] != EXPECTED_CHANNELS:
             raise ValueError(
                 f"Expected {EXPECTED_CHANNELS} channels, "
                 f"got {signals.shape[1]}"
             )
 
+        # Check number of samples per segment
         if signals.shape[2] != EXPECTED_SAMPLES_PER_SEGMENT:
             raise ValueError(
                 f"Expected {EXPECTED_SAMPLES_PER_SEGMENT} samples "
                 f"per segment, got {signals.shape[2]}"
             )
 
+        # Convert metadata to numpy arrays
         subjects = subset["Subject"]
         sbp = np.asarray(subset["SBP"], dtype=float).reshape(-1)
         dbp = np.asarray(subset["DBP"], dtype=float).reshape(-1)
@@ -103,7 +132,10 @@ class PulseDBReader:
         genders = subset["Gender"]
 
         n_segments = signals.shape[0]
+        if limit is not None:
+            n_segments = min(limit, n_segments)
 
+        # Check metadata lengths
         metadata_lengths = {
             "Subject": len(subjects),
             "SBP": len(sbp),
@@ -145,6 +177,10 @@ class PulseDBReader:
             segments.append(segment)
 
         return segments
+
+    # -------------------------
+    # Helpers
+    # -------------------------
 
     @staticmethod
     def _get_subject_id(value):
