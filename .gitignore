@@ -50,3 +50,10 @@ temp/
 # Hardware generated files
 hardware/pcb/output/
 hardware/pcb/gerber/
+
+# Data archives and MATLAB files
+*.mat
+*.zip
+pulsedb-reader.zip
+extracted/
+.ipynb_checkpoints/
