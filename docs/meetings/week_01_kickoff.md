@@ -1,6 +1,6 @@
 ﻿# Biên bản / Chương trình Họp Khởi động Tuần 1 (Kickoff Meeting Draft & Agenda)
 
-> **Loại tài liệu:** Biên bản / Chương trình nghị sự dự thảo (Draft Agenda & Minutes)
+> **Loại tài liệu:** Agenda dự thảo; chưa phải biên bản cuộc họp đã diễn ra.
 > **Người khởi tạo:** Nguyễn Đức Huy
 > **Ngày lập:** 2026-09-22
 > **Trạng thái:** Bản dự thảo nội dung khởi động dự án *(Đánh dấu các phần cần nhóm xác nhận tại buổi họp chính thức)*
@@ -34,7 +34,7 @@ Nhóm làm rõ định hướng khoa học chủ đạo:
 > **Câu hỏi nghiên cứu trung tâm:**
 > *"Sau khi hiệu chuẩn cá nhân ban đầu, việc bổ sung tín hiệu ECG và đại lượng PAT có cải thiện khả năng ước lượng biến thiên huyết áp ($\Delta\text{SBP}$ và $\Delta\text{DBP}$) ở các phiên đo tương lai so với việc chỉ sử dụng đặc trưng hình thái từ tín hiệu PPG hay không?"*
 
-**Lưu ý phương pháp luận đã khóa:**
+**Quy ước phương pháp của repository; không phải bằng chứng quyết định tại cuộc họp:**
 - Tín hiệu đo tại cổ tay từ đỉnh R của ECG đến chân sóng PPG là **PAT (Pulse Arrival Time)**, bao gồm cả thời gian tiền tống máu ($\text{PEP}$). $\text{PAT} = \text{PEP} + \text{PTT}$. Tuyệt đối không gọi nhầm là PTT thực sự.
 - Phân tích và báo cáo kết quả tách biệt hoàn toàn giữa SBP và DBP.
 - Không tuyên bố thiết bị đạt chuẩn y tế thay thế máy đo thương mại; mục tiêu đề tài là nguyên mẫu nghiên cứu kỹ thuật y sinh.
@@ -74,7 +74,7 @@ Nhóm làm rõ định hướng khoa học chủ đạo:
   - Phần mềm/Pipeline $\leftrightarrow$ Xử lý tín hiệu: Linh và Huy review chéo về thuật toán lọc sóng, trích xuất đặc trưng và cấu trúc train/val/test split.
 
 ### 5.3. Quy định dữ liệu và bảo mật (Data & Privacy Rules)
-- Tuân thủ tuyệt đối [docs/DATA_POLICY.md](file:///D:/ppg-ecg-blood-pressure/docs/DATA_POLICY.md):
+- Tuân thủ [chính sách dữ liệu](../DATA_POLICY.md):
   - Không commit dữ liệu người tham gia thật, dữ liệu thô dung lượng lớn.
   - Không đưa token, mật khẩu, khóa API hoặc file `.env` lên Git.
   - Mọi dữ liệu thử nghiệm phải sử dụng định danh `subject_id`, `session_id`, `event_id`. Không dùng tên hay mã sinh viên.
@@ -82,11 +82,11 @@ Nhóm làm rõ định hướng khoa học chủ đạo:
 
 ---
 
-## 6. Các quyết định kỹ thuật đã khóa (Locked Decisions)
+## 6. Cấu hình có bằng chứng và đề xuất chờ xác nhận
 
-1. **Quyết định 1 (Ngôn ngữ và Môi trường):** Python 3.11/3.13 làm môi trường phân tích dữ liệu chuẩn; quản lý phụ thuộc bằng `requirements.txt` và `environment.yml`. Bộ kiểm tra code gồm `ruff` và `pytest`.
+1. **Cấu hình hiện hành:** Python 3.11 theo `pyproject.toml` (`>=3.11,<3.12`) và CI. Chưa hỗ trợ chính thức Python 3.13. Phụ thuộc được ghi trong `requirements.txt` và `environment.yml`; kiểm tra dùng Ruff và pytest. Sự tồn tại của workflow không chứng minh CI hiện tại đạt.
 2. **Quyết định 2 (Cấu trúc thư mục):** Tổ chức theo chức năng kỹ thuật (`hardware/`, `firmware/`, `software/`, `docs/`, `reports/`), tuyệt đối không tạo thư mục cá nhân theo tên người.
-3. **Quyết định 3 (Đại lượng mục tiêu):** Dự đoán biến thiên huyết áp $\Delta\text{SBP}$ và $\Delta\text{DBP}$ sau hiệu chuẩn cá nhân, không theo đuổi bài toán dự đoán tuyệt đối không hiệu chuẩn ("calibration-free") do không khả thi về mặt sinh lý học trên thiết bị một vị trí đeo.
+3. **Định hướng đề xuất:** Dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ sau hiệu chuẩn cá nhân theo RQ v0.1, chờ nhóm/giảng viên xác nhận. Không nghiên cứu calibration-free trong phạm vi này; không suy rộng thành tuyên bố mọi phương pháp calibration-free đều bất khả thi.
 4. **Quyết định 4 (Nguyên tắc dữ liệu tuần 1):** Tuần 1 tuyệt đối không tuyển người hay thu dữ liệu thật.
 
 ---
@@ -103,6 +103,8 @@ Nhóm làm rõ định hướng khoa học chủ đạo:
 ---
 
 ## 8. Kế hoạch và Checklist cho buổi họp tiếp theo (Tuần 2)
+
+Checklist này là đề xuất lịch sử ngày 2026-09-22. Ưu tiên/phụ thuộc Tuần 2 xem [kế hoạch hiện hành](../plans/WEEK_02.md); chưa có bằng chứng các demo hoặc thử phần cứng dưới đây đã diễn ra.
 
 - [ ] Linh demo pipeline nạp dữ liệu mẫu và chạy thử nghiệm các baseline mẫu.
 - [ ] Đức Anh trình bày bản vẽ sơ đồ nguyên lý mạch sơ bộ (Schematic v0.1) và kết quả thử nghiệm cảm biến trên breadboard.

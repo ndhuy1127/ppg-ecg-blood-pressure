@@ -14,7 +14,7 @@
 > **Tuyên bố quan trọng về phê duyệt đạo đức y sinh:**
 > 1. Tài liệu này là **khung phác thảo sơ bộ (outline)** các nguyên tắc bảo vệ quyền lợi con người và an toàn dữ liệu, phục vụ công tác chuẩn bị hồ sơ xin cấp phép của nhóm nghiên cứu. Đây **hoàn toàn chưa phải là Giấy chứng nhận chấp thuận đạo đức (IRB/Ethics Approval)** được cấp bởi Hội đồng Đạo đức trong nghiên cứu y sinh học có thẩm quyền.
 > 2. **Tuyệt đối không được phép tiến hành tuyển tình nguyện viên hoặc thu thập dữ liệu sinh học trên người trong Tuần 1.** Bất kỳ hoạt động đo đạc thực nghiệm nào trên con người chỉ được thực hiện sau khi hồ sơ đạo đức chính thức được hoàn thiện, thẩm định và phê duyệt bằng văn bản.
-> 3. Mọi điều khoản trong tài liệu này được xây dựng trên cơ sở đồng bộ và thống nhất chặt chẽ với [Chính sách dữ liệu và bảo mật](file:///D:/ppg-ecg-blood-pressure/docs/DATA_POLICY.md) của dự án.
+> 3. Tài liệu phải được đối chiếu với [chính sách dữ liệu và bảo mật](../DATA_POLICY.md) trước khi nộp duyệt; outline không phải bằng chứng đã triển khai các biện pháp bảo vệ.
 
 ---
 
@@ -82,11 +82,12 @@ Phiên đo phải được dừng ngay lập tức khi xảy ra một trong các
 
 ---
 
-## 5. Chính sách bảo mật dữ liệu và Ẩn danh hóa (Data Governance)
+## 5. Chính sách bảo mật dữ liệu và giả danh hóa (Data Governance)
 
 Chính sách bảo mật tuân thủ nghiêm ngặt các điều khoản trong `docs/DATA_POLICY.md`:
 
-### 5.1. Cơ chế mã hóa và Ẩn danh hóa danh tính (Pseudonymization)
+### 5.1. Cơ chế mã hóa và giả danh hóa danh tính (Pseudonymization)
+- Khi còn bảng liên kết danh tính với `subject_id`, dữ liệu là **giả danh hóa**, không phải ẩn danh không thể truy ngược. Mã giả danh không tự loại bỏ mọi nguy cơ tái nhận diện từ metadata hoặc waveform.
 - Mỗi người tham gia được gán một mã định danh nghiên cứu duy nhất ngẫu nhiên: `subject_id` (ví dụ: `SUBJ_001`, `SUBJ_002`...).
 - **Quy tắc tuyệt đối:**
   - Không sử dụng Họ tên, Số điện thoại, Email, Mã số sinh viên, Số căn cước công dân hoặc Ngày sinh làm mã định danh trong dữ liệu.
@@ -128,3 +129,5 @@ Nếu phát hiện bất kỳ sự cố rò rỉ dữ liệu hoặc commit nhầ
 > 2. [ ] Hoàn thiện Bản thông tin nghiên cứu dành cho tình nguyện viên (Participant Information Sheet).
 > 3. [ ] Hoàn thiện biên bản kiểm định an toàn điện và dòng rò của bo mạch nguyên mẫu.
 > 4. [ ] Trình giảng viên hướng dẫn rà soát và ký duyệt trước khi gửi Hội đồng Đạo đức.
+> 5. [ ] Xác nhận căn cứ và quy trình ứng phó cho tiêu chí dừng/ngưỡng BP tại mục 4; không coi outline là hướng dẫn xử trí y khoa đã được duyệt.
+> 6. [ ] Xác nhận người quản lý bảng liên kết, biện pháp mã hóa, phân quyền, thời gian lưu giữ 03 năm và cách tiêu hủy phù hợp loại thiết bị lưu trữ. Đây là đề xuất, chưa có bằng chứng triển khai/phê duyệt.

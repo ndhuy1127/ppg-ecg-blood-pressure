@@ -4,6 +4,7 @@
 > **Người thực hiện:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 > **Ngày cập nhật:** 2026-09-22
+> **Rà soát diễn đạt:** 2026-10-01. Không audit lại toàn văn trong lần sửa này; số liệu bảng và nhận định từ nguồn vẫn cần xác minh tới đúng trang/bảng/hình trước khi dùng cho bài báo.
 
 ---
 
@@ -43,9 +44,9 @@ Ma trận tập trung vào các khía cạnh cốt lõi:
 ## 3. Tổng hợp chi tiết các trục kỹ thuật chính
 
 ### 3.1. Bản chất vật lý: PAT khác biệt PTT như thế nào?
-- **Định nghĩa chuẩn xác:**
+- **Quy ước viết gọn, cần khai báo mốc đo:**
   $$\text{PAT} = \text{PEP} + \text{PTT}$$
-  - $\text{PEP}$ (Pre-ejection Period): Thời gian tiền tống máu, tính từ lúc tâm thất khử cực (đỉnh R trên ECG) đến khi van động mạch chủ mở (máu bắt đầu tống vào quai động mạch chủ).
+  - $\text{PEP}$ (Pre-ejection Period): Từ khởi đầu khử cực thất (thường mốc Q/QRS) đến khi van động mạch chủ mở. Mốc R peak không trùng khởi đầu Q/QRS; với PAT đo từ R, khoảng trước tống máu có thể khác PEP. ECG + PPG trong dự án chỉ đo PAT, không đo riêng PEP/PTT; xem [glossary](../protocol/week_02_sample_label_glossary.md).
   - $\text{PTT}$ (Pulse Transit Time): Thời gian sóng áp lực cơ học thực sự lan truyền trong lòng mạch từ gốc động mạch chủ đến vị trí đo ngoại vi (cổ tay).
 - **Hệ quả nghiên cứu:**
   - $\text{PTT}$ tuân theo phương trình Moens-Korteweg và Hughes, tỷ lệ nghịch với vận tốc sóng mạch ($\text{PWV}$) và độ cứng thành mạch, do đó có tương quan vật lý chặt chẽ với huyết áp.
@@ -54,7 +55,7 @@ Ma trận tập trung vào các khía cạnh cốt lõi:
 
 ### 3.2. Hiệu chuẩn cá nhân hóa và bài toán dự đoán biến thiên ($\Delta\text{BP}$)
 - Mối quan hệ giữa PAT/PPG và huyết áp phụ thuộc vào thông số giải phẫu và sinh lý riêng của từng cá nhân: chiều dài động mạch ($L$), đường kính mạch không tải ($r_0$), độ dày thành mạch ($h$), và mô đun đàn hồi cơ bản ($E_0$).
-- Không thể có một mô hình tổng quát "calibration-free" dự đoán huyết áp tuyệt đối chính xác cho toàn bộ quần thể nếu chỉ dựa vào tín hiệu ngoại vi một vị trí mà không có rò rỉ dữ liệu.
+- Đề tài giới hạn ở hiệu chuẩn cá nhân và dự đoán biến thiên; ma trận sơ bộ này chưa đủ để kết luận mọi mô hình calibration-free đều bất khả thi. Tổng quát hóa cần đánh giá bằng split phù hợp và bằng chứng riêng.
 - Do đó, một hướng tiếp cận phù hợp để kiểm chứng trong phạm vi đề tài là:
   1. Sử dụng 1 hoặc 2 lần đo cuff chuẩn ban đầu làm mốc hiệu chuẩn (Calibration Baseline: $\text{SBP}_0, \text{DBP}_0$).
   2. Mô hình tập trung dự đoán **biến thiên huyết áp giữa các phiên đo**:
@@ -73,13 +74,13 @@ Nghiên cứu của Yoshizawa et al. (2023) và benchmark PulseDB (Wang et al., 
 - Dữ liệu thu từ thiết bị đeo cổ tay rất nhạy cảm với nhiễu chuyển động (motion artifacts) và thay đổi áp lực tiếp xúc.
 - Việc ép mô hình đưa ra dự đoán trên các đoạn tín hiệu suy hao dẫn đến sai số nghiêm trọng.
 - Các nghiên cứu của Shen et al. (2024) và Elgendi (2016) gợi ý rằng hệ thống nên có khả năng trả lời: *"Tín hiệu không đủ tin cậy, từ chối đưa ra kết quả đo"* (Selective Prediction / Abstention). Hiệu quả và ngưỡng từ chối cụ thể phải được xác nhận lại trên validation set của dự án.
-- Sự kết hợp giữa SQI tiền xử lý (loại bỏ cửa sổ có skewness bất thường hoặc mất đỉnh) và độ bất định của mô hình (Uncertainty threshold) là chìa khóa để giảm MAE trên các mẫu được chấp nhận.
+- Kết hợp SQI và độ bất định là giả thuyết RQ3, chưa có kết quả dự án chứng minh giảm MAE. Ngưỡng và hiệu quả cần đánh giá risk–coverage trên validation rồi test đã khóa.
 
 ---
 
 ## 4. Tổng hợp khoảng trống nghiên cứu (Research Gaps)
 
-Từ việc khảo sát 12 công trình trên, nhóm xác định 4 khoảng trống nghiên cứu lớn mà y văn hiện tại chưa giải quyết trọn vẹn:
+Từ 12 công trình chọn sơ bộ, Huy đề xuất bốn hướng khảo sát dưới đây. Không coi đây là kết luận toàn bộ y văn còn thiếu hoặc chứng minh tính mới; các nhận định “phần lớn”, “hầu hết”, “chưa chuẩn hóa” cần audit nguồn và tìm kiếm có hệ thống trước khi sử dụng trong bài báo.
 
 1. **Khoảng trống 1 (Hình thức đeo cổ tay đa cảm biến đồng bộ):**
    Phần lớn các nghiên cứu PTT/PAT chính xác cao đều sử dụng cảm biến ngón tay kết hợp dán điện cực ngực chuẩn phòng thí nghiệm (MIMIC, Finapres). Các thiết bị thương mại đeo cổ tay thành công (như Aktiia) lại chỉ dùng PPG quang học đơn thuần và phụ thuộc vào đo khi ngủ/nghỉ, thiếu tín hiệu ECG để tách pha huyết động. Nghiên cứu tích hợp đồng thời ECG và PPG trên cùng một thiết bị cổ tay để đánh giá PAT còn khan hiếm và gặp trở ngại về chất lượng tín hiệu.
@@ -94,7 +95,7 @@ Từ việc khảo sát 12 công trình trên, nhóm xác định 4 khoảng tr�
 
 ## 5. Định vị đóng góp của đề tài
 
-Dựa trên các khoảng trống nghiên cứu đã chỉ ra, đề tài này định vị các đóng góp khoa học và kỹ thuật rõ ràng:
+Dưới đây là mục tiêu/đóng góp **dự kiến**, chờ kết quả tái lập và review; không phải đóng góp mới đã được chứng minh:
 
 1. **Về thiết kế hệ thống (Hardware & Sensing):**
    Xây dựng nguyên mẫu nghiên cứu dạng vòng đeo cổ tay tích hợp đồng bộ phần cứng giữa cảm biến quang học PPG (bước sóng tối ưu cho mao mạch cổ tay) và khối khuếch đại vi sai ECG (bố trí điện cực mặt đáy tiếp xúc cổ tay và mặt trên tiếp xúc ngón tay đối diện), đảm bảo thu nhận đồng thời tín hiệu để trích xuất PAT trên cùng một thiết bị.
@@ -105,4 +106,4 @@ Dựa trên các khoảng trống nghiên cứu đã chỉ ra, đề tài này �
 3. **Về thuật toán và an toàn dự đoán (Signal Quality & Rejection):**
    Xây dựng pipeline hai tầng:
    - Tầng 1: Đánh giá SQI (dựa trên $s\text{SQI}$, tương quan hình thái và kiểm tra đỉnh R/chân sóng PPG đồng bộ).
-   - Tầng 2: Định lượng độ bất định của mô hình dự đoán. Hệ thống sẽ từ chối đưa ra kết quả nếu độ tin cậy dưới ngưỡng an toàn, đảm bảo tính ứng dụng thực tế trong giám sát sức khỏe dài hạn.
+    - Tầng 2: Đề xuất định lượng độ bất định và từ chối dự đoán. Chưa có ngưỡng đã khóa hoặc bằng chứng ứng dụng dài hạn; không diễn giải cơ chế từ chối là đảm bảo an toàn y tế.

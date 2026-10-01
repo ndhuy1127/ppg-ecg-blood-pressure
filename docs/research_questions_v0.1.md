@@ -7,6 +7,7 @@
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 >
 > **Ngày cập nhật:** 2026-09-22
+> **Rà soát tài liệu:** 2026-10-01; chưa thay thế phê duyệt khoa học.
 >
 > **Trạng thái:** Bản thảo đề xuất v0.1 (Chờ thảo luận và phê duyệt chính thức từ nhóm và giảng viên)
 
@@ -57,15 +58,15 @@ Các nguyên tắc phương pháp luận bắt buộc:
 
 1. **Baseline 1 (Zero-Change Baseline):** Dự đoán $\Delta\text{SBP} = 0$ và $\Delta\text{DBP} = 0$ (tức là coi huyết áp phiên đo mới bằng đúng giá trị mốc hiệu chuẩn ban đầu $\widehat{\text{BP}} = \text{BP}_0$). Bất kỳ mô hình học máy nào không vượt qua được baseline này đều coi như thất bại sinh lý học.
 2. **Baseline 2 (PPG-Only Baseline):** Mô hình hồi quy (Ridge Regression / Random Forest) chỉ sử dụng các đặc trưng hình thái sóng PPG cổ tay và HR.
-3. **Baseline 3 (PAT-Based Linear Baseline):** Mô hình hồi quy tuyến tính cổ điển dựa trên nghịch đảo bình phương của PAT: $\Delta\text{BP} = a \cdot \Delta(1/\text{PAT}^2) + b$.
+3. **Baseline 3 (PAT-Based Linear Baseline):** Baseline hồi quy thực nghiệm với biến đổi ứng viên $\Delta\text{BP} = a \cdot \Delta(1/\text{PAT}^2) + b$. Không diễn giải là áp trực tiếp Moens–Korteweg/PTT lên PAT; biến đổi và hệ số phải được chọn/fit trên train/validation, không trên test.
 4. **Mô hình đề xuất (ECG + PPG Multi-feature Fusion):** Mô hình hồi quy kết hợp toàn diện đặc trưng hình thái PPG, PAT và biến thiên nhịp tim.
 
 #### D. Chỉ số đánh giá
 
 - Sai số tuyệt đối trung bình: $`\text{MAE} = \frac{1}{N}\sum |y_i - \hat{y}_i|`$ (đánh giá riêng cho SBP và DBP).
-- Sai số chuẩn hóa và độ lệch chuẩn: $\text{ME} \pm \text{STD}$.
+- Sai số trung bình có dấu (ME) và độ lệch chuẩn của sai số (STD): $\text{ME} \pm \text{STD}$.
 - Hệ số tương quan Pearson ($r$) giữa $`\Delta\text{BP}_{\text{true}}`$ và $`\Delta\text{BP}_{\text{pred}}`$.
-- Tỷ lệ sai số nằm trong khoảng chuẩn y tế $\le 5\text{ mmHg}, \le 10\text{ mmHg}$ theo hướng chuẩn AAMI/ISO.
+- Tỷ lệ sai số tuyệt đối $\le 5\text{ mmHg}, \le 10\text{ mmHg}$ như chỉ số mô tả; không chứng minh đạt chuẩn y tế/AAMI/ISO.
 
 #### E. Điều kiện bác bỏ hoặc chấp nhận giả thuyết
 
@@ -101,16 +102,14 @@ Các nguyên tắc phương pháp luận bắt buộc:
   Sai số dự đoán (MAE) và hệ số tương quan ($r$) của mô hình không có sự khác biệt có ý nghĩa thống kê giữa phương pháp chia Window-wise Random Split và phương pháp Subject-wise / Cross-session Split.
 
 - **Giả thuyết đối ($H_{1, \text{RQ2}}$):**
-  Có hiện tượng rò rỉ dữ liệu (data leakage) nghiêm trọng trong phương pháp chia Window-wise Random Split:
-    - Sai số $\text{MAE}_{\text{Window-wise}}$ bị làm đẹp nhân tạo (lạc quan quá mức, thấp hơn rõ rệt so với thực tế).
-    - Khi chuyển sang Subject-wise Split và Cross-session Split, sai số MAE sẽ tăng tối thiểu $40\%$ và hệ số tương quan $r$ suy giảm đáng kể, phản ánh đúng năng lực tổng quát hóa sinh lý của mô hình trên người mới và phiên đo mới.
+  Giả thuyết cần kiểm chứng: MAE trong đánh giá subject-wise/cross-session có thể cao hơn đánh giá random window-wise khi dữ liệu cùng người/lần đo xuất hiện ở nhiều tập trong đối chứng random split. Báo cáo mức chênh lệch và khoảng tin cậy riêng cho SBP/DBP; mức tăng $40\%$ là đề xuất ban đầu chưa được phê duyệt, không phải tiêu chí đã khóa. Chênh lệch hiệu năng giữa các split không tự chứng minh nguyên nhân duy nhất là rò rỉ nhận dạng cá nhân.
 
 #### B. Biến nghiên cứu
 
 - **Biến phân chia (Splitting Strategies):**
-    1. *Strategy A (Window-wise Random Split - Nguy cơ rò rỉ cao):* Cắt toàn bộ tín hiệu thành các cửa sổ 5–10 giây rồi xáo trộn ngẫu nhiên vào Train/Test. Các cửa sổ của cùng một đối tượng và cùng một lần đo xuất hiện ở cả hai tập.
+    1. *Strategy A (Window-wise Random Split - Đối chứng nguy cơ rò rỉ):* Chia ngẫu nhiên các cửa sổ đã tạo theo cấu hình phân tích chung, có thể khiến cùng người/lần đo xuất hiện ở nhiều tập. Khi so sánh các chiến lược split, giữ nguyên cách tạo cửa sổ và các yếu tố có thể kiểm soát. Chỉ dùng Strategy A để minh họa nguy cơ rò rỉ, không dùng để chọn model hoặc báo cáo hiệu năng chính; không tự chốt độ dài cửa sổ tại đây.
     2. *Strategy B (Subject-wise Split - Không rò rỉ người):* Leave-One-Subject-Out (LOSO) hoặc chia theo danh sách người tham gia ($k$-fold theo subject_id).
-    3. *Strategy C (Cross-session / Temporal Split - Không rò rỉ thời gian):* Với mỗi người, phiên đo thứ nhất (Session 1) dùng để huấn luyện/hiệu chuẩn, các phiên đo sau (Session 2, Session 3...) độc lập hoàn toàn dùng để kiểm thử.
+    3. *Strategy C (Cross-session / Temporal Split - Chống rò rỉ thời gian):* Mô hình chung được huấn luyện trên train subjects; việc chọn mô hình/siêu tham số dùng train/validation, không dùng test. Với người kiểm tra, chỉ dùng phần Session 1 được protocol cho phép để hiệu chuẩn cá nhân trước khi đánh giá các phiên tương lai (Session 2, Session 3...). Không dùng phiên tương lai để huấn luyện, hiệu chuẩn hoặc tuning. Các phiên có cấu trúc đo lặp theo người, không coi là quan sát thống kê độc lập.
 
 - **Biến đầu ra:** Độ biến thiên sai số ($`\Delta\text{MAE} = \text{MAE}_{\text{Subject-wise}} - \text{MAE}_{\text{Window-wise}}`$) phân tích riêng cho SBP và DBP.
 
@@ -127,7 +126,7 @@ Các nguyên tắc phương pháp luận bắt buộc:
 
 #### E. Điều kiện bác bỏ hoặc chấp nhận giả thuyết
 
-- **Chấp nhận $H_1$:** Khi chứng minh được $`\text{MAE}_{\text{Subject-wise}}`$ và $`\text{MAE}_{\text{Cross-session}}`$ lớn hơn $`\text{MAE}_{\text{Window-wise}}`$ có ý nghĩa thống kê ($p < 0.001$), khẳng định rằng việc chia ngẫu nhiên cửa sổ gây rò rỉ nhận dạng cá nhân và tạo ra độ chính xác ảo.
+- **Đề xuất điều kiện bằng chứng, chờ duyệt:** Báo cáo chênh lệch MAE riêng cho SBP/DBP, khoảng tin cậy theo người và kiểm tra cấu trúc rò rỉ. Sai số tăng giữa các split không tự chứng minh nguyên nhân duy nhất là nhận dạng cá nhân. Ngưỡng $p < 0.001$ là đề xuất cũ chưa có căn cứ/phê duyệt, không phải tiêu chí đã khóa; kế hoạch kiểm định cần được duyệt trước test.
 
 #### F. Rủi ro phương pháp
 
@@ -153,7 +152,7 @@ Các nguyên tắc phương pháp luận bắt buộc:
 
 - **Giả thuyết đối ($H_{1, \text{RQ3}}$):**
   Tồn tại một cơ chế từ chối chọn lọc (selective prediction) hiệu quả:
-    - Bằng cách từ chối tối đa $15\% - 20\%$ số mẫu có SQI thấp hoặc độ bất định dự đoán cao nhất, sai số MAE trên tập mẫu giữ lại giảm tối thiểu $20\%$ đối với cả SBP và DBP.
+    - Giả thuyết cần kiểm chứng: từ chối theo SQI/độ bất định cải thiện risk–coverage so với baseline ở cùng coverage, đánh giá SBP và DBP riêng. Mức từ chối 15–20% và giảm MAE 20% là đề xuất cũ chưa có căn cứ/phê duyệt, không phải kết quả hoặc tiêu chí đã khóa.
     - Các mẫu bị từ chối có tương quan thuận rõ rệt với độ lớn sai số thực tế ($`|y_i - \hat{y}_i|`$).
 
 #### B. Biến nghiên cứu
@@ -205,7 +204,7 @@ Các nguyên tắc phương pháp luận bắt buộc:
 |---|---|---|---|---|
 | **Zero-Change** | RQ1, RQ2 | Không (chỉ dùng $\text{BP}_0$ mốc) | $\Delta\widehat{\text{BP}} = 0 \Rightarrow \widehat{\text{BP}} = \text{BP}_0$ | Ngưỡng sàn sinh lý; mô hình học máy bắt buộc phải vượt qua baseline này |
 | **PPG-Only (Morphology)** | RQ1 | Đặc trưng hình thái PPG cổ tay + HR | Ridge Regression / Random Forest | Xác định trần hiệu năng của tín hiệu quang học đơn lẻ |
-| **PAT-Only (Linear)** | RQ1 | Đại lượng PAT từ đỉnh R ECG đến PPG foot | Mô hình nghịch đảo tuyến tính Moens-Korteweg | Kiểm tra giá trị thuần túy của thời gian truyền sóng mạch |
+| **PAT-Only (Linear)** | RQ1 | PAT từ R peak ECG đến PPG foot | Hồi quy thực nghiệm; biến đổi nghịch đảo bình phương là ứng viên | Kiểm tra thông tin của PAT, không đo riêng PTT/PEP |
 | **ECG + PPG Multi-feature** | RQ1, RQ2 | Kết hợp đặc trưng PPG + PAT + HRV | Hồi quy Ridge / Random Forest / Mô hình phi tuyến | Mô hình đề xuất chính của đề tài |
 | **No-Rejection vs Rejection** | RQ3 | Mô hình ECG + PPG kèm SQI & Uncertainty | Ngưỡng lọc SQI và độ bất định | Kiểm chứng cơ chế bảo vệ an toàn và độ tin cậy |
 
@@ -219,3 +218,5 @@ Các nguyên tắc phương pháp luận bắt buộc:
 > - [ ] **Thống nhất về đại lượng dự đoán:** Xác nhận dự đoán biến thiên $\Delta\text{SBP}$ và $\Delta\text{DBP}$ có hiệu chuẩn cá nhân thay vì cố gắng dự đoán huyết áp tuyệt đối không hiệu chuẩn.
 > - [ ] **Mức cải thiện thực tiễn:** Thống nhất có sử dụng ngưỡng cải thiện MAE hay không; nếu có, phải nêu căn cứ tài liệu/pilot, phân tích cỡ mẫu và khóa ngưỡng trước khi mở test set.
 > - [ ] **Tỷ lệ từ chối tối đa:** Chọn mức coverage/tỷ lệ từ chối trên validation set dựa trên đường cong risk–coverage; test set chỉ dùng một lần để báo cáo kết quả cuối.
+> - [ ] **RQ2:** Mức suy giảm 40% trong giả thuyết là đề xuất chưa được duyệt, không phải mức đã chứng minh. Random window split chỉ là đối chứng minh họa nguy cơ rò rỉ, không dùng để chọn model hoặc đánh giá chính; ghi split/seed và giữ nguyên test nghiêm ngặt.
+> - [ ] **Cỡ mẫu và kiểm định:** Các số người/phiên và ngưỡng ý nghĩa trong bản thảo cần căn cứ pilot/power, kế hoạch xử lý nhiều kiểm định và phê duyệt trước test. PEP thường bắt đầu ở Q/QRS; công thức PAT = PEP + PTT là viết gọn, không đồng nhất mốc Q với R.
