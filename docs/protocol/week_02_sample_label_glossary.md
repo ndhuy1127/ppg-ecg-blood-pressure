@@ -1,6 +1,7 @@
 # Tuần 2 — định nghĩa mẫu, nhãn và thuật ngữ sinh lý (bản thảo v0.1)
 
-> **Trạng thái:** Bản thảo phương pháp của Huy, chờ Linh và Đức Anh review giao diện trước khi mã hóa logger, trình đọc và phân tích. Tài liệu này không thay thế protocol được duyệt. Chưa có phần cứng PPG/ECG hoặc bản ghi v0 để kiểm tra trực quan.
+> **Trạng thái:** Bản thảo phương pháp của Huy, chờ Linh và Đức Anh review giao diện trước khi khóa logger, trình đọc và phân tích. Tài liệu này không thay thế protocol được duyệt. Chưa có bằng chứng bản ghi v0 được bàn giao để kiểm tra trực quan.
+> **Rà soát:** 2026-10-01. Chưa có bằng chứng bản ghi v0 được bàn giao; tình trạng phần cứng thực tế cần Đức Anh xác nhận. Các ref Git cục bộ có đầu ra mới để review, không chứng minh schema đã được duyệt.
 
 ## 1. Thuật ngữ dùng thống nhất
 
@@ -66,6 +67,8 @@ Trong cách viết gọn của kế hoạch, `PAT = PEP + PTT`; vì mốc đo l�
 
 Tên trường, kiểu dữ liệu cụ thể, ánh xạ clock, tần số lấy mẫu và cách đóng gói phải được Linh và Đức Anh xác nhận trước khi khóa schema. Raw bất biến; dữ liệu dẫn xuất cần truy về raw, script, config, split, seed và commit theo [chính sách dữ liệu](../DATA_POLICY.md).
 
+**Đầu vào review hiện có:** packet schema tại ref cục bộ `origin/dev/ducanh` (`e13d669`, 2026-09-30), tệp `configs/hardware/Packet_Schema_V0.1.md`, đề xuất ECG 512 SPS, hai loại gói ECG/PPG và timestamp mẫu đầu gói (µs); PPG AFE/tần số chưa chốt. Protocol cũ nêu ECG 250–500 Hz, PPG 100–250 Hz. Không tự thay bằng một cấu hình cuối cùng: nhóm cần đối chiếu timestamp lấy mẫu với đọc FIFO/nhận gói, clock theo kênh, mất mẫu, metadata phiên và marker cuff. Chưa có bằng chứng Huy đã review/khóa packet.
+
 ## 6. Phân biệt nguồn nhãn BP
 
 PulseDB công bố các **đoạn 10 giây** ECG, PPG và waveform **ABP** từ MIMIC-III/VitalDB, có thông tin subject. Nhãn BP dẫn xuất từ ABP không phải lần đo cuff của protocol tại cổ tay. Một đoạn PulseDB cũng không chứng minh có một lần đo cuff tương ứng. Vì vậy:
@@ -87,7 +90,7 @@ Chưa điền kết quả khi chưa có phần cứng, raw thật và log cấu 
 3. Đánh dấu R peak và PPG foot theo quy tắc ứng viên, xem đỉnh giả/bỏ sót và ảnh hưởng của lọc. Chỉ ghép nhịp khi cùng clock và có một xung PPG tương ứng hợp lý; ghi trường hợp không ghép được.
 4. Lưu người review, ngày, mã bản ghi, phiên bản thiết bị, lỗi, quyết định và issue cần xử lý; không thay đổi ngưỡng sau khi xem test set.
 
-**Chờ đầu ra PulseDB của Linh** để review riêng trên dữ liệu công khai: nguồn/phiên bản và checksum phần sử dụng, hướng dẫn chạy reader/notebook, mã test, ánh xạ `subject_id` và kênh ECG/PPG/ABP, đơn vị/tần số, quy tắc nhãn SBP/DBP và bằng chứng ít nhất 1.000 đoạn. Mọi hình minh họa từ PulseDB phải ghi rõ **dữ liệu công khai, không phải tín hiệu thiết bị nhóm thu**.
+**Đã có đầu ra PulseDB để review** tại ref cục bộ `origin/develop` (`e8915f6`, 2026-09-30): `software/pulsedb/`, `tests/test_pulsedb.py`, `notebooks/01_eda_and_visualization.ipynb`, `docs/pulsedb_provenance.md`. Chưa có bằng chứng Huy chạy lại hoặc nghiệm thu. Cần xác nhận nguồn/phiên bản, checksum file thực dùng, hướng dẫn chạy sạch, ánh xạ người/kênh/đơn vị/nhãn và bằng chứng ít nhất 1.000 đoạn. Provenance còn ghi checksum/file sử dụng sẽ hoàn thiện; notebook cần kiểm tra biến đầu vào từ kernel sạch. Mọi hình minh họa phải ghi **dữ liệu công khai, không phải tín hiệu thiết bị nhóm thu**.
 
 | Mục cần xem | Dấu hiệu / câu hỏi cần ghi | Kết quả |
 | --- | --- | --- |
