@@ -81,6 +81,15 @@ Các đường dẫn trên là vị trí **dự kiến**, chưa phải sản ph�
 
 ## Nguồn đối chiếu
 
+**Cập nhật phần Huy, 2026-10-03:** đã triển khai B0/B1, MAE/bias/SD và test/demo
+SYNTHETIC, có kiểm thử cục bộ; xem [báo cáo Huy](../../reports/weekly/week_03/README.md)
+và [quy ước/API](../protocol/week_03_baselines_metrics.md). Chờ Linh review code,
+manifest/split và metadata calibration; chờ Đức Anh bàn giao fixture thời gian
+và waveform xác minh. Đoạn trạng thái baseline trong bảng trên mô tả lần lập
+kế hoạch trước triển khai; không còn mô tả code trong workspace hiện tại.
+Chưa chạy PulseDB/PAT/thiết bị thật, chưa xác nhận CI Python 3.11 hoặc nghiệm thu
+toàn bộ Tuần 3; trạng thái phần Linh/Đức Anh giữ theo bằng chứng bàn giao riêng.
+
 - [Kế hoạch Tuần 2](WEEK_02.md), [báo cáo Tuần 2](../../reports/weekly/week_02/README.md), [phân công nhóm](../TEAM.md).
 - [Tài liệu mẫu/nhãn](../protocol/week_02_sample_label_glossary.md), [protocol v0.1](../protocol/protocol_outline_v0.1.md), [câu hỏi nghiên cứu](../research_questions_v0.1.md), [chính sách dữ liệu](../DATA_POLICY.md).
 - Rà soát ngày 2026-10-03: workspace `dev/huy@171e951`; reader/notebook/test/provenance tại `origin/develop@e8915f6`; packet/BOM/pin map/bring-up tại `origin/dev/ducanh@e13d669`. Đây là ref cục bộ, có file chưa nằm trong workspace; chưa fetch, chạy PulseDB hoặc xác nhận CI online trong lần lập kế hoạch.
