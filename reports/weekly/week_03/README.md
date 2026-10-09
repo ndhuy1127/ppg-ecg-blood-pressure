@@ -7,6 +7,10 @@
 > **Ngày kiểm tra bổ sung:** 2026-10-05
 > **Ngày cập nhật bố cục:** 2026-10-08. Giữ kết quả kiểm tra lịch sử; code/test giả lập chưa thay review chéo, phê duyệt phương pháp hoặc nghiệm thu toàn bộ Tuần 3.
 
+> **Bổ sung 2026-10-08:** mục 6.4 ghi lần chạy B0 sơ bộ trên nhãn CSV công khai
+> do Linh bàn giao. Các mô tả kiểm thử chỉ dùng SYNTHETIC ở phần lịch sử áp dụng
+> cho lần triển khai ban đầu; B1/PAT/thiết bị thật vẫn chưa được đánh giá.
+
 ---
 
 ## 1. Mục tiêu tuần 3
@@ -19,7 +23,10 @@ Theo [kế hoạch Tuần 3](../../../docs/plans/WEEK_03.md), các mục tiêu t
 4. Huy xây MAE/bias/SD riêng SBP/DBP, test đáp án biết trước, demo tái lập và đặc tả các chỉ số mở rộng còn cần thống nhất.
 5. Bàn giao code, cấu hình, test, bằng chứng và các đầu vào còn chờ để chuẩn bị pipeline baseline Tuần 4.
 
-Báo cáo này chỉ ghi nhận **phần độc lập của Huy đã làm bằng dữ liệu SYNTHETIC**. Chưa chạy PulseDB/PAT hoặc đánh giá thiết bị thật; chưa hoàn thành toàn bộ Tuần 3.
+Báo cáo ban đầu ghi nhận **phần độc lập của Huy đã làm bằng dữ liệu SYNTHETIC**.
+Bổ sung mục 6.4 chạy B0 từ nhãn CSV PulseDB; kết quả là sơ bộ, chờ review nguồn
+raw và phương pháp. Chưa chạy B1 trên PulseDB/PAT hoặc đánh giá thiết bị thật;
+chưa hoàn thành toàn bộ Tuần 3.
 
 ---
 
@@ -163,9 +170,72 @@ online hoặc review chéo. Push nhánh cá nhân không đồng nghĩa nghiệm
 
 ---
 
+### 6.4. Runner B0 và CSV bàn giao ngày 2026-10-08
+
+- Workspace chính chuyển sang `dev/ngoclinh`, chưa có baseline/metrics. Đã tạo
+  checkout riêng `tmp/b0_pulsedb_work` từ `dev/huy@7ba230f`, giữ nhánh chính.
+  Khi workspace chính đã trở lại `dev/huy@7ba230f` và Git sạch, đã sao các file
+  runner/test/tài liệu đã kiểm thử cùng JSON kết quả về workspace chính. Không
+  tự checkout, commit, push hoặc merge; checkout riêng vẫn giữ bản kiểm thử.
+- Lấy CSV `notebooks/pulsedb_manifest_1000.csv` và đọc code notebook
+  `week3-split-hash.ipynb` ở `origin/dev/ngoclinh@1f218eb` sau Git fetch.
+  Không in bảng/ID người hoặc đọc waveform; CSV cục bộ nằm ngoài Git.
+- Runner mới `scripts/run_b0_pulsedb_csv.py` dùng B0/metrics hiện có, giữ split,
+  kiểm tra metadata mọi tập và chỉ dùng nhãn train/val. Notebook ghi split
+  seed 72. Không dùng nhãn test hoặc tạo calibration B1.
+- Lệnh đã chạy: `python scripts/run_b0_pulsedb_csv.py D:\ppg-ecg-blood-pressure\data\processed\linh_week03\pulsedb_manifest_1000.csv --unit mmHg --split-seed 72 --manifest-ref 1f218eb`,
+  với interpreter `.venv` của workspace chính, trong checkout riêng.
+- JSON do runner tạo: `runs/b0_pulsedb/20261008T082734462661Z/metrics.json`,
+  lưu số mẫu/người từng split, mức B0, MAE/bias/SD, weighting, seed, hash CSV,
+  ref CSV, môi trường, commit/hash code, log và giới hạn. Đây là artifact cục
+  bộ được ignore; không phải số liệu nhập tay hoặc bằng chứng nghiệm thu.
+- Hai file test cũ cùng test runner mới: 81 passed. Full suite: **88 passed in
+  0.43s**, exit 0 sau khi được phép chạy ngoài sandbox. Lần sandbox có lỗi
+  thư mục tạm, gồm thiếu thư mục cha (WinError 3), sau đó giới hạn quyền
+  (WinError 5); không đổi logic reader/test. Ruff toàn checkout đạt.
+- Môi trường vẫn là Python 3.13.12, chưa thay kiểm chứng CI Python 3.11.
+- Giới hạn: notebook đọc `file_paths[0]` nhưng ghi source cố định; cần xác nhận
+  file/raw checksum thực dùng, pool/holdout gốc, mapping người, index raw và
+  trọng số quan sát. Chưa tái tính sample_hash từ raw. Kết quả B0 chỉ mô tả
+  nhãn CSV bàn giao; chưa chứng minh hiệu năng cuff/ΔBP hoặc hoàn thành Tuần 3.
+- [Hướng dẫn chạy lại](../../../docs/protocol/run_b0_pulsedb_csv.md).
+- Theo yêu cầu làm trên nhánh Huy, đã xác nhận workspace chính ở `dev/huy`
+  và chạy lại runner trực tiếp từ Git root. JSON lần chạy trên dev/huy:
+  `runs/b0_pulsedb/20261008T083043729745Z/metrics.json`
+  cho cùng kết quả như lần kiểm thử checkout riêng. Ruff đạt và 81 test
+  baseline/metrics/runner đạt trong 0.35s; không chạy lại full suite trong lần
+  này. Thay đổi vẫn chưa commit/push; B1 trên CSV vẫn chưa đủ calibration.
+- Bổ sung hỗ trợ **Run Python File in Terminal** sau lỗi thiếu `csv_path` và
+  `--unit`: khi không truyền đối số, runner đọc cấu hình versioned
+  `configs/data/b0_pulsedb_validation.json`, dùng đường dẫn theo repo và kiểm tra
+  hash của CSV đã ghi nhận. CSV truyền riêng vẫn phải xác nhận đơn vị và không
+  kế thừa seed/ref mặc định. Không đổi split, weighting hoặc công thức metrics.
+  Đã chạy không đối số bằng `.venv/bin/python.exe` với file script tuyệt đối
+  từ thư mục `scripts/`, exit 0; JSON lần chạy:
+  `runs/b0_pulsedb/20261008T083535378627Z/metrics.json`
+  khớp kết quả trước. Test baseline/metrics/runner đạt 84 passed in 0.35s,
+  Ruff và diff check đạt; chưa chạy lại full suite/CI trong lần sửa này.
+
+### 6.5. Kiểm tra file dự kiến commit ngày 2026-10-09
+
+- Nhánh `dev/huy`; các file dự kiến commit gồm runner, test SYNTHETIC, cấu hình
+  JSON, hướng dẫn chạy và hai README. Không stage/commit/push trong lần rà soát.
+- Ruff và `git diff --check` đạt. Full suite chạy ngoài sandbox: **91 passed
+  in 0.47s**, exit 0. Lần sandbox có 89 passed, 2 errors do WinError 5 trong
+  fixture Temp của reader; không đổi test hoặc bỏ test để che lỗi quyền.
+- `scripts/check_environment.py` và `pip check` đạt trong môi trường hiện có
+  Python 3.13.12. Chưa kiểm thử runtime/CI Python 3.11 hoặc review chéo.
+- Không thấy secret hay dữ liệu thật theo người trong sáu file dự kiến commit.
+  CSV ở `data/processed/`, JSON kết quả ở `runs/`, checkout tạm ở `tmp/` vẫn
+  được ignore và không nằm trong danh sách file thay đổi Git.
+- Các đường dẫn JSON ở mục 6.4 là artifact cục bộ, không có trong GitHub.
+  Hướng dẫn runner ghi cách lấy CSV đúng version và chạy lại để tạo kết quả.
+
 ## 7. Khó khăn, Rủi ro và Vướng mắc kỹ thuật
 
-Chưa đủ manifest/split và chronology/calibration để chạy B0/B1 công khai; chưa có fixture/waveform xác minh hoặc dữ liệu đo thật. Các công việc đang chờ và yêu cầu bàn giao:
+B0 đã chạy sơ bộ từ CSV ở mục 6.4; nguồn raw/split chưa nghiệm thu đầy đủ.
+Chronology/calibration cho B1, fixture/waveform xác minh và dữ liệu thiết bị thật
+vẫn chưa có. Các công việc đang chờ và yêu cầu bàn giao:
 
 | Công việc | Người cung cấp / phối hợp | Đầu vào cần nhận | Sau bàn giao Huy sẽ làm |
 | --- | --- | --- | --- |

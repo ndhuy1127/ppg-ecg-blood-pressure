@@ -9,6 +9,14 @@ mục gốc repository; demo còn hỗ trợ chạy trực tiếp từ thư mụ
 | --- | --- | --- | --- |
 | [demo_week_03_baselines.py](demo_week_03_baselines.py) | Chạy thử B0/B1 và metrics cùng nhau | Tự sinh train, calibration, evaluation; các mảng BP `(3, 2)`, ID và thời điểm giả lập; seed `20261003` | JSON `SYNTHETIC` in ra Terminal |
 | [check_environment.py](check_environment.py) | Kiểm tra import thư viện và phép tính NumPy | Mảng tự tạo `[1.0, 2.0, 3.0]`; không nhận dataset | Phiên bản Python/thư viện, kết quả `[2.0, 4.0, 6.0]`; exit 0 khi đạt |
+| [run_b0_pulsedb_csv.py](run_b0_pulsedb_csv.py) | Fit B0 trên train, đánh giá val từ manifest CSV | Các cột trong bảng bàn giao của Linh; kiểm tra metadata mọi split, dùng nhãn train/val | Metrics tổng hợp và JSON truy vết trong `runs/`; không dùng nhãn test hoặc chạy B1 |
+
+Hướng dẫn runner CSV: [chạy B0 trên PulseDB](../docs/protocol/run_b0_pulsedb_csv.md).
+Runner CSV có đầu vào riêng; các mô tả dữ liệu tự tạo bên dưới chỉ áp dụng demo.
+Có thể mở `run_b0_pulsedb_csv.py` và bấm **Run Python File in Terminal**:
+không truyền đối số thì script dùng `configs/data/b0_pulsedb_validation.json`
+với CSV cục bộ đã bàn giao và kiểm tra hash trước khi chạy. CSV khác cần truyền
+đường dẫn và đơn vị rõ ràng; xem hướng dẫn runner ở trên.
 
 Demo không cần file dữ liệu đầu vào hoặc đối số CLI. Nó không đọc PulseDB,
 không chứa nhãn/người tham gia thật và không ghi kết quả ra file. Các ID
