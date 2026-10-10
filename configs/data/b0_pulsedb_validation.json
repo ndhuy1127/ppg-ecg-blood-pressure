@@ -1,0 +1,7 @@
+{
+  "csv_path": "data/processed/linh_week03/pulsedb_manifest_1000.csv",
+  "unit": "mmHg",
+  "split_seed": 72,
+  "manifest_ref": "1f218eb",
+  "manifest_sha256": "ed630151680665cdc4ede92189880aec95ee54e35d8a3f14c81b918fc0eb9d60"
+}
