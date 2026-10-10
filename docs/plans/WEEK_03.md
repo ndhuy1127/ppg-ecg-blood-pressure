@@ -81,6 +81,14 @@ Các đường dẫn trên là vị trí **dự kiến**, chưa phải sản ph�
 
 ## Nguồn đối chiếu
 
+**Cập nhật đầu ra hỗ trợ Linh/Đức Anh, 2026-10-10:** đã có pipeline split v2
+với inventory và công cụ generator/replay packet SYNTHETIC v2 trong workspace,
+có test cục bộ; xem [báo cáo mục 6.6](../../reports/weekly/week_03/README.md#66-bản-sửa-hỗ-trợ-phần-linh-và-đức-anh-ngày-2026-10-10).
+Fixture expected thực tế ở `tests/fixtures/`, packet/config/replay/report sinh
+qua runner vào output mới ngoài Git. Vị trí `data/sample/` trong bảng đầu ra là
+dự kiến ban đầu. Chưa xác nhận chạy raw/nguồn/pool, schema firmware được khóa,
+review chéo, CI hoặc phép đo thiết bị thật; các mục đó vẫn chờ bàn giao riêng.
+
 **Cập nhật phần Huy, 2026-10-03:** đã triển khai B0/B1, MAE/bias/SD và test/demo
 SYNTHETIC, có kiểm thử cục bộ; xem [báo cáo Huy](../../reports/weekly/week_03/README.md)
 và [quy ước/API](../protocol/week_03_baselines_metrics.md). Chờ Linh review code,

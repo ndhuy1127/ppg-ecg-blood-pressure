@@ -34,8 +34,8 @@ chưa hoàn thành toàn bộ Tuần 3.
 
 | Công việc | Người phụ trách chính | Reviewer dự kiến | Trạng thái ghi nhận |
 | --- | --- | --- | --- |
-| Split/manifest PulseDB và bằng chứng chống rò rỉ | Linh | Huy, Đức Anh | Chờ đầu vào đủ điều kiện để Huy chạy B0/B1; báo cáo này chưa xác nhận nghiệm thu phần Linh |
-| Timestamp/packet, fixture đồng bộ và kế hoạch đo thật | Đức Anh | Linh, Huy | Chờ schema/fixture/waveform xác minh; chưa có kết quả thiết bị thật |
+| Split/manifest PulseDB và bằng chứng chống rò rỉ | Linh | Huy, Đức Anh | Có bản sửa split v2 và test giả lập; chờ raw/config/pool được review và chạy lại để nghiệm thu; xem mục 6.6 |
+| Timestamp/packet, fixture đồng bộ và kế hoạch đo thật | Đức Anh | Linh, Huy | Có công cụ hỗ trợ mô phỏng v2 và test; chờ Đức Anh review schema/clock, kế hoạch đo thật; xem mục 6.6 |
 | B0/B1, validation, metrics, test và demo | Huy | Linh | Đã triển khai và kiểm thử cục bộ bằng giả lập; chờ review code và phương pháp |
 | Quy ước đánh giá và tổng hợp báo cáo Tuần 3 | Huy | Linh, Đức Anh; nhóm/giảng viên review phương pháp | Đã có tài liệu/báo cáo; các quyết định khoa học còn mở chưa được khóa |
 
@@ -230,6 +230,34 @@ online hoặc review chéo. Push nhánh cá nhân không đồng nghĩa nghiệm
   được ignore và không nằm trong danh sách file thay đổi Git.
 - Các đường dẫn JSON ở mục 6.4 là artifact cục bộ, không có trong GitHub.
   Hướng dẫn runner ghi cách lấy CSV đúng version và chạy lại để tạo kết quả.
+
+### 6.6. Bản sửa hỗ trợ phần Linh và Đức Anh ngày 2026-10-10
+
+- **Phần Linh:** `software/data_io/split_manifest.py`,
+  `scripts/build_pulsedb_split.py` và `tests/test_split_manifest.py` có inventory,
+  split theo người, hash waveform độc lập ID/nhãn, kiểm tra bảo toàn mẫu và
+  metadata round-trip. [Hướng dẫn bàn giao](../../../docs/protocol/run_pulsedb_split.md)
+  ghi schema `pulsedb-split-v2`, đầu vào/pool phải review và giới hạn raw/ID.
+- **Phần Đức Anh:** `software/data_io/packet_simulation.py`,
+  `scripts/simulate_packets.py`, config tại `configs/hardware/packet_simulation.json`,
+  expected fixture tại `tests/fixtures/packet_simulation_expected.json` và test
+  `tests/test_packet_simulation.py`. Sáu case kiểm tra valid/missing/duplicate/
+  reordered/timestamp/offset, giữ gap và thời gian phân số chính xác, có
+  seed/hash/code/commit truy vết. [Schema và hướng dẫn](../../../docs/protocol/packet_simulation.md)
+  chỉ áp dụng SYNTHETIC; chờ Đức Anh review, không phải decoder firmware.
+- **Tích hợp B0:** runner kiểm tra `waveform_hash` khi cột này có mặt, từ chối
+  hash giao split dù `subject_id`/`sample_hash` khác nhau. Có regression test cho
+  train–val/test, hash lỗi và lặp cùng split. Không đọc nhãn test để đánh giá,
+  không đổi split/trọng số/B0; kiểm tra CSV không thay validator với inventory.
+- **Kiểm tra cục bộ:** Ruff và `git diff --check` đạt; full suite **199 passed
+  in 2.08s**, exit 0, chạy ngoài sandbox để dùng fixture Temp. Python vẫn
+  **3.13.12**, chưa thay kiểm chứng CI/runtime Python 3.11. Các test mới dùng
+  SYNTHETIC; không chạy raw PulseDB hoặc thiết bị trong lần tích hợp này.
+- **Còn chờ:** Linh bàn giao raw/config/checksum/pool được review, chạy hai lần
+  đối chiếu inventory/manifest; Đức Anh thống nhất version V0.1 trong Markdown
+  với V1 trong Word tại ref `40ede49`, clock/FIFO và kế hoạch đo 10 phút.
+  Các bước đo người chỉ thực hiện khi đủ điều kiện an toàn/phê duyệt theo repo.
+  CI và review chéo sẽ được kiểm tra trên PR; chưa nghiệm thu toàn bộ Tuần 3.
 
 ## 7. Khó khăn, Rủi ro và Vướng mắc kỹ thuật
 
