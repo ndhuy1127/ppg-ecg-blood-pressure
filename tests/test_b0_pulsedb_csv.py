@@ -1,6 +1,8 @@
 """Known-answer CSV integration and leakage checks using synthetic labels only."""
 
 import argparse
+import csv
+import io
 import json
 from pathlib import Path
 
@@ -64,6 +66,41 @@ def test_cross_split_hash_is_rejected():
     changed[2] = changed[2].replace("h2", "h0")
     with pytest.raises(ValueError, match="sample_hash"):
         evaluate_manifest(payload(changed))
+
+
+def waveform_payload(hashes):
+    stream = io.StringIO(newline="")
+    writer = csv.writer(stream)
+    writer.writerow(HEADER.strip().split(",") + ["waveform_hash"])
+    for row, fingerprint in zip(ROWS, hashes):
+        writer.writerow(row.split(",") + [fingerprint])
+    return stream.getvalue().encode()
+
+
+@pytest.mark.parametrize("index", [2, 4])
+def test_waveform_overlap_with_validation_or_test_is_rejected(index):
+    # Subject IDs and sample_hash remain distinct, as for content hashed with ID.
+    hashes = [str(i) * 64 for i in range(len(ROWS))]
+    hashes[index] = hashes[0]
+    with pytest.raises(ValueError, match="Repeated waveform_hash"):
+        evaluate_manifest(waveform_payload(hashes))
+
+
+def test_waveform_metadata_does_not_use_test_labels_or_drop_same_split_repeats():
+    hashes = [str(i) * 64 for i in range(len(ROWS))]
+    hashes[3] = hashes[2]
+    result = evaluate_manifest(waveform_payload(hashes))
+    assert result["B0_constant"] == {"SBP": 120, "DBP": 80}
+    assert result["split_counts"] == {"train": 2, "val": 2, "test": 1}
+    assert any("No waveform_hash shared" in line for line in result["validation_log"])
+
+
+@pytest.mark.parametrize("fingerprint", ["", "bad", "A" * 64, "g" * 64])
+def test_malformed_waveform_hash_is_rejected(fingerprint):
+    hashes = [str(i) * 64 for i in range(len(ROWS))]
+    hashes[4] = fingerprint
+    with pytest.raises(ValueError, match="lowercase SHA256"):
+        evaluate_manifest(waveform_payload(hashes))
 
 
 @pytest.mark.parametrize("label", ["NaN", "inf", "", "text"])

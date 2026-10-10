@@ -35,6 +35,7 @@ def evaluate_manifest(payload: bytes) -> dict:
     split_subjects = {split: set() for split in counts}
     subject_split: dict[str, str] = {}
     hash_split: dict[str, str] = {}
+    waveform_split: dict[str, str] = {}
     sample_keys: set[tuple[str, str]] = set()
     labels: dict[str, list[list[float]]] = {"train": [], "val": []}
     validation_ids: list[str] = []
@@ -60,6 +61,13 @@ def evaluate_manifest(payload: bytes) -> dict:
         if sample_hash in hash_split and hash_split[sample_hash] != split:
             raise ValueError("Repeated sample_hash across splits; review hash definition")
         hash_split[sample_hash] = split
+        if "waveform_hash" in fields:
+            fingerprint = row["waveform_hash"]
+            if len(fingerprint) != 64 or any(c not in "0123456789abcdef" for c in fingerprint):
+                raise ValueError("waveform_hash must be a lowercase SHA256")
+            if fingerprint in waveform_split and waveform_split[fingerprint] != split:
+                raise ValueError("Repeated waveform_hash across splits; review with Linh")
+            waveform_split[fingerprint] = split
         counts[split] += 1
         split_subjects[split].add(subject)
         if split in labels:
@@ -101,6 +109,9 @@ def evaluate_manifest(payload: bytes) -> dict:
             "No subject overlap between CSV splits",
             "Unique source/sample_id keys",
             "No sample_hash shared between splits; raw hash content not reverified",
+            ("No waveform_hash shared between splits; raw hash content not reverified"
+             if "waveform_hash" in fields else
+             "waveform_hash absent: waveform-only leakage not checked by this runner"),
             "Train/val labels validated by baseline and metrics modules",
             "Test BP labels were not converted or used in fitting/evaluation",
         ],

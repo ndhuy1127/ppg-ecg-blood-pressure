@@ -27,6 +27,14 @@ Runner kiểm tra header, metadata, khóa source/sample_id trùng, giao người
 sample_hash giao split. Nhãn train/val phải là số hữu hạn. Không tự bỏ dòng.
 Chỉ xem metadata của test để kiểm tra leakage, không dùng nhãn BP của test.
 
+Với CSV split v2 có cột `waveform_hash`, runner yêu cầu SHA256 lowercase hợp lệ
+và từ chối hash waveform xuất hiện ở nhiều split, kể cả khi ID/nhãn và
+`sample_hash` khác nhau. Bản lặp trong cùng split được giữ nguyên. CSV lịch sử
+không có cột này vẫn chạy và log ghi rõ chưa kiểm tra waveform-only leakage.
+Không đổi split, trọng số hoặc cách dùng nhãn test. Kiểm tra này không thay
+`validate_manifest(manifest, inventory)` của pipeline split: phải đối chiếu
+inventory, raw/hash và report bàn giao trước đánh giá chính thức.
+
 ## Chạy
 
 Mở `scripts/run_b0_pulsedb_csv.py` trong VSCode và bấm **Run Python File in
