@@ -1,0 +1,12 @@
+{
+  "source_type": "SYNTHETIC",
+  "config": "configs/hardware/packet_simulation.json",
+  "cases": {
+    "valid": {"issue_counts": {}, "ECG_packets": 4, "PPG_packets": 4, "PPG_gaps": 0, "offset_us": 0},
+    "missing": {"issue_counts": {"missing": 1}, "ECG_packets": 4, "PPG_packets": 3, "PPG_gaps": 1, "offset_us": 0},
+    "duplicate": {"issue_counts": {"duplicate": 1}, "ECG_packets": 4, "PPG_packets": 4, "PPG_gaps": 0, "offset_us": 0},
+    "reordered": {"issue_counts": {"out_of_order": 1}, "ECG_packets": 4, "PPG_packets": 4, "PPG_gaps": 0, "offset_us": 0},
+    "timestamp": {"issue_counts": {"timestamp_anomaly": 1}, "ECG_packets": 4, "PPG_packets": 3, "PPG_gaps": 1, "offset_us": 0},
+    "offset": {"issue_counts": {"channel_offset": 1}, "ECG_packets": 4, "PPG_packets": 4, "PPG_gaps": 0, "offset_us": 20000}
+  }
+}

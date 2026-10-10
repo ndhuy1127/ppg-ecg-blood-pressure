@@ -13,6 +13,7 @@ không có dataset thật hoặc dữ liệu người tham gia trong những tes
 | [test_smoke.py](test_smoke.py) | Import package, cấu trúc thư mục và phép tính NumPy | Mảng `[1.0, 2.0, 3.0, 4.0]`, đường dẫn package |
 | [test_pulsedb.py](test_pulsedb.py) | File thiếu, kiểm tra khóa trùng trên mảng tự tạo, reader từ chối sai số kênh và nhận gender M/F | File tạm rỗng; mock `mat73.loadmat` trả dữ liệu giả lập |
 | [test_split_manifest.py](test_split_manifest.py) | Validator đối chiếu inventory từ chối mất/thêm/trùng mẫu và leakage; hash/sort/tái lập; runner kế thừa reader và không ghi đè | SYNTHETIC, MAT loader mock, output trong thư mục tạm |
+| [test_packet_simulation.py](test_packet_simulation.py) | Sáu case packet, decoder validation, dữ liệu/timeline/gap/offset, tái lập và CLI | Chỉ SYNTHETIC; config và expected fixture, output tạm |
 
 Test khóa trùng trong `test_pulsedb.py` chưa chứng minh reader phát hiện trùng
 metadata trên dataset thật. Kết quả test không chứng minh split PulseDB,

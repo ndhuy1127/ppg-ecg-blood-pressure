@@ -11,9 +11,11 @@ mục gốc repository; demo còn hỗ trợ chạy trực tiếp từ thư mụ
 | [check_environment.py](check_environment.py) | Kiểm tra import thư viện và phép tính NumPy | Mảng tự tạo `[1.0, 2.0, 3.0]`; không nhận dataset | Phiên bản Python/thư viện, kết quả `[2.0, 4.0, 6.0]`; exit 0 khi đạt |
 | [run_b0_pulsedb_csv.py](run_b0_pulsedb_csv.py) | Fit B0 trên train, đánh giá val từ manifest CSV | Các cột trong bảng bàn giao của Linh; kiểm tra metadata mọi split, dùng nhãn train/val | Metrics tổng hợp và JSON truy vết trong `runs/`; không dùng nhãn test hoặc chạy B1 |
 | [build_pulsedb_split.py](build_pulsedb_split.py) | Tạo split có inventory đối chiếu từ reader repo | Một file raw và config/checksum/pool đã review; giữ mọi dòng reader | Inventory, manifest, config và report trong thư mục mới; không ghi đè bàn giao cũ |
+| [simulate_packets.py](simulate_packets.py) | Sinh/replay packet giả lập và kiểm tra lỗi | Config/seed SYNTHETIC, 6 case hoặc JSON giả lập | Packet, timeline/gap và report trong output mới; không phải đồng bộ phần cứng |
 
 Hướng dẫn runner CSV: [chạy B0 trên PulseDB](../docs/protocol/run_b0_pulsedb_csv.md).
 Hướng dẫn split mới: [inventory, config, hash và giới hạn](../docs/protocol/run_pulsedb_split.md).
+Hướng dẫn mô phỏng: [schema riêng, expected results và giới hạn](../docs/protocol/packet_simulation.md).
 Runner CSV có đầu vào riêng; các mô tả dữ liệu tự tạo bên dưới chỉ áp dụng demo.
 Có thể mở `run_b0_pulsedb_csv.py` và bấm **Run Python File in Terminal**:
 không truyền đối số thì script dùng `configs/data/b0_pulsedb_validation.json`

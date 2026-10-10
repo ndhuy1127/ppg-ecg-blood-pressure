@@ -1,0 +1,18 @@
+{
+  "schema_version": "synthetic-packet-v2",
+  "source_type": "SYNTHETIC",
+  "session_id": "SYN_SESSION_001",
+  "clock_id": "SYN_COMMON_CLOCK",
+  "seed": 20261010,
+  "start_timestamp_us": 1000000,
+  "sequence_start": 100,
+  "packet_count": 4,
+  "channels": {
+    "ECG": {"fs_hz": 512, "sample_count": 16},
+    "PPG": {"fs_hz": 128, "sample_count": 4}
+  },
+  "fault_channel": "PPG",
+  "fault_index": 1,
+  "offset_us": 20000,
+  "timestamp_tolerance_us": 1
+}
