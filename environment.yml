@@ -14,3 +14,4 @@ dependencies:
       - pytest==8.0.2
       - ruff==0.3.0
       - PyYAML==6.0.1
+      - mat73==0.65
