@@ -60,17 +60,17 @@ Nghiên cứu này được phân loại là **nghiên cứu có rủi ro tối 
   > - Tuyệt đối không cắm cáp sạc USB, không nối thiết bị với nguồn điện lưới ($220\text{V}/\text{AC}$) hoặc máy tính khi vòng đeo đang tiếp xúc với da người tham gia.
   > - Pin sử dụng phải có mạch bảo vệ ngắt quá áp, quá dòng và chống quá nhiệt (PCM module).
 - **Cách ly tín hiệu và tiếp xúc điện cực:**
-  - Mạch đo ECG sử dụng các tầng đệm khuếch đại có trở kháng đầu vào cực cao ($> 10\text{ M}\Omega$), đảm bảo dòng rò qua cơ thể luôn nằm trong giới hạn an toàn sinh học ($< 10\mu\text{A}$ theo chuẩn IEC 60601-1).
+  - Mạch đo ECG dùng tầng khuếch đại có trở kháng đầu vào cao và có điện trở hạn dòng/bảo vệ ở đầu vào điện cực. Trở kháng đầu vào cao **không tự bảo đảm** dòng rò an toàn: dòng rò qua người phải được đo trên bo mạch thực tế và so với giới hạn của IEC 60601-1 cho loại bộ phận ứng dụng tương ứng, trước khi đo trên người (checklist mục 7).
 
 ### 4.2. An toàn da liễu và Tiếp xúc quang học
 - **Vật liệu vỏ hộp và điện cực:**
   - Vỏ thiết bị in 3D bằng vật liệu nhựa sinh học an toàn (PLA/PETG) hoặc silicone y tế không độc hại, không có gờ sắc nhọn.
-  - Điện cực kim loại tiếp xúc da (thép không gỉ y tế 316L hoặc mạ vàng) không chứa niken gây dị ứng da.
+  - Điện cực kim loại tiếp xúc da: vật liệu chưa chốt (thép không gỉ, mạ vàng hoặc Ag/AgCl dùng gel theo [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md)). Thép không gỉ 316L có chứa niken, và lớp mạ vàng có thể nằm trên lớp lót niken; vì vậy phải hỏi tiền sử dị ứng kim loại và loại trừ người dị ứng niken nếu điện cực có niken.
 - **Cảm biến quang học PPG:**
   - Sử dụng chùm sáng LED xanh lá/đỏ/hồng ngoại với công suất phát quang cực thấp ($< 15\text{mW}$), không tạo nhiệt lượng gây bỏng rát hay tổn thương nhiệt biểu bì da khi đo liên tục.
 
 ### 4.3. Sự khó chịu do Vòng bít đo đối chứng (Reference Cuff)
-- Vòng bít bắp tay tự động bơm căng có thể gây cảm giác tức ép nhẹ tại bắp tay trong vòng $20 - 30\text{ giây}$.
+- Vòng bít bắp tay tự động bơm căng có thể gây cảm giác tức ép nhẹ tại bắp tay trong thời gian bơm và xả (protocol dự kiến khoảng $45 - 60\text{ giây}$ mỗi lần đo).
 - Giữa hai lần bơm bắp tay liên tiếp phải có khoảng nghỉ tối thiểu 2–3 phút để mạch máu tái tưới máu hoàn toàn, tránh ứ trệ tĩnh mạch cục bộ.
 
 ### 4.4. Tiêu chí dừng phiên đo ngay lập tức (Stopping Criteria)

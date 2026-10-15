@@ -24,7 +24,7 @@ $$\text{<subject\_id>\_<session\_id>\_<event\_id>\_<data\_type>.<ext>}$$
 ### Định danh (IDs):
 * **`subject_id`**: Mã tình nguyện viên/người tham gia (Ví dụ: `SUB001`, `SUB002`).
 * **`session_id`**: Mã phiên đo (Ví dụ: `S001`, `S002`).
-* **`event_id`**: Mã sự kiện/trạng thái trong phiên đo (Ví dụ: `E01_REST` - nghỉ ngơi, `E02_EXERCISE` - vận động).
+* **`event_id`**: Mã một lần đo cuff đối chứng trong phiên (Ví dụ: `E01`, `E02`). Mỗi `event_id` có tối đa một cặp nhãn SBP/DBP. Trạng thái đo (nghỉ, sau vận động nếu protocol cho phép) ghi ở trường metadata riêng, không mã hóa vào `event_id` (xem [định nghĩa mẫu và nhãn](protocol/week_02_sample_label_glossary.md)).
 
 **Ví dụ tên file chuẩn:**
 * `SUB001_S001_E01_raw.csv`

@@ -35,7 +35,7 @@ Theo kế hoạch tuần tại [docs/plans/WEEK_01.md](../../../docs/plans/WEEK_
 
 Huy đã có các bản thảo đầu ra Tuần 1 dưới đây. Dấu tích chỉ xác nhận có bản thảo hoặc ghi nhận kiểm tra lịch sử, không xác nhận review/phê duyệt. Task tạo Issue chưa có số Issue hoặc bằng chứng liên kết trong báo cáo này.
 
-- [x] **Ma trận tổng quan 12 bài báo khoa học (A):** Đã xác minh DOI và tiêu đề của 12 công trình; đã hiệu chỉnh các sai lệch số liệu được phát hiện. Đây là structured rapid review, chưa phải systematic review. Mọi con số dùng trong bản thảo bài báo phải có trích dẫn tới đúng bảng/hình/trang của nguồn gốc.
+- [x] **Ma trận tổng quan 12 bài báo khoa học (A):** Đã xác minh DOI và tiêu đề của 12 công trình. Lần đối chiếu nội dung ngày 2026-10-14 phát hiện và sửa thêm một số số liệu không có trong nguồn (xem ma trận v0.2). Đây là structured rapid review, chưa phải systematic review. Mọi con số dùng trong bản thảo bài báo phải có trích dẫn tới đúng bảng/hình/trang của nguồn gốc.
 - [x] **Bộ câu hỏi nghiên cứu RQ1–RQ3 (B):** Xây dựng chi tiết 3 câu hỏi nghiên cứu trung tâm bản v0.1 kèm đầy đủ giả thuyết $H_0/H_1$, biến đầu vào/đầu ra, hệ thống baseline đối chứng (Zero-change, PPG-only, PAT linear, ECG+PPG fusion), chỉ số đánh giá riêng biệt cho SBP và DBP, điều kiện kiểm định thống kê và phân tích rủi ro phương pháp luận.
 - [x] **Khung protocol nghiên cứu thực nghiệm v0.1 (C):** Thiết lập quy trình đo đối chứng đồng bộ ECG+PPG tại cổ tay với máy đo cuff bắp tay, quy tắc ghép cửa sổ tín hiệu (chỉ lấy cửa sổ trước khi bơm cuff), định nghĩa nghiêm ngặt một mẫu độc lập (1 lần đo cuff = 1 nhãn), chiến lược chia dữ liệu Subject-wise và Cross-session, và kế hoạch thống kê Bootstrap theo đối tượng.
 - [x] **Khung đạo đức v0.1 (D):** Có bản thảo quyền lợi, đồng thuận, tiêu chí dừng và giả danh hóa bằng `subject_id`; còn chờ đối chiếu chính sách dữ liệu và phê duyệt. **Không sạc thiết bị khi đang đeo**.
@@ -64,17 +64,17 @@ Huy đã có các bản thảo đầu ra Tuần 1 dưới đây. Dấu tích ch�
 Tóm tắt sơ bộ từ literature matrix; các số liệu và diễn giải dưới đây cần đối chiếu toàn văn trước khi dùng trong bài báo, không phải kết luận của dự án.
 
 1. **Mukkamala et al. (2015, IEEE TBME):** Tổng quan cơ sở PTT/PAT và vai trò PEP. Công thức $\text{PAT} = \text{PEP} + \text{PTT}$ là cách viết gọn; cần khai báo mốc ECG, không đồng nhất Q/QRS với R peak.
-2. **Zhang et al. (2011, J Appl Physiol):** Theo tóm tắt ma trận, thực nghiệm can thiệp thuốc trên động vật báo cáo RMSE PAT $10.4\text{ mmHg}$ và PTT $4.8\text{ mmHg}$. Các số cần đối chiếu nguồn; không suy rộng thành hiệu năng trên người hoặc prototype.
-3. **Payne et al. (2006, J Appl Physiol):** Khảo sát trên người về ảnh hưởng của thành phần trước tống máu tới quan hệ PAT–huyết áp.
+2. **Zhang et al. (2011, J Appl Physiol):** Thực nghiệm trên 6 con chó với nhiều can thiệp huyết động; với huyết áp trung bình (MBP), mô hình theo 1/PAT có RMSE 10,4 mmHg so với 4,8 mmHg của 1/PTT (abstract). Không suy rộng thành hiệu năng trên người hoặc prototype.
+3. **Payne et al. (2006, J Appl Physiol):** 12 nam khỏe mạnh dùng thuốc vận mạch; PEP chiếm 12–35% khoảng R → xung ngón tay, và PAT gần như không giải thích DBP/MAP khi chưa trừ PEP.
 4. **Yoshizawa et al. (2023, IEEE Sensors J):** Khảo sát nguy cơ rò rỉ khi chia dữ liệu tín hiệu; cần đối chiếu thiết kế split trong nguồn. Subject-wise là quy tắc dự án, không diễn giải bài này là tiêu chuẩn bắt buộc cho mọi nghiên cứu.
-5. **Kachuee et al. (2017, IEEE TBME):** Khai thác 21 đặc trưng hình thái PPG kết hợp PAT và các thuật toán học máy cổ điển (Ridge Regression, Random Forest) có hiệu chuẩn cá nhân.
-6. **Esmaili et al. (2017, IEEE TIM):** Đánh giá các mô hình hiệu chuẩn cá nhân hóa phi tuyến tính trên người khỏe mạnh, so sánh sai số khi có và không có bù trừ PEP.
+5. **Kachuee et al. (2017, IEEE TBME):** Kết hợp PAT với đặc trưng hình thái PPG trên khoảng 1.000 bản ghi MIMIC-II, có và không có hiệu chuẩn; số đặc trưng, thuật toán tốt nhất và MAE chưa xác minh vì mới đọc abstract.
+6. **Esmaili et al. (2017, IEEE TIM):** 32 người khỏe mạnh; so sánh PTT đo từ âm tim (PCG) với PAT đo từ ECG, ở ba mốc trên PPG (foot, đạo hàm cực đại, đỉnh), mô hình phi tuyến fit riêng từng người.
 7. **Ding et al. (2016, IEEE TBME):** Bổ sung tỷ số cường độ quang học PPG (PIR) nhằm phản ánh sự thay đổi đường kính mạch máu, giúp cải thiện độ ổn định khi theo dõi huyết áp liên tục.
-8. **Zhang Q. et al. (2017, BioMed Eng OnLine):** Nghiên cứu hệ thống một bên tay (single-arm ECG+PPG) trích xuất PAT tại cổ tay/cẳng tay; chưa phải bằng chứng cho cấu hình prototype của nhóm.
-9. **Vybornova et al. (2021, Blood Press Monit):** Theo ma trận, nghiên cứu 1 tháng về Aktiia có đánh giá theo ISO 81060-2; cần audit protocol/kết quả nguồn. Không suy rộng thành chứng nhận prototype hoặc mọi điều kiện theo dõi dài hạn.
-10. **Elgendi (2016, Bioengineering):** Khảo sát chỉ số chất lượng PPG ($s\text{SQI}$, $q\text{SQI}$); ngưỡng dự án vẫn cần kiểm tra và review.
-11. **Shen et al. (2024, Biomed Signal Process Control):** Đề xuất cơ chế định lượng độ bất định (Evidential Deep Learning) để từ chối các mẫu dự đoán không tin cậy trong ước lượng huyết áp không cuff.
-12. **Wang et al. (2023, Front Digit Health - PulseDB):** Bộ dữ liệu gồm 5,245,454 đoạn 10 giây từ 5,361 người; cung cấp các tập calibration-based, calibration-free và AAMI test để benchmark có thể tái lập.
+8. **Zhang Q. et al. (2017, BioMed Eng OnLine):** ECG và PPG cùng một cánh tay (cánh tay trên trái), 10 người, hai phiên trong cùng ngày, chỉ SBP; chưa phải bằng chứng cho cấu hình cổ tay của nhóm.
+9. **Vybornova et al. (2021, Blood Press Monit):** 86 người, theo dõi 1 tháng vòng Aktiia (chỉ PPG) theo protocol ISO 81060-2 mở rộng, điều chỉnh cho thiết bị cuffless. Không suy rộng thành chứng nhận cho prototype.
+10. **Elgendi (2016, Bioengineering):** So sánh 8 SQI cho PPG ngón tay; skewness tốt nhất. Ngưỡng của dự án vẫn cần kiểm tra trên dữ liệu riêng.
+11. **Shen et al. (2024, Biomed Signal Process Control):** Định lượng độ bất định cho ước lượng BP cuffless bằng mô hình tham số kết hợp mạng evidential (PEEL), trên 96 người MIMIC-III.
+12. **Wang et al. (2023, Front Digit Health - PulseDB):** Bộ dữ liệu gồm 5.245.454 đoạn 10 giây từ 5.361 người; có năm tập con (huấn luyện, kiểm thử có/không hiệu chuẩn, AAMI test, AAMI calibration) để benchmark có thể tái lập.
 
 ### 5.2. Tóm tắt bộ câu hỏi nghiên cứu RQ1–RQ3
 - **RQ1:** Đánh giá giá trị gia tăng của việc kết hợp ECG và PAT so với mô hình chỉ dùng PPG sau khi đã hiệu chuẩn cá nhân, trên các phiên đo tương lai. Baseline bắt buộc gồm: Zero-change, PPG-only, PAT linear và ECG+PPG fusion.
@@ -103,8 +103,8 @@ Bảng dưới là kết quả được ghi trong báo cáo ngày 2026-09-22, kh
 
 ## 7. Khó khăn, Rủi ro và Vướng mắc kỹ thuật
 
-1. **Rủi ro suy hao biên độ ECG tại cổ tay:** Việc đo ECG đạo trình I qua cổ tay và ngón tay đối diện có biên độ nhỏ ($< 100\mu\text{V}$) và rất dễ bị ảnh hưởng bởi nhiễu cử động. Cần phối hợp chặt chẽ với Đức Anh trong thiết kế phần cứng khuếch đại vi sai (INA) và điện cực tiếp xúc.
-2. **Hiện tượng trôi thời gian tiền tống máu ($\text{PEP}$ drift):** Khi đo lặp lại giữa các ngày, sự thay đổi tâm lý hoặc nhiệt độ phòng có thể làm biến đổi PEP, làm suy giảm mối liên hệ giữa PAT và huyết áp. Cần bù trừ bằng các đặc trưng hình thái PPG và tần số tim (HR).
+1. **Rủi ro chất lượng ECG tại cổ tay:** ECG đạo trình I qua cổ tay và ngón tay tay đối diện dùng điện cực khô, tiếp xúc phụ thuộc lực chạm nên dễ nhiễu cử động và trôi nền; biên độ thực tế cần đo trên prototype. ECG lấy trên cùng một tay (single-arm) còn yếu hơn nhiều. Cần phối hợp chặt chẽ với Đức Anh trong thiết kế phần cứng khuếch đại vi sai (INA) và điện cực tiếp xúc.
+2. **Hiện tượng trôi thời gian tiền tống máu ($\text{PEP}$ drift):** Khi đo lặp lại giữa các ngày, sự thay đổi tâm lý hoặc nhiệt độ phòng có thể làm biến đổi PEP, làm suy giảm mối liên hệ giữa PAT và huyết áp. Việc dùng đặc trưng hình thái PPG và HR để bù trừ là giả thuyết cần kiểm tra trong ablation, chưa có bằng chứng.
 3. **Cân đối giữa tỷ lệ từ chối (Rejection rate) và tính sẵn sàng của thiết bị:** Nếu đặt ngưỡng SQI và độ bất định quá khắt khe, số lượng kết quả đo bị hủy sẽ quá lớn, làm giảm trải nghiệm người dùng.
 
 ---

@@ -12,8 +12,9 @@ tuyệt đối**, riêng SBP và DBP. [Glossary Tuần 2](week_02_sample_label_g
 quy định đơn vị quan sát và chronology; [RQ v0.1](../research_questions_v0.1.md)
 là bản thảo cho ΔBP, Pearson, Bland–Altman và risk–coverage.
 
-Tên B0/B1 tuần này không đồng nghĩa với số thứ tự Baseline 1/2 trong RQ v0.1.
-B1 có thể tương ứng zero-change nếu mốc BP chính là trung bình hiệu chuẩn đó;
+Tên B0/B1 trong code không trùng với cách đánh số "Baseline 1/2" của RQ v0.1;
+bảng đối chiếu nằm ở [RQ v0.2, mục 7](../research_questions_v0.1.md). B1 tương
+ứng zero-change khi mốc $\text{BP}_0$ chính là trung bình các lần cuff hiệu chuẩn;
 code hiện không tính ΔBP hay chứng minh kết quả cross-session.
 
 Không có module baseline/metrics cùng chức năng trong workspace trước thay đổi.
