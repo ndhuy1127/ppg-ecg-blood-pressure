@@ -3,7 +3,7 @@
 > **Phiên bản:** v0.1
 > **Người biên soạn:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu
-> **Ngày lập:** 2026-09-22; **rà soát tài liệu:** 2026-10-01 (chưa phê duyệt).
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (đồng bộ với RQ v0.2, yêu cầu phần cứng V0 và nguồn bổ sung; chưa phê duyệt).
 > **Trạng thái:** Bản thảo đề xuất phương pháp luận (TUYỆT ĐỐI CHƯA THU THẬP DỮ LIỆU THẬT TRONG TUẦN 1)
 
 ---
@@ -32,7 +32,8 @@
 - **Hình thức:** Nghiên cứu thực nghiệm quan sát (observational prospective study), đo lặp lại theo chuỗi thời gian (repeated-measures longitudinal design).
 - **Cấu trúc phiên đo:** Mỗi người tham gia sẽ thực hiện ít nhất 3 phiên đo độc lập (`session_id`), phân bố qua tối thiểu 2–3 ngày khác nhau:
   - **Phiên 1 (Calibration Session):** Thu nhận mốc huyết áp chuẩn ban đầu ($\text{BP}_0$) và tín hiệu nền để thiết lập tham số hiệu chuẩn cá nhân.
-  - **Phiên 2 & Phiên 3 (Evaluation Sessions):** Thu nhận tín hiệu và huyết áp ở các thời điểm khác nhau (ví dụ: sáng/chiều, sau nghỉ ngơi, sau vận động nhẹ) để đánh giá khả năng theo dõi biến thiên $\Delta\text{BP}$ trong tương lai.
+  - **Phiên 2 & Phiên 3 (Evaluation Sessions):** Thu nhận tín hiệu và huyết áp ở các thời điểm khác nhau (ví dụ: sáng/chiều, khác ngày) theo cùng quy trình nghỉ ổn định ở mục 6.1 để đánh giá khả năng theo dõi $\Delta\text{BP}$ ở phiên sau. Các can thiệp làm thay đổi huyết áp (ví dụ vận động nhẹ) chưa thuộc protocol v0.1; chỉ thêm khi đã được duyệt đạo đức (xem mục 11).
+- **Hệ quả cần lưu ý:** Ở người trẻ khỏe mạnh đo lúc nghỉ, $\Delta\text{BP}$ giữa các phiên có thể nhỏ. Khi đó baseline zero-change (dự đoán $\Delta\text{BP} = 0$) đã có sai số thấp, và mô hình khó thể hiện khác biệt. Mukkamala et al. (2021, [10.1161/HYPERTENSIONAHA.121.17747](https://doi.org/10.1161/HYPERTENSIONAHA.121.17747)) chỉ ra rằng thiết bị có hiệu chuẩn có thể trông chính xác chỉ vì BP ít thay đổi, nên phải báo cáo sai số của baseline chỉ dùng BP hiệu chuẩn và độ lệch chuẩn của $\Delta\text{BP}$ tham chiếu cùng với sai số mô hình.
 
 ---
 
@@ -40,7 +41,7 @@
 
 ### 4.1. Cỡ mẫu dự kiến
 - Dự kiến $N = 15 - 20$ tình nguyện viên khỏe mạnh (sinh viên/cán bộ tại trường, độ tuổi 18–35).
-- Cỡ mẫu này phù hợp cho giai đoạn thử nghiệm nguyên mẫu kỹ thuật (feasibility phase), đủ cung cấp $60 - 100$ lượt đo đối chứng độc lập phục vụ kiểm định thống kê cặp.
+- Đây là cỡ mẫu khả thi cho giai đoạn thử nghiệm nguyên mẫu (feasibility), chưa dựa trên phân tích power. Với 3 phiên và vài lần cuff mỗi phiên, dự kiến có khoảng $60 - 100$ lần đo cuff hợp lệ; các lần đo này lặp trong cùng người nên **không phải 60–100 quan sát độc lập**. Đơn vị cho kiểm định cặp là người ($n = 15 - 20$). Cỡ mẫu chính thức cần được tính lại từ dữ liệu pilot.
 
 ### 4.2. Tiêu chí lựa chọn (Inclusion Criteria)
 - Độ tuổi từ 18 đến 35 tuổi, có đầy đủ năng lực hành vi dân sự.
@@ -49,7 +50,7 @@
 
 ### 4.3. Tiêu chí loại trừ (Exclusion Criteria)
 - Người có tiền sử tăng huyết áp bệnh lý, hạ huyết áp tư thế, loạn nhịp tim (rung nhĩ, ngoại tâm thu dày) hoặc đang sử dụng thuốc tác động đến hệ tim mạch/hệ thần kinh giao cảm (thuốc chẹn beta, giãn mạch, an thần).
-- Người có vết thương hở, viêm da, dị ứng hoặc kích ứng tiếp xúc tại vùng cổ tay đeo thiết bị.
+- Người có vết thương hở, viêm da, dị ứng hoặc kích ứng tiếp xúc tại vùng cổ tay đeo thiết bị; người có tiền sử dị ứng kim loại (niken) nếu điện cực được chọn có chứa niken.
 - Người mang máy tạo nhịp tim hoặc thiết bị cấy ghép điện tử trong cơ thể.
 - Phụ nữ đang mang thai hoặc nghi ngờ có thai.
 
@@ -65,7 +66,8 @@
   - *Điện cực 3 (Mặt trên thiết bị):* Khi đo, người tham gia dùng ngón trỏ hoặc ngón cái của **tay đối diện (tay phải)** chạm nhẹ lên điện cực kim loại mặt trên của vỏ thiết bị để tạo thành vòng dẫn truyền qua tim (Lead I khép kín).
 
 ### 5.2. Vị trí vòng bít đo đối chứng (Reference Cuff)
-- Sử dụng máy đo huyết áp bắp tay tự động đạt chuẩn chứng nhận y tế (Omron HEM-series đã kiểm định theo chuẩn AAMI/ESH/ISO).
+- Sử dụng máy đo huyết áp bắp tay tự động có kết quả validation lâm sàng đã công bố theo protocol AAMI/ESH/ISO cho đúng model sử dụng. Model cụ thể chưa chốt (xem checklist mục 12); không coi "cùng hãng" là đã được validate.
+- Sai số của máy cuff truyền thẳng vào nhãn và vào mốc hiệu chuẩn $\text{BP}_0$; AHA scientific statement về thiết bị cuffless (Cohen et al., 2025, [10.1161/HYP.0000000000000254](https://doi.org/10.1161/HYP.0000000000000254)) nhấn mạnh độ chính xác của thiết bị cuffless phụ thuộc mạnh vào cuff dùng để hiệu chuẩn.
 - **Bố trí chính đề xuất, chờ phê duyệt:** prototype đeo ở cổ tay trái; cuff đối chứng đặt ở bắp tay phải. Sau khi khóa protocol, không đổi bên tùy từng lượt đo. Quy trình đo hai tay và tiêu chí chọn bên/loại trừ cần được giảng viên review trước khi thu dữ liệu chính.
 - Kích thước vòng bít phải phù hợp với chu vi bắp tay của người tham gia.
 
@@ -113,7 +115,8 @@ Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, g�
 
 ### 6.3. Đồng bộ thời gian phần cứng giữa ECG và PPG
 - ECG và PPG cần cùng quy chiếu thời gian hoặc ánh xạ clock được kiểm chứng; không mặc định hai AFE lấy mẫu đồng thời chỉ vì dùng cùng MCU.
-- Đề xuất ban đầu của protocol: PPG 100–250 Hz, ECG 250–500 Hz. Packet schema v0.1 tại ref cục bộ `origin/dev/ducanh` (`e13d669`, 2026-09-30), tệp `configs/hardware/Packet_Schema_V0.1.md`, đề xuất ECG **512 SPS**, PPG AFE/tần số chưa chốt. Đây là khác biệt chờ Huy–Đức Anh–Linh review, không phải cấu hình đã khóa hoặc số đo thực.
+- Tần số lấy mẫu chưa thống nhất giữa các tài liệu: protocol v0.1 đề xuất PPG 100–250 Hz, ECG 250–500 Hz; [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md) chọn MAX30001 (ECG) và MAX30101 (PPG) với mục tiêu 500 Hz cho cả hai kênh; packet schema v0.1 tại ref `origin/dev/ducanh` (`e13d669`) đề xuất ECG **512 SPS**. Tần số cuối cùng phải là giá trị mà từng AFE hỗ trợ theo datasheet và phải được đo lại trên thiết bị. Đây là điểm chờ Đức Anh chốt cùng Huy và Linh, không phải cấu hình đã khóa.
+- Với độ phân giải thời gian, mỗi mẫu ở 500 Hz là 2 ms; sai số định vị R peak và PPG foot cộng với sai số đồng bộ hai kênh đi thẳng vào PAT, nên cần đo jitter/offset thực tế trước khi diễn giải các thay đổi PAT cỡ vài ms.
 - Phải phân biệt timestamp **lấy mẫu**, timestamp **đọc FIFO** và thời điểm **nhận gói tại PC**. Counter MCU không tự loại bỏ độ trễ sensor/FIFO, sai lệch clock hoặc jitter. Cần ghi clock, đơn vị, tần số theo kênh, mất mẫu và cách suy ra thời điểm từng mẫu từ timestamp mẫu đầu gói.
 - Marker bắt đầu bơm cuff (`t0`) phải cùng clock hoặc có ánh xạ có thể kiểm tra. Không dịch PPG để trùng đỉnh R vì sẽ mất độ trễ cần tính PAT.
 
@@ -180,15 +183,18 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 - **Bootstrap theo đối tượng (Subject-level Bootstrapping):**
   - Khi ước lượng khoảng tin cậy 95% (95% CI) cho MAE, phải tiến hành lấy mẫu lại có hoàn lại **theo từng người tham gia (`subject_id`)**, sau đó tính sai số trên toàn bộ các mẫu của người đó.
   - Tuyệt đối **KHÔNG bootstrap theo từng cửa sổ đo riêng rẽ**, vì điều đó vi phạm giả định độc lập quan sát (i.i.d).
-- **Kiểm định giả thuyết:**
-  - So sánh mô hình kết hợp ECG+PPG với mô hình PPG-only bằng kiểm định phi tham số Wilcoxon signed-rank test cặp trên từng đối tượng. Ngưỡng ý nghĩa thống kê là $\alpha = 0.05$.
+- **Kiểm định giả thuyết (đề xuất, chờ duyệt):**
+  - Phép so sánh chính của RQ1 là mô hình PPG-only với mô hình PPG + PAT, cùng thuật toán và trên **cùng tập lần đo** có cả ECG và PPG đạt chất lượng (xem [RQ v0.2](../research_questions_v0.1.md), mục 4.C).
+  - Hiệu ứng chính là chênh lệch MAE theo từng người; báo cáo trung bình và CI 95% bootstrap theo người. Wilcoxon signed-rank cặp theo người ($\alpha = 0.05$) là phân tích hỗ trợ.
+  - SBP và DBP là hai phép kiểm định; cách hiệu chỉnh đa kiểm định (ví dụ Holm) phải chọn trước khi mở test.
+  - Luôn báo cáo kèm baseline zero-change và SD của $\Delta\text{BP}$ tham chiếu.
 
 ---
 
 ## 10. Quản lý dữ liệu thiếu và Dữ liệu suy hao
 
 - Trường hợp một lượt đo bị mất nhãn cuff (do lỗi máy đo bắp tay): Toàn bộ lượt đo đó bị hủy, không đưa vào tập huấn luyện hay kiểm thử.
-- Trường hợp tín hiệu ECG bị nhiễu không bắt được đỉnh R nhưng PPG đạt chuẩn: Lượt đo được giữ lại cho nhánh phân tích *PPG-Only*, nhưng bị loại khỏi nhánh phân tích *ECG+PPG/PAT* (ghi nhận rõ tỷ lệ mẫu mất kênh).
+- Trường hợp tín hiệu ECG bị nhiễu không bắt được đỉnh R nhưng PPG đạt chuẩn: lượt đo bị loại khỏi phép so sánh chính PPG-only vs PPG + PAT (để hai mô hình được đánh giá trên cùng tập), nhưng được giữ cho phân tích phụ PPG-only trên toàn bộ lượt đo. Ghi rõ tỷ lệ lượt đo mất ECG theo từng người, vì mất ECG không ngẫu nhiên có thể làm lệch kết quả.
 - Không áp dụng phương pháp tự điền nhãn huyết áp bằng trung bình (imputation) cho biến đầu ra.
 
 ---
@@ -197,7 +203,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 
 | Rủi ro kỹ thuật | Khả năng | Mức độ | Biện pháp phòng ngừa và xử lý |
 |---|---|---|---|
-| Biên độ ECG tại cổ tay quá nhỏ, SNR thấp | Cao | Cao | Bố trí điện cực ngón tay đối diện (chạm mặt trên) để tăng diện tích đạo trình Lead I; thiết kế bộ lọc phần cứng dải thông $0.5 - 40\text{ Hz}$ kết hợp bộ khuếch đại đo lường có CMRR $> 100\text{ dB}$. |
+| ECG cổ tay–ngón tay nhiễu, SNR thấp | Cao | Cao | Dùng ngón tay của tay đối diện chạm điện cực mặt trên để tạo đạo trình Lead I qua hai tay (tín hiệu mạnh hơn nhiều so với ECG lấy trên cùng một tay); thiết kế lọc dải thông khoảng $0.5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn); so sánh điện cực khô với Ag/AgCl dùng gel theo [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md). |
 | Nhiễu trôi đường nền PPG do lỏng dây đeo | Trung bình | Trung bình | Bổ sung cơ chế hiển thị SQI trực quan trên giao diện thu thập; hướng dẫn kỹ thuật viên siết chặt vòng vừa đủ trước khi bắt đầu đếm ngược 60 giây. |
 | Biên độ biến thiên huyết áp tự nhiên giữa các phiên quá nhỏ ($< 5\text{ mmHg}$) | Trung bình | Cao | Bổ sung bài test kích hoạt sinh lý nhẹ trong protocol (ví dụ: tư thế ngồi xổm đứng dậy nhẹ nhàng hoặc ngâm tay nước ấm) ở các tuần sau khi đã được duyệt đạo đức. |
 | Người tham gia cử động tay trong khi đo | Cao | Trung bình | Tích hợp thuật toán tự động hủy lượt đo và yêu cầu đo lại nếu SQI tụt dưới ngưỡng cho phép. |

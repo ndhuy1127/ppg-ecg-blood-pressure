@@ -1,0 +1,30 @@
+{
+  "version": "features-sqi-v0",
+  "status": "PRELIMINARY_UNREVIEWED_NOT_TEST_TUNED",
+  "signal": {
+    "flat_std": 1e-8,
+    "min_beats": 3,
+    "refractory_s": 0.4,
+    "prominence_fraction": 0.2,
+    "foot_lookback_s": 0.5,
+    "pat_min_s": 0.08,
+    "pat_max_s": 0.4,
+    "gap_factor": 1.5,
+    "sampling_rtol": 0.05,
+    "sampling_atol_s": 1e-6,
+    "shape_min_correlation": 0.8,
+    "edge_s": 0.1,
+    "ecg_polarity": 1,
+    "ppg_polarity": 1,
+    "filter_mode": "none",
+    "ecg_band_hz": [0.5, 40.0],
+    "ppg_band_hz": [0.5, 8.0],
+    "filter_order": 2
+  },
+  "bootstrap": {
+    "seed": 20261013,
+    "repetitions": 2000,
+    "confidence": 0.95,
+    "min_subjects": 2
+  }
+}

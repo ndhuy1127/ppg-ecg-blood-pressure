@@ -104,7 +104,7 @@ Chưa điền kết quả khi chưa có phần cứng, raw thật và log cấu 
 ## Nguồn và điểm cần duyệt
 
 - [Mukkamala et al., 2015](https://doi.org/10.1109/TBME.2015.2441951): phân biệt PTT/PAT và các giới hạn mô hình hóa BP.
-- [Gao et al., 2016](https://doi.org/10.14814/phy2.12768): ảnh hưởng của thành phần trước tống máu tới quan hệ PAT–BP.
-- [Yamashita et al., 2015](https://doi.org/10.1186/2197-425X-3-S1-A588): khác biệt giữa mốc Q và R khi xác định khoảng trước tống máu.
+- [Gao et al., 2016](https://doi.org/10.14814/phy2.12768): thực nghiệm trên lợn; PAT tương quan với BP kém hơn PTT xâm lấn và tác giả quy phần kém hơn cho thành phần PEP.
+- [Yamashita et al., 2015](https://doi.org/10.1186/2197-425X-3-S1-A588): abstract hội nghị trên 6 con lợn; PEP tính từ R và từ Q tương quan chặt nhưng lệch nhau có hệ thống. Bằng chứng yếu, chỉ dùng để minh họa vì sao phải khai báo mốc.
 - [Wang et al., PulseDB](https://doi.org/10.3389/fdgth.2022.1090854): cấu trúc ECG/PPG/ABP của dữ liệu công khai.
 - [Protocol v0.1](protocol_outline_v0.1.md) và [chính sách dữ liệu](../DATA_POLICY.md). Nhóm cần duyệt định nghĩa mốc ECG/PPG foot, schema logger và cách xử lý cửa sổ trước khi triển khai.

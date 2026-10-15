@@ -13,14 +13,22 @@ cứu khả năng ước lượng biến thiên huyết áp giữa các phiên �
 ECG. Sản phẩm hiện chỉ phục vụ nghiên cứu, không phải thiết bị y tế và không
 được dùng để chẩn đoán hay đưa ra quyết định điều trị.
 
-## Câu hỏi nghiên cứu chính
+## Câu hỏi nghiên cứu
 
-> Việc bổ sung ECG và PAT có cải thiện khả năng dự đoán ΔSBP và ΔDBP qua các
-> phiên đo so với chỉ sử dụng PPG hay không?
+Bản thảo v0.1, chờ nhóm và giảng viên duyệt (chi tiết trong
+[docs/research_questions_v0.1.md](docs/research_questions_v0.1.md)):
+
+1. **RQ1 (câu hỏi chính):** Sau khi hiệu chuẩn bằng một lần đo cuff, việc bổ
+   sung ECG để tính PAT có làm giảm sai số dự đoán ΔSBP và ΔDBP ở các phiên đo
+   sau so với mô hình chỉ dùng PPG hay không?
+2. **RQ2:** Sai số thay đổi bao nhiêu khi chuyển từ chia ngẫu nhiên theo cửa sổ
+   (có rò rỉ dữ liệu) sang chia theo người và chia theo phiên đo?
+3. **RQ3:** Từ chối dự đoán dựa trên SQI và độ bất định có cho sai số thấp hơn
+   so với từ chối ngẫu nhiên ở cùng tỷ lệ giữ lại (coverage) không?
 
 Trong dự án này, **PAT (Pulse Arrival Time)** là thời gian từ đỉnh R của ECG đến
-chân sóng PPG. PAT bao gồm cả thành phần tiền tống máu nên **không được gọi là
-PTT thực sự**.
+chân sóng PPG. PAT gồm cả thời gian tiền tống máu (PEP), `PAT = PEP + PTT`, nên
+**không được gọi là PTT**.
 
 ## Thành viên và trách nhiệm
 
@@ -65,11 +73,12 @@ python -m pip install -r requirements.txt
 
 ~~~bash
 conda env create -f environment.yml
-conda activate ppg-ecg-bp
+conda activate ppg-ecg-env
 ~~~
 
-PyTorch chưa được thêm ở giai đoạn dựng khung để giữ CI gọn nhẹ. Thư viện này
-sẽ được bổ sung khi dự án bắt đầu giai đoạn xây dựng mô hình.
+Reader PulseDB cần thêm `mat73` (đã có trong `requirements.txt`). PyTorch và
+XGBoost chưa có trong dependency; thành viên triển khai mô hình sẽ bổ sung kèm
+phiên bản cố định khi cần.
 
 ## Chạy kiểm tra
 
@@ -103,16 +112,15 @@ lượng lớn, bí mật, token hay tệp môi trường. Chỉ dữ liệu m�
 
 ## Trạng thái dự án
 
-Dự án đang ở tuần 1 trong lộ trình 28 tuần. Các sản phẩm dự kiến của tuần 1:
+Dự án đang ở tuần 4 trong lộ trình 28 tuần. Tóm tắt theo mức bằng chứng:
 
-- Repository có cấu trúc thống nhất và CI hoạt động.
-- BOM v0.1 và sơ đồ khối phần cứng.
-- Ít nhất hai phương án điện cực ECG.
-- Ma trận 10–12 tài liệu.
-- Câu hỏi nghiên cứu được thống nhất.
-- Khung protocol và hồ sơ đạo đức v0.1.
-- Báo cáo tuần 1.
+| Mức | Nội dung |
+| --- | --- |
+| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; generator/replay packet giả lập; đặc trưng PPG/HR/PAT, SQI v0 và bootstrap theo người (Tuần 4, chưa review) |
+| Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3); nguồn raw và pool chưa nghiệm thu |
+| Bản thảo chờ duyệt | Câu hỏi nghiên cứu, protocol, ethics, tổng quan tài liệu, BOM và thiết kế mạch |
+| Chưa có | Phần cứng lắp ráp, bản ghi ECG/PPG của nhóm, dữ liệu cuff, mô hình ΔBP và mọi kết quả trả lời RQ1–RQ3 |
 
-Danh sách và người phụ trách chi tiết nằm tại
-[docs/plans/WEEK_01.md](docs/plans/WEEK_01.md). Trạng thái thực tế phải được cập
-nhật trong [reports/weekly/week_01/README.md](reports/weekly/week_01/README.md).
+Kết quả trên dữ liệu giả lập chỉ kiểm tra code, không phải hiệu năng ước lượng
+huyết áp. Kế hoạch từng tuần nằm trong [docs/plans/](docs/plans/README.md); trạng
+thái và bằng chứng nằm trong báo cáo tuần tại [reports/weekly/](reports/weekly/).

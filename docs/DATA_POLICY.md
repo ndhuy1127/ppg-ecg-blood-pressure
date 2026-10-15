@@ -24,7 +24,10 @@ Dữ liệu nghiên cứu phải dùng các khóa:
 
 - **subject_id**: mã người tham gia đã giả danh.
 - **session_id**: mã phiên đo.
-- **event_id**: mã sự kiện hoặc đoạn tín hiệu trong phiên.
+- **event_id**: mã một lần đo cuff đối chứng trong phiên. Một `event_id` tạo
+  tối đa một cặp nhãn SBP/DBP; các cửa sổ tín hiệu của lần đo đó dùng
+  `window_id` riêng (xem
+  [định nghĩa mẫu và nhãn](protocol/week_02_sample_label_glossary.md)).
 
 Không dùng tên, số điện thoại hoặc mã bệnh án làm bất kỳ khóa nào.
 

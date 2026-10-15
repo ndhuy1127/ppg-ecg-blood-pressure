@@ -3,10 +3,20 @@
 Lưu protocol và lịch sử phiên bản. Protocol cần xác định quy trình đo, biến đầu
 ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phân tích.
 
-﻿# Protocol nghiên cứu
+## Protocol và định nghĩa phương pháp
 
-Lưu trữ protocol và lịch sử phiên bản. Protocol xác định quy trình đo, biến đầu ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phân tích.
+- [Khung protocol nghiên cứu thực nghiệm v0.1](protocol_outline_v0.1.md): thiết
+  kế đo lặp nhiều phiên, quy trình đo đối chứng bằng cuff, ghép cửa sổ tín hiệu
+  và kế hoạch phân tích thống kê. Bản thảo, chưa được duyệt.
+- [Định nghĩa mẫu, nhãn và thuật ngữ (Tuần 2)](week_02_sample_label_glossary.md):
+  PAT/PTT/PEP/PWA, đơn vị quan sát, cửa sổ ứng viên và metadata tối thiểu.
+- [Baseline B0/B1 và chỉ số đánh giá (Tuần 3)](week_03_baselines_metrics.md):
+  công thức B0/B1, MAE/bias/SD và đặc tả các chỉ số mở rộng.
+- [Đặc trưng, SQI v0 và bootstrap theo người (Tuần 4)](week04_features_sqi_bootstrap.md):
+  giao diện trích đặc trưng, mốc R/foot/PAT và CI bootstrap. Sơ bộ, chưa review.
 
-## Danh mục tài liệu tuần 1
-- [Khung Protocol Nghiên cứu Thực nghiệm v0.1](protocol_outline_v0.1.md): Bản thảo khung protocol nghiên cứu, thiết kế thực nghiệm, quy trình đo đối chứng, nguyên tắc ghép cửa sổ và kế hoạch phân tích thống kê.
+## Hướng dẫn chạy
 
+- [Chạy B0 trên CSV PulseDB](run_b0_pulsedb_csv.md)
+- [Tạo inventory và split PulseDB](run_pulsedb_split.md)
+- [Sinh và replay packet giả lập](packet_simulation.md)

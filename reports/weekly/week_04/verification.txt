@@ -1,0 +1,22 @@
+﻿Week 04 Huy verification after review fixes - 2026-10-13
+Base commit 8472721; uncommitted changes; fixture only, no public/hardware validation
+COMMANDS: python -B -m pytest -q -p no:cacheprovider; python -m ruff check .; python scripts/check_environment.py; python -m pip check; python scripts/demo_week04_huy.py
+pytest_exit=0
+ruff_exit=0
+environment_exit=0
+pip_check_exit=0
+demo_exit=0
+........................................................................ [ 28%]
+........................................................................ [ 56%]
+........................................................................ [ 84%]
+.........................................                                [100%]
+257 passed in 5.69s
+Python: 3.13.12
+Libraries imported: numpy=2.5.3, scipy=1.18.1, pandas=3.0.6, matplotlib=3.11.2, scikit-learn=1.9.1, pyyaml=6.0.3
+NumPy result: [2.0, 4.0, 6.0]
+No broken requirements found.
+{"input_segments": 5, "ppg_feature_segments": 2, "pat_segments": 1, "flagged_segments": 4, "flag_counts": {"pat:alignment_unverified": 1, "pat:too_few_pairs": 4, "pat:unmatched_beats": 3, "ppg:flat": 1, "ppg:insufficient_foot_intervals": 3, "ppg:missing": 1, "ppg:nonfinite": 1, "ppg:too_few_feet": 3, "ppg:too_few_peaks": 3}}
+Python 3.11 unavailable: py -0p found none; Get-Command only Python 3.13
+artifact_check_exit=0
+PASS artifact hashes, timing-sensitive provenance, JSON and whitespace
+diff_check_exit=0
