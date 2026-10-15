@@ -1,0 +1,6 @@
+source_type,case,ppg_std,ppg_amplitude_median,ppg_rise_time_median_ms,ppg_width50_median_ms,ppg_hr_bpm,ecg_hr_bpm,pat_median_ms,pat_iqr_ms,flags
+SYNTHETIC,0,0.28487814158961994,0.9999999999999996,160.00000000000014,200.00000000000017,60.0,60.0,200.00000000000017,5.684341886080802e-14,
+SYNTHETIC,1,,,,,,60.0,,,pat:too_few_pairs;pat:unmatched_beats;ppg:insufficient_foot_intervals;ppg:missing;ppg:too_few_feet;ppg:too_few_peaks
+SYNTHETIC,2,,,,,,60.0,,,pat:too_few_pairs;pat:unmatched_beats;ppg:flat;ppg:insufficient_foot_intervals;ppg:too_few_feet;ppg:too_few_peaks
+SYNTHETIC,3,,,,,,60.0,,,pat:too_few_pairs;pat:unmatched_beats;ppg:insufficient_foot_intervals;ppg:nonfinite;ppg:too_few_feet;ppg:too_few_peaks
+SYNTHETIC,4,0.28487814158961994,0.9999999999999996,160.00000000000014,200.00000000000017,60.0,60.0,,,pat:alignment_unverified;pat:too_few_pairs

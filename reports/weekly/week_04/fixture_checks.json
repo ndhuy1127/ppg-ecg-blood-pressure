@@ -1,0 +1,800 @@
+{
+  "source_type": "SYNTHETIC",
+  "config_sha256": "8999786f4bc86c69653d1ae1510f1980817e053dc52f88c3f17d5f902c0a7d33",
+  "commit": "8472721b4e30738fed415ee098f35fa6d541a4bf",
+  "dirty": true,
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.5.3"
+  },
+  "expected": {
+    "r_times_s": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0
+    ],
+    "foot_times_s": [
+      1.2,
+      2.2,
+      3.2,
+      4.2,
+      5.2,
+      6.2,
+      7.2,
+      8.2
+    ],
+    "pat_ms": 200,
+    "rise_ms": 160,
+    "width50_ms": 200,
+    "hr_bpm": 60
+  },
+  "summary": {
+    "input_segments": 5,
+    "ppg_feature_segments": 2,
+    "pat_segments": 1,
+    "flagged_segments": 4,
+    "flag_counts": {
+      "pat:alignment_unverified": 1,
+      "pat:too_few_pairs": 4,
+      "pat:unmatched_beats": 3,
+      "ppg:flat": 1,
+      "ppg:insufficient_foot_intervals": 3,
+      "ppg:missing": 1,
+      "ppg:nonfinite": 1,
+      "ppg:too_few_feet": 3,
+      "ppg:too_few_peaks": 3
+    }
+  },
+  "rows": [
+    {
+      "version": "features-sqi-v0",
+      "metadata": {
+        "sample_id": "SYN_CASE_0",
+        "subject_id": "SYN_001",
+        "source": "analytic_fixture_v1",
+        "source_sha256": "cd343bdb7e9ccd77cac40a73fa459f0aab76d86791ab9e64b1b4945a3a0c6928",
+        "raw_index": 0,
+        "split": "val",
+        "source_type": "SYNTHETIC"
+      },
+      "features": {
+        "ppg_std": 0.28487814158961994,
+        "ppg_amplitude_median": 0.9999999999999996,
+        "ppg_rise_time_median_ms": 160.00000000000014,
+        "ppg_width50_median_ms": 200.00000000000017,
+        "ppg_hr_bpm": 60.0,
+        "ecg_hr_bpm": 60.0,
+        "pat_median_ms": 200.00000000000017,
+        "pat_iqr_ms": 5.684341886080802e-14
+      },
+      "missing_reasons": {},
+      "quality": {
+        "ecg_finite_fraction": 1.0,
+        "ecg_std": 0.14270482657090652,
+        "ecg_peak_count": 8,
+        "ppg_finite_fraction": 1.0,
+        "ppg_std": 0.28487814158961994,
+        "ppg_peak_count": 8,
+        "ppg_foot_count": 8,
+        "ppg_shape_correlation": 0.9999999999999998,
+        "pat_pair_count": 8,
+        "pat_unmatched_r_count": 0,
+        "pat_unmatched_foot_count": 0,
+        "pat_pair_fraction": 1.0
+      },
+      "flags": [],
+      "flagged": false,
+      "unavailable": {
+        "motion": "No IMU",
+        "saturation": "No ADC rails",
+        "ac_dc": "No physical DC/unit evidence"
+      },
+      "fiducials": {
+        "r_times_s": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0
+        ],
+        "foot_times_s": [
+          1.2,
+          2.2,
+          3.2,
+          4.2,
+          5.2,
+          6.2,
+          7.2,
+          8.2
+        ],
+        "ppg_peak_times_s": [
+          1.36,
+          2.36,
+          3.36,
+          4.36,
+          5.36,
+          6.36,
+          7.36,
+          8.36
+        ],
+        "pairs": [
+          [
+            0,
+            0,
+            199.99999999999994
+          ],
+          [
+            1,
+            1,
+            200.00000000000017
+          ],
+          [
+            2,
+            2,
+            200.00000000000017
+          ],
+          [
+            3,
+            3,
+            200.00000000000017
+          ],
+          [
+            4,
+            4,
+            200.00000000000017
+          ],
+          [
+            5,
+            5,
+            200.00000000000017
+          ],
+          [
+            6,
+            6,
+            200.00000000000017
+          ],
+          [
+            7,
+            7,
+            199.9999999999993
+          ]
+        ]
+      },
+      "processing": {
+        "filter_mode": "none",
+        "alignment_basis": "Analytic common seconds axis; no upstream processing",
+        "ecg_fs_hz": 250,
+        "ppg_fs_hz": 125
+      }
+    },
+    {
+      "version": "features-sqi-v0",
+      "metadata": {
+        "sample_id": "SYN_CASE_1",
+        "subject_id": "SYN_001",
+        "source": "analytic_fixture_v1",
+        "source_sha256": "3e00ec2f8663e9e3d443e233fcfd6f617c162c9a09a28c47dcf86bccf25aaf53",
+        "raw_index": 0,
+        "split": "val",
+        "source_type": "SYNTHETIC"
+      },
+      "features": {
+        "ppg_std": null,
+        "ppg_amplitude_median": null,
+        "ppg_rise_time_median_ms": null,
+        "ppg_width50_median_ms": null,
+        "ppg_hr_bpm": null,
+        "ecg_hr_bpm": 60.0,
+        "pat_median_ms": null,
+        "pat_iqr_ms": null
+      },
+      "missing_reasons": {
+        "ppg_std": "ppg:missing",
+        "ppg_amplitude_median": "ppg:missing;ppg:too_few_feet",
+        "ppg_rise_time_median_ms": "ppg:missing;ppg:too_few_feet",
+        "ppg_width50_median_ms": "ppg:missing;ppg:too_few_feet",
+        "ppg_hr_bpm": "ppg:insufficient_foot_intervals;ppg:missing",
+        "pat_median_ms": "pat:too_few_pairs;pat:unmatched_beats;ppg:missing",
+        "pat_iqr_ms": "pat:too_few_pairs;pat:unmatched_beats;ppg:missing"
+      },
+      "quality": {
+        "ecg_finite_fraction": 1.0,
+        "ecg_std": 0.14270482657090652,
+        "ecg_peak_count": 8,
+        "ppg_finite_fraction": 0.0,
+        "ppg_std": null,
+        "ppg_peak_count": 0,
+        "ppg_foot_count": 0,
+        "ppg_shape_correlation": null,
+        "pat_pair_count": 0,
+        "pat_unmatched_r_count": 8,
+        "pat_unmatched_foot_count": 0,
+        "pat_pair_fraction": 0.0
+      },
+      "flags": [
+        "pat:too_few_pairs",
+        "pat:unmatched_beats",
+        "ppg:insufficient_foot_intervals",
+        "ppg:missing",
+        "ppg:too_few_feet",
+        "ppg:too_few_peaks"
+      ],
+      "flagged": true,
+      "unavailable": {
+        "motion": "No IMU",
+        "saturation": "No ADC rails",
+        "ac_dc": "No physical DC/unit evidence"
+      },
+      "fiducials": {
+        "r_times_s": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0
+        ],
+        "foot_times_s": [],
+        "ppg_peak_times_s": [],
+        "pairs": []
+      },
+      "processing": {
+        "filter_mode": "none",
+        "alignment_basis": "Analytic common seconds axis; no upstream processing",
+        "ecg_fs_hz": 250,
+        "ppg_fs_hz": 125
+      }
+    },
+    {
+      "version": "features-sqi-v0",
+      "metadata": {
+        "sample_id": "SYN_CASE_2",
+        "subject_id": "SYN_001",
+        "source": "analytic_fixture_v1",
+        "source_sha256": "d0199688436c31636248f8260ac9c3618c9b3f0b4dc92cb5e60ee97500857700",
+        "raw_index": 0,
+        "split": "val",
+        "source_type": "SYNTHETIC"
+      },
+      "features": {
+        "ppg_std": null,
+        "ppg_amplitude_median": null,
+        "ppg_rise_time_median_ms": null,
+        "ppg_width50_median_ms": null,
+        "ppg_hr_bpm": null,
+        "ecg_hr_bpm": 60.0,
+        "pat_median_ms": null,
+        "pat_iqr_ms": null
+      },
+      "missing_reasons": {
+        "ppg_std": "ppg:flat",
+        "ppg_amplitude_median": "ppg:flat;ppg:too_few_feet",
+        "ppg_rise_time_median_ms": "ppg:flat;ppg:too_few_feet",
+        "ppg_width50_median_ms": "ppg:flat;ppg:too_few_feet",
+        "ppg_hr_bpm": "ppg:flat;ppg:insufficient_foot_intervals",
+        "pat_median_ms": "pat:too_few_pairs;pat:unmatched_beats;ppg:flat",
+        "pat_iqr_ms": "pat:too_few_pairs;pat:unmatched_beats;ppg:flat"
+      },
+      "quality": {
+        "ecg_finite_fraction": 1.0,
+        "ecg_std": 0.14270482657090652,
+        "ecg_peak_count": 8,
+        "ppg_finite_fraction": 1.0,
+        "ppg_std": null,
+        "ppg_peak_count": 0,
+        "ppg_foot_count": 0,
+        "ppg_shape_correlation": null,
+        "pat_pair_count": 0,
+        "pat_unmatched_r_count": 8,
+        "pat_unmatched_foot_count": 0,
+        "pat_pair_fraction": 0.0
+      },
+      "flags": [
+        "pat:too_few_pairs",
+        "pat:unmatched_beats",
+        "ppg:flat",
+        "ppg:insufficient_foot_intervals",
+        "ppg:too_few_feet",
+        "ppg:too_few_peaks"
+      ],
+      "flagged": true,
+      "unavailable": {
+        "motion": "No IMU",
+        "saturation": "No ADC rails",
+        "ac_dc": "No physical DC/unit evidence"
+      },
+      "fiducials": {
+        "r_times_s": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0
+        ],
+        "foot_times_s": [],
+        "ppg_peak_times_s": [],
+        "pairs": []
+      },
+      "processing": {
+        "filter_mode": "none",
+        "alignment_basis": "Analytic common seconds axis; no upstream processing",
+        "ecg_fs_hz": 250,
+        "ppg_fs_hz": 125
+      }
+    },
+    {
+      "version": "features-sqi-v0",
+      "metadata": {
+        "sample_id": "SYN_CASE_3",
+        "subject_id": "SYN_001",
+        "source": "analytic_fixture_v1",
+        "source_sha256": "8bdbe2a75e4236d8f72386f39c430d3f9ccebb9eb2ed79cb9829a2266d3a9ce6",
+        "raw_index": 0,
+        "split": "val",
+        "source_type": "SYNTHETIC"
+      },
+      "features": {
+        "ppg_std": null,
+        "ppg_amplitude_median": null,
+        "ppg_rise_time_median_ms": null,
+        "ppg_width50_median_ms": null,
+        "ppg_hr_bpm": null,
+        "ecg_hr_bpm": 60.0,
+        "pat_median_ms": null,
+        "pat_iqr_ms": null
+      },
+      "missing_reasons": {
+        "ppg_std": "ppg:nonfinite",
+        "ppg_amplitude_median": "ppg:nonfinite;ppg:too_few_feet",
+        "ppg_rise_time_median_ms": "ppg:nonfinite;ppg:too_few_feet",
+        "ppg_width50_median_ms": "ppg:nonfinite;ppg:too_few_feet",
+        "ppg_hr_bpm": "ppg:insufficient_foot_intervals;ppg:nonfinite",
+        "pat_median_ms": "pat:too_few_pairs;pat:unmatched_beats;ppg:nonfinite",
+        "pat_iqr_ms": "pat:too_few_pairs;pat:unmatched_beats;ppg:nonfinite"
+      },
+      "quality": {
+        "ecg_finite_fraction": 1.0,
+        "ecg_std": 0.14270482657090652,
+        "ecg_peak_count": 8,
+        "ppg_finite_fraction": 0.9992,
+        "ppg_std": null,
+        "ppg_peak_count": 0,
+        "ppg_foot_count": 0,
+        "ppg_shape_correlation": null,
+        "pat_pair_count": 0,
+        "pat_unmatched_r_count": 8,
+        "pat_unmatched_foot_count": 0,
+        "pat_pair_fraction": 0.0
+      },
+      "flags": [
+        "pat:too_few_pairs",
+        "pat:unmatched_beats",
+        "ppg:insufficient_foot_intervals",
+        "ppg:nonfinite",
+        "ppg:too_few_feet",
+        "ppg:too_few_peaks"
+      ],
+      "flagged": true,
+      "unavailable": {
+        "motion": "No IMU",
+        "saturation": "No ADC rails",
+        "ac_dc": "No physical DC/unit evidence"
+      },
+      "fiducials": {
+        "r_times_s": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0
+        ],
+        "foot_times_s": [],
+        "ppg_peak_times_s": [],
+        "pairs": []
+      },
+      "processing": {
+        "filter_mode": "none",
+        "alignment_basis": "Analytic common seconds axis; no upstream processing",
+        "ecg_fs_hz": 250,
+        "ppg_fs_hz": 125
+      }
+    },
+    {
+      "version": "features-sqi-v0",
+      "metadata": {
+        "sample_id": "SYN_CASE_4",
+        "subject_id": "SYN_001",
+        "source": "analytic_fixture_v1",
+        "source_sha256": "3cffd62541b20cba1ca59c9575a3e4f70f2fabd8f5e40cadf2907593ef1ce794",
+        "raw_index": 0,
+        "split": "val",
+        "source_type": "SYNTHETIC"
+      },
+      "features": {
+        "ppg_std": 0.28487814158961994,
+        "ppg_amplitude_median": 0.9999999999999996,
+        "ppg_rise_time_median_ms": 160.00000000000014,
+        "ppg_width50_median_ms": 200.00000000000017,
+        "ppg_hr_bpm": 60.0,
+        "ecg_hr_bpm": 60.0,
+        "pat_median_ms": null,
+        "pat_iqr_ms": null
+      },
+      "missing_reasons": {
+        "pat_median_ms": "pat:alignment_unverified;pat:too_few_pairs",
+        "pat_iqr_ms": "pat:alignment_unverified;pat:too_few_pairs"
+      },
+      "quality": {
+        "ecg_finite_fraction": 1.0,
+        "ecg_std": 0.14270482657090652,
+        "ecg_peak_count": 8,
+        "ppg_finite_fraction": 1.0,
+        "ppg_std": 0.28487814158961994,
+        "ppg_peak_count": 8,
+        "ppg_foot_count": 8,
+        "ppg_shape_correlation": 0.9999999999999998,
+        "pat_pair_count": 0,
+        "pat_unmatched_r_count": 8,
+        "pat_unmatched_foot_count": 8,
+        "pat_pair_fraction": 0.0
+      },
+      "flags": [
+        "pat:alignment_unverified",
+        "pat:too_few_pairs"
+      ],
+      "flagged": true,
+      "unavailable": {
+        "motion": "No IMU",
+        "saturation": "No ADC rails",
+        "ac_dc": "No physical DC/unit evidence"
+      },
+      "fiducials": {
+        "r_times_s": [
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0
+        ],
+        "foot_times_s": [
+          1.2,
+          2.2,
+          3.2,
+          4.2,
+          5.2,
+          6.2,
+          7.2,
+          8.2
+        ],
+        "ppg_peak_times_s": [
+          1.36,
+          2.36,
+          3.36,
+          4.36,
+          5.36,
+          6.36,
+          7.36,
+          8.36
+        ],
+        "pairs": []
+      },
+      "processing": {
+        "filter_mode": "none",
+        "alignment_basis": "",
+        "ecg_fs_hz": 250,
+        "ppg_fs_hz": 125
+      }
+    }
+  ],
+  "fixture_input_provenance": [
+    {
+      "waveform_sha256": "de15e64527e89177cb5b414624e675cd8dc5d49c21dc0bab082524fc2f799020",
+      "metadata_sha256": "b9c2eed1f65950887ef1178ebe861ecca4922c72e291eb9a4d1cea4f8b53a15b",
+      "input_sha256": "cd343bdb7e9ccd77cac40a73fa459f0aab76d86791ab9e64b1b4945a3a0c6928",
+      "hash_kind": "analytic fixture content, NOT raw file SHA256",
+      "input_metadata": {
+        "version": "analytic-fixture-input-v2",
+        "channels": {
+          "ecg": {
+            "fs_hz": 250,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          },
+          "ppg": {
+            "fs_hz": 125,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          }
+        },
+        "alignment_verified": true,
+        "alignment_basis": "Analytic common seconds axis; no upstream processing"
+      }
+    },
+    {
+      "waveform_sha256": "c831abd34c2dfbe6120836f61ed9ec23325241ed57e68b20c865bd2bafc4dfc7",
+      "metadata_sha256": "b9c2eed1f65950887ef1178ebe861ecca4922c72e291eb9a4d1cea4f8b53a15b",
+      "input_sha256": "3e00ec2f8663e9e3d443e233fcfd6f617c162c9a09a28c47dcf86bccf25aaf53",
+      "hash_kind": "analytic fixture content, NOT raw file SHA256",
+      "input_metadata": {
+        "version": "analytic-fixture-input-v2",
+        "channels": {
+          "ecg": {
+            "fs_hz": 250,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          },
+          "ppg": {
+            "fs_hz": 125,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          }
+        },
+        "alignment_verified": true,
+        "alignment_basis": "Analytic common seconds axis; no upstream processing"
+      }
+    },
+    {
+      "waveform_sha256": "72ee115b23611a5c9ff21a3d8df7a3f008505777938ce73d53ecd583309cb049",
+      "metadata_sha256": "b9c2eed1f65950887ef1178ebe861ecca4922c72e291eb9a4d1cea4f8b53a15b",
+      "input_sha256": "d0199688436c31636248f8260ac9c3618c9b3f0b4dc92cb5e60ee97500857700",
+      "hash_kind": "analytic fixture content, NOT raw file SHA256",
+      "input_metadata": {
+        "version": "analytic-fixture-input-v2",
+        "channels": {
+          "ecg": {
+            "fs_hz": 250,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          },
+          "ppg": {
+            "fs_hz": 125,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          }
+        },
+        "alignment_verified": true,
+        "alignment_basis": "Analytic common seconds axis; no upstream processing"
+      }
+    },
+    {
+      "waveform_sha256": "9ecc871276dcd1ab344b5bfb8643501f25d6651c1b5db521f0320789fba9c0e6",
+      "metadata_sha256": "b9c2eed1f65950887ef1178ebe861ecca4922c72e291eb9a4d1cea4f8b53a15b",
+      "input_sha256": "8bdbe2a75e4236d8f72386f39c430d3f9ccebb9eb2ed79cb9829a2266d3a9ce6",
+      "hash_kind": "analytic fixture content, NOT raw file SHA256",
+      "input_metadata": {
+        "version": "analytic-fixture-input-v2",
+        "channels": {
+          "ecg": {
+            "fs_hz": 250,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          },
+          "ppg": {
+            "fs_hz": 125,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          }
+        },
+        "alignment_verified": true,
+        "alignment_basis": "Analytic common seconds axis; no upstream processing"
+      }
+    },
+    {
+      "waveform_sha256": "de15e64527e89177cb5b414624e675cd8dc5d49c21dc0bab082524fc2f799020",
+      "metadata_sha256": "ca8ec94737ebcc53e5c0db5751cf4ee9bb9cac4101a26723a447142758b6c1d5",
+      "input_sha256": "3cffd62541b20cba1ca59c9575a3e4f70f2fabd8f5e40cadf2907593ef1ce794",
+      "hash_kind": "analytic fixture content, NOT raw file SHA256",
+      "input_metadata": {
+        "version": "analytic-fixture-input-v2",
+        "channels": {
+          "ecg": {
+            "fs_hz": 250,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          },
+          "ppg": {
+            "fs_hz": 125,
+            "unit": "synthetic_unit",
+            "clock_id": "SYN_CLOCK",
+            "start_s": 0.0,
+            "timestamp_unit": "s",
+            "processing_delay_s": 0,
+            "timestamps_shape": null,
+            "timestamps_sha256": null
+          }
+        },
+        "alignment_verified": false,
+        "alignment_basis": ""
+      }
+    }
+  ],
+  "synthetic_statistics_not_public_baselines": {
+    "n_rows": 6,
+    "n_subjects": 3,
+    "seed": 20261013,
+    "repetitions": 2000,
+    "confidence": 0.95,
+    "method": "subject cluster percentile; shared draws across models",
+    "models": {
+      "SYNTHETIC_KNOWN_ERRORS": {
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": 1.5,
+            "subject_balanced_bias": 0.5,
+            "sample_weighted_mae": 1.5,
+            "sample_weighted_bias": 0.5,
+            "sample_sd": 1.8708286933869707
+          },
+          "DBP": {
+            "subject_balanced_mae": 1.0,
+            "subject_balanced_bias": 0.0,
+            "sample_weighted_mae": 1.0,
+            "sample_weighted_bias": 0.0,
+            "sample_sd": 1.4142135623730951
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                1.0,
+                2.5
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                -1.0,
+                2.5
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                1.0,
+                2.5
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                -1.0,
+                2.5
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                0.5477225575051661,
+                2.0412414523193148
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                0.5,
+                1.5
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                -0.5,
+                1.0
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                0.5,
+                1.5
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                -0.5,
+                1.0
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                0.5477225575051661,
+                1.6733200530681511
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      }
+    },
+    "status": "ok"
+  },
+  "figure_sha256": "fe64e4c0865d7699b98f1cbd55aacfa88d56646a0c35694cd9a4e8f2cc0250d1",
+  "public_results": "N/A: no raw waveform/alignment evidence or B3 predictions handed over",
+  "code_sha256": {
+    "scripts/demo_week04_huy.py": "6c5a76777af3ba15d826ebc47691493ae83c24d9416afb29af022c6d8a15223b",
+    "software/signal_processing/fiducials.py": "72a3fa2f17d5e431cf35e53f0de93b756f36821d901eaa7ae5ad0d84ff7e06ec",
+    "software/feature_extraction/week04.py": "78cd37c79e49e9685f4f10a77e922d24446d36b5164ffa721173b2e27fb36123",
+    "software/evaluation/subject_bootstrap.py": "9df49f4056192f3e0fada722736d9271727baba2badde08ee0ddded3873fae8c",
+    "software/evaluation/bp_metrics.py": "54d1f9ac6fa38b045c35dbd1269a9970ce9f015cc7fa1aeadcea5e3f9ab1c6ba"
+  },
+  "fixture_table_sha256": "4dfd1ef43ad78e563fbba9815f0925513f1a888507b5dafa987ed80b49f88e35"
+}
