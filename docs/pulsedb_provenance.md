@@ -1,40 +1,43 @@
-# PulseDB Provenance
+# Thông tin nguồn gốc dữ liệu PulseDB
 
-## 1. Dataset
+## 1. Bộ dữ liệu
 
-- Dataset: PulseDB
-- Data subset used: PulseDB Supplementary Subsets
-- Source database: VitalDB
-- Distribution: Kaggle
-- Kaggle dataset: `weinanwangrutgers/pulsedb-balanced-training-and-testing`
+- **Tên bộ dữ liệu:** PulseDB
+- **Phần dữ liệu sử dụng:** PulseDB Supplementary Subsets
+- **Cơ sở dữ liệu nguồn:** VitalDB
+- **Nền tảng phân phối:** Kaggle
+- **Bộ dữ liệu Kaggle:** `weinanwangrutgers/pulsedb-balanced-training-and-testing`
 
-## 2. Source
+## 2. Nguồn tham khảo
 
-- Official PulseDB repository:
+- **Kho mã nguồn chính thức của PulseDB:**  
   https://github.com/pulselabteam/PulseDB
 
-- PulseDB paper:
+- **Bài báo về PulseDB:**  
   https://doi.org/10.3389/fdgth.2022.1090854
 
-- Kaggle dataset:
+- **Bộ dữ liệu trên Kaggle:**  
   https://doi.org/10.34740/KAGGLE/DS/2447469
 
-## 3. Version
+## 3. Phiên bản dữ liệu
 
-The PulseDB official repository currently provides version `v2_0`.
+Kho chính thức của PulseDB hiện cung cấp phiên bản `v2_0`.
 
-The data used in this project are the supplementary subsets distributed through Kaggle and linked from the official PulseDB repository.
+Dự án sử dụng các tập dữ liệu bổ sung được phân phối qua Kaggle và có liên kết với kho PulseDB chính thức.
 
-## 4. Data license
+Cần ghi nhận riêng phiên bản của bộ dữ liệu Kaggle đã tải xuống. Phiên bản của kho PulseDB chính thức và phiên bản của bộ dữ liệu Kaggle không nhất thiết giống nhau.
 
-The VitalDB-derived PulseDB data are distributed under the
-CC BY-NC-SA 4.0 license.
+## 4. Giấy phép sử dụng dữ liệu
 
-The full dataset is not committed to this Git repository.
+Dữ liệu PulseDB có nguồn gốc từ VitalDB được ghi nhận là phân phối theo giấy phép CC BY-NC-SA 4.0.
 
-## 5. Data files used
+Trước khi chia sẻ hoặc phân phối lại dữ liệu, cần kiểm tra giấy phép và điều khoản áp dụng cho bản phân phối cụ thể.
 
-The Kaggle package provides the following subset files:
+Toàn bộ dữ liệu gốc không được đưa vào kho Git của dự án.
+
+## 5. Các tệp dữ liệu sử dụng
+
+Bộ dữ liệu Kaggle cung cấp các tệp:
 
 - `VitalDB_Train_Subset.mat`
 - `VitalDB_AAMI_Cal_Subset.mat`
@@ -42,22 +45,83 @@ The Kaggle package provides the following subset files:
 - `VitalDB_CalFree_Test_Subset.mat`
 - `VitalDB_CalBased_Test_Subset.mat`
 
-The exact files used for this project will be recorded when the reader and notebook are finalized.
+**Tệp được sử dụng trong lần chạy pipeline hiện tại:**
 
-## 6. Checksum
+`data/pulsedb_data/VitalDB_AAMI_Cal_Subset.mat`
 
-A SHA-256 checksum manifest will be generated for the exact data files used in this project.
+Pipeline đọc tệp này và chọn 1.000 đoạn tín hiệu để thực nghiệm.
 
-No checksum is assumed or invented for the Kaggle package.
+Tệp Manifest tương ứng:
 
-## 7. Data policy
+`notebooks/pulsedb_manifest_1000.csv`
 
-The complete PulseDB dataset must not be committed to this Git repository.
+Manifest có tổng cộng 1.000 mẫu, được chia thành:
 
-Only source code, documentation, tests, notebooks, and checksum/provenance information are stored in Git.
-## 8. Data schema
+| Tập dữ liệu | Số mẫu |
+|---|---:|
+| Train – huấn luyện | 800 |
+| Validation – kiểm định | 100 |
+| Test – kiểm tra | 100 |
+| **Tổng cộng** | **1.000** |
 
-The supplementary subset contains the following fields:
+Việc chia tập được thực hiện theo `subject_id` nhằm ngăn cùng một đối tượng xuất hiện trong nhiều tập dữ liệu.
+
+## 6. Kiểm tra tính toàn vẹn bằng SHA-256
+
+Cần phân biệt hai loại kiểm tra: checksum của tệp dữ liệu gốc và hash của từng mẫu trong Manifest.
+
+### 6.1. Checksum của tệp dữ liệu gốc
+
+Sử dụng thuật toán SHA-256 để tạo checksum cho chính xác tệp `.mat` được sử dụng.
+
+Trên macOS, chạy lệnh sau tại thư mục gốc của dự án:
+
+```bash
+shasum -a 256 \
+  data/pulsedb_data/VitalDB_AAMI_Cal_Subset.mat
+```
+
+Ghi lại checksum thu được cùng tên tệp, kích thước tệp và phiên bản dữ liệu.
+
+**Tệp dữ liệu:** `VitalDB_AAMI_Cal_Subset.mat`
+
+**Thuật toán:** SHA-256
+
+**Checksum:**
+
+```text
+bc68fc239d3809f20cda01bb55eeae7aee88912f8143e0c4cde18d9c4384dcde
+```
+
+Checksum được tạo trực tiếp từ tệp dữ liệu đang sử dụng trong dự án bằng lệnh `shasum -a 256` trên macOS.
+### 6.2. Hash của các mẫu trong Manifest
+
+Manifest có cột `sample_hash`. Hash của mỗi mẫu được tính từ thông tin metadata, SBP, DBP và các mảng tín hiệu ECG, PPG, ABP.
+
+Kết quả đối chiếu đã thực hiện:
+
+| Nội dung kiểm tra | Kết quả |
+|---|---:|
+| Số dòng Manifest | 1.000 |
+| Số đoạn tín hiệu được chọn | 1.000 |
+| `subject_id` khớp theo thứ tự | Có |
+| Hash khớp theo thứ tự | Có |
+| Số hash khớp | 1.000/1.000 |
+
+Kết quả xác nhận cả 1.000 đoạn tín hiệu được chọn đều khớp với các dòng tương ứng trong Manifest theo quy trình hash đã triển khai.
+
+Hash của từng mẫu dùng để xác minh tính nhất quán giữa dữ liệu và Manifest, không thay thế checksum SHA-256 của tệp `.mat` gốc.
+
+## 7. Quy định quản lý dữ liệu
+
+- Không commit toàn bộ bộ dữ liệu PulseDB vào kho Git.
+- Chỉ lưu mã nguồn, tài liệu, kiểm thử, notebook, Manifest và thông tin nguồn gốc dữ liệu cần thiết.
+- Ghi nhận nguồn dữ liệu, phiên bản, tên tệp và checksum để hỗ trợ tái lập thực nghiệm.
+- Không phân phối lại dữ liệu gốc khi chưa xác minh giấy phép và điều khoản sử dụng.
+
+## 8. Cấu trúc dữ liệu
+
+Các trường dữ liệu được ghi nhận trong tập bổ sung gồm:
 
 - `Subject`
 - `Signals`
@@ -69,35 +133,39 @@ The supplementary subset contains the following fields:
 - `Weight`
 - `BMI`
 
-The `Signals` array contains three channels:
+Mảng `Signals` chứa ba kênh tín hiệu:
 
-- Channel 0: `ECG_F`
-- Channel 1: `PPG_F`
-- Channel 2: `ABP_Raw`
+- Kênh 0: `ECG_F` – điện tâm đồ ECG
+- Kênh 1: `PPG_F` – tín hiệu quang thể tích PPG
+- Kênh 2: `ABP_Raw` – tín hiệu huyết áp động mạch ABP
 
-Each segment contains 1250 samples per channel.
+Mỗi đoạn tín hiệu có 1.250 điểm dữ liệu trên mỗi kênh.
 
-The sampling frequency is 125 Hz, corresponding to a 10-second segment.
+Cấu trúc dự kiến của mảng tín hiệu:
 
-The signal array therefore has the form:
+`(số_lượng_đoạn_tín_hiệu, 3, 1250)`
 
-`(number_of_segments, 3, 1250)`
-## 9. Units
+Với tần số lấy mẫu 125 Hz, mỗi đoạn tương ứng 10 giây tín hiệu.
 
-- `SBP`: mmHg
-- `DBP`: mmHg
-- `Age`: years
+## 9. Đơn vị đo
+
+- `SBP`: mmHg – huyết áp tâm thu
+- `DBP`: mmHg – huyết áp tâm trương
+- `Age`: năm
 - `Height`: cm
 - `Weight`: kg
 - `BMI`: kg/m²
 
-`ECG_F`, `PPG_F`, and `ABP_Raw` are waveform signals.
-## 10. Subject identifier
+`ECG_F`, `PPG_F` và `ABP_Raw` là các tín hiệu dạng sóng. Đơn vị biên độ và các bước tiền xử lý hoặc chuẩn hóa cần được xác minh từ tài liệu dữ liệu trước khi ghi cụ thể.
 
-The subject identifier is stored in the `Subject` field.
+## 10. Mã định danh đối tượng
 
-Example:
+Mã định danh đối tượng được lưu trong trường `Subject`.
+
+Ví dụ:
 
 `p000001_1`
 
-The reader maps the `Subject` field to `subject_id`.
+Reader chuyển trường `Subject` thành `subject_id`.
+
+Manifest lưu `subject_id` cho từng mẫu. Bộ kiểm tra xác minh rằng không có đối tượng nào xuất hiện đồng thời trong các tập train, validation và test.
