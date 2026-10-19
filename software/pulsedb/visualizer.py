@@ -19,7 +19,8 @@ class PulseVisualizer:
             f"BP: {segment.sbp}/{segment.dbp} mmHg | Age/Gender: {segment.age}/{segment.gender}",
             fontsize=11, fontweight='bold'
         )
-        axes[0].set_ylabel("ECG (mV)", fontsize=10)
+        # ECG_F của PulseDB Subset chưa được xác minh là mV; không gán đơn vị vật lý.
+        axes[0].set_ylabel("ECG (a.u.)", fontsize=10)
         axes[0].grid(True, linestyle="--", alpha=0.6)
 
         # 2. Kênh PPG
