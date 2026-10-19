@@ -38,8 +38,9 @@
 | MCU | ESP32-S3-DevKitC-1 N16R8 | Cấp nguồn và truyền dữ liệu qua USB với laptop **đang chạy pin, không cắm sạc** |
 | ECG | Breakout ProtoCentral MAX30001 | **SPI bus 1, dùng riêng.** Oscillator 32,768 kHz, LDO 1,8 V và TXB0108 có sẵn trên breakout. 512 sps (chưa chốt) |
 | Điện cực ECG | Điện cực dán Ag/AgCl (bộ kèm breakout hoặc 3M Red Dot 2228) | Qua jack 3,5 mm của breakout. Đạo trình I: cổ tay và ngón tay. Vài phiên dùng điện cực khô BIOPAC để so sánh |
-| Sự kiện | Nút bấm `t0` vào GPIO, LED trạng thái | Đánh dấu bắt đầu bơm cuff trên cùng đồng hồ `esp_timer` |
-| Phụ | Header cái cho module, tụ 100 nF + 10 µF mỗi module, test point mọi rail và bus | |
+| Sự kiện | Nút bấm `t0` (SW1) vào GPIO4, kéo lên 10 kΩ (R2) và tụ 100 nF (C2); LED trạng thái D1 qua 1 kΩ (R3) ở GPIO5 | Đánh dấu bắt đầu bơm cuff trên cùng đồng hồ `esp_timer` |
+| FSR (phần trên bo đế) | R6 6,8 kΩ từ 3V3 tới `FSR_TOP`; R7 22 kΩ từ `FSR` xuống GND; R1 1 kΩ + C1 100 nF vào GPIO6 (ADC1_CH5, datasheet ESP32-S3 v2.2 Bảng 2-8, tr. 24) | FSR 402 nằm ở bo cổ tay, nối qua cáp (chân 15–16) |
+| Phụ | Socket cho DevKitC (2 hàng 1×22) và breakout MAX30001 (header 10 chân SV1); R8 100 kΩ kéo `ECG_CS` lên 3V3 | Tụ 3V3–GND trên bo đế: C3, C5, C7 (10 µF) và C4, C6, C8 (100 nF). Test point: TP1 `3V3`, TP2 `GND`, TP4 `PPG_SCL`, TP5 `BMI_SCK`, TP6 `T0_BTN`; không có test point cho bus SPI ECG, `PPG_SDA`, `BMI_MOSI/MISO/CS` và các đường INT (mục 7 Việc còn mở) |
 
 ### A.3. Bo cảm biến cổ tay (gắn trên dây đeo)
 
@@ -47,14 +48,27 @@
 | --- | --- | --- |
 | PPG | SparkFun Photodetector Breakout MAX30101 (Qwiic), SEN-16474 | **I²C bus 1, dùng riêng.** Chỉ cần cấp 3,3 V (A.4). Không chọn bo có chip MAX32664 (chỉ xuất nhịp tim/SpO2 đã tính) |
 | IMU | SparkFun Qwiic 6DoF BMI270 (bản 1×1), mặt dưới bo | **SPI bus 2**, tách khỏi bus của MAX30001. Phải cắt jumper `I2C` và `ADR` để dùng SPI |
-| Áp lực | FSR 402 + điện trở chia áp | **Tùy chọn.** Vào chân ADC1 (ADC2 không dùng được khi bật WiFi) |
-| Cơ khí | Hai khe 3 × 22 mm trên PCB cho dây velcro 20 mm; tấm kính hoặc acrylic che | Theo ảnh sản phẩm, hai đầu nối Qwiic cao hơn chip cảm biến nên da cổ tay chạm đầu nối trước: tháo đầu nối Qwiic hoặc làm giá đỡ |
+| Áp lực | FSR 402 + điện trở chia áp | **Tùy chọn.** FSR hàn vào J2 (1×2) ở mặt dưới bo cổ tay; điện trở chia áp nằm ở bo đế (A.2), vào GPIO6 thuộc ADC1 (ADC2 không dùng được khi bật WiFi) |
+| Cơ khí | Hai khe 3 × 22 mm trên PCB cho dây velcro 20 mm; tấm kính hoặc acrylic che | Bo 40,4 × 31,5 mm theo Edge.Cuts. Theo ảnh sản phẩm, hai đầu nối Qwiic cao hơn chip cảm biến nên da cổ tay chạm đầu nối trước: tháo đầu nối Qwiic hoặc làm giá đỡ |
+| Phụ | C2 10 µF + C3 100 nF trên 3V3–GND, dùng chung cho M1 (MAX30101) và M3 (BMI270) | Không có test point trên bo cổ tay |
 
-**Cáp nối hai bo:** box header 2×8 bước 2,54 mm có khóa chiều ở cả hai bo + cáp
-dẹt IDC 16P bấm sẵn, dài 20–30 cm, dây GND xen giữa các dây tín hiệu. Tín hiệu: 3V3, GND, PPG SDA/SCL/INT, BMI270 SCK/MOSI/MISO/CS/INT,
-FSR. Không cần dây 5 V vì bo MAX30101 tự tạo 5 V.
+**Cáp nối hai bo (theo KiCad):**
 
-Schematic và PCB (đã đi dây) của hai bo: `hardware/kicad/v1_module/`.
+- Đầu bo đế: J2, box header IDC 2×8 bước 2,54 mm
+  (`Connector_IDC:IDC-Header_2x08_P2.54mm_Vertical`, DIN 41651), cắm socket IDC
+  bấm trên cáp dẹt 16 dây.
+- Đầu bo cổ tay: **không có đầu nối**. J1 (`Ribbon_2x08_P2.54mm_SolderHoles`) là
+  16 lỗ hàn cho cáp dẹt 1,27 mm, dây n vào lỗ n theo đánh số IDC. Đầu này không có
+  khóa chiều.
+- Chiều dài dự kiến 20–30 cm (KiCad không thể hiện).
+- GND ở chân 2, 4, 7, 9, 14. Các dây tín hiệu kề nhau không có GND xen giữa: 5–6
+  (`PPG_SCL`, `PPG_INT`), 10–13 (`BMI_MOSI`, `BMI_MISO`, `BMI_CS`, `BMI_INT`),
+  15–16 (`FSR`, `FSR_TOP`). Chân 1–2 là 3V3 và GND đặt kề nhau.
+- Tín hiệu: 3V3, GND, PPG SDA/SCL/INT, BMI270 SCK/MOSI/MISO/CS/INT, `FSR`,
+  `FSR_TOP`. Không cần dây 5 V vì bo MAX30101 tự tạo 5 V.
+
+Bảng chân từng dây: A.7. Schematic và PCB (đã đi dây) của hai bo:
+`hardware/kicad/v1_module/base/` và `hardware/kicad/v1_module/wrist/`.
 
 ### A.4. Bo SparkFun MAX30101: điều đã kiểm trong schematic
 
@@ -67,7 +81,7 @@ ngày 2026-10-16.
 | Nguồn vào | Chỉ 3,3 V (chân 3.3V và Qwiic) | Cấp 3V3 từ DevKitC |
 | VDD 1,8 V của MAX30101 | LDO SP6214 1,8 V/100 mA từ 3,3 V | **Chân header "1.8V" là đầu ra LDO**; không nối nguồn vào |
 | VDD_LED (VLED+) | Boost PAM2401 từ 3,3 V lên net 5V | LED xanh có nguồn 5 V ngay trên bo |
-| I²C | Chuyển mức bằng 2 MOSFET kênh N; kéo lên 2,2 kΩ ở cả phía 1,8 V và phía 3,3 V (phía 3,3 V qua jumper `I2C PU`) | Bus 1 không cần thêm kéo lên; chừa footprint, không hàn |
+| I²C | Chuyển mức bằng 2 MOSFET kênh N; kéo lên 2,2 kΩ ở cả phía 1,8 V và phía 3,3 V (phía 3,3 V qua jumper `I2C PU`) | Bus 1 không cần thêm kéo lên. KiCad hiện **không có** footprint kéo lên I²C trên cả hai bo (mục 7 Việc còn mở) |
 | INT | Kéo lên 4,7 kΩ lên 3,3 V (jumper `INT`) | Nối thẳng GPIO |
 
 ### A.5. Không dùng ở V1
@@ -79,18 +93,80 @@ Phần B.
 ### A.6. Cần kiểm tra trước khi vẽ
 
 1. ~~Header breakout MAX30001 có đưa chân INT2B ra không.~~ Có (chân 4 của SV1,
-   theo `pc_max30001_brk_v1.0.brd`); đã nối vào GPIO4. Vẫn phải kiểm revision
-   breakout thật.
+   theo `pc_max30001_brk_v1.0.brd`); trên KiCad V1-module đã nối vào GPIO47
+   (net `/ECG_INT2B`, U1 pad 28). Vẫn phải kiểm revision breakout thật.
 2. Đối chiếu module thật đã mua với footprint.
 3. Tổ hợp tốc độ × độ rộng xung cho ba khe LED của MAX30101 (bảng trong
    datasheet), và VLED 5 V đủ cho dòng LED xanh đã chọn.
 4. Thầy chấp nhận MAX30101 dùng I²C trên bus riêng.
-5. Đức Anh đồng ý pin map mới (MAX30001 riêng SPI bus 1, BMI270 sang SPI bus 2,
-   nút `t0`); bảng GPIO ở `hardware/kicad/v1_module/README.md`.
+5. Pin map: KiCad V1-module (MAX30001 riêng SPI bus 1, BMI270 sang SPI bus 2,
+   nút `t0`; bảng ở A.7) khác pin map V1 của Đức Anh
+   ([interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 3).
+   Chọn bản nào làm chuẩn là việc còn mở (mục 7 Việc còn mở).
+6. DevKitC N16R8 dùng chip nào; với ESP32-S3R8V/R16V thì GPIO47 (`ECG_INT2B`)
+   chạy 1,8 V (datasheet ESP32-S3 v2.2, Bảng 2-1, chú thích 4, tr. 17)
+   [chưa đối chiếu với tài liệu module].
+
+### A.7. Bảng chân của KiCad V1-module
+
+Bảng dưới lấy từ `hardware/kicad/v1_module/base/v1_base.kicad_pcb` (pad → net
+của U1) và tên chân trong symbol `ESP32-S3-DevKitC-1` của
+`v1_base.kicad_sch`; cáp lấy từ J1 của `v1_wrist.kicad_pcb` và J2 của
+`v1_base.kicad_pcb`. Đây là pin map của **KiCad V1-module**, khác pin map V1 của
+Đức Anh ở [interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 3
+(`Pin_Map_V1.md`, `V1.SchDoc` trên nhánh `dev/ducanh`). Cả hai đều gọi là "V1";
+bản nào là chuẩn còn mở (mục 7 Việc còn mở).
+
+**GPIO của DevKitC (U1):**
+
+| Net | GPIO | U1 pad | Thiết bị | Ghi chú |
+| --- | ---: | ---: | --- | --- |
+| `/ECG_CS` | 7 | 7 | MAX30001 CSB (J1 bo đế = SV1 chân 7) | R8 100 kΩ kéo lên 3V3 |
+| `/ECG_SCLK` | 15 | 8 | MAX30001 SCLK (J1 bo đế = SV1 chân 8) | SPI bus 1. GPIO15 cũng là XTAL_32K_P (mục 7 Việc còn mở) |
+| `/ECG_MOSI` | 16 | 9 | MAX30001 MOSI (J1 bo đế = SV1 chân 9) | GPIO16 cũng là XTAL_32K_N (mục 7 Việc còn mở) |
+| `/ECG_MISO` | 17 | 10 | MAX30001 MISO (J1 bo đế = SV1 chân 10) | |
+| `/ECG_INTB` | 21 | 27 | MAX30001 INTB (J1 bo đế = SV1 chân 5) | |
+| `/ECG_INT2B` | 47 | 28 | MAX30001 INT2B (J1 bo đế = SV1 chân 4) | Xung `SAMP` nếu firmware bật (mục 7 Việc còn mở). Datasheet ESP32-S3 v2.2 (Bảng 2-1, chú thích 4, tr. 17): GPIO47/48 chạy 1,8 V ở chip ESP32-S3R8V/R16V; chip trên DevKitC N16R8 [chưa đối chiếu] |
+| `/PPG_SDA` | 8 | 12 | MAX30101 SDA (cáp chân 3) | I²C bus 1 |
+| `/PPG_SCL` | 9 | 15 | MAX30101 SCL (cáp chân 5) | TP4 |
+| `/PPG_INT` | 18 | 11 | MAX30101 INT (cáp chân 6) | |
+| `/BMI_CS` | 10 | 16 | BMI270 CS (cáp chân 12) | SPI bus 2 |
+| `/BMI_MOSI` | 11 | 17 | BMI270 SDA/PICO (cáp chân 10) | |
+| `/BMI_SCK` | 12 | 18 | BMI270 SCL/SCK (cáp chân 8) | TP5 |
+| `/BMI_MISO` | 13 | 19 | BMI270 ADR/POCI (cáp chân 11) | |
+| `/BMI_INT` | 14 | 20 | BMI270 INT1 (cáp chân 13) | |
+| `/T0_BTN` | 4 | 4 | SW1 | R2 10 kΩ kéo lên, C2 100 nF, TP6 |
+| `/LED_STAT` | 5 | 5 | D1 qua R3 1 kΩ | |
+| `/FSR_ADC` | 6 | 6 | FSR qua R1 1 kΩ, C1 100 nF | ADC1_CH5 |
+| `/+3V3` | — | 1, 2 | Nguồn 3V3 của DevKitC | Chân 5V (pad 21) không nối |
+| `/GND` | — | 22, 23, 24, 44 | | |
+
+Không nối: EN và GPIO0, 1, 2, 3, 19, 20, 35–42, 43, 44, 45, 46, 48.
+
+**Cáp 16 dây (J2 bo đế ↔ J1 bo cổ tay, cùng số chân):**
+
+| Chân | Net | Chân | Net |
+| ---: | --- | ---: | --- |
+| 1 | `/+3V3` | 2 | `/GND` |
+| 3 | `/PPG_SDA` | 4 | `/GND` |
+| 5 | `/PPG_SCL` | 6 | `/PPG_INT` |
+| 7 | `/GND` | 8 | `/BMI_SCK` |
+| 9 | `/GND` | 10 | `/BMI_MOSI` |
+| 11 | `/BMI_MISO` | 12 | `/BMI_CS` |
+| 13 | `/BMI_INT` | 14 | `/GND` |
+| 15 | `/FSR` | 16 | `/FSR_TOP` |
+
+Bo cổ tay: M1 MAX30101 (mặt trên) dùng chân 1–5 (GND, 3.3V, SDA, SCL, INT);
+chân 6 `1.8V_OUT` không nối. M3 BMI270 (mặt dưới) dùng GND, 3.3V, PICO, SCK, POCI, CS,
+INT1 (ASDX, ASCX, INT2, OCS, OSDO không nối); J2 FSR nối `FSR_TOP` và `FSR`.
+
+Định dạng file: PCB lưu bằng KiCad 10.0, schematic bằng KiCad 9.0; mở
+`.kicad_pcb` bằng KiCad ≥ 10.
 
 ## Phần B — bản hoàn chỉnh dùng chip trần
 
-Các mục 1–7 dưới đây áp dụng cho bản hoàn chỉnh.
+Các mục 1–6 dưới đây áp dụng cho bản hoàn chỉnh. Mục 7 (Việc còn mở) gom việc
+còn mở của cả Phần A và Phần B.
 
 ## 1. Danh sách linh kiện
 
@@ -118,7 +194,7 @@ Các mục 1–7 dưới đây áp dụng cho bản hoàn chỉnh.
 
 - **ECG 512 sps, FMSTR 00**, FCLK = 32,768 kHz (MAX30001 tr. 49, Bảng 26). Chưa
   chốt; quyết định số 3 trong mục 6 của tài liệu V0 vẫn mở. Nếu chốt, khớp `FS_NOMINAL_MHZ = 512 000` trong packet
-  schema.
+  schema (đơn vị mHz, tức 512 Hz).
 - **Đo theo cửa sổ:** ECG đạo trình I chỉ có khi người đo chạm ngón tay vào điện
   cực mặt trên, nên mỗi lần đo chỉ vài chục giây, không đo ECG liên tục suốt buổi
   1–2 giờ.
@@ -165,8 +241,9 @@ Yêu cầu oscillator FCLK:
   (MAX30101 tr. 2). Dùng boost 5 V từ VBAT, kèm tụ ≥ 1 µF sát chân VLED+, để
   xung dòng LED không đi vào rail 3V3. Nếu bỏ LED xanh thì VLED+ có thể lấy
   thẳng từ VBAT với ngưỡng cắt pin thấp ≥ 3,1 V.
-- **Địa chỉ I²C 7 bit:** MAX30101 0x57 (ghi/đọc 0xAE/0xAF như MAX30102 tr. 29; số trang
-  MAX30101 [chưa đối chiếu]); TMP117 0x48–0x4B,
+- **Địa chỉ I²C 7 bit:** MAX30101 0x57 (ghi/đọc 0xAE/0xAF như MAX30102 tr. 29
+  [chưa đối chiếu: `interface_power_sampling_v0.md` và `hardware/datasheets/README.md`
+  ghi tr. 5]; số trang MAX30101 [chưa đối chiếu]); TMP117 0x48–0x4B,
   BMI270 0x68/0x69, BQ25180 0x6A [chưa đối chiếu]. Không trùng. Nếu thêm ADC họ
   ADS1115 cho FSR (0x48–0x4B) thì chọn chân ADDR khác TMP117.
 - **Bảo vệ điện cực ECG:** mạng Rpp và VCM 200 kΩ theo MAX30001 tr. 84, Hình 17c.
@@ -182,6 +259,10 @@ Yêu cầu oscillator FCLK:
 - Nếu packet sự kiện cuff (`t0`) và cửa sổ tín hiệu phải dùng chung trục thời
   gian qua các lần ngủ, thì **thêm thạch anh 32,768 kHz cho RTC của ESP32**
   hoặc **giữ MCU thức** suốt phiên.
+- Thạch anh 32 kHz nối vào XTAL_32K_P/XTAL_32K_N, tức GPIO15/GPIO16 (datasheet
+  ESP32-S3 v2.2, Bảng 2-4 tr. 21 và Bảng 2-8 tr. 24). KiCad V1-module đang dùng
+  hai chân này cho `ECG_SCLK`/`ECG_MOSI` (A.7): nếu bản hoàn chỉnh giữ pin map
+  đó thì không gắn được thạch anh (mục 7 Việc còn mở).
 
 ## 6. Thời điểm mẫu, dung lượng flash và pin
 
@@ -227,5 +308,25 @@ packet schema sẽ cần cập nhật sau (không sửa trong tài liệu này).
 3. BMI270, FSR 402, TMP117 có trong phạm vi không.
 4. ADC cho FSR: ADC nội ESP32 hay ADC ngoài.
 5. Có jack điện cực dán Ag/AgCl để lấy ECG tham chiếu không.
-6. Có nối INT2B (xung `SAMP`) của MAX30001 vào GPIO không.
+6. INT2B (xung `SAMP`) của MAX30001: KiCad V1-module đã nối vào GPIO47 (A.7).
+   Còn mở cho pin map V1 của Đức Anh và cho bản hoàn chỉnh, và firmware có bật
+   `SAMP` (`EN_INT2`, `SAMP_IT`) hay không.
 7. Ngủ giữa các cửa sổ (thêm thạch anh 32 kHz) hay giữ MCU thức suốt phiên.
+8. Pin map nào là chuẩn: KiCad V1-module (A.7) hay pin map V1 của Đức Anh
+   (`interface_power_sampling_v0.md` mục 3). Cả hai đều mang tên "V1".
+9. Xung đột chân: KiCad V1-module dùng GPIO15/16 cho `ECG_SCLK`/`ECG_MOSI`, trùng
+   XTAL_32K_P/N của ESP32-S3 (mục 5). Nếu bản hoàn chỉnh giữ pin map này thì
+   phải bỏ thạch anh 32 kHz hoặc đổi chân SPI ECG.
+10. Đầu cáp ở bo cổ tay hàn thẳng, không có khóa chiều; chân 1–2 (3V3, GND) kề
+    nhau. Hàn sai thứ tự hay lật cáp sẽ đưa 3V3/GND vào sai net, có nguy cơ cấp
+    nguồn ngược cho module. Có thêm header có khóa chiều trên bo cổ tay không.
+11. Thứ tự dây cáp: mô tả ban đầu là GND xen giữa các dây tín hiệu, nhưng chân
+    10–13 (`BMI_MOSI`, `BMI_MISO`, `BMI_CS`, `BMI_INT`), 5–6 và 15–16 kề nhau không
+    có GND (A.3). Đổi thứ tự chân hay giữ nguyên.
+12. Footprint kéo lên I²C (chừa sẵn, không hàn) chưa có trên bo nào (A.4). Có
+    thêm không.
+13. Tụ và test point: mô tả ban đầu là tụ 100 nF + 10 µF cho mỗi module và test
+    point cho mọi rail và bus. Bản vẽ hiện có: bo cổ tay một cặp C2/C3 dùng chung
+    cho M1 và M3, không có test point; bo đế có test point ở 3V3, GND,
+    `PPG_SCL`, `BMI_SCK`, `T0_BTN` (A.2), thiếu bus SPI ECG, `PPG_SDA`,
+    `BMI_MOSI/MISO/CS` và các đường INT. Có bổ sung không.
