@@ -194,3 +194,26 @@ def test_validator_flags_channel_length_mismatch():
     segment.ppg = np.zeros(1000)
     stats = PulseValidator([segment]).validate_and_summarize()
     assert bool(stats["length_mismatch"].iloc[0])
+
+
+def test_reader_accepts_mat73_cell_arrays_as_lists(tmp_path, monkeypatch):
+    # mat73 returns MATLAB cell arrays (Subject, Gender in PulseDB) as lists.
+    subset = make_subset(Subject=["SYN_001", "SYN_002"], Gender=["M", "F"])
+    segments = read_subset(tmp_path, monkeypatch, subset)
+    assert [s.subject_id for s in segments] == ["SYN_001", "SYN_002"]
+    assert [s.gender for s in segments] == ["M", "F"]
+
+
+def test_reader_rejects_multi_value_subject(tmp_path, monkeypatch):
+    subset = make_subset(Subject=[["SYN_001", "SYN_009"], "SYN_002"])
+    with pytest.raises(ValueError, match="Subject"):
+        read_subset(tmp_path, monkeypatch, subset)
+
+
+def test_validator_and_split_share_missing_subject_tokens():
+    from software.data_io.split_manifest import build_inventory
+
+    segment = make_segment("NULL")
+    assert PulseValidator([segment]).validate_and_summarize()["subject_missing"].iloc[0]
+    with pytest.raises(ValueError, match="subject_id"):
+        build_inventory([segment], "SYNTHETIC", "c" * 64)

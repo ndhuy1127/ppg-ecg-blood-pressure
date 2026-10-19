@@ -322,3 +322,20 @@ def test_reader_rejects_malformed_csv(inventory, mutation):
         lines[1] = lines[1].rsplit(",", 1)[0] + ",INVALID"
     with pytest.raises(ValueError):
         read_manifest_bytes(("\n".join(lines) + "\n").encode())
+
+
+def test_split_sizes_use_exact_decimal_floor():
+    pool = [SimpleNamespace(subject_id=f"SYN_{i:03d}", sbp=120.0, dbp=80.0,
+                            ecg=np.array([i, 1.0]), ppg=np.array([i, 2.0]),
+                            abp=np.array([i, 3.0])) for i in range(90)]
+    manifest = make_manifest(build_inventory(pool, "SYNTHETIC", "b" * 64),
+                             ratios=(0.7, 0.2, 0.1))
+    # float arithmetic gives int(90 * 0.7) == 62; the documented rule is 63.
+    assert manifest.split.value_counts().to_dict() == {"train": 63, "val": 18, "test": 9}
+
+
+def test_summary_omits_test_label_statistics(inventory):
+    summary = summarize_manifest(make_manifest(inventory), inventory)
+    assert summary["test"]["bp"] is None
+    assert summary["test"]["segments"] == 2
+    assert set(summary["val"]["bp"]) == {"sbp", "dbp"}

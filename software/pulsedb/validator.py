@@ -4,7 +4,10 @@ import hashlib
 import numpy as np
 import pandas as pd
 
-MISSING_SUBJECT_TOKENS = {"", "nan", "none", "null", "unknown"}
+from software.data_io.split_manifest import MISSING_SUBJECT_TOKENS as _SPLIT_TOKENS
+
+# Same tokens the split rejects, plus the empty string.
+MISSING_SUBJECT_TOKENS = frozenset(_SPLIT_TOKENS | {""})
 
 
 def _subject_missing(subject_id) -> bool:

@@ -144,6 +144,10 @@ class PulseDBReader:
 
         def extract_subject(arr, idx):
             value = extract_scalar(arr, idx)
+            if isinstance(value, np.ndarray):
+                raise ValueError(
+                    f"Subject của đoạn {idx} không phải một giá trị đơn: {value!r}"
+                )
             if isinstance(value, bytes):
                 return value.decode("utf-8", errors="replace")
             return str(value)
