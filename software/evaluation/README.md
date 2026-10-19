@@ -63,5 +63,6 @@ dữ liệu tham chiếu, dự đoán và kết quả chỉ được xử lý tr
 
 Công thức đầy đủ và cách xử lý đo lặp nằm trong
 [quy ước phương pháp](../../docs/protocol/week_03_baselines_metrics.md).
-SD mô tả không phải CI; module chưa tính bootstrap, beta, Pearson ΔBP,
+SD mô tả không phải CI; module này không tính bootstrap (xem
+[subject_bootstrap.py](subject_bootstrap.py)), beta, Pearson ΔBP,
 Bland–Altman hay coverage.

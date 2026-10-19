@@ -67,7 +67,7 @@ Trong cách viết gọn của kế hoạch, `PAT = PEP + PTT`; vì mốc đo l�
 
 Tên trường, kiểu dữ liệu cụ thể, ánh xạ clock, tần số lấy mẫu và cách đóng gói phải được Linh và Đức Anh xác nhận trước khi khóa schema. Raw bất biến; dữ liệu dẫn xuất cần truy về raw, script, config, split, seed và commit theo [chính sách dữ liệu](../DATA_POLICY.md).
 
-**Đầu vào hiện có:** packet schema tại ref cục bộ `origin/dev/ducanh` (`e13d669`, 2026-09-30), tệp `configs/hardware/Packet_Schema_V0.1.md`, đề xuất ECG 512 SPS, hai loại gói ECG/PPG và timestamp mẫu đầu gói (µs); PPG AFE/tần số chưa chốt. Protocol cũ nêu ECG 250–500 Hz, PPG 100–250 Hz. Không tự thay bằng một cấu hình cuối cùng: cần đối chiếu timestamp lấy mẫu với đọc FIFO/nhận gói, clock theo kênh, mất mẫu, metadata phiên và marker cuff. Packet chưa khóa.
+**Đầu vào hiện có:** [packet schema V0.1](../../configs/hardware/Packet_Schema_V0.1.md), đã vào `develop` qua PR #23. Bản đối chiếu lúc viết glossary là ref `origin/dev/ducanh` (`e13d669`, 2026-09-30), khi đó đề xuất ECG 512 SPS, hai loại gói ECG/PPG và timestamp mẫu đầu gói (µs). Bản hiện tại tách thời điểm lấy mẫu, mốc neo `T_ANCHOR_US` và thời điểm PC nhận gói (mục 3, 5), và vẫn để mở ECG 500 hay 512 sps cùng PPG AFE/tần số (mục 15); bảng tốc độ ứng viên ở [interface_power_sampling_v0.md, mục 4](../../configs/hardware/interface_power_sampling_v0.md). Protocol cũ nêu ECG 250–500 Hz, PPG 100–250 Hz. Không tự thay bằng một cấu hình cuối cùng: cần đối chiếu timestamp lấy mẫu với đọc FIFO/nhận gói, clock theo kênh, mất mẫu, metadata phiên và marker cuff. Packet chưa khóa.
 
 ## 6. Phân biệt nguồn nhãn BP
 
@@ -90,7 +90,7 @@ Chưa điền kết quả khi chưa có phần cứng, raw thật và log cấu 
 3. Đánh dấu R peak và PPG foot theo quy tắc ứng viên, xem đỉnh giả/bỏ sót và ảnh hưởng của lọc. Chỉ ghép nhịp khi cùng clock và có một xung PPG tương ứng hợp lý; ghi trường hợp không ghép được.
 4. Lưu ngày, mã bản ghi, phiên bản thiết bị, lỗi, quyết định và issue cần xử lý; không thay đổi ngưỡng sau khi xem test set.
 
-**Đã có đầu ra PulseDB** tại ref cục bộ `origin/develop` (`e8915f6`, 2026-09-30): `software/pulsedb/`, `tests/test_pulsedb.py`, `notebooks/01_eda_and_visualization.ipynb`, `docs/pulsedb_provenance.md`. Chưa chạy lại hoặc nghiệm thu. Cần xác nhận nguồn/phiên bản, checksum file thực dùng, hướng dẫn chạy sạch, ánh xạ người/kênh/đơn vị/nhãn và bằng chứng ít nhất 1.000 đoạn. Provenance còn ghi checksum/file sử dụng sẽ hoàn thiện; notebook cần kiểm tra biến đầu vào từ kernel sạch. Mọi hình minh họa phải ghi **dữ liệu công khai, không phải tín hiệu thiết bị nhóm thu**.
+**Đã có đầu ra PulseDB** (có trên `develop` tại commit `e8915f6`, 2026-09-30, qua PR #13/#14, và được cập nhật sau đó): `software/pulsedb/`, `tests/test_pulsedb.py`, `notebooks/01_eda_and_visualization.ipynb`, [`docs/pulsedb_provenance.md`](../pulsedb_provenance.md). Provenance nay đã ghi file thực dùng và SHA-256 của file raw cùng CSV 1.000 đoạn (mục 3–4); version gói Kaggle, thứ tự kênh và ý nghĩa hậu tố ID vẫn chưa xác minh (mục 11). Chưa chạy lại split trên raw bằng reader của repo. Notebook không được chạy lại liền mạch từ kernel sạch (provenance mục 8). Cần xác nhận hướng dẫn chạy sạch và ánh xạ người/kênh/đơn vị/nhãn. Mọi hình minh họa phải ghi **dữ liệu công khai, không phải tín hiệu thiết bị nhóm thu**. Mọi hình minh họa phải ghi **dữ liệu công khai, không phải tín hiệu thiết bị nhóm thu**.
 
 | Mục cần xem | Dấu hiệu / câu hỏi cần ghi | Kết quả |
 | --- | --- | --- |

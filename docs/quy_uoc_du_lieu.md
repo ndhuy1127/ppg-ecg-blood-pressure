@@ -6,12 +6,12 @@ Tài liệu này quy định chuẩn quản lý, đặt tên và cấu trúc d�
 
 ## 1. Phân loại thư mục dữ liệu
 
-Dữ liệu dự án được phân chia nghiêm ngặt theo 4 cấp độ:
+Dữ liệu dự án được phân chia nghiêm ngặt theo 3 cấp độ, cộng một thư mục riêng cho kết quả chạy. Cả bốn thư mục đều bị Git bỏ qua (`.gitignore`):
 
 * `data/raw/`: Dữ liệu gốc thu thập từ thiết bị đo. Tuyệt đối **KHÔNG** chỉnh sửa hay xóa file trong thư mục này.
 * `data/interim/`: Dữ liệu thô đã qua xử lý sơ bộ (lọc nhiễu ban đầu, cắt bớt đoạn nhiễu nặng, định dạng lại timestamp).
 * `data/processed/`: Dữ liệu hoàn chỉnh đã trích xuất đặc trưng (features), đồng bộ PPG/ECG và nhãn SBP/DBP, sẵn sàng cho huấn luyện mô hình ML/DL.
-* `data/results/`: Kết quả đầu ra từ mô hình (dự đoán, trọng số model, metrics đánh giá).
+* `runs/` (ở gốc repository, ngoài `data/`): Kết quả chạy mô hình (dự đoán, model, metrics, provenance). Runner `scripts/run_b0_pulsedb_csv.py` và `scripts/run_b3_pulsedb.py` mặc định ghi vào `runs/` và từ chối ghi đè output đã có. File dự đoán theo dòng chứa `subject_id`, nên không commit.
 
 ---
 
@@ -35,28 +35,28 @@ $$\text{<subject\_id>\_<session\_id>\_<event\_id>\_<data\_type>.<ext>}$$
 ## 3. Đơn vị đo & Tần số lấy mẫu (Sampling Rate)
 
 ### Đơn vị tín hiệu chuẩn:
-* **ECG (Tín hiệu điện tim):** Millivolt ($mV$)
+* **ECG (Tín hiệu điện tim):** Millivolt ($mV$) cho dữ liệu thiết bị. ECG/PPG của PulseDB Subset được coi là đơn vị tùy ý ($a.u.$), xem [provenance PulseDB](pulsedb_provenance.md), mục 6.
 * **PPG (Tín hiệu quang thể tích):** Đơn vị tùy chỉnh / Biên độ chuẩn hóa ($a.u.$)
 * **SBP (Huyết áp tâm thu):** $mmHg$
 * **DBP (Huyết áp tâm trương):** $mmHg$
 
 ### Tần số lấy mẫu (Sampling Rate):
-* **ECG:** $500\,Hz$ hoặc $512\,SPS$ (MAX30001 cấu hình được cả hai; packet schema đang ghi 512). Chưa chốt một giá trị.
-* **PPG:** $100\,Hz$ hoặc $125\,Hz$ (chưa chốt); giá trị khả thi phụ thuộc AFE, chế độ LED và hệ số lấy trung bình.
-* **PulseDB Subset (dữ liệu công khai):** $125\,Hz$ cho cả ba kênh (suy ra từ 1250 mẫu/đoạn 10 giây).
-
-Bảng khả năng lấy mẫu theo linh kiện nằm ở `configs/hardware/interface_power_sampling_v0.md`.
+* **Thiết bị prototype (ECG và PPG):** **chưa chốt**. Bảng tốc độ mà từng linh kiện cấu hình được và phương án dự kiến nằm ở [interface_power_sampling_v0.md, mục 4](../configs/hardware/interface_power_sampling_v0.md); các quyết định còn mở (ECG 500 hay 512 sps; linh kiện, chế độ LED và tốc độ PPG) ghi ở mục 6 của tài liệu đó. Tài liệu này không lặp lại giá trị ứng viên để tránh lệch nhau.
+* **PulseDB Subset (dữ liệu công khai):** $125\,Hz$ cho cả ba kênh (suy ra từ 1250 mẫu/đoạn 10 giây, khớp với bài báo PulseDB; xem [provenance PulseDB](pulsedb_provenance.md), mục 6).
 
 ---
 
 ## 4. Khả năng truy xuất nguồn gốc (Data Traceability)
 
-Mỗi file trong `data/processed/` phải kèm theo một file metadata `.json` tương ứng cùng tên để truy xuất nguồn gốc:
+Mỗi file trong `data/processed/` phải kèm theo một file metadata `.json` tương ứng cùng tên để truy xuất nguồn gốc. Mẫu dưới đây chỉ là khuôn: các giá trị trong `<...>` là chỗ điền, chưa có script xử lý dữ liệu prototype.
 ```json
 {
   "processed_file": "SUB001_S001_E01_processed.parquet",
   "source_raw_files": ["SUB001_S001_E01_raw.csv"],
-  "script_used": "src/features/extract_features.py",
-  "config_used": "configs/feature_extraction_v1.yaml",
-  "git_commit_hash": "a1b2c3d4e5f6..."
+  "script_used": "<script trong scripts/, ví dụ scripts/demo_week04_huy.py>",
+  "config_used": "<config trong configs/, ví dụ configs/data/week04_huy.json>",
+  "git_commit_hash": "<commit Git của code đã chạy>"
 }
+```
+
+Ví dụ trong khuôn là cặp script/config thật hiện có cho bộ đặc trưng Tuần 4 (module `software/feature_extraction/week04.py`); script này mới chạy trên dữ liệu SYNTHETIC.

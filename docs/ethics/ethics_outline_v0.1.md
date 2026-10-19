@@ -88,7 +88,7 @@ Chính sách bảo mật tuân thủ nghiêm ngặt các điều khoản trong `
 
 ### 5.1. Cơ chế mã hóa và giả danh hóa danh tính (Pseudonymization)
 - Khi còn bảng liên kết danh tính với `subject_id`, dữ liệu là **giả danh hóa**, không phải ẩn danh không thể truy ngược. Mã giả danh không tự loại bỏ mọi nguy cơ tái nhận diện từ metadata hoặc waveform.
-- Mỗi người tham gia được gán một mã định danh nghiên cứu duy nhất ngẫu nhiên: `subject_id` (ví dụ: `SUBJ_001`, `SUBJ_002`...).
+- Mỗi người tham gia được gán một mã định danh nghiên cứu duy nhất ngẫu nhiên: `subject_id` (ví dụ: `SUB001`, `SUB002`...; định dạng theo [quy ước dữ liệu](../quy_uoc_du_lieu.md)).
 - **Quy tắc tuyệt đối:**
   - Không sử dụng Họ tên, Số điện thoại, Email, Mã số sinh viên, Số căn cước công dân hoặc Ngày sinh làm mã định danh trong dữ liệu.
   - Tệp tín hiệu thô, tệp trích xuất đặc trưng và toàn bộ mã nguồn chỉ được chứa `subject_id`, `session_id`, `event_id`.

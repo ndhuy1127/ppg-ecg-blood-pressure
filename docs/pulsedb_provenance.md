@@ -73,8 +73,9 @@ Theo bài báo (mục mô tả các subset), người tham gia chia thành ba nh
 | AAMI Test | C | Đánh giá theo kiểu AAMI |
 | AAMI Cal | C (cùng người với AAMI Test) | Các đoạn còn lại của cùng người, không chồng lấn với AAMI Test |
 
-Bài báo ghi bản VitalDB của AAMI Test có 116 người, khớp với 116 người trong
-file thực dùng. Phần VitalDB của Train có 1.293 người.
+Theo Bảng 4 của bài báo, bản VitalDB của AAMI Test có 116 người, khớp với 116
+người trong file thực dùng. Phần VitalDB của Train có 1.293 người (cùng số người
+với CalBased Test), của CalFree Test có 144 người.
 
 **Hệ quả cho dự án (chưa khóa):**
 
@@ -95,7 +96,10 @@ file thực dùng. Phần VitalDB của Train có 1.293 người.
   định lượng trên raw. Cách kiểm tra đề xuất: trên một số đoạn, so cực đại/cực
   tiểu của kênh 2 với nhãn SBP/DBP; kênh ABP phải nằm trong cùng thang mmHg.
 - Mỗi đoạn dài 10 giây (bài báo) và có 1250 mẫu/kênh, nên tần số lấy mẫu suy ra
-  là **125 Hz**. Bài báo không nêu tốc độ này trong phần text đã đọc.
+  là **125 Hz**. Bài báo (mục 2.2 "Record selection") ghi tín hiệu VitalDB được
+  hạ tần số lấy mẫu từ 500 Hz xuống 125 Hz để khớp với MIMIC-III, đúng với giá
+  trị suy ra từ shape. Phần text đã đọc (bản PMC9944565) không nêu phương pháp
+  resample hay bộ lọc chống aliasing đã dùng.
 - Đơn vị ECG/PPG: README PulseDB v2_0 có thêm tín hiệu "non-normalized"
   (`ECG_Record`, `PPG_Record`), gợi ý `ECG_F`/`PPG_F` đã chuẩn hóa. Vì vậy dự án
   coi ECG/PPG của Subset là **đơn vị tùy ý (a.u.)**, không phải mV.
@@ -106,8 +110,15 @@ file thực dùng. Phần VitalDB của Train có 1.293 người.
   dưới 0,9 sau khi căn độ trễ. Như vậy ABP đã tham gia vào việc **chọn đoạn**;
   cần ghi điều này khi diễn giải kết quả.
 - Bài báo ghi MIMIC-III có lệch thời gian giữa các kênh tới 500 ms, còn VitalDB
-  được đồng bộ. File đang dùng là VitalDB. Độ trễ do bộ lọc của `ECG_F`/`PPG_F`
-  chưa được xác định, nên PAT trên PulseDB vẫn cần kiểm chứng riêng.
+  được đồng bộ. File đang dùng là VitalDB.
+- Bộ lọc: mục 2.4.2 của bài báo ghi PPG được lọc bằng bộ lọc Chebyshev-II bậc
+  4, dải [0,5, 8] Hz, trước khi đưa vào thuật toán Elgendi để tìm đỉnh tâm thu
+  và các điểm chuyển (turning points). Mục 2.4.1 chỉ ghi R-peak ECG được tìm bằng
+  Pan–Tompkins, không mô tả bộ lọc ECG riêng. Phần text đã đọc **không** nói bộ
+  lọc Chebyshev-II là zero-phase hay causal, và không nói `PPG_F`/`ECG_F` trong
+  file Subset có phải là tín hiệu đã qua bộ lọc này hay không. Vì vậy độ trễ do
+  lọc của `ECG_F`/`PPG_F` vẫn **chưa xác định**, và PAT trên PulseDB vẫn cần
+  kiểm chứng riêng (ví dụ đối chiếu với code tạo subset của PulseDB).
 - Đơn vị nhân khẩu: `Age` năm, `Height` cm, `Weight` kg, `BMI` kg/m². Khi file
   không có trường chiều cao/cân nặng/BMI, reader trả `NaN`, không điền 0.
 
@@ -188,5 +199,7 @@ notebook và thông tin checksum/provenance. Việc có giữ CSV nhãn kèm ID 
 - Chạy `scripts/build_pulsedb_split.py` hai lần trên raw đã chốt, bằng reader của
   repo, và đối chiếu SHA-256 inventory/manifest.
 - Kiểm tra thứ tự kênh và ý nghĩa hậu tố ID (mục 6, 7) trên raw.
+- Xác định `ECG_F`/`PPG_F` đã qua bộ lọc nào và lọc zero-phase hay causal (mục
+  6) trước khi tính PAT trên PulseDB.
 - Chốt quy tắc QC nhãn (mục 9) trước khi huấn luyện mô hình.
 - Ghi số version của gói Kaggle.

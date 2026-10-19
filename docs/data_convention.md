@@ -1,32 +1,35 @@
-# Data Conventions and Volume Estimates
+# Quy ước dữ liệu và ước lượng dung lượng
 
-The authoritative data convention (folders, IDs, file names, units, sampling
-rates, traceability) is [quy_uoc_du_lieu.md](quy_uoc_du_lieu.md). This file only
-keeps the short naming rule and the storage estimate; if the two disagree,
-`quy_uoc_du_lieu.md` wins.
+Quy ước dữ liệu chính thức (thư mục, ID, tên file, đơn vị, tần số lấy mẫu, truy
+xuất nguồn gốc) là [quy_uoc_du_lieu.md](quy_uoc_du_lieu.md). File này chỉ giữ
+quy tắc đặt tên ngắn gọn và ước lượng dung lượng lưu trữ; nếu hai file mâu
+thuẫn, `quy_uoc_du_lieu.md` được ưu tiên.
 
-## 1. Naming Conventions
+## 1. Quy tắc đặt tên
 
-- Use lowercase letters and snake_case (e.g., `ecg_raw_2026.csv`).
-- Study data files follow `<subject_id>_<session_id>_<event_id>_<data_type>.<ext>`
-  as defined in `quy_uoc_du_lieu.md`.
+- Phần không phải ID dùng chữ thường và snake_case (ví dụ `ecg_raw_2026.csv`).
+- File dữ liệu nghiên cứu theo mẫu
+  `<subject_id>_<session_id>_<event_id>_<data_type>.<ext>` như định nghĩa trong
+  `quy_uoc_du_lieu.md`. Phần ID giữ đúng định dạng ở đó (ví dụ
+  `SUB001_S001_E01_raw.csv`).
 
-## 2. Sampling rates (status)
+## 2. Tần số lấy mẫu (trạng thái)
 
-| Source | ECG | PPG | Status |
+| Nguồn | ECG | PPG | Trạng thái |
 | --- | --- | --- | --- |
-| PulseDB Subset (public) | 125 Hz | 125 Hz | From file shape: 1250 samples per 10-s segment |
-| Prototype device | 500 or 512 SPS | Depends on PPG AFE, LED mode and averaging | **Not decided**; see `configs/hardware/interface_power_sampling_v0.md` |
+| PulseDB Subset (công khai) | 125 Hz | 125 Hz | Suy ra từ shape: 1250 mẫu mỗi đoạn 10 giây; khớp với bài báo PulseDB, xem [provenance PulseDB](pulsedb_provenance.md), mục 6 |
+| Thiết bị prototype | 500 hoặc 512 sps (MAX30001 cấu hình được cả hai) | Phụ thuộc linh kiện PPG, chế độ LED và lấy trung bình | **Chưa chốt**; bảng tốc độ và phương án dự kiến ở [interface_power_sampling_v0.md, mục 4](../configs/hardware/interface_power_sampling_v0.md), quyết định còn mở ở mục 6 của tài liệu đó |
 
-Do not assume the two channels share one sampling rate or one clock.
+Không giả định hai kênh dùng chung một tần số lấy mẫu hay một clock.
 
-## 3. Volume Estimation
+## 3. Ước lượng dung lượng
 
-Storage planning estimate, not a measurement:
+Ước lượng để lập kế hoạch lưu trữ, không phải số đo:
 
-- Assumption: 500 samples/s, one CSV row per sample, about 48 bytes per row
-  (timestamp, ECG, PPG, sequence, status as text).
-- Result: 500 x 60 x 48 bytes ≈ 1.44 MB per minute of raw CSV.
+- Giả định: 500 mẫu/s, mỗi mẫu một dòng CSV, khoảng 48 byte mỗi dòng
+  (timestamp, ECG, PPG, sequence, status dạng text).
+- Kết quả: 500 × 60 × 48 byte ≈ 1,44 MB mỗi phút CSV raw.
 
-Recompute when the device sampling rates and the logger file format are
-decided. Binary packets (see the packet schema) are several times smaller.
+Tính lại khi đã chốt tần số lấy mẫu của thiết bị và định dạng file của logger.
+Packet nhị phân (xem [packet schema V0.1](../configs/hardware/Packet_Schema_V0.1.md))
+nhỏ hơn vài lần.
