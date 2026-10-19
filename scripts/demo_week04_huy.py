@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from software._provenance import text_file_sha256, text_sha256  # noqa: E402
 from software.evaluation.subject_bootstrap import BootstrapConfig, bootstrap_bp  # noqa: E402
 from software.feature_extraction.week04 import SignalWindow, extract_windows  # noqa: E402
 from software.signal_processing.fiducials import Channel, SignalConfig  # noqa: E402
@@ -120,7 +121,7 @@ def run(config_path, output, figure):
     with plt.rc_context({"svg.hashsalt": "week04-fixture"}):
         fig.savefig(figure, metadata={"Description": "Analytic fixture v1", "Date": None})
     plt.close(fig)
-    report = {"source_type": "SYNTHETIC", "config_sha256": hashlib.sha256(config_bytes).hexdigest(),
+    report = {"source_type": "SYNTHETIC", "config_sha256": text_sha256(config_bytes),
         "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
         "environment": {"python": platform.python_version(), "numpy": np.__version__},
@@ -133,18 +134,20 @@ def run(config_path, output, figure):
     output.parent.mkdir(parents=True, exist_ok=True)
     table = output.with_name("fixture_features.csv")
     with table.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=["source_type", "case", *rows[0]["features"], "flags"])
+        writer = csv.DictWriter(stream, fieldnames=["source_type", "case", *rows[0]["features"], "flags"],
+                                lineterminator="\n")
         writer.writeheader()
         for i, row in enumerate(rows):
             writer.writerow({"source_type": "SYNTHETIC", "case": i, **row["features"],
                              "flags": ";".join(row["flags"])})
     report["code_sha256"] = {str(path.relative_to(ROOT)).replace("\\", "/"):
-        hashlib.sha256(path.read_bytes()).hexdigest() for path in (
+        text_file_sha256(path) for path in (
             Path(__file__), ROOT / "software/signal_processing/fiducials.py",
             ROOT / "software/feature_extraction/week04.py", ROOT / "software/evaluation/subject_bootstrap.py",
-            ROOT / "software/evaluation/bp_metrics.py")}
+            ROOT / "software/evaluation/bp_metrics.py", ROOT / "software/_bp_validation.py",
+            ROOT / "software/data_io/split_manifest.py", ROOT / "software/_provenance.py")}
     report["fixture_table_sha256"] = hashlib.sha256(table.read_bytes()).hexdigest()
-    output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(summary))
     return report
 

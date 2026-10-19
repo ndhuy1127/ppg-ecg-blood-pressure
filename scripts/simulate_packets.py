@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 def run(config_path, case, output, packets_path=None):
+    from software._provenance import text_file_sha256
     from software.data_io.packet_simulation import (
         generate_packets, json_bytes, packet_sha256, replay_packets,
     )
@@ -36,8 +37,8 @@ def run(config_path, case, output, packets_path=None):
         "packets_sha256": packet_sha256(packets),
         "result_sha256": hashlib.sha256(json_bytes(result)).hexdigest(),
         "python": platform.python_version(), "commit": commit, "working_tree_dirty": dirty,
-        "code_sha256": {p.relative_to(repo).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
-                        for p in code},
+        # Tracked code hashed with LF endings, as stored in Git.
+        "code_sha256": {p.relative_to(repo).as_posix(): text_file_sha256(p) for p in code},
         "packet_count": len(packets), "issue_counts": result["issue_counts"],
         "offset_ppg_minus_ecg_us": result["offset_ppg_minus_ecg_us"],
         "channel_summary": {channel: {

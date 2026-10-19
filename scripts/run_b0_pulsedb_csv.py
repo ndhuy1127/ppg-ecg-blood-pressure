@@ -178,6 +178,8 @@ def main() -> None:
     repo = Path(__file__).resolve().parents[1]
     if not __package__:
         sys.path.insert(0, str(repo))
+    from software._provenance import text_file_sha256
+
     try:
         run_config = apply_default_config(args, repo)
         payload = args.csv_path.read_bytes()
@@ -200,8 +202,9 @@ def main() -> None:
         report["code_provenance"] = {
             "git_commit": git_commit,
             "workspace_has_changes": bool(git_status.strip()),
+            # Tracked code hashed with LF endings, as stored in Git.
             "sha256": {
-                name: hashlib.sha256((repo / name).read_bytes()).hexdigest()
+                name: text_file_sha256(repo / name)
                 for name in (
                     "scripts/run_b0_pulsedb_csv.py",
                     "software/models/constant_baselines.py",
