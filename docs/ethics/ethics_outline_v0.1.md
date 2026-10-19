@@ -4,7 +4,7 @@
 > **Người biên soạn:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol và hồ sơ đạo đức
 > **Ngày cập nhật:** 2026-09-22
-> **Trạng thái:** Bản thảo khung nguyên tắc đạo đức (CHƯA PHẢI HỒ SƠ ĐẠO ĐỨC ĐÃ ĐƯỢC PHÊ DUYỆT CHÍNH THỨC)
+> **Lưu ý:** CHƯA PHẢI HỒ SƠ ĐẠO ĐỨC ĐÃ ĐƯỢC PHÊ DUYỆT CHÍNH THỨC.
 
 ---
 

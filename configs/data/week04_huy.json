@@ -1,6 +1,6 @@
 {
   "version": "features-sqi-v0",
-  "status": "PRELIMINARY_UNREVIEWED_NOT_TEST_TUNED",
+  "status": "NOT_TEST_TUNED",
   "signal": {
     "flat_std": 1e-8,
     "min_beats": 3,

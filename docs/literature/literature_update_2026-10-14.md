@@ -2,7 +2,7 @@
 
 > **Người thực hiện:** Nguyễn Đức Huy
 > **Ngày cập nhật:** 2026-10-14
-> **Trạng thái:** Bản thảo chờ nhóm review. Bổ sung cho [ma trận Tuần 1](week_01_literature_matrix.md); không phải systematic review và không thay thế protocol đã duyệt.
+> Bổ sung cho [ma trận Tuần 1](week_01_literature_matrix.md); không phải systematic review và không thay thế protocol.
 
 ## 1. Mục đích
 

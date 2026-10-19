@@ -96,7 +96,7 @@ def evaluate_prediction_table(manifest, inventory, predictions, *, split="val", 
     """Validate v2 conservation/leakage and exact prediction keys before metrics.
 
     Table columns: sample_id, subject_id, split, model, pred_sbp, pred_dbp.
-    Caller still owns raw/pool permissions and observation/calibration review.
+    Caller still owns raw/pool permissions and observation/calibration checks.
     Test evaluation requires caller's prior model/threshold lock; not enforced here.
     """
     validate_manifest(manifest, inventory)

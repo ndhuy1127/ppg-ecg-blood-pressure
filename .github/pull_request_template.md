@@ -27,4 +27,3 @@ Closes #
 - [ ] Không chứa file dữ liệu hoặc model dung lượng lớn
 - [ ] Đã cập nhật tài liệu liên quan
 - [ ] Tên biến, file và commit tuân theo quy ước
-- [ ] Sẵn sàng để thành viên khác review

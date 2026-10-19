@@ -67,7 +67,7 @@ thái workspace, log kiểm tra và giới hạn. Không lưu bảng/ID từng n
 Mỗi lần chạy tạo thư mục mới. `--output` tùy chọn nhận đường dẫn JSON mới;
 script từ chối ghi đè file đã tồn tại.
 
-## Giới hạn còn cần review
+## Giới hạn
 
 - Notebook Linh đọc `file_paths[0]` nhưng ghi tên source cố định; cần xác nhận
   checksum/tên file thực đọc. CSV không tự chứng minh metadata source đúng.
@@ -75,9 +75,9 @@ script từ chối ghi đè file đã tồn tại.
   kiểm tra chuỗi hash trong CSV, chưa tái tạo hash từ raw.
 - Xác nhận mapping người, việc chọn pool 100 người × 10 đoạn và cách chia lại
   subset so với các holdout gốc; sample_id đánh lại không thay index raw gốc.
-- B0 tính trung bình đều theo dòng; cần review trọng số và đơn vị quan sát.
+- B0 tính trung bình đều theo dòng; trọng số và đơn vị quan sát chưa chốt.
 - Không có chronology/calibration nên chưa chạy B1 trên CSV này.
-- Test runner dùng dữ liệu tự tạo; không thay CI Python 3.11 hoặc review chéo.
+- Test runner dùng dữ liệu tự tạo; không thay CI Python 3.11.
 
 ## Kiểm tra runner
 
