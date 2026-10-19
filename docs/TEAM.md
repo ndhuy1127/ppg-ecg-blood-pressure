@@ -8,16 +8,13 @@
 | Đức Anh | Phần cứng, firmware, BOM, PCB và kiểm thử thiết bị | **hardware/**, **firmware/**, **configs/hardware/** |
 | Huy | Xử lý tín hiệu, PAT, thống kê, protocol, tài liệu và điều phối bài báo | **software/signal_processing/**, **software/feature_extraction/**, **docs/**, **reports/** |
 
-Phạm vi trên xác định người điều phối, không trao quyền sở hữu độc quyền. Mọi
-thành viên vẫn phải review chéo các thay đổi, đặc biệt ở ranh giới giữa phần
-cứng, firmware, dữ liệu và xử lý tín hiệu.
+Phạm vi trên xác định người điều phối, không trao quyền sở hữu độc quyền.
 
 ## Nguyên tắc tổ chức
 
 - Không tạo thư mục theo tên cá nhân như **Linh/**, **DucAnh/** hay **Huy/**.
-- Tài liệu và sản phẩm được lưu theo chức năng kỹ thuật để dễ tìm, review và
+- Tài liệu và sản phẩm được lưu theo chức năng kỹ thuật để dễ tìm và
   bàn giao.
-- Một sản phẩm liên quan nhiều mảng phải có người phụ trách chính và reviewer từ
-  mảng còn lại.
+- Một sản phẩm liên quan nhiều mảng phải có người phụ trách chính.
 - Quyết định ảnh hưởng tới protocol, định dạng dữ liệu hoặc giao diện phần
   cứng–phần mềm phải được ghi lại trong issue, pull request hoặc biên bản họp.

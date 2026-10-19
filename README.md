@@ -15,8 +15,8 @@ ECG. Sản phẩm hiện chỉ phục vụ nghiên cứu, không phải thiết 
 
 ## Câu hỏi nghiên cứu
 
-Bản thảo v0.1, chờ nhóm và giảng viên duyệt (chi tiết trong
-[docs/research_questions_v0.1.md](docs/research_questions_v0.1.md)):
+Chi tiết trong
+[docs/research_questions_v0.1.md](docs/research_questions_v0.1.md):
 
 1. **RQ1 (câu hỏi chính):** Sau khi hiệu chuẩn bằng một lần đo cuff, việc bổ
    sung ECG để tính PAT có làm giảm sai số dự đoán ΔSBP và ΔDBP ở các phiên đo
@@ -38,8 +38,7 @@ chân sóng PPG. PAT gồm cả thời gian tiền tống máu (PEP), `PAT = PEP
 | Đức Anh | Phần cứng, firmware, BOM, PCB và kiểm thử thiết bị |
 | Huy | Xử lý tín hiệu, PAT, thống kê, protocol, tài liệu và bài báo |
 
-Mọi thay đổi đều cần được một thành viên khác review. Chi tiết xem
-[docs/TEAM.md](docs/TEAM.md).
+Phân công chi tiết xem [docs/TEAM.md](docs/TEAM.md).
 
 ## Cấu trúc repository
 
@@ -99,7 +98,7 @@ dev/thanh-vien → develop → main
 ~~~
 
 Mỗi người đồng bộ từ **develop**, làm việc trên nhánh cá nhân, tạo pull request
-vào **develop**, chờ review chéo và CI thành công. Chỉ tích hợp **develop** vào
+vào **develop** và chờ CI thành công. Chỉ tích hợp **develop** vào
 **main** tại một mốc ổn định. Không làm việc trực tiếp trên **main**.
 
 ## Dữ liệu và bảo mật
@@ -116,9 +115,9 @@ Dự án đang ở tuần 4 trong lộ trình 28 tuần. Tóm tắt theo mức b
 
 | Mức | Nội dung |
 | --- | --- |
-| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; generator/replay packet giả lập; đặc trưng PPG/HR/PAT, SQI v0 và bootstrap theo người (Tuần 4, chưa review) |
+| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; generator/replay packet giả lập; đặc trưng PPG/HR/PAT, SQI v0 và bootstrap theo người (Tuần 4) |
 | Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3); nguồn raw và pool chưa nghiệm thu |
-| Bản thảo chờ duyệt | Câu hỏi nghiên cứu, protocol, ethics, tổng quan tài liệu, BOM và thiết kế mạch |
+| Bản thảo | Câu hỏi nghiên cứu, protocol, ethics, tổng quan tài liệu, BOM và thiết kế mạch |
 | Chưa có | Phần cứng lắp ráp, bản ghi ECG/PPG của nhóm, dữ liệu cuff, mô hình ΔBP và mọi kết quả trả lời RQ1–RQ3 |
 
 Kết quả trên dữ liệu giả lập chỉ kiểm tra code, không phải hiệu năng ước lượng

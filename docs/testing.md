@@ -1,5 +1,12 @@
 # Hướng dẫn kiểm thử Pipeline PulseDB
 
+> **Tài liệu lịch sử.** Mô tả pipeline cũ của commit `acc8b8b`. Các file
+> `software/pulsedb/train.py` và `evaluate.py` đã bị xóa, nên lệnh ở mục 5 và 8
+> không còn chạy. Pipeline hiện tại: [run_b3_pulsedb.md](protocol/run_b3_pulsedb.md).
+> Pipeline cũ đã chấm điểm trên tập **test**; không dùng số ở mục 7 để chọn model.
+> Số ở mục 7 cũng không khớp `notebooks/metrics_all_splits.csv` (ví dụ SBP val
+> 20.16 so với 20.66). Chưa rõ nguyên nhân vì không có log chạy.
+
 ## 1. Mục đích
 
 Tài liệu này hướng dẫn cách chạy kiểm thử pipeline dự đoán huyết áp từ tín hiệu ECG và PPG, kiểm tra tính hợp lệ của Manifest và xác nhận các file kết quả được tạo ra.

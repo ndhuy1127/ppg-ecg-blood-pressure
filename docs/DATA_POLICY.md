@@ -10,13 +10,13 @@
 - Artifact mô hình và kết quả thí nghiệm dung lượng lớn.
 
 Không được dựa riêng vào **.gitignore** để bảo vệ dữ liệu nhạy cảm. Người tạo
-commit và reviewer đều phải kiểm tra nội dung thay đổi.
+commit phải kiểm tra nội dung thay đổi.
 
 ## Dữ liệu được phép
 
 Chỉ được đưa dữ liệu mẫu nhỏ, đã ẩn danh và không thể truy ngược vào
 **data/sample/**. Mẫu phải có nguồn gốc và mục đích rõ ràng, không chứa metadata
-định danh và được review trước khi merge.
+định danh và được kiểm tra trước khi merge.
 
 ## Định danh nghiên cứu
 

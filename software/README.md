@@ -21,6 +21,8 @@ nghiệm thu. Các thư mục chỉ chứa `__init__.py` vẫn là khung package
 | --- | --- | --- |
 | [_bp_validation.py](_bp_validation.py) | Kiểm tra shape, kiểu số, giá trị hữu hạn và mã người dùng chung | Mảng BP `(n, 2)` hoặc danh sách ID được caller cung cấp |
 | [models/constant_baselines.py](models/constant_baselines.py) | Tính dự đoán hằng số B0/B1 | Nhãn train hoặc calibration → cặp dự đoán `[SBP, DBP]` |
+| [models/xgboost_baseline.py](models/xgboost_baseline.py) | B3: XGBoost riêng SBP/DBP | Đặc trưng + nhãn train → model; đặc trưng val → `[SBP, DBP]` |
+| [pulsedb/features.py](pulsedb/features.py), [pulsedb/pipeline.py](pulsedb/pipeline.py) | 12 đặc trưng ECG/PPG đơn giản; fit B0/B3 trên train, đánh giá val | Đoạn PulseDB + manifest/inventory split v2 → dự đoán và metrics |
 | [evaluation/bp_metrics.py](evaluation/bp_metrics.py) | Tính MAE/bias/SD và tổng hợp theo người | Nhãn tham chiếu + dự đoán + ID người → kết quả đánh giá |
 
 Chi tiết đầu vào/đầu ra nằm trong [README models](models/README.md) và
@@ -51,6 +53,6 @@ kỹ thuật, không xác minh nguồn nhãn, split, chronology hoặc ngưỡng
 Nó trả mảng hợp lệ hoặc báo `ValueError`; không tự bỏ dòng hay điền dữ liệu
 thiếu. Hàm `finite_result()` còn báo lỗi khi phép tính tạo giá trị không hữu hạn.
 
-Định nghĩa khoa học, trường hợp lỗi và các quyết định còn chờ review được giữ
+Định nghĩa khoa học, trường hợp lỗi và các quyết định còn mở được giữ
 trong [quy ước B0/B1 và metrics](../docs/protocol/week_03_baselines_metrics.md).
 Kết quả giả lập chỉ kiểm chứng code/công thức, chưa chứng minh hiệu năng dự án.

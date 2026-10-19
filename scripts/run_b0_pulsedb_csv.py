@@ -51,7 +51,7 @@ def evaluate_manifest(payload: bytes) -> dict:
             raise ValueError("split values must be exactly train, val, or test")
         subject = row["subject_id"]
         if subject in subject_split and subject_split[subject] != split:
-            raise ValueError("Subject leakage detected between splits; review with Linh")
+            raise ValueError("Subject leakage detected between splits; check the split inputs")
         subject_split[subject] = split
         sample_key = (row["source"], row["sample_id"])
         if sample_key in sample_keys:
@@ -66,7 +66,7 @@ def evaluate_manifest(payload: bytes) -> dict:
             if len(fingerprint) != 64 or any(c not in "0123456789abcdef" for c in fingerprint):
                 raise ValueError("waveform_hash must be a lowercase SHA256")
             if fingerprint in waveform_split and waveform_split[fingerprint] != split:
-                raise ValueError("Repeated waveform_hash across splits; review with Linh")
+                raise ValueError("Repeated waveform_hash across splits; check the split inputs")
             waveform_split[fingerprint] = split
         counts[split] += 1
         split_subjects[split].add(subject)
@@ -118,7 +118,7 @@ def evaluate_manifest(payload: bytes) -> dict:
         "pending_upstream_checks": [
             "CSV source/version, permissions, raw checksum and hash construction",
             "Split config/seed/commit, original holdouts and true subject mapping",
-            "BP label derivation, units and observation weighting review",
+            "BP label derivation, units and observation weighting",
         ],
         "B0_constant": dict(zip(("SBP", "DBP"), predictions[0].tolist())),
         "sample_weighted": {

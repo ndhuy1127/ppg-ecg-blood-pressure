@@ -42,6 +42,7 @@ Kiểm tra mức nhiễu và các thành phần nhiễu trong tín hiệu.
 ### 3.2 PPG
 Hệ thống PPG của V0 sử dụng:
 MAX30101 làm cảm biến PPG.
+> Ghi chú: BOM V0.1 để trống dòng PPG AFE; BOM V1 và schematic V1 (nhánh `dev/ducanh`) dùng module MAX30102. Linh kiện PPG **chưa chốt**; xem `interface_power_sampling_v0.md` mục 6.
 ESP32-S3 DevKitC-1 N16R8 làm MCU.
 
 Luồng dữ liệu:
@@ -67,6 +68,8 @@ T_s=\frac{1}{500}=2,ms
 Do đó khoảng thời gian giữa hai mẫu liên tiếp là 2 ms.
 Mục đích của việc chọn 500 Hz là tăng độ phân giải thời gian của dữ liệu ECG–PPG khi xác định các mốc như R-peak ECG và mốc chân sóng PPG.
 500 Hz được chọn làm cấu hình thu thập ban đầu của prototype; sau khi thu dữ liệu có thể thực hiện downsample để phục vụ các thí nghiệm sử dụng bộ dữ liệu có tần số thấp hơn.
+
+> Ghi chú khả thi: MAX30001 cấu hình được 500 sps (FMSTR 32 000 Hz) hoặc 512 sps (FMSTR 32 768 Hz); packet schema đang ghi 512. MAX30101/MAX30102 không có tốc độ 500 sps gốc, chỉ đạt bằng 1000 sps lấy trung bình 2 mẫu, kèm độ trễ cần ghi; ở SpO2 mode, 1000 sps chỉ cho phép độ rộng xung 69 hoặc 118 µs (MAX30102 tr. 23, Bảng 11). Bảng đầy đủ và các quyết định cần chốt: `interface_power_sampling_v0.md` mục 4.
 ### 4.2 Đồng bộ PPG và ECG
 ECG và PPG phải được ghi nhận với mốc thời gian nhất quán.
 Hệ thống phải duy trì thông tin thời gian của hai tín hiệu để phục vụ việc xác định:
@@ -92,6 +95,7 @@ ECG timestamp
 PPG timestamp
 theo cùng một mốc thời gian của MCU hoặc theo một cơ chế đồng bộ đã được xác minh.
 Không được đồng bộ bằng cách dịch tín hiệu PPG để R-peak ECG và PPG trùng nhau, vì thao tác đó sẽ làm mất độ trễ sinh lý cần dùng để tính PAT.
+Cũng không dùng R-peak và chân sóng PPG để *kiểm tra* đồng bộ: khoảng giữa hai mốc này là PAT, không phải lệch clock. Kiểm tra đồng bộ bằng kích thích chung theo `hardware/test_reports/sync_10min_test_plan.md`; định dạng timestamp theo `Packet_Schema_V0.1.md`.
 ### 4.4 Jitter và drift
 
 V0 phải kiểm tra ba vấn đề:

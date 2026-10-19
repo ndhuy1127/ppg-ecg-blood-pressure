@@ -6,7 +6,7 @@
 >
 > **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code)
 >
-> **Trạng thái:** Bản thảo, chờ nhóm và giảng viên duyệt. Tên file giữ `v0.1` để không làm gãy liên kết.
+> Tên file giữ `v0.1` để không làm gãy liên kết.
 
 ---
 

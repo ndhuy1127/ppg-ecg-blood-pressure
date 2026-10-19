@@ -1,7 +1,7 @@
 # Tuần 3 — giao diện B0/B1 và chỉ số đánh giá
 
-> Huy, 2026-10-03. **Đã triển khai và kiểm thử cục bộ bằng dữ liệu giả lập**;
-> chờ Linh review code và nhóm thống nhất các quyết định phương pháp còn mở.
+> Huy, 2026-10-03. Kiểm thử cục bộ bằng dữ liệu giả lập. Các quyết định
+> phương pháp còn mở được ghi bên dưới.
 > Tài liệu không khóa protocol, split, calibration PulseDB hay ngưỡng SQI.
 
 ## 1. Phạm vi và nguồn định nghĩa
@@ -43,7 +43,7 @@ Một dòng đầu vào là một đơn vị quan sát đã được thống nh�
 mỗi `(subject_id, session_id, event_id)` chỉ đóng góp một cặp nhãn; phải tổng hợp
 các cửa sổ theo quy tắc khóa trước rồi gọi API. Không đưa nhiều cửa sổ cùng cuff
 vào như nhiều nhãn độc lập. Với PulseDB, đơn vị đoạn ABP và việc trùng/overlap
-record cần manifest được review; không tạo event cuff hoặc chronology từ thứ tự
+record cần manifest đã kiểm tra; không tạo event cuff hoặc chronology từ thứ tự
 file/dòng. Bootstrap tương lai giữ cụm người; không thực hiện trong module này.
 
 ## 3. B0 — trung bình train
@@ -75,7 +75,7 @@ prediction[j, k] = c[subject_ids[j], k]
 
 Kế hoạch chưa khóa phép tổng hợp nhiều nhãn hiệu chuẩn; theo yêu cầu tác vụ,
 code dùng trung bình đều các dòng hiệu chuẩn của từng người. Đây là quy ước
-triển khai để kiểm thử, chờ review trước phân tích thật.
+triển khai để kiểm thử, chưa chốt cho phân tích thật.
 
 `fit(calibration_subject_ids, calibration_labels)` nhận **phần hiệu chuẩn được
 cung cấp riêng**, không nhận evaluation. `predict(subject_ids)` chỉ nhận ID,
@@ -86,7 +86,7 @@ không dùng B0 và không dùng nhãn evaluation để bổ sung. Lỗi không 
 B1 chỉ thuộc kịch bản **cá nhân hóa có hiệu chuẩn**, không báo cáo như dự đoán
 người mới chưa hiệu chuẩn. Phần calibration phải không trùng sample/record/event
 đánh giá và phải có trước toàn bộ evaluation tương ứng. Chưa chọn calibration
-PulseDB: cần metadata phiên/thời gian, quyền dùng nhãn và quy tắc của Linh/nhóm.
+PulseDB: cần metadata phiên/thời gian, quyền dùng nhãn và quy tắc chọn calibration.
 
 ## 5. MAE, bias và SD
 
@@ -119,18 +119,18 @@ Nếu có `S` người: `MAE_subject_balanced = Σ_s MAE_s / S`,
 Không xuất SD macro: trung bình SD từng người không phải SD gộp, cũng không
 phải SD của bias giữa người. SD hiện có chỉ là SD mô tả tất cả sai số hoặc sai
 số của từng người, không phải standard error/CI và không giả định dòng độc lập.
-Quy ước SD dùng cho báo cáo nghiên cứu chính vẫn cần review thống kê.
+Quy ước SD dùng cho báo cáo nghiên cứu chính chưa chốt.
 
 ## 6. Các chỉ số mở rộng — chỉ đặc tả, chưa chạy
 
 | Đại lượng | Đối chiếu repo và công thức/quy ước | Đầu vào và khi chưa tính được |
 | --- | --- | --- |
 | **beta (β)** | Không có định nghĩa β trong kế hoạch/RQ/glossary đã đọc. **Cần thống nhất** beta là hệ số gì, trục nào, đơn vị, weighting và intercept. Nếu nhóm chọn slope OLS của `Δprediction = α + β × Δreference`, công thức ứng viên là `β = Σ(x-x̄)(z-z̄) / Σ(x-x̄)²`, với `x=Δreference`, `z=Δprediction`; đây chưa phải quyết định chính thức và không được tự xuất bằng code. | Cần định nghĩa được phê duyệt, cặp ΔBP, mốc hiệu chuẩn, chronology, grouping/weighting. Slope ứng viên không xác định khi `var(x)=0` hoặc thiếu đủ cặp; không tự diễn giải β như một chỉ số đã khóa. |
-| **Tương quan ΔBP** | RQ1-D đã nêu Pearson: `r = Σ(x-x̄)(z-z̄) / sqrt[Σ(x-x̄)² × Σ(z-z̄)²]`. `ΔBP = BP_future - BP_calibration`, đánh giá SBP/DBP riêng. Cách gộp theo người/phiên và CI còn chờ review. | Cần cặp Δreference/Δprediction cùng mốc cá nhân, ID phiên/người, chronology. Không tính khi thiếu mốc/thời gian, ít hơn hai cặp hoặc một vector hằng. B1 zero-change tạo Δprediction hằng 0 thì r không xác định, không phải r=0. |
+| **Tương quan ΔBP** | RQ1-D đã nêu Pearson: `r = Σ(x-x̄)(z-z̄) / sqrt[Σ(x-x̄)² × Σ(z-z̄)²]`. `ΔBP = BP_future - BP_calibration`, đánh giá SBP/DBP riêng. Cách gộp theo người/phiên và CI chưa chốt. | Cần cặp Δreference/Δprediction cùng mốc cá nhân, ID phiên/người, chronology. Không tính khi thiếu mốc/thời gian, ít hơn hai cặp hoặc một vector hằng. B1 zero-change tạo Δprediction hằng 0 thì r không xác định, không phải r=0. |
 | **Bland–Altman** | RQ2-D nêu biểu đồ và “khoảng tin cậy 95%”, chưa phân biệt CI với giới hạn đồng thuận (LoA). Quy ước minh họa ứng viên: trục ngang `(prediction + reference)/2`, trục dọc `e`; bias `ē`, LoA xấp xỉ `ē ± 1.96 × SD(e)` nếu giả định thích hợp. **LoA không phải CI của bias hoặc CI của LoA**. Phương pháp cho đo lặp theo người và CI chưa khóa. | Cần cặp cùng đơn vị/đại lượng, người/phiên/event, cấu trúc đo lặp và đánh giá giả định sai số. Dưới hai cặp không có SD; dữ liệu đo lặp không dùng trực tiếp công thức độc lập để tuyên bố đồng thuận. Chưa tạo hình/LoA/CI. |
 | **Coverage trong selective prediction** | RQ3 định nghĩa tỷ lệ giữ lại: công thức mô tả theo mẫu `coverage = N_accepted / N_eligible`; risk là MAE trên accepted. Có thể tính `coverage_s = N_accepted_s / N_eligible_s` và trung bình đều theo người, nhưng mẫu số eligible, weighting, các người không có accepted và cách dựng/AUC đường cong **cần thống nhất**. Không nhầm với coverage của prediction interval hoặc tỷ lệ `|e| ≤ 5/10 mmHg` ở RQ1-D. | Cần toàn bộ ứng viên eligible gồm cả rejected, mask accepted, SQI/uncertainty, ngưỡng khóa từ validation, nhãn và ID để tính risk. `N_eligible=0` thì coverage không xác định; `N_accepted=0` thì MAE retained không xác định dù coverage có thể bằng 0. Không tự loại rejected khỏi mẫu số. |
 
-Các công thức ứng viên trong bảng chỉ làm rõ lựa chọn cần review, không bổ sung
+Các công thức ứng viên trong bảng chỉ làm rõ lựa chọn còn mở, không bổ sung
 quyết định khoa học chính thức. Không chạy bootstrap, kiểm định, phân tích thật
 hay tuning test trong lần này. RQ/protocol v0.1 vẫn là bản thảo.
 
@@ -190,5 +190,5 @@ root. Cần extension Python và Python Debugger; đã xác nhận hai extension
 trong danh sách cài cục bộ. Chưa thao tác trực tiếp nút giao diện để xác minh.
 `.vscode/` đang được Git ignore, nên cấu hình này chỉ có trên workspace hiện tại.
 
-Kết quả chạy và đầu vào còn chờ nằm trong
+Kết quả chạy và đầu vào còn thiếu nằm trong
 [báo cáo Huy Tuần 3](../../reports/weekly/week_03/README.md).

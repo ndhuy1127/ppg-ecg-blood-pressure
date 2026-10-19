@@ -3,8 +3,8 @@
 > **Phiên bản:** v0.1
 > **Người biên soạn:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (đồng bộ với RQ v0.2, yêu cầu phần cứng V0 và nguồn bổ sung; chưa phê duyệt).
-> **Trạng thái:** Bản thảo đề xuất phương pháp luận (TUYỆT ĐỐI CHƯA THU THẬP DỮ LIỆU THẬT TRONG TUẦN 1)
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (đồng bộ với RQ v0.2, yêu cầu phần cứng V0 và nguồn bổ sung).
+> **Lưu ý:** TUYỆT ĐỐI CHƯA THU THẬP DỮ LIỆU THẬT TRONG TUẦN 1.
 
 ---
 
@@ -68,7 +68,7 @@
 ### 5.2. Vị trí vòng bít đo đối chứng (Reference Cuff)
 - Sử dụng máy đo huyết áp bắp tay tự động có kết quả validation lâm sàng đã công bố theo protocol AAMI/ESH/ISO cho đúng model sử dụng. Model cụ thể chưa chốt (xem checklist mục 12); không coi "cùng hãng" là đã được validate.
 - Sai số của máy cuff truyền thẳng vào nhãn và vào mốc hiệu chuẩn $\text{BP}_0$; AHA scientific statement về thiết bị cuffless (Cohen et al., 2025, [10.1161/HYP.0000000000000254](https://doi.org/10.1161/HYP.0000000000000254)) nhấn mạnh độ chính xác của thiết bị cuffless phụ thuộc mạnh vào cuff dùng để hiệu chuẩn.
-- **Bố trí chính đề xuất, chờ phê duyệt:** prototype đeo ở cổ tay trái; cuff đối chứng đặt ở bắp tay phải. Sau khi khóa protocol, không đổi bên tùy từng lượt đo. Quy trình đo hai tay và tiêu chí chọn bên/loại trừ cần được giảng viên review trước khi thu dữ liệu chính.
+- **Bố trí chính:** prototype đeo ở cổ tay trái; cuff đối chứng đặt ở bắp tay phải. Sau khi khóa protocol, không đổi bên tùy từng lượt đo. Quy trình đo hai tay và tiêu chí chọn bên/loại trừ phải chốt trước khi thu dữ liệu chính.
 - Kích thước vòng bít phải phù hợp với chu vi bắp tay của người tham gia.
 
 ### 5.3. Tư thế người tham gia
@@ -115,7 +115,7 @@ Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, g�
 
 ### 6.3. Đồng bộ thời gian phần cứng giữa ECG và PPG
 - ECG và PPG cần cùng quy chiếu thời gian hoặc ánh xạ clock được kiểm chứng; không mặc định hai AFE lấy mẫu đồng thời chỉ vì dùng cùng MCU.
-- Tần số lấy mẫu chưa thống nhất giữa các tài liệu: protocol v0.1 đề xuất PPG 100–250 Hz, ECG 250–500 Hz; [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md) chọn MAX30001 (ECG) và MAX30101 (PPG) với mục tiêu 500 Hz cho cả hai kênh; packet schema v0.1 tại ref `origin/dev/ducanh` (`e13d669`) đề xuất ECG **512 SPS**. Tần số cuối cùng phải là giá trị mà từng AFE hỗ trợ theo datasheet và phải được đo lại trên thiết bị. Đây là điểm chờ Đức Anh chốt cùng Huy và Linh, không phải cấu hình đã khóa.
+- Tần số lấy mẫu chưa thống nhất giữa các tài liệu: protocol v0.1 đề xuất PPG 100–250 Hz, ECG 250–500 Hz; [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md) chọn MAX30001 (ECG) và MAX30101 (PPG) với mục tiêu 500 Hz cho cả hai kênh; packet schema v0.1 tại ref `origin/dev/ducanh` (`e13d669`) đề xuất ECG **512 SPS**. Tần số cuối cùng phải là giá trị mà từng AFE hỗ trợ theo datasheet và phải được đo lại trên thiết bị. Đây là điểm chưa chốt, không phải cấu hình đã khóa.
 - Với độ phân giải thời gian, mỗi mẫu ở 500 Hz là 2 ms; sai số định vị R peak và PPG foot cộng với sai số đồng bộ hai kênh đi thẳng vào PAT, nên cần đo jitter/offset thực tế trước khi diễn giải các thay đổi PAT cỡ vài ms.
 - Phải phân biệt timestamp **lấy mẫu**, timestamp **đọc FIFO** và thời điểm **nhận gói tại PC**. Counter MCU không tự loại bỏ độ trễ sensor/FIFO, sai lệch clock hoặc jitter. Cần ghi clock, đơn vị, tần số theo kênh, mất mẫu và cách suy ra thời điểm từng mẫu từ timestamp mẫu đầu gói.
 - Marker bắt đầu bơm cuff (`t0`) phải cùng clock hoặc có ánh xạ có thể kiểm tra. Không dịch PPG để trùng đỉnh R vì sẽ mất độ trễ cần tính PAT.
@@ -139,7 +139,7 @@ Mỗi bản ghi phải chứa khóa định danh duy nhất theo cấu trúc:
 - `window_id`: Mã cửa sổ tín hiệu thành phần bên trong một event.
 
 ### 7.3. Tiêu chí kiểm tra chất lượng tín hiệu (SQI) và Loại bỏ cửa sổ
-Các tiêu chí và con số dưới đây là **đề xuất chưa khóa**, không phải ngưỡng đã kiểm chứng hay quy tắc đang triển khai. Nhóm phải review căn cứ, cực tính/lọc tín hiệu và kiểm tra trên pilot/validation trước khi áp dụng; không tuning theo test. Dự kiến gắn `flag_reject = True` khi vi phạm tiêu chí đã được duyệt:
+Các tiêu chí và con số dưới đây là **đề xuất chưa khóa**, không phải ngưỡng đã kiểm chứng hay quy tắc đang triển khai. Phải kiểm tra căn cứ, cực tính/lọc tín hiệu và kiểm tra trên pilot/validation trước khi áp dụng; không tuning theo test. Dự kiến gắn `flag_reject = True` khi vi phạm tiêu chí đã khóa:
 1. **Nhiễu bão hòa quang học (Clipping/Saturation):** Tín hiệu PPG chạm ngưỡng kịch trần ADC ($V_{\text{max}}$ hoặc $V_{\text{min}}$) quá 5% thời gian cửa sổ.
 2. **Chỉ số Skewness SQI ($s\text{SQI}$):** Ứng viên $s\text{SQI} < 0$; dấu phụ thuộc cực tính và xử lý tín hiệu, không mặc định mọi PPG hợp lệ đều có độ lệch dương.
 3. **Mất tín hiệu ECG:** Không phát hiện được phức bộ QRS rõ ràng hoặc biên độ đỉnh R nhỏ hơn $3\times$ độ lệch chuẩn đường nền.
@@ -152,8 +152,8 @@ Các tiêu chí và con số dưới đây là **đề xuất chưa khóa**, kh�
 
 ### 8.1. Công thức xác định PAT
 $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
-- $t_{\mathrm{ECG,Rpeak}}$: Thời điểm đỉnh sóng R của phức bộ QRS. Pan–Tompkins hiệu chỉnh là một thuật toán ứng viên; phương pháp phát hiện R peak, cấu hình lọc và quy tắc xử lý đỉnh giả/bỏ sót phải được kiểm tra trên pilot/validation và review trước khi khóa.
-- $t_{\mathrm{PPG,foot}}$: Thời điểm chân sóng (foot) của nhịp PPG tương ứng. Tiếp tuyến giao cắt (intersecting tangent method) và đạo hàm bậc hai cực đại ($d^2\text{PPG}/dt^2$) là các phương pháp ứng viên; phương pháp foot và quy tắc ghép nhịp vẫn chờ review/khóa trên pilot/validation, không điều chỉnh theo test.
+- $t_{\mathrm{ECG,Rpeak}}$: Thời điểm đỉnh sóng R của phức bộ QRS. Pan–Tompkins hiệu chỉnh là một thuật toán ứng viên; phương pháp phát hiện R peak, cấu hình lọc và quy tắc xử lý đỉnh giả/bỏ sót phải được kiểm tra trên pilot/validation trước khi khóa.
+- $t_{\mathrm{PPG,foot}}$: Thời điểm chân sóng (foot) của nhịp PPG tương ứng. Tiếp tuyến giao cắt (intersecting tangent method) và đạo hàm bậc hai cực đại ($d^2\text{PPG}/dt^2$) là các phương pháp ứng viên; phương pháp foot và quy tắc ghép nhịp vẫn chưa khóa, phải khóa trên pilot/validation, không điều chỉnh theo test.
 
 ### 8.2. Cảnh báo phương pháp luận: $\text{PAT} \neq \text{PTT}$
 - Nhóm nghiên cứu ghi nhận rõ ràng:
@@ -183,7 +183,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 - **Bootstrap theo đối tượng (Subject-level Bootstrapping):**
   - Khi ước lượng khoảng tin cậy 95% (95% CI) cho MAE, phải tiến hành lấy mẫu lại có hoàn lại **theo từng người tham gia (`subject_id`)**, sau đó tính sai số trên toàn bộ các mẫu của người đó.
   - Tuyệt đối **KHÔNG bootstrap theo từng cửa sổ đo riêng rẽ**, vì điều đó vi phạm giả định độc lập quan sát (i.i.d).
-- **Kiểm định giả thuyết (đề xuất, chờ duyệt):**
+- **Kiểm định giả thuyết (chưa khóa):**
   - Phép so sánh chính của RQ1 là mô hình PPG-only với mô hình PPG + PAT, cùng thuật toán và trên **cùng tập lần đo** có cả ECG và PPG đạt chất lượng (xem [RQ v0.2](../research_questions_v0.1.md), mục 4.C).
   - Hiệu ứng chính là chênh lệch MAE theo từng người; báo cáo trung bình và CI 95% bootstrap theo người. Wilcoxon signed-rank cặp theo người ($\alpha = 0.05$) là phân tích hỗ trợ.
   - SBP và DBP là hai phép kiểm định; cách hiệu chỉnh đa kiểm định (ví dụ Holm) phải chọn trước khi mở test.
@@ -218,5 +218,5 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 > 2. [ ] Linh xác nhận cấu trúc gói dữ liệu nhị phân/JSON truyền từ thiết bị vào máy tính có trường lưu `subject_id`, `session_id`, `event_id` và timestamp vi giây.
 > 3. [ ] Thống nhất nhãn hiệu và model máy đo huyết áp bắp tay đối chứng dùng trong phòng thí nghiệm.
 > 4. [ ] Xin ý kiến giảng viên hướng dẫn về quy trình làm việc với hội đồng đạo đức trước khi tuyển tình nguyện viên.
-> 5. [ ] Review khác biệt sampling, timestamp lấy mẫu/FIFO/nhận gói, clock và marker cuff với packet schema; ghi reviewer, commit và quyết định trước khi khóa giao diện.
-> 6. [ ] Review căn cứ cỡ mẫu, cửa sổ, SQI, kiểm định và mọi tiêu chí an toàn/vận động dự thảo; không dùng outline để tự triển khai đo trên người.
+> 5. [ ] Đối chiếu khác biệt sampling, timestamp lấy mẫu/FIFO/nhận gói, clock và marker cuff với packet schema; ghi commit và quyết định trước khi khóa giao diện.
+> 6. [ ] Kiểm tra căn cứ cỡ mẫu, cửa sổ, SQI, kiểm định và mọi tiêu chí an toàn/vận động dự thảo; không dùng outline để tự triển khai đo trên người.

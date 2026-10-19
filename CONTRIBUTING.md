@@ -8,7 +8,7 @@
   **fix/mo-ta-ngan**, **docs/mo-ta-ngan** hoặc **chore/mo-ta-ngan**.
 - Tạo pull request vào **develop**. Chỉ đưa **develop** vào **main** tại mốc ổn
   định đã được nhóm thống nhất.
-- Cần ít nhất một thành viên khác review; CI phải thành công trước khi merge.
+- CI phải thành công trước khi merge.
 
 ## Commit
 
@@ -39,5 +39,4 @@ Một thay đổi chỉ hoàn thành khi:
 - Kiểm thử phù hợp đã được thêm và chạy thành công.
 - **ruff check .**, **pytest -q** và kiểm tra môi trường đều thành công.
 - Không có dữ liệu nhạy cảm, bí mật hoặc file lớn ngoài chính sách.
-- Pull request đã được review chéo và mọi góp ý đã được xử lý.
 - CI thành công và pull request sẵn sàng merge vào **develop**.

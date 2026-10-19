@@ -1,14 +1,16 @@
-# Giao diện packet giả lập trên PC — chờ Đức Anh review
+# Giao diện packet giả lập trên PC
 
 ## Ranh giới
 
 **SYNTHETIC ONLY.** Đây là đầu ra hỗ trợ phần mềm Tuần 3, không phải schema
 phần cứng đã chốt, driver/firmware hoặc kết quả đồng bộ hai cảm biến thật.
-Không sửa tài liệu V0.1/V1 của Đức Anh. Không dùng dữ liệu này để đánh giá
+Không dùng dữ liệu này để đánh giá
 waveform, PAT, BP, độ trễ sinh lý, năng lượng hoặc hiệu năng thiết bị.
 
 Tham khảo yêu cầu generator/replay và packet ở `origin/dev/ducanh@40ede49`.
 Version riêng `synthetic-packet-v2`; JSON, không phải binary wire format.
+Bảng đối chiếu trường với schema phần cứng dự kiến nằm ở
+[Packet_Schema_V0.1.md mục 14](../../configs/hardware/Packet_Schema_V0.1.md).
 Code: `software/data_io/packet_simulation.py`; runner: `scripts/simulate_packets.py`.
 
 ## Schema, clock và thông số giả lập
@@ -44,7 +46,7 @@ giới hạn integer và sampling rate tạo khoảng mẫu phân số.
 
 Đây là thay đổi không tương thích với output v1: config/packet v1 bị từ chối.
 Tạo lại artifact bằng config v2; không chỉ sửa version trên artifact cũ.
-Schema phần cứng của Đức Anh không thay đổi. Issue counts/giá trị mẫu giữ nguyên
+Issue counts/giá trị mẫu giữ nguyên
 với config mặc định; hash packet/replay thay đổi do version/biểu diễn thời gian.
 
 Config `configs/hardware/packet_simulation.json` chứa seed `20261010`, 4 packet
@@ -104,16 +106,14 @@ commit/dirty có thể thay đổi giữa các lần, nên không yêu cầu to�
 Lỗi ghi có thể để lại thư mục chưa hoàn chỉnh: chỉ bàn giao khi lệnh exit 0,
 đủ bốn file và hash khớp. Không đổi tên output giả lập thành dữ liệu đo thật.
 
-## Review và việc thực tế còn chờ
+## Việc còn mở
 
-Đức Anh review field/version, sequence/reset/wrap, ý nghĩa timestamp lấy mẫu và
-FIFO, mốc clock, fs từng kênh; Linh review decoder/schema/gap; Huy review ý nghĩa
-thời gian và giới hạn offset. Đây không giải quyết mâu thuẫn version tài liệu
-phần cứng, không thay quyết định giao diện firmware chính thức.
+Công cụ này không giải quyết mâu thuẫn version tài liệu phần cứng và không thay
+quyết định giao diện firmware chính thức.
 
-Khi có phần cứng: Đức Anh cần kế hoạch bản ghi **10 phút** trên điều kiện được
+Khi có phần cứng: cần kế hoạch bản ghi **10 phút** trên điều kiện được
 phép/an toàn, lưu raw/config/checksum/log, dùng mốc tham chiếu đồng bộ có kiểm
 chứng. Báo riêng offset ban đầu, biến thiên timing/jitter, thay đổi offset theo
 thời gian/drift và tỷ lệ missing packet/sample từ sequence/log. Không lấy trễ
 R-peak→PPG làm clock offset. Mốc tham chiếu, công thức/đơn vị, tiêu chí/tolerance
-và clock mapping phải được nhóm review; chưa có số đo nào từ công cụ này.
+và clock mapping phải chốt trước; chưa có số đo nào từ công cụ này.

@@ -11,7 +11,6 @@ Tài liệu này dành cho cả thành viên mới dùng GitHub. Mục tiêu là
 | Commit | Một lần lưu thay đổi kèm thông điệp mô tả. |
 | Push | Đưa các commit từ máy cá nhân lên GitHub. |
 | Pull Request (PR) | Yêu cầu ghép thay đổi từ một nhánh vào nhánh khác để nhóm kiểm tra. |
-| Review | Thành viên khác đọc và góp ý cho PR. |
 | CI | Hệ thống tự động chạy kiểm tra mã nguồn và test. Dấu xanh nghĩa là kiểm tra đạt. |
 | Merge | Ghép thay đổi của PR vào nhánh đích. |
 | Conflict | Hai nhánh cùng sửa một vùng nên Git không tự quyết định được nội dung cần giữ. |
@@ -19,7 +18,7 @@ Tài liệu này dành cho cả thành viên mới dùng GitHub. Mục tiêu là
 ## 2. Vai trò của các nhánh
 
 - main: phiên bản ổn định dùng cho các mốc báo cáo, demo hoặc phát hành.
-- develop: nơi tích hợp công việc đã được review và CI kiểm tra.
+- develop: nơi tích hợp công việc đã qua CI.
 - dev/linh: nhánh làm việc của Linh.
 - dev/ducanh: nhánh làm việc của Đức Anh.
 - dev/huy: nhánh làm việc của Huy.
@@ -108,13 +107,13 @@ Nếu là lần đầu đẩy một nhánh mới:
 4. Chọn compare là nhánh đang làm.
 5. Điền mục tiêu, thay đổi chính, cách kiểm tra và ảnh hưởng tới dữ liệu/phần cứng/protocol.
 6. Liên kết Issue nếu có.
-7. Tạo PR và yêu cầu ít nhất một thành viên khác review.
+7. Tạo PR.
 
 Không chọn main làm base cho công việc hằng ngày.
 
-## 5. Review và merge
+## 5. Kiểm tra và merge
 
-Người review cần kiểm tra:
+Trước khi merge cần kiểm tra:
 
 - Thay đổi có đúng nhiệm vụ không.
 - Có file dữ liệu nhạy cảm hoặc file sinh tự động bị đưa lên không.
@@ -125,9 +124,7 @@ Người review cần kiểm tra:
 Chỉ merge khi:
 
 - CI hiển thị màu xanh.
-- Góp ý quan trọng đã được xử lý.
 - Không còn conflict.
-- Một thành viên khác đã review.
 
 Merge là ghép thay đổi vào develop; không phải xóa toàn bộ nhánh hoặc mất lịch sử.
 
@@ -193,6 +190,5 @@ Xem thêm docs/DATA_POLICY.md.
 - Đã chạy Ruff, Pytest và kiểm tra môi trường.
 - PR có mô tả cách kiểm tra.
 - Base branch là develop.
-- Đã chọn người review.
 
 Nếu chưa chắc một thao tác Git có an toàn hay không, dừng lại và hỏi nhóm trước khi dùng force, reset, rebase hoặc xóa nhánh.

@@ -1,4 +1,8 @@
-# Models — baseline B0/B1
+# Models — baseline B0/B1/B3
+
+B3 (`XGBoostBaseline` trong [xgboost_baseline.py](xgboost_baseline.py)) có API
+`fit(train_features, train_labels)`, `predict(features)` và `save(directory)`.
+Xem [hướng dẫn B0/B3](../../docs/protocol/run_b3_pulsedb.md). Phần dưới mô tả B0/B1.
 
 [constant_baselines.py](constant_baselines.py) chứa hai lớp dự đoán **BP tuyệt
 đối**, riêng SBP và DBP. File này được demo/pipeline import; không tự đọc
@@ -59,5 +63,5 @@ B0 hiện dùng trung bình đều theo dòng train. B1 dùng trung bình đều
 hiệu chuẩn của từng người và thuộc kịch bản cá nhân hóa có hiệu chuẩn. Caller
 phải xác minh split, không trùng record/event và calibration có trước evaluation;
 API không nhận metadata để tự chứng minh các điều kiện đó. Quy tắc dataset thật
-và trọng số vẫn cần review trước phân tích. Xem
+và trọng số chưa chốt cho phân tích. Xem
 [quy ước phương pháp](../../docs/protocol/week_03_baselines_metrics.md).

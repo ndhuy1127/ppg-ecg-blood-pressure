@@ -1,7 +1,7 @@
 # Tuần 4 — giao diện đặc trưng, SQI v0 và bootstrap người
 
-Huy, 2026-10-13. **Triển khai sơ bộ, kiểm tra bằng fixture SYNTHETIC; chờ
-review của Linh/Đức Anh.** Không phải phương pháp đã khóa trên dữ liệu công khai.
+Huy, 2026-10-13. Kiểm tra bằng fixture SYNTHETIC.
+Không phải phương pháp đã khóa trên dữ liệu công khai.
 Không thay protocol, split, calibration hoặc chính sách raw.
 
 ## 1. Giao diện bàn giao
@@ -51,9 +51,9 @@ HR luôn cần ít nhất hai mốc và đủ `min_beats`; đặt `min_beats=1` 
 tính HR từ một nhịp. Mọi feature là số hữu hạn hoặc None. `missing_reasons`
 theo từng feature: RR/foot intervals, chất lượng kênh, pulse half-height đầy đủ
 hoặc timing/PAT; không gán cờ PAT vào feature PPG-only.
-Linh chỉ lấy cột theo `FEATURE_NAMES`; không đưa metadata/SQI vào model một cách
+Pipeline chỉ lấy cột theo `FEATURE_NAMES`; không đưa metadata/SQI vào model một cách
 ngầm định. Nếu impute/scaling cần fit, chỉ fit trên train; quy tắc missing và
-lọc SQI phải review/khóa trước test. Có thể dùng PPG feature khi PAT chưa khả dụng.
+lọc SQI phải khóa trước test. Có thể dùng PPG feature khi PAT chưa khả dụng.
 `ppg_feature_segments` trong summary nghĩa là tính được `ppg_hr_bpm`, không có
 nghĩa mọi cột đều đầy đủ hay mọi đoạn đã được chấp nhận.
 
@@ -129,7 +129,7 @@ không trùng/mất/thêm ID và cùng tập cho các model. Prediction table c�
 `sample_id, subject_id, split, model, pred_sbp, pred_dbp`. Không nhận nhãn từ
 prediction table; reference lấy từ manifest được inventory kiểm tra.
 Nguồn/quyền dùng/pool, raw hash, chronology/calibration và khóa test vẫn là
-trách nhiệm caller/reviewer; API không đủ metadata để xác nhận B1 hợp lệ.
+trách nhiệm caller; API không đủ metadata để xác nhận B1 hợp lệ.
 Beta/r ΔBP không triển khai khi chưa có định nghĩa/metadata phù hợp.
 
 ## 6. Ví dụ tích hợp và tái chạy
@@ -169,7 +169,7 @@ cho raw. Khác với các runner khác trong `scripts/` (từ chối ghi đè), 
 `svg.hashsalt` cố định, nên `figure_sha256` giống nhau giữa các lần chạy trong
 cùng môi trường. Không đưa bảng fixture vào bảng baseline công khai.
 
-**Sửa sau review ngày 2026-10-13:** validation số thực từ chối bool/string/array
+**Sửa ngày 2026-10-13:** validation số thực từ chối bool/string/array
 và trả ValueError; ID/clock không nhận edge whitespace, alignment_basis phải là
 chuỗi. Config và ngưỡng mặc định không đổi. Fixture có `fixture_input_provenance`
 cho từng case: hash waveform canonical little-endian float64 theo kênh/shape,

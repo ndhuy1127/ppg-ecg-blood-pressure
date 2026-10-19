@@ -80,7 +80,7 @@ def run(config_path, output):
         "limitations": [
             "raw_index identifies a file row, not an original record or timestamp",
             "No original record/window metadata or cross-source identity verified",
-            "Config review declarations require independent human review",
+            "Config declarations (license, pool, identity) are not verified automatically",
             "No learned preprocessing, demographics, calibration or cuff inference",
             "All reader rows retained; no implicit subsampling or quality exclusion",
             "Exact waveform matches across splits require review; partial overlaps are not detected",

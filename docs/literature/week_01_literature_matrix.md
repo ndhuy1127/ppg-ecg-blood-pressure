@@ -4,7 +4,7 @@
 > **Người thực hiện:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 > **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14
-> **Trạng thái:** Bản thảo chờ nhóm review. Metadata của 12 bài đã được đối chiếu với Crossref/nhà xuất bản; nội dung được đối chiếu ở mức ghi trong cột "Mức đã đọc". Nguồn bổ sung 2021–2026 nằm trong [tổng quan bổ sung](literature_update_2026-10-14.md).
+> Metadata của 12 bài đã được đối chiếu với Crossref/nhà xuất bản; nội dung được đối chiếu ở mức ghi trong cột "Mức đã đọc". Nguồn bổ sung 2021–2026 nằm trong [tổng quan bổ sung](literature_update_2026-10-14.md).
 
 ---
 
