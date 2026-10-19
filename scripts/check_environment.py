@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import sklearn
+import xgboost
 import yaml
 
 
@@ -25,6 +26,7 @@ def main() -> int:
         f"pandas={pd.__version__},",
         f"matplotlib={matplotlib.__version__},",
         f"scikit-learn={sklearn.__version__},",
+        f"xgboost={xgboost.__version__},",
         f"pyyaml={yaml.__version__}",
     )
     print(f"NumPy result: {doubled.tolist()}")
