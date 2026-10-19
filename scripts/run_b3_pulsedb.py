@@ -15,8 +15,10 @@ CODE_FILES = (
     "software/pulsedb/features.py", "software/pulsedb/reader.py",
     "software/models/xgboost_baseline.py", "software/models/constant_baselines.py",
     "software/evaluation/subject_bootstrap.py", "software/evaluation/bp_metrics.py",
-    "software/data_io/split_manifest.py", "software/_bp_validation.py",
+    "software/signal_processing/fiducials.py", "software/data_io/split_manifest.py",
+    "software/_bp_validation.py", "software/_provenance.py",
 )
+SPLIT_FILES = ("inventory.csv", "manifest.csv", "config.json", "report.json")
 
 
 def _git(repo, *args):
@@ -28,7 +30,10 @@ def _git(repo, *args):
 
 def run(raw_path, split_dir, config_path, output, repo):
     """Validate every input before fitting; write a new output directory only."""
-    from software.data_io.split_manifest import file_sha256, read_manifest_bytes
+    from software._provenance import text_file_sha256, text_sha256
+    from software.data_io.split_manifest import (
+        VERSION as SPLIT_VERSION, file_sha256, read_manifest_bytes,
+    )
     from software.pulsedb.pipeline import baseline_table, load_config, run_baselines
     from software.pulsedb.reader import PulseDBReader
 
@@ -39,21 +44,31 @@ def run(raw_path, split_dir, config_path, output, repo):
     config = load_config(config_bytes)
 
     split_dir = Path(split_dir)
-    payloads = {
-        name: (split_dir / name).read_bytes()
-        for name in ("inventory.csv", "manifest.csv", "report.json")
-    }
+    payloads = {name: (split_dir / name).read_bytes() for name in SPLIT_FILES}
     split_report = json.loads(payloads["report.json"])
+    if not isinstance(split_report, dict):
+        raise ValueError("Split report.json must be a JSON object")
+    if split_report.get("schema_version") != SPLIT_VERSION:
+        raise ValueError(f"Split report schema_version must be {SPLIT_VERSION}")
     raw_sha256 = file_sha256(raw_path)
+    # config.json is checked byte-for-byte: it is the copy written with the split.
     for field, actual in (
         ("inventory_sha256", hashlib.sha256(payloads["inventory.csv"]).hexdigest()),
         ("manifest_sha256", hashlib.sha256(payloads["manifest.csv"]).hexdigest()),
+        ("config_sha256", hashlib.sha256(payloads["config.json"]).hexdigest()),
         ("raw_sha256", raw_sha256),
     ):
         if split_report.get(field) != actual:
             raise ValueError(f"{field} differs from the split handover report")
+    split_config = json.loads(payloads["config.json"])
+    pool_decision = split_config.get("pool_decision") if isinstance(
+        split_config, dict) else None
+    if not isinstance(pool_decision, str) or not pool_decision.strip():
+        raise ValueError("Split config.json has no pool_decision")
     inventory = read_manifest_bytes(payloads["inventory.csv"])
     manifest = read_manifest_bytes(payloads["manifest.csv"])
+    if set(inventory.source_sha256) != {raw_sha256}:
+        raise ValueError("Inventory source_sha256 differs from the raw file")
 
     segments = PulseDBReader(str(raw_path)).read()
     result = run_baselines(segments, manifest, inventory, config)
@@ -71,13 +86,16 @@ def run(raw_path, split_dir, config_path, output, repo):
                   "or cross-session BP"),
         "config": config,
         "inputs_sha256": {
-            "config": hashlib.sha256(config_bytes).hexdigest(),
+            # Tracked text: hashed with LF line endings, as stored in Git.
+            "config": text_sha256(config_bytes),
             "raw": raw_sha256,
             "split_inventory": split_report["inventory_sha256"],
             "split_manifest": split_report["manifest_sha256"],
+            "split_config": split_report["config_sha256"],
             "split_report": hashlib.sha256(payloads["report.json"]).hexdigest(),
         },
-        "split_schema_version": split_report.get("schema_version"),
+        "split_schema_version": split_report["schema_version"],
+        "split_pool_decision": pool_decision,
         "split_counts": result["counts"],
         "feature_names": result["feature_names"],
         "constant_train_features": result["constant_train_features"],
@@ -85,7 +103,8 @@ def run(raw_path, split_dir, config_path, output, repo):
         "evaluation": result["evaluation"],
         "validation_log": [
             "Raw SHA256 matches the split report before and after reading",
-            "Split inventory/manifest SHA256 match the split report",
+            "Split inventory/manifest/config SHA256 match the split report",
+            "Inventory source_sha256 equals the raw SHA256; pool_decision present",
             "validate_manifest: conservation and no subject/hash leakage",
             "Inventory rebuilt from raw segments matches the handover byte-for-byte",
             "Features read only ECG/PPG; no ABP, BP label, subject ID or hash",
@@ -104,7 +123,7 @@ def run(raw_path, split_dir, config_path, output, repo):
         "code_provenance": {
             "git_commit": commit,
             "workspace_has_changes": None if status is None else bool(status),
-            "sha256": {name: file_sha256(repo / name) for name in CODE_FILES},
+            "sha256_lf": {name: text_file_sha256(repo / name) for name in CODE_FILES},
         },
         "environment": {
             "python": platform.python_version(),
@@ -112,19 +131,24 @@ def run(raw_path, split_dir, config_path, output, repo):
         },
         "run_time_utc": now.isoformat(),
     }
-    serialized = json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False)
     table = baseline_table(result["evaluation"], result["counts"])
 
     output.mkdir(parents=True, exist_ok=False)
-    with (output / "report.json").open("x", encoding="utf-8") as stream:
-        stream.write(serialized + "\n")
-    with (output / "baseline_table.md").open("x", encoding="utf-8") as stream:
-        stream.write(table)
+    with (output / "baseline_table.md").open("x", encoding="utf-8", newline="\n") as s:
+        s.write(table)
     # Row-level predictions contain subject IDs; runs/ stays outside Git.
     with (output / "predictions_val.csv").open("x", encoding="utf-8", newline="") as s:
         result["predictions"].to_csv(s, index=False, lineterminator="\n",
                                      float_format="%.17g")
-    result["b3"].save(output)
+    written = ["baseline_table.md", "predictions_val.csv"]
+    written += [path.name for path in result["b3"].save(output).values()]
+    # report.json is written last: its presence means every output above exists.
+    report["outputs_sha256"] = {
+        name: file_sha256(output / name) for name in sorted(written)
+    }
+    serialized = json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False)
+    with (output / "report.json").open("x", encoding="utf-8", newline="\n") as s:
+        s.write(serialized + "\n")
     return report, table
 
 

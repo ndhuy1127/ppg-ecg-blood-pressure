@@ -23,13 +23,18 @@ chưa có chronology/calibration.
 
 1. File raw `.mat` đã chọn làm pool, lưu ngoài Git.
 2. Thư mục split do `scripts/build_pulsedb_split.py` tạo, gồm `inventory.csv`,
-   `manifest.csv` và `report.json`. Xem [hướng dẫn split](run_pulsedb_split.md).
+   `manifest.csv`, `config.json` và `report.json`. Xem
+   [hướng dẫn split](run_pulsedb_split.md).
 3. Config [b3_pulsedb_v0.json](../../configs/models/b3_pulsedb_v0.json).
 
 Trước khi fit, runner dừng nếu có bất kỳ điểm nào sau không khớp:
 
-- SHA-256 của raw (trước và sau khi đọc), `inventory.csv` và `manifest.csv`
-  so với `report.json` của split;
+- `report.json` của split phải là object có `schema_version` `pulsedb-split-v2`;
+- SHA-256 của raw (trước và sau khi đọc), `inventory.csv`, `manifest.csv` và
+  `config.json` so với `report.json` của split;
+- `config.json` của split phải có `pool_decision` không rỗng (được chép vào
+  `split_pool_decision` của report);
+- `source_sha256` của mọi dòng inventory phải bằng SHA-256 của file raw;
 - `validate_manifest`: thiếu/thêm/sửa dòng, giao người hoặc hash giữa các split;
 - inventory dựng lại từ raw qua reader của repo phải trùng từng byte với
   inventory bàn giao, tức `sample_hash`/`waveform_hash` được tính lại từ waveform.
@@ -53,8 +58,8 @@ chuẩn hóa `ECG_F`/`PPG_F` **chưa được xác minh**. Nếu kênh đã chu�
 `constant_train_features`.
 
 Hàm chỉ nhận vector ECG và PPG, không nhận ABP, nhãn BP, ID người hay hash.
-Không impute: NaN/Inf hoặc vector rỗng gây `ValueError`. PAT và module
-`features-sqi-v0` chưa được tích hợp.
+Không impute: NaN/Inf, vector rỗng hoặc masked array gây `ValueError`. PAT và
+module `features-sqi-v1` chưa được tích hợp.
 
 ## B3
 
@@ -80,7 +85,7 @@ hash lại cho mọi dòng.
 
 | File | Nội dung |
 | --- | --- |
-| `report.json` | Config, hash input, số người/đoạn mỗi split, B0, metrics/CI, log kiểm tra, giới hạn, commit, hash code, môi trường; không có ID người |
+| `report.json` | Config, hash input, `pool_decision`, số người/đoạn mỗi split, B0, metrics/CI, log kiểm tra, giới hạn, commit, hash code (`sha256_lf`), môi trường, `outputs_sha256` của bốn file dưới; không có ID người. Ghi **sau cùng**: thiếu file này nghĩa là lần chạy không hoàn tất |
 | `baseline_table.md` | Bảng B0/B3 riêng SBP/DBP trên val, sinh bằng mã; không có ID người |
 | `predictions_val.csv` | `sample_id, subject_id, split, model, pred_sbp, pred_dbp`; **có ID**, giữ ngoài Git |
 | `xgboost_sbp.json`, `xgboost_dbp.json` | Model B3 |
@@ -89,7 +94,9 @@ hash lại cho mọi dòng.
 
 Cùng raw, split, config, code và môi trường cho cùng metrics, cùng file dự
 đoán và cùng file model theo từng byte. Test kiểm tra điều này trên dữ liệu
-SYNTHETIC. Chưa chạy trên raw thật.
+SYNTHETIC. Chưa chạy trên raw thật. Hash config model và code tính trên nội dung
+đã đổi CRLF thành LF (như blob trong Git), nên không phụ thuộc checkout Windows hay
+Linux; raw, inventory, manifest, config split và output vẫn hash theo byte.
 
 ## Ghi nhận và việc còn mở
 
@@ -97,8 +104,9 @@ SYNTHETIC. Chưa chạy trên raw thật.
   `notebooks/metrics_all_splits.csv`, notebook `week4-train-xgboost.ipynb`).
   Không được dùng các số đó để chọn model; cần ghi sai lệch này vào báo cáo.
 - CSV 1.000 đoạn lịch sử không chạy được với runner này vì không có inventory.
-- Cần chốt `pool_decision`: `VitalDB_AAMI_Cal_Subset` trùng người với AAMI Test.
-  Xem [provenance](../pulsedb_provenance.md).
+- Cần chốt nội dung `pool_decision`: `VitalDB_AAMI_Cal_Subset` trùng người với
+  AAMI Test. Runner chỉ kiểm tra trường này có mặt, không đánh giá nội dung. Xem
+  [provenance](../pulsedb_provenance.md).
 - Cần CI trên Python 3.11; `xgboost` 3.3 trở lên yêu cầu Python ≥ 3.12, nên repo
   pin 3.2.0.
 
