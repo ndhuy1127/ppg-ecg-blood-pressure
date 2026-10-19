@@ -41,10 +41,11 @@ $$\text{<subject\_id>\_<session\_id>\_<event\_id>\_<data\_type>.<ext>}$$
 * **DBP (Huyết áp tâm trương):** $mmHg$
 
 ### Tần số lấy mẫu (Sampling Rate):
-> ⚠️ **LƯU Ý:** Các thông số tần số lấy mẫu dưới đây hiện ở dạng **ĐỀ XUẤT** và chờ Hội đồng/Lead duyệt chính thức.
+* **ECG:** $500\,Hz$ hoặc $512\,SPS$ (MAX30001 cấu hình được cả hai; packet schema đang ghi 512). Chưa chốt một giá trị.
+* **PPG:** $100\,Hz$ hoặc $125\,Hz$ (chưa chốt); giá trị khả thi phụ thuộc AFE, chế độ LED và hệ số lấy trung bình.
+* **PulseDB Subset (dữ liệu công khai):** $125\,Hz$ cho cả ba kênh (suy ra từ 1250 mẫu/đoạn 10 giây).
 
-* **ECG:** Đề xuất $500\,Hz$
-* **PPG:** Đề xuất $100\,Hz$ hoặc $125\,Hz$
+Bảng khả năng lấy mẫu theo linh kiện nằm ở `configs/hardware/interface_power_sampling_v0.md`.
 
 ---
 

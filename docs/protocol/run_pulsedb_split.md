@@ -13,15 +13,32 @@ làm mất metadata khi xuất CSV. Config v1 bị từ chối; không chỉ đ�
 trên CSV cũ: phải tạo lại inventory/hash từ waveform. Dữ liệu bàn giao cũ giữ nguyên.
 Pipeline giữ **mọi dòng reader trả về** của một file được chỉ định; không áp dụng
 quy tắc chọn 10 đoạn/người hoặc pool 1.000 đoạn của notebook cũ. Vì vậy không
-coi output mới là lần tái tạo pool cũ. Việc chọn pool thực nghiệm cần Linh/Huy
-review trước khi chạy; không tái chia holdout gốc để tuyên bố đánh giá PulseDB.
+coi output mới là lần tái tạo pool cũ. Pool thực nghiệm phải
+chốt trước khi chạy; không tái chia holdout gốc để tuyên bố đánh giá PulseDB.
 Không dùng nhãn test để chọn tỷ lệ, seed, model hoặc tiêu chí loại.
+
+## Chọn pool và vai trò subset
+
+Gói Kaggle có 5 subset VitalDB. Theo bài báo PulseDB, Train và CalBased Test là
+cùng người; AAMI Test và AAMI Cal là cùng người (nhóm C); CalFree Test là nhóm
+người riêng. CSV lịch sử dùng `VitalDB_AAMI_Cal_Subset.mat` (116 người, đều có
+mặt trong AAMI Test). Chi tiết và bằng chứng: [provenance PulseDB](../pulsedb_provenance.md).
+
+Trước khi chạy, trường `pool_decision` phải ghi rõ:
+
+- file nào là pool để chia train/val/test;
+- subset nào là held-out bên ngoài và subset nào **không được dùng** ở bất kỳ
+  bước nào vì trùng người với pool.
+
+Không chọn pool, seed hay tỷ lệ dựa trên kết quả mô hình. Quy tắc QC nhãn (ví dụ
+pulse pressure bất thường) được chốt riêng và chỉ gắn cờ, không xóa dòng khỏi
+inventory.
 
 ## Config đầu vào
 
 Lưu JSON cục bộ ngoài Git, ví dụ
 `D:\ppg-ecg-blood-pressure\data\processed\linh_split_config.json`.
-Không có config mặc định được phê duyệt và không bịa checksum. JSON phải có
+Không có config mặc định và không bịa checksum. JSON phải có
 đúng các trường sau, tất cả chuỗi phải không rỗng:
 
 | Trường | Giá trị / ý nghĩa |
@@ -32,20 +49,20 @@ Không có config mặc định được phê duyệt và không bịa checksum.
 | `source` | Tên file/nguồn thật; không hard-code nguồn khác file đã chọn |
 | `source_version` | Phiên bản bản dữ liệu thực dùng |
 | `license`, `permission_basis` | Điều khoản và bằng chứng quyền dùng đã kiểm tra |
-| `pool_decision` | Quyết định được review về pool và quan hệ với holdout có sẵn |
-| `subject_identity_review` | Kết quả review ý nghĩa ID/alias và giới hạn còn lại |
+| `pool_decision` | Quyết định đã chốt về pool và quan hệ với holdout có sẵn |
+| `subject_identity_review` | Kết quả kiểm tra ý nghĩa ID/alias và giới hạn còn lại |
 | `unit` | `mmHg` |
 | `seed` | Số nguyên; 72 là seed lịch sử, chỉ dùng nếu quyết định giữ seed đó |
 | `ratios` | Ba tỷ lệ dương tổng bằng 1, thứ tự train/val/test; 0.8/0.1/0.1 là phương án lịch sử |
 
-Các mô tả quyền dùng/review là khai báo cần người kiểm tra, **không phải chứng
+Các mô tả quyền dùng/pool/ID là khai báo cần người kiểm tra, **không phải chứng
 nhận tự động**. Có thể tính checksum tại máy được phép giữ dataset bằng
 `Get-FileHash -Algorithm SHA256`, rồi ghi giá trị lowercase vào config.
 Không tự tải dataset hoặc commit đường dẫn/metadata nhạy cảm.
 
 ## Chạy và kiểm tra tái lập
 
-Dùng môi trường đã cài theo repo, không cài dependency trong lúc review:
+Dùng môi trường đã cài theo repo, không cài dependency trong lúc chạy:
 
 ```powershell
 & 'D:\ppg-ecg-blood-pressure\.venv\Scripts\python.exe' -B 'D:\ppg-ecg-blood-pressure\scripts\build_pulsedb_split.py' --config 'D:\ppg-ecg-blood-pressure\data\processed\linh_split_config.json' --output 'D:\ppg-ecg-blood-pressure\data\processed\linh_split_run_01'
@@ -76,7 +93,7 @@ thầm làm tròn (ví dụ `2**53 + 1`). Integer lớn nhưng biểu diễn ch�
 chấp nhận. Quy ước hash/CSV v2 không đổi cho dữ liệu đã được hỗ trợ chính xác.
 `sample_hash` kiểm tra ID/nhãn và waveform; `waveform_hash` chỉ chứa waveform,
 channel/shape và version, độc lập ID/nhãn/nguồn. Waveform giống hệt khác split
-làm pipeline dừng để review, không tự xóa mẫu hoặc suy ra hai ID là cùng người.
+làm pipeline dừng để kiểm tra thủ công, không tự xóa mẫu hoặc suy ra hai ID là cùng người.
 Hash này không phát hiện cửa sổ chồng lấn một phần, gần giống hoặc thay cách lọc.
 
 ## Hợp đồng validation
@@ -89,7 +106,7 @@ content hash giống nhau trong cùng split được giữ nguyên.
 
 `make_manifest()` sort ID trước shuffle bằng RNG cục bộ, không ảnh hưởng global
 random state; yêu cầu đủ người để cả ba split không rỗng. Hiện chỉ cho một nguồn
-và một checksum; nhiều nguồn bị từ chối cho đến khi có identity mapping đã duyệt.
+và một checksum; nhiều nguồn bị từ chối cho đến khi có identity mapping đã kiểm chứng.
 
 API `build_inventory(..., record_ids=...)` nhận record metadata thật phủ đủ dòng,
 giữ nhóm record qua validator; nếu record chứa nhiều subject chia khác split,
@@ -98,7 +115,7 @@ Các cột tùy chọn được hỗ trợ là `record_id` và `window_id` (chu�
 Có thể bổ sung `window_id` thật vào inventory qua API trước split. Khóa cửa sổ
 được kiểm tra trong nguồn/record nếu có; không có record thì trong nguồn.
 Cả hai cột được giữ khi xuất CSV theo thứ tự cố định. Cột khác bị từ chối ở
-validation và serialization, không âm thầm bỏ; mở rộng phải có schema/review.
+validation và serialization, không âm thầm bỏ; mở rộng phải tăng version schema.
 Đọc lại CSV bằng `read_manifest_bytes(path.read_bytes())` trong module split:
 hàm giữ cột định danh/nguồn/hash/split là chuỗi, giữ số 0 đầu và token `NA`,
 `N/A`, `NULL` thay vì suy thành missing; BP dùng float round-trip, raw index là
@@ -109,7 +126,7 @@ chối split ngoài train/val/test hoặc missing; nó không tự chứng minh 
 Inventory phải được bảo vệ/truy vết bằng hash raw và code; validator
 không phát hiện được nếu cả inventory và manifest bị thay giả đồng thời.
 
-## Test và việc còn chờ
+## Test và việc còn mở
 
 ```powershell
 & 'D:\ppg-ecg-blood-pressure\.venv\Scripts\python.exe' -B -m pytest -q -p no:cacheprovider 'D:\ppg-ecg-blood-pressure\tests\test_split_manifest.py'
@@ -121,9 +138,9 @@ kiểm tra reader repo qua mock MAT loader, hash,
 sort, thống kê, tái chạy, checksum và không ghi đè output. Không chứng minh
 nguồn raw, ID người, record/cửa sổ gốc hoặc PulseDB đã được nghiệm thu.
 
-Linh còn cần bàn giao config/pool được review, quyền dùng/checksum thật, chạy
+Còn cần config/pool đã chốt, quyền dùng/checksum thật, chạy
 raw hai lần, đối chiếu số dòng raw-reader-inventory và record/alias nếu có.
 Thiếu record metadata phải ghi giới hạn; không tạo ID người hay timestamp giả.
 Chưa có chronology/calibration thì chưa đánh giá B1/cross-session/DeltaBP.
 Không có preprocessing học tham số trong pipeline này. Mọi bổ sung fit sau này
-phải chỉ dùng train. Chờ review chéo và CI Python 3.11 trước nghiệm thu chung.
+phải chỉ dùng train. Cần CI Python 3.11 đạt trước nghiệm thu chung.
