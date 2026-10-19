@@ -1,4 +1,6 @@
-# Tuần 4 — giao diện đặc trưng, SQI v0 và bootstrap người
+# Tuần 4 — giao diện đặc trưng, SQI và bootstrap người
+
+Version hiện tại: `features-sqi-v1` (đổi quy tắc đếm nhịp không ghép ở biên, mục 3).
 
 Huy, 2026-10-13. Kiểm tra bằng fixture SYNTHETIC.
 Không phải phương pháp đã khóa trên dữ liệu công khai.
@@ -78,12 +80,30 @@ Default `filter_mode=none`: không thêm lọc khi chưa biết xử lý upstrea
 Tùy chọn `zero_phase` là Butterworth SOS forward–backward, band/order trong
 config, kiểm tra Nyquist riêng từng kênh. Không có trễ nhóm hằng của lọc này,
 nhưng có thể biến dạng foot và hiệu ứng biên; `edge_s` bỏ mốc sát biên và chưa
-chứng minh loại hết artifact. Đây là xử lý offline trong cửa sổ hiện có, không
+chứng minh loại hết artifact. **Độ lệch đã đo:** trên analytic fixture (foot
+R + 200 ms, rise 160 ms), `zero_phase` với band mặc định 0,5–8 Hz làm foot trễ
+khoảng **+5,7 ms** so với `none`, ở cả 125 Hz và 500 Hz; R không đổi. Vì độ lệch
+không phụ thuộc fs, đây là hiệu ứng của lọc lên hình dạng xung, không phải lượng
+tử hóa; với PPG thật, độ lệch phụ thuộc hình dạng xung và chưa được đo. Test
+`test_zero_phase_foot_bias_is_morphological_not_sampling` ghi lại độ lệch này. Đây là xử lý offline trong cửa sổ hiện có, không
 phải bộ lọc causal triển khai firmware. Không dùng mẫu ngoài cửa sổ hoặc sau mốc cuff.
 
 Ghép forward R→foot trong `pat_min_s..pat_max_s`, trước R tiếp theo; yêu cầu
 một foot ứng viên và một R owner, từ chối mơ hồ. R/foot phải hữu hạn tăng nghiêm
-ngặt. Nhịp mất không ghép sang nhịp sau; báo số R/foot không ghép. PAT = R→foot,
+ngặt. Nhịp mất không ghép sang nhịp sau; báo số R/foot không ghép.
+
+Từ `features-sqi-v1` (2026-10-20), R hoặc foot không ghép chỉ bị đếm vào
+`pat_unmatched_r_count`/`pat_unmatched_foot_count` và gây cờ `pat:unmatched_beats`
+khi **toàn bộ** vùng tìm partner nằm trong đoạn kênh kia phát hiện được mốc. Với R
+tại `r`, vùng đó là `[r + pat_min_s, r + pat_max_s]`, cần nằm trong
+`[t0_PPG + edge_s, t_end_PPG - edge_s - foot_lookback_s]`; khoảng
+`foot_lookback_s` ở cuối vì peak nằm sau foot tối đa chừng đó. Với foot tại `f`,
+vùng `[f - pat_max_s, f - pat_min_s]` cần nằm trong `[t0_ECG + edge_s, t_end_ECG - edge_s]`.
+Nhịp không ghép vì sát biên được đếm riêng ở `pat_edge_unpaired_r_count` /
+`pat_edge_unpaired_foot_count`. Ở v0, `peaks()` cắt mép từng kênh độc lập nên
+89/200 cửa sổ 10 s sạch có pha nhịp ngẫu nhiên bị gắn cờ nhầm; v1 cho 0/200.
+
+PAT = R→foot,
 không phải PTT; cách viết gọn PAT = PEP + PTT giữ giới hạn mốc Q/R ở glossary.
 
 NaN/Inf, rỗng, phẳng, timestamp sai, gaps hoặc sampling không khớp: gắn cờ và
@@ -168,6 +188,12 @@ cho raw. Khác với các runner khác trong `scripts/` (từ chối ghi đè), 
 `--output`/`--figure` tới thư mục mới. SVG được lưu không kèm ngày giờ và với
 `svg.hashsalt` cố định, nên `figure_sha256` giống nhau giữa các lần chạy trong
 cùng môi trường. Không đưa bảng fixture vào bảng baseline công khai.
+CSV và JSON được ghi với LF; `config_sha256` và `code_sha256` tính trên nội dung
+đã đổi CRLF thành LF (như blob trong Git), nên checkout Windows và Linux cho cùng
+hash. File `reports/weekly/week_04/fixture_checks.json` (commit vào `14aa817`) là
+kết quả chạy `features-sqi-v0` trên working tree chưa commit (ghi `commit`
+`8472721`, `dirty: true`), được giữ làm bản ghi lịch sử; các hash trong đó tính
+trên byte CRLF của máy chạy nên không tái tạo được từ blob Git.
 
 **Sửa ngày 2026-10-13:** validation số thực từ chối bool/string/array
 và trả ValueError; ID/clock không nhận edge whitespace, alignment_basis phải là

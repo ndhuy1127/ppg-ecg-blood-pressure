@@ -7,7 +7,7 @@ import pytest
 
 from scripts.demo_week04_huy import fixture, fixture_provenance, run
 from software.feature_extraction.week04 import extract_window, from_pulse_segment
-from software.signal_processing.fiducials import SignalConfig, pair_pat
+from software.signal_processing.fiducials import Channel, SignalConfig, pair_pat
 
 
 @pytest.mark.parametrize("ecg_fs,ppg_fs", [(250, 125), (512, 128), (125, 125)])
@@ -291,3 +291,65 @@ def test_filter_short_window_and_edge_exclusion():
     cropped = replace(w, ecg=replace(w.ecg, values=w.ecg.values[245:], start_s=0.98))
     result = extract_window(cropped, SignalConfig())
     assert 1.0 not in result["fiducials"]["r_times_s"]
+
+
+def beat_window(r_times, fs=125, duration_s=10.0, pat_s=0.2):
+    """Analytic beats anywhere in a PulseDB-like 10 s window, edges included."""
+    base, _ = fixture()
+    t = np.arange(int(duration_s * fs)) / fs
+    r_times = np.asarray(r_times, dtype=float)
+    ecg = sum(np.exp(-0.5 * ((t - r) / 0.015) ** 2) for r in r_times)
+    ppg = np.zeros_like(t)
+    for foot in r_times + pat_s:
+        x = t - foot
+        ppg += np.where((x >= 0) & (x <= 0.16), x / 0.16,
+                        np.where((x > 0.16) & (x < 0.4), (0.4 - x) / 0.24, 0))
+    return replace(base, ecg=Channel(ecg, fs, "synthetic_unit", "SYN_CLOCK", processing_delay_s=0),
+                   ppg=Channel(ppg, fs, "synthetic_unit", "SYN_CLOCK", processing_delay_s=0))
+
+
+def test_clean_beats_cut_by_window_edges_are_not_unmatched():
+    # Regression: peaks() trims edge_s per channel, so an R near an edge could
+    # lose its foot (or vice versa) although nothing is wrong with the signal.
+    edge_total = 0
+    for offset in (0.02, 0.05, 0.3, 0.6, 0.75):
+        result = extract_window(beat_window(np.arange(offset, 10, 0.8)), SignalConfig())
+        quality = result["quality"]
+        assert "pat:unmatched_beats" not in result["flags"], offset
+        assert quality["pat_unmatched_r_count"] == quality["pat_unmatched_foot_count"] == 0
+        edge_total += quality["pat_edge_unpaired_r_count"] + quality["pat_edge_unpaired_foot_count"]
+    assert edge_total > 0  # The exemption was actually exercised.
+
+
+def test_interior_missing_pulse_is_still_unmatched_in_edge_spanning_window():
+    window = beat_window(np.arange(0.05, 10, 0.8))
+    values = window.ppg.values.copy()
+    times = np.arange(len(values)) / window.ppg.fs_hz
+    values[(times >= 4.2) & (times < 4.7)] = 0  # Remove the pulse after R = 4.05 s.
+    result = extract_window(replace(window, ppg=replace(window.ppg, values=values)), SignalConfig())
+    assert result["quality"]["pat_unmatched_r_count"] == 1
+    assert "pat:unmatched_beats" in result["flags"]
+
+
+def test_zero_phase_foot_bias_is_morphological_not_sampling():
+    # Characterisation, not a tolerance: on this analytic pulse the band-pass
+    # filter moves the tangent foot later by about +5.7 ms (documented in
+    # docs/protocol/week04_features_sqi_bootstrap.md). R timing is unchanged.
+    pat = {}
+    for fs in (125, 500):
+        window, _ = fixture(ecg_fs=fs, ppg_fs=fs)
+        pat[fs] = {mode: extract_window(window, SignalConfig(filter_mode=mode))["features"]["pat_median_ms"]
+                   for mode in ("none", "zero_phase")}
+        assert pat[fs]["none"] == pytest.approx(200, abs=1e-6)
+        assert 3 < pat[fs]["zero_phase"] - 200 < 8
+    # The same shift at 125 and 500 Hz: a filter/morphology effect, not quantisation.
+    assert pat[125]["zero_phase"] == pytest.approx(pat[500]["zero_phase"], abs=0.5)
+
+
+def test_masked_timestamps_are_rejected():
+    window, _ = fixture()
+    stamps = np.ma.masked_array(np.arange(len(window.ppg.values)) / window.ppg.fs_hz)
+    stamps[3] = np.ma.masked
+    with pytest.raises(ValueError, match="Masked"):
+        extract_window(replace(window, ppg=replace(window.ppg, timestamps=stamps)),
+                       SignalConfig())
