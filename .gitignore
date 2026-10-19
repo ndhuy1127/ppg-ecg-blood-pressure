@@ -57,3 +57,8 @@ hardware/pcb/gerber/
 pulsedb-reader.zip
 extracted/
 .ipynb_checkpoints/
+# Raw PulseDB data
+data/pulsedb_data/*.mat
+
+# Pipeline outputs
+software/pulsedb/outputs/

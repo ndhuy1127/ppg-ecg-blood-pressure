@@ -55,7 +55,7 @@ cell 4 notebook EDA in đường dẫn file này; cell 3 notebook Tuần 3 đọ
 
 | File | SHA-256 | Bằng chứng | Giới hạn |
 | --- | --- | --- | --- |
-| `VitalDB_AAMI_Cal_Subset.mat` | `bc68fc239d3809f20cda01bb55eeae7aee88912f8143e0c4cde18d9c4384dcde` | Output cell 15 notebook EDA (Kaggle, kernel Python 3.11) | Tính trong phiên chạy notebook EDA, **không phải** phiên tạo CSV Tuần 3; cell tổng kết in lại giá trị gõ cứng. Chỉ chứng minh hai lần chạy cùng đường dẫn Kaggle, chưa chứng minh cùng nội dung file |
+| `VitalDB_AAMI_Cal_Subset.mat` | `bc68fc239d3809f20cda01bb55eeae7aee88912f8143e0c4cde18d9c4384dcde` | Output cell 15 notebook EDA (Kaggle, kernel Python 3.11). Commit `acc8b8b` ghi cùng giá trị khi chạy `shasum -a 256 data/pulsedb_data/VitalDB_AAMI_Cal_Subset.mat` trên macOS | Lần tính trên Kaggle **không phải** phiên tạo CSV Tuần 3; cell tổng kết in lại giá trị gõ cứng. Lần tính trên macOS chưa có log lệnh, kích thước file hay version gói Kaggle đi kèm |
 | `data/processed/linh_week03/pulsedb_manifest_1000.csv` | `ed630151680665cdc4ede92189880aec95ee54e35d8a3f14c81b918fc0eb9d60` | `configs/data/b0_pulsedb_validation.json`; tính lại ngày 2026-10-15 cho cùng giá trị | Bản sao `notebooks/pulsedb_manifest_1000.csv` có nội dung giống hệt và **đang được Git theo dõi** |
 
 Lần chạy split mới phải để `scripts/build_pulsedb_split.py` tự kiểm tra
@@ -143,6 +143,9 @@ Notebook `notebooks/week3-split-hash.ipynb` tạo
    BMI, SBP, DBP) cùng byte của ba kênh. Nó phát hiện được bản sao giống hệt toàn
    bộ, nhưng không phát hiện được hai đoạn cùng waveform mà khác metadata hoặc
    nhãn. Split v2 bổ sung `waveform_hash` cho trường hợp này.
+6. Commit `acc8b8b` ghi đã đọc lại file `.mat`, chọn lại 1.000 đoạn theo quy tắc
+   bước 2 và đối chiếu: `subject_id` và `sample_hash` khớp theo thứ tự ở cả
+   1.000/1.000 dòng. Kết quả chỉ có dạng bảng trong tài liệu, chưa có log chạy.
 
 Giới hạn của notebook:
 
