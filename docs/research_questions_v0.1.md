@@ -127,7 +127,7 @@ Giữ nguyên cách tạo cửa sổ, đặc trưng và thuật toán giữa cá
 
 ### C. Mô hình so sánh
 
-- Cùng một mô hình (B3 XGBoost theo kế hoạch Tuần 4, hoặc Ridge) trên các cách chia A, B (và C).
+- Cùng một mô hình (B3 XGBoost, đã có trong code, xem mục 7; hoặc Ridge) trên các cách chia A, B (và C).
 - B0 (trung bình train) trên từng cách chia để biết mức sai số khi không dùng tín hiệu.
 
 ### D. Chỉ số
@@ -147,7 +147,7 @@ Báo cáo ΔMAE với CI theo người, riêng SBP và DBP. Mức suy giảm 40%
 
 ### G. Dữ liệu và tính khả thi
 
-- **Phần (a), làm được ngay:** PulseDB (phần VitalDB trên Kaggle) với reader, inventory và split theo người `pulsedb-split-v2` đã có. Cần thêm: một hàm chia ngẫu nhiên theo đoạn (chỉ cho đối chứng A) và mô hình có đặc trưng (B3). Một lựa chọn khác cần nhóm cân nhắc là dùng chính các tập của PulseDB: tập kiểm thử có hiệu chuẩn chứa người đã có trong tập huấn luyện (2.506 người ở cả hai tập), còn tập không hiệu chuẩn chứa người mới (279 người).
+- **Phần (a), làm được ngay:** PulseDB (phần VitalDB trên Kaggle) với reader, inventory và split theo người `pulsedb-split-v2` đã có, cùng pipeline B0/B3 trên split này (mục 7; mới kiểm tra bằng dữ liệu SYNTHETIC, chưa chạy trên raw PulseDB). Cần thêm: một hàm chia ngẫu nhiên theo đoạn (chỉ cho đối chứng A). Một lựa chọn khác cần nhóm cân nhắc là dùng chính các tập của PulseDB: tập kiểm thử có hiệu chuẩn (CalBased) chứa người đã có trong tập huấn luyện, còn tập không hiệu chuẩn (CalFree) chứa người mới. Theo Bảng 4 của bài báo PulseDB (Wang et al., 2023), phần VitalDB có 1.293 người ở cả Train và CalBased Test, 144 người ở CalFree Test; các con số 2.506 và 279 là tổng MIMIC-III + VitalDB.
 - **Phần (b):** cần dữ liệu prototype có cấu trúc `subject_id → session_id → event_id → window_id`, tối thiểu khoảng 30–40 phiên trên ít nhất 15 người, có biến thiên BP tự nhiên giữa các phiên.
 
 ---
@@ -213,9 +213,9 @@ Lưu ý: "coverage" ở đây là **tỷ lệ quan sát được giữ lại**, 
 |---|---|---|---|
 | — | **B0** `PopulationMeanBaseline` (trung bình nhãn train) | BP tuyệt đối, người mới; dùng cho RQ2 | Đã cài, đã chạy sơ bộ trên CSV PulseDB (Tuần 3) |
 | **Zero-change** | **B1** `PersonalMeanBaseline`, khi $`\text{BP}_0`$ là trung bình các lần cuff hiệu chuẩn | $`\widehat{\text{BP}} = \text{BP}_0`$, tương đương $`\Delta\widehat{\text{BP}} = 0`$; RQ1 | Đã cài, mới kiểm tra bằng dữ liệu giả lập |
-| — | **B3** XGBoost (kế hoạch Tuần 4) | BP tuyệt đối trên PulseDB; RQ2 | Chưa triển khai |
+| — | **B3** `XGBoostBaseline` (`software/models/xgboost_baseline.py`), đặc trưng `pulsedb-simple-stats-v0`; pipeline `software/pulsedb/pipeline.py`, runner `scripts/run_b3_pulsedb.py` | BP tuyệt đối (không phải ΔBP) trên PulseDB; RQ2 | Đã cài: fit trên train, chỉ đánh giá val (không trích đặc trưng tập test); mới kiểm tra bằng dữ liệu SYNTHETIC, chưa chạy trên raw PulseDB |
 | PAT-only, PPG-only, PPG + PAT | Chưa có | ΔBP; RQ1 | Chưa triển khai, cần dữ liệu prototype |
-| Không từ chối / ngẫu nhiên / SQI / SQI + độ bất định | SQI v0 có trong `week04.py`; chưa có cơ chế từ chối | RQ3 | Mới có SQI v0 |
+| Không từ chối / ngẫu nhiên / SQI / SQI + độ bất định | Cờ SQI `features-sqi-v1` có trong `week04.py`; chưa có cơ chế từ chối | RQ3 | Mới có cờ SQI, chưa có ngưỡng khóa |
 
 Tên B0/B1/B3 trong code không trùng với số thứ tự "Baseline 1/2/3" của bản v0.1; bảng này thay thế cách đánh số cũ.
 

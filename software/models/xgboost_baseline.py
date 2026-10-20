@@ -24,6 +24,8 @@ ALLOWED_PARAMS = frozenset(DEFAULT_PARAMS) | {
 
 
 def _features(values, name: str) -> NDArray[np.float64]:
+    if np.ma.isMaskedArray(values):
+        raise ValueError(f"{name} must not be a masked array; masks are not imputed")
     array = np.asarray(values)
     if array.ndim != 2 or 0 in array.shape or array.dtype.kind not in "iuf":
         raise ValueError(f"{name} must be a nonempty 2-D numeric array")

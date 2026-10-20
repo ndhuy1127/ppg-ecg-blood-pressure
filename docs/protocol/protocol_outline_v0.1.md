@@ -41,7 +41,7 @@
 
 ### 4.1. Cỡ mẫu dự kiến
 - Dự kiến $N = 15 - 20$ tình nguyện viên khỏe mạnh (sinh viên/cán bộ tại trường, độ tuổi 18–35).
-- Đây là cỡ mẫu khả thi cho giai đoạn thử nghiệm nguyên mẫu (feasibility), chưa dựa trên phân tích power. Với 3 phiên và vài lần cuff mỗi phiên, dự kiến có khoảng $60 - 100$ lần đo cuff hợp lệ; các lần đo này lặp trong cùng người nên **không phải 60–100 quan sát độc lập**. Đơn vị cho kiểm định cặp là người ($n = 15 - 20$). Cỡ mẫu chính thức cần được tính lại từ dữ liệu pilot.
+- Đây là cỡ mẫu khả thi cho giai đoạn thử nghiệm nguyên mẫu (feasibility), chưa dựa trên phân tích power. Với 3 phiên mỗi người và ít nhất 2 lần cuff hợp lệ mỗi phiên ([RQ v0.2](../research_questions_v0.1.md), mục 4.G), dự kiến có tối thiểu $15 \times 3 \times 2 = 90$ đến $20 \times 3 \times 2 = 120$ lần đo cuff hợp lệ, với giả định mọi người hoàn thành đủ 3 phiên; các lần đo này lặp trong cùng người nên **không phải 90–120 quan sát độc lập**. Đơn vị cho kiểm định cặp là người ($n = 15 - 20$). Cỡ mẫu chính thức cần được tính lại từ dữ liệu pilot.
 
 ### 4.2. Tiêu chí lựa chọn (Inclusion Criteria)
 - Độ tuổi từ 18 đến 35 tuổi, có đầy đủ năng lực hành vi dân sự.
@@ -115,7 +115,7 @@ Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, g�
 
 ### 6.3. Đồng bộ thời gian phần cứng giữa ECG và PPG
 - ECG và PPG cần cùng quy chiếu thời gian hoặc ánh xạ clock được kiểm chứng; không mặc định hai AFE lấy mẫu đồng thời chỉ vì dùng cùng MCU.
-- Tần số lấy mẫu chưa thống nhất giữa các tài liệu: protocol v0.1 đề xuất PPG 100–250 Hz, ECG 250–500 Hz; [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md) chọn MAX30001 (ECG) và MAX30101 (PPG) với mục tiêu 500 Hz cho cả hai kênh; packet schema v0.1 tại ref `origin/dev/ducanh` (`e13d669`) đề xuất ECG **512 SPS**. Tần số cuối cùng phải là giá trị mà từng AFE hỗ trợ theo datasheet và phải được đo lại trên thiết bị. Đây là điểm chưa chốt, không phải cấu hình đã khóa.
+- Tần số lấy mẫu chưa chốt. Protocol v0.1 ban đầu đề xuất PPG 100–250 Hz, ECG 250–500 Hz; [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md) dùng MAX30001 cho ECG, đặt mục tiêu 500 Hz cho cả hai kênh, còn linh kiện PPG (MAX30101 hay MAX30102) chưa chốt. Bảng tốc độ mà từng AFE cấu hình được và phương án dự kiến (ECG 512 sps; PPG 100 hoặc 200 sps) nằm ở [interface_power_sampling_v0.md, mục 4](../../configs/hardware/interface_power_sampling_v0.md); [packet schema V0.1](../../configs/hardware/Packet_Schema_V0.1.md) vẫn để mở ECG 500 hay 512 sps (mục 15). Tần số cuối cùng phải là giá trị mà từng AFE hỗ trợ theo datasheet và phải được đo lại trên thiết bị. Đây là điểm chưa chốt, không phải cấu hình đã khóa.
 - Với độ phân giải thời gian, mỗi mẫu ở 500 Hz là 2 ms; sai số định vị R peak và PPG foot cộng với sai số đồng bộ hai kênh đi thẳng vào PAT, nên cần đo jitter/offset thực tế trước khi diễn giải các thay đổi PAT cỡ vài ms.
 - Phải phân biệt timestamp **lấy mẫu**, timestamp **đọc FIFO** và thời điểm **nhận gói tại PC**. Counter MCU không tự loại bỏ độ trễ sensor/FIFO, sai lệch clock hoặc jitter. Cần ghi clock, đơn vị, tần số theo kênh, mất mẫu và cách suy ra thời điểm từng mẫu từ timestamp mẫu đầu gói.
 - Marker bắt đầu bơm cuff (`t0`) phải cùng clock hoặc có ánh xạ có thể kiểm tra. Không dịch PPG để trùng đỉnh R vì sẽ mất độ trễ cần tính PAT.
@@ -132,10 +132,10 @@ Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, g�
 > - Đề xuất tổng hợp đặc trưng bằng trung vị trong cửa sổ chính dự kiến 20–30 giây trước cuff; chưa khóa độ dài hoặc quy tắc tổng hợp. Các ứng viên độ nhạy 10/20/30/60 giây lấy `[t0 - L, t0)`, phải chọn/khóa trên pilot/validation trước khi xem test. Mỗi `event_id` vẫn chỉ đóng góp tối đa một cặp nhãn cuff độc lập.
 
 ### 7.2. Định danh cấu trúc dữ liệu phân cấp
-Mỗi bản ghi phải chứa khóa định danh duy nhất theo cấu trúc:
-- `subject_id`: Mã người tham gia (ví dụ: `SUBJ_001`, `SUBJ_002`), không chứa thông tin định danh cá nhân.
-- `session_id`: Mã phiên đo theo ngày/thời điểm (ví dụ: `SESS_01`, `SESS_02`).
-- `event_id`: Mã lượt đo trong phiên (ví dụ: `EVT_01`, `EVT_02`).
+Mỗi bản ghi phải chứa khóa định danh duy nhất theo cấu trúc (định dạng ID theo [quy ước dữ liệu](../quy_uoc_du_lieu.md)):
+- `subject_id`: Mã người tham gia (ví dụ: `SUB001`, `SUB002`), không chứa thông tin định danh cá nhân.
+- `session_id`: Mã phiên đo theo ngày/thời điểm (ví dụ: `S001`, `S002`).
+- `event_id`: Mã lượt đo trong phiên (ví dụ: `E01`, `E02`).
 - `window_id`: Mã cửa sổ tín hiệu thành phần bên trong một event.
 
 ### 7.3. Tiêu chí kiểm tra chất lượng tín hiệu (SQI) và Loại bỏ cửa sổ

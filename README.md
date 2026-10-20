@@ -56,37 +56,50 @@ Phân công chi tiết xem [docs/TEAM.md](docs/TEAM.md).
 
 ## Cài đặt môi trường
 
-Yêu cầu Python 3.11. Có thể dùng một trong hai cách:
+Bắt buộc dùng **Python 3.11**: `pyproject.toml` khai báo
+`requires-python = ">=3.11,<3.12"` và CI chạy Python 3.11. Có thể dùng một
+trong hai cách:
 
 ### pip
 
-~~~bash
-python -m venv .venv
-# Windows PowerShell
+Windows PowerShell (`py -3.11` chọn đúng Python 3.11 khi máy có nhiều bản):
+
+~~~powershell
+py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+~~~
+
+Linux/macOS:
+
+~~~bash
+python3.11 -m venv .venv
+source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ~~~
 
 ### Conda
 
-~~~bash
+~~~text
 conda env create -f environment.yml
 conda activate ppg-ecg-env
 ~~~
 
-Reader PulseDB cần thêm `mat73` (đã có trong `requirements.txt`). PyTorch và
-XGBoost chưa có trong dependency; thành viên triển khai mô hình sẽ bổ sung kèm
-phiên bản cố định khi cần.
+`requirements.txt`, `pyproject.toml` và `environment.yml` cố định phiên bản
+`mat73==0.65` (reader PulseDB) và `xgboost==3.2.0` (baseline B3). PyTorch chưa có
+trong dependency; thành viên cần dùng sẽ bổ sung kèm phiên bản cố định.
 
 ## Chạy kiểm tra
 
-Từ thư mục gốc của repository:
+Từ thư mục gốc của repository, sau khi kích hoạt môi trường:
 
-~~~bash
+~~~text
 ruff check .
 pytest -q
 python scripts/check_environment.py
+python -m pip check
 ~~~
 
 ## Quy trình nhánh
@@ -115,7 +128,7 @@ Dự án đang ở tuần 4 trong lộ trình 28 tuần. Tóm tắt theo mức b
 
 | Mức | Nội dung |
 | --- | --- |
-| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; generator/replay packet giả lập; đặc trưng PPG/HR/PAT, SQI v0 và bootstrap theo người (Tuần 4) |
+| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; generator/replay packet giả lập; đặc trưng PPG/HR/PAT, SQI `features-sqi-v1` và bootstrap theo người (Tuần 4); pipeline B0/B3 (XGBoost, đặc trưng `pulsedb-simple-stats-v0`) trên split v2, fit trên train và chỉ chấm val, chưa chạy trên raw PulseDB ([hướng dẫn](docs/protocol/run_b3_pulsedb.md)) |
 | Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3); nguồn raw và pool chưa nghiệm thu |
 | Bản thảo | Câu hỏi nghiên cứu, protocol, ethics, tổng quan tài liệu, BOM và thiết kế mạch |
 | Chưa có | Phần cứng lắp ráp, bản ghi ECG/PPG của nhóm, dữ liệu cuff, mô hình ΔBP và mọi kết quả trả lời RQ1–RQ3 |

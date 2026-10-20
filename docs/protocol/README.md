@@ -12,7 +12,7 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   PAT/PTT/PEP/PWA, đơn vị quan sát, cửa sổ ứng viên và metadata tối thiểu.
 - [Baseline B0/B1 và chỉ số đánh giá (Tuần 3)](week_03_baselines_metrics.md):
   công thức B0/B1, MAE/bias/SD và đặc tả các chỉ số mở rộng.
-- [Đặc trưng, SQI v0 và bootstrap theo người (Tuần 4)](week04_features_sqi_bootstrap.md):
+- [Đặc trưng, SQI và bootstrap theo người (Tuần 4)](week04_features_sqi_bootstrap.md):
   giao diện trích đặc trưng, mốc R/foot/PAT và CI bootstrap.
 
 ## Hướng dẫn chạy

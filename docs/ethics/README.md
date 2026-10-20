@@ -1,10 +1,5 @@
 # Hồ sơ đạo đức
 
-Lưu khung hồ sơ, biểu mẫu trống và tài liệu đã được phép quản lý bằng Git. Không
-commit hồ sơ có chữ ký, dữ liệu cá nhân hoặc thông tin người tham gia.
-
-﻿# Hồ sơ đạo đức
-
 Lưu trữ khung hồ sơ, biểu mẫu trống và tài liệu đã được phép quản lý bằng Git. Không commit hồ sơ có chữ ký, dữ liệu cá nhân hoặc thông tin người tham gia.
 
 ## Danh mục tài liệu tuần 1

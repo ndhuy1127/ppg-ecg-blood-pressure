@@ -81,7 +81,10 @@ Output gồm:
 - `manifest.csv`: inventory cộng split; sort theo checksum nguồn và raw index.
 - `config.json`: bản config đã dùng; chỉ lưu nơi nội bộ được phép.
 - `report.json`: hash raw/config/inventory/manifest, commit, trạng thái dirty,
-  hash code, phiên bản Python/dependency, số người/đoạn, phân bố BP và giới hạn.
+  hash code (`code_sha256_lf`, tính trên nội dung LF như blob Git), phiên bản
+  Python/dependency, số người/đoạn mỗi split, phân bố BP **chỉ của train và val**
+  (`split_summary.test.bp` là `null`, để nhãn test không được xem trước khi có
+  model khóa) và giới hạn.
 
 `sample_id = source_sha256:raw_index`; `raw_index` là dòng zero-based trong file,
 **không phải record/session/timestamp được suy đoán**. Hash nội dung dùng JSON
@@ -105,7 +108,11 @@ giao subject/sample hash/waveform hash/record/window giữa split. Không tự x
 content hash giống nhau trong cùng split được giữ nguyên.
 
 `make_manifest()` sort ID trước shuffle bằng RNG cục bộ, không ảnh hưởng global
-random state; yêu cầu đủ người để cả ba split không rỗng. Hiện chỉ cho một nguồn
+random state; yêu cầu đủ người để cả ba split không rỗng. Số người train và val
+là `floor(N × tỷ lệ)` tính bằng phân số thập phân chính xác, phần dư thuộc test
+(ví dụ N = 116 với 0.8/0.1/0.1 cho 92/11/13). Với 0.8/0.1/0.1 kết quả giống phép
+tính float cũ cho mọi N ≤ 20.000; với tỷ lệ như 0.7 thì float cũ có thể thiếu một
+người (`int(90 × 0.7) = 62`). Hiện chỉ cho một nguồn
 và một checksum; nhiều nguồn bị từ chối cho đến khi có identity mapping đã kiểm chứng.
 
 API `build_inventory(..., record_ids=...)` nhận record metadata thật phủ đủ dòng,

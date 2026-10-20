@@ -2,6 +2,7 @@
 
 import csv
 import hashlib
+from fractions import Fraction
 import io
 import json
 import math
@@ -18,6 +19,10 @@ COLUMNS = (
     "sample_hash", "waveform_hash", "sbp", "dbp",
 )
 OPTIONAL_COLUMNS = ("record_id", "window_id")
+# Subject IDs that mean "missing"; also used by software/pulsedb/validator.py.
+MISSING_SUBJECT_TOKENS = frozenset({"nan", "none", "null", "unknown"})
+# Splits whose BP labels may be summarised; test labels stay unread.
+LABEL_SUMMARY_SPLITS = ("train", "val")
 
 
 def canonical_json(value):
@@ -38,7 +43,7 @@ def file_sha256(path):
 def _text(value, field):
     if not isinstance(value, str) or not value or value.strip() != value:
         raise ValueError(f"{field} must be nonempty text without edge spaces")
-    if field == "subject_id" and value.lower() in {"nan", "none", "unknown"}:
+    if field == "subject_id" and value.lower() in MISSING_SUBJECT_TOKENS:
         raise ValueError("subject_id is missing")
     return value
 
@@ -205,7 +210,11 @@ def make_manifest(inventory, seed=72, ratios=(0.8, 0.1, 0.1)):
         raise ValueError("Three positive ratios must sum to one")
     subjects = sorted(inventory.subject_id.unique())
     random.Random(seed).shuffle(subjects)
-    n_train, n_val = int(len(subjects) * ratios[0]), int(len(subjects) * ratios[1])
+    # Exact decimal floor: int(90 * 0.7) is 62 in float arithmetic. Identical to
+    # the float result for 0.8/0.1/0.1. The remainder always goes to test.
+    n_train, n_val = (
+        math.floor(len(subjects) * Fraction(str(ratio))) for ratio in ratios[:2]
+    )
     if min(n_train, n_val, len(subjects) - n_train - n_val) < 1:
         raise ValueError("Too few subjects for requested split ratios")
     groups = (subjects[:n_train], subjects[n_train:n_train + n_val],
@@ -262,14 +271,21 @@ def read_manifest_bytes(payload):
 
 
 def summarize_manifest(manifest, inventory):
+    """Counts for every split; BP statistics only for LABEL_SUMMARY_SPLITS.
+
+    Test-label statistics are omitted (``bp`` is None) so that a handover report
+    cannot inform choices made before a locked test evaluation.
+    """
     validate_manifest(manifest, inventory)
     report = {}
     for split in SPLITS:
         rows = manifest[manifest.split == split]
         report[split] = {
             "subjects": int(rows.subject_id.nunique()), "segments": len(rows),
-            "bp": {},
+            "bp": {} if split in LABEL_SUMMARY_SPLITS else None,
         }
+        if split not in LABEL_SUMMARY_SPLITS:
+            continue
         for target in ("sbp", "dbp"):
             values = rows[target]
             report[split]["bp"][target] = {

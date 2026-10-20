@@ -9,7 +9,7 @@ from software.signal_processing.fiducials import (
     Channel, SignalConfig, pair_pat, peaks, ppg_fiducials, prepare,
 )
 
-VERSION = "features-sqi-v0"
+VERSION = "features-sqi-v1"
 FEATURE_NAMES = (
     "ppg_std", "ppg_amplitude_median", "ppg_rise_time_median_ms",
     "ppg_width50_median_ms", "ppg_hr_bpm", "ecg_hr_bpm",
@@ -55,6 +55,35 @@ def _shape_consistency(values, times, beats):
     if np.std(template) == 0:
         return None
     return _median([np.corrcoef(w, template)[0, 1] for w in waveforms])
+
+
+def _partner_detectable(low, high, times, config, tail_s=0.0):
+    """True where [low, high] lies inside the span where the other channel can
+    yield fiducials (edge_s trimmed; tail_s extra at the end). An empty channel
+    has no span, so nothing is exempted."""
+    low, high = np.asarray(low, dtype=float), np.asarray(high, dtype=float)
+    if not len(times):
+        return np.ones(low.shape, dtype=bool)
+    return (low >= times[0] + config.edge_s) & (high <= times[-1] - config.edge_s - tail_s)
+
+
+def _unmatched(r_times, foot_times, pairs, ecg_times, ppg_times, config):
+    """Split unpaired R/feet into interior (counted) and edge (exempt) beats.
+
+    peaks() trims edge_s per channel, so a beat near a window edge can lose its
+    partner without any signal problem. A foot is detectable only if its peak,
+    at most foot_lookback_s later, is inside the PPG span.
+    """
+    paired_r = {p[0] for p in pairs}
+    paired_foot = {p[1] for p in pairs}
+    lone_r = np.array([t for i, t in enumerate(r_times) if i not in paired_r])
+    lone_foot = np.array([t for j, t in enumerate(foot_times) if j not in paired_foot])
+    r_inside = _partner_detectable(lone_r + config.pat_min_s, lone_r + config.pat_max_s,
+                                   ppg_times, config, tail_s=config.foot_lookback_s)
+    foot_inside = _partner_detectable(lone_foot - config.pat_max_s,
+                                      lone_foot - config.pat_min_s, ecg_times, config)
+    return (int(r_inside.sum()), int(len(lone_r) - r_inside.sum()),
+            int(foot_inside.sum()), int(len(lone_foot) - foot_inside.sum()))
 
 
 def extract_window(window: SignalWindow, config: SignalConfig) -> dict:
@@ -136,13 +165,17 @@ def extract_window(window: SignalWindow, config: SignalConfig) -> dict:
         timing_reasons.append("clock_unverified")
     if any(c.processing_delay_s is None for c in (window.ecg, window.ppg)):
         timing_reasons.append("upstream_delay_unknown")
-    pairs, rejected = ([], len(r_times)) if timing_reasons else pair_pat(r_times, foot_times, config)
+    pairs, _ = ([], len(r_times)) if timing_reasons else pair_pat(r_times, foot_times, config)
     flags.extend(f"pat:{r}" for r in timing_reasons)
+    lone_r, edge_r, lone_foot, edge_foot = _unmatched(
+        r_times, foot_times, pairs, prepared["ecg"][1], pt, config)
     quality["pat_pair_count"] = len(pairs)
-    quality["pat_unmatched_r_count"] = rejected
-    quality["pat_unmatched_foot_count"] = len(foot_times) - len(pairs)
+    quality["pat_unmatched_r_count"] = lone_r
+    quality["pat_unmatched_foot_count"] = lone_foot
+    quality["pat_edge_unpaired_r_count"] = edge_r
+    quality["pat_edge_unpaired_foot_count"] = edge_foot
     quality["pat_pair_fraction"] = len(pairs) / len(r_times) if len(r_times) else None
-    if not timing_reasons and (rejected or len(foot_times) != len(pairs)):
+    if not timing_reasons and (lone_r or lone_foot):
         flags.append("pat:unmatched_beats")
     if len(pairs) < config.min_beats:
         flags.append("pat:too_few_pairs")

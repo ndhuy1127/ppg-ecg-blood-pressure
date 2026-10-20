@@ -9,11 +9,12 @@
 [Kế hoạch Tuần 3](../plans/WEEK_03.md) quy định B0 là trung bình nhãn train,
 B1 là hằng số từ phần hiệu chuẩn riêng trước đánh giá; tuần này kiểm tra **BP
 tuyệt đối**, riêng SBP và DBP. [Glossary Tuần 2](week_02_sample_label_glossary.md)
-quy định đơn vị quan sát và chronology; [RQ v0.1](../research_questions_v0.1.md)
-là bản thảo cho ΔBP, Pearson, Bland–Altman và risk–coverage.
+quy định đơn vị quan sát và chronology; [RQ v0.2](../research_questions_v0.1.md)
+(tên file giữ `v0.1`) là bản thảo cho ΔBP, Pearson, Bland–Altman và
+risk–coverage.
 
-Tên B0/B1 trong code không trùng với cách đánh số "Baseline 1/2" của RQ v0.1;
-bảng đối chiếu nằm ở [RQ v0.2, mục 7](../research_questions_v0.1.md). B1 tương
+Tên B0/B1 trong code không trùng với cách đánh số "Baseline 1/2" của bản RQ
+v0.1 cũ; bảng đối chiếu nằm ở [RQ v0.2, mục 7](../research_questions_v0.1.md). B1 tương
 ứng zero-change khi mốc $\text{BP}_0$ chính là trung bình các lần cuff hiệu chuẩn;
 code hiện không tính ΔBP hay chứng minh kết quả cross-session.
 
@@ -127,12 +128,12 @@ Quy ước SD dùng cho báo cáo nghiên cứu chính chưa chốt.
 | --- | --- | --- |
 | **beta (β)** | Không có định nghĩa β trong kế hoạch/RQ/glossary đã đọc. **Cần thống nhất** beta là hệ số gì, trục nào, đơn vị, weighting và intercept. Nếu nhóm chọn slope OLS của `Δprediction = α + β × Δreference`, công thức ứng viên là `β = Σ(x-x̄)(z-z̄) / Σ(x-x̄)²`, với `x=Δreference`, `z=Δprediction`; đây chưa phải quyết định chính thức và không được tự xuất bằng code. | Cần định nghĩa được phê duyệt, cặp ΔBP, mốc hiệu chuẩn, chronology, grouping/weighting. Slope ứng viên không xác định khi `var(x)=0` hoặc thiếu đủ cặp; không tự diễn giải β như một chỉ số đã khóa. |
 | **Tương quan ΔBP** | RQ1-D đã nêu Pearson: `r = Σ(x-x̄)(z-z̄) / sqrt[Σ(x-x̄)² × Σ(z-z̄)²]`. `ΔBP = BP_future - BP_calibration`, đánh giá SBP/DBP riêng. Cách gộp theo người/phiên và CI chưa chốt. | Cần cặp Δreference/Δprediction cùng mốc cá nhân, ID phiên/người, chronology. Không tính khi thiếu mốc/thời gian, ít hơn hai cặp hoặc một vector hằng. B1 zero-change tạo Δprediction hằng 0 thì r không xác định, không phải r=0. |
-| **Bland–Altman** | RQ2-D nêu biểu đồ và “khoảng tin cậy 95%”, chưa phân biệt CI với giới hạn đồng thuận (LoA). Quy ước minh họa ứng viên: trục ngang `(prediction + reference)/2`, trục dọc `e`; bias `ē`, LoA xấp xỉ `ē ± 1.96 × SD(e)` nếu giả định thích hợp. **LoA không phải CI của bias hoặc CI của LoA**. Phương pháp cho đo lặp theo người và CI chưa khóa. | Cần cặp cùng đơn vị/đại lượng, người/phiên/event, cấu trúc đo lặp và đánh giá giả định sai số. Dưới hai cặp không có SD; dữ liệu đo lặp không dùng trực tiếp công thức độc lập để tuyên bố đồng thuận. Chưa tạo hình/LoA/CI. |
+| **Bland–Altman** | RQ2-D (RQ v0.2) nêu độ lệch trung bình và giới hạn đồng thuận 95% (LoA), không gọi là khoảng tin cậy; phương pháp LoA cho đo lặp chưa khóa. Quy ước minh họa ứng viên: trục ngang `(prediction + reference)/2`, trục dọc `e`; bias `ē`, LoA xấp xỉ `ē ± 1.96 × SD(e)` nếu giả định thích hợp. **LoA không phải CI của bias hoặc CI của LoA**. Phương pháp cho đo lặp theo người và CI chưa khóa. | Cần cặp cùng đơn vị/đại lượng, người/phiên/event, cấu trúc đo lặp và đánh giá giả định sai số. Dưới hai cặp không có SD; dữ liệu đo lặp không dùng trực tiếp công thức độc lập để tuyên bố đồng thuận. Chưa tạo hình/LoA/CI. |
 | **Coverage trong selective prediction** | RQ3 định nghĩa tỷ lệ giữ lại: công thức mô tả theo mẫu `coverage = N_accepted / N_eligible`; risk là MAE trên accepted. Có thể tính `coverage_s = N_accepted_s / N_eligible_s` và trung bình đều theo người, nhưng mẫu số eligible, weighting, các người không có accepted và cách dựng/AUC đường cong **cần thống nhất**. Không nhầm với coverage của prediction interval hoặc tỷ lệ `|e| ≤ 5/10 mmHg` ở RQ1-D. | Cần toàn bộ ứng viên eligible gồm cả rejected, mask accepted, SQI/uncertainty, ngưỡng khóa từ validation, nhãn và ID để tính risk. `N_eligible=0` thì coverage không xác định; `N_accepted=0` thì MAE retained không xác định dù coverage có thể bằng 0. Không tự loại rejected khỏi mẫu số. |
 
 Các công thức ứng viên trong bảng chỉ làm rõ lựa chọn còn mở, không bổ sung
 quyết định khoa học chính thức. Không chạy bootstrap, kiểm định, phân tích thật
-hay tuning test trong lần này. RQ/protocol v0.1 vẫn là bản thảo.
+hay tuning test trong lần này. RQ v0.2 và protocol v0.1 vẫn là bản thảo.
 
 ## 7. Ví dụ và lệnh chạy lại
 

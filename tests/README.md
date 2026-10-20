@@ -11,14 +11,18 @@ không có dataset thật hoặc dữ liệu người tham gia trong những tes
 | [test_week_03_baselines.py](test_week_03_baselines.py) | B0/B1 đúng hằng số, thay nhãn evaluation không đổi dự đoán, B1 từ chối người chưa hiệu chuẩn, input lỗi và state model | Nhãn BP và ID giả lập, kể cả input lỗi có chủ đích |
 | [test_bp_metrics.py](test_bp_metrics.py) | MAE/bias/SD khớp tính tay; weighting theo mẫu/người, trường hợp một mẫu, input lỗi, demo tái lập và chạy trực tiếp | Mảng số tự tạo; subprocess chạy demo trong isolated mode từ `scripts/` |
 | [test_smoke.py](test_smoke.py) | Import package, cấu trúc thư mục và phép tính NumPy | Mảng `[1.0, 2.0, 3.0, 4.0]`, đường dẫn package |
-| [test_pulsedb.py](test_pulsedb.py) | File thiếu, kiểm tra khóa trùng trên mảng tự tạo, reader từ chối sai số kênh và nhận gender M/F | File tạm rỗng; mock `mat73.loadmat` trả dữ liệu giả lập |
+| [test_pulsedb.py](test_pulsedb.py) | Reader: file thiếu, sai số kênh, thứ tự kênh/dòng, trường bắt buộc/tùy chọn thiếu (NaN, không điền 0), độ dài trường, file một đoạn, gender M/F/lạ/thiếu, cell array dạng list, Subject nhiều giá trị, `limit`. Validator: waveform trùng, nhãn bất thường, tuổi thiếu, lệch độ dài kênh, token thiếu ID dùng chung với split | File tạm rỗng; mock `mat73.loadmat` trả Subset SYNTHETIC |
+| [test_b0_pulsedb_csv.py](test_b0_pulsedb_csv.py) | Runner B0 trên CSV: fit chỉ trên train và metrics val tính tay, từ chối giao người/hash/waveform giữa split, nhãn val lỗi, thiếu split/header, config mặc định tương đối repo và yêu cầu xác nhận đơn vị | CSV nhãn SYNTHETIC |
 | [test_split_manifest.py](test_split_manifest.py) | Validator đối chiếu inventory từ chối mất/thêm/trùng mẫu và leakage; hash/sort/tái lập; runner kế thừa reader và không ghi đè | SYNTHETIC, MAT loader mock, output trong thư mục tạm |
 | [test_b3_pipeline.py](test_b3_pipeline.py) | Đặc trưng khớp tính tay và không đọc ABP/nhãn; B3 tái lập; pipeline từ chối leakage/hash sai/thiếu dòng/raw khác inventory; thay nhãn val/test hoặc waveform test không đổi dự đoán; runner tái lập và không ghi đè | Chỉ SYNTHETIC `SYN_*`; reader mock, output trong thư mục tạm |
+| [test_week04_features.py](test_week04_features.py) | Mốc R/foot và PAT trên fixture giải tích nhiều fs, cờ SQI, nhịp sát biên không bị tính là không ghép, độ lệch foot của lọc zero-phase, timestamp/masked/gaps, provenance fixture | Fixture SYNTHETIC từ `scripts/demo_week04_huy.py` |
+| [test_subject_bootstrap.py](test_subject_bootstrap.py) | Bootstrap theo người: cluster lặp, cùng draws cho mọi model, trường hợp ít người/suy biến, bảng dự đoán đối chiếu manifest | ID và dự đoán SYNTHETIC |
+| [test_check_environment.py](test_check_environment.py) | So sánh `requires-python` và pin của `scripts/check_environment.py` | Chuỗi requirement tự tạo |
 | [test_packet_simulation.py](test_packet_simulation.py) | Sáu case packet, decoder validation, dữ liệu/timeline/gap/offset, tái lập và CLI | Chỉ SYNTHETIC; config và expected fixture, output tạm |
 
-Test khóa trùng trong `test_pulsedb.py` chưa chứng minh reader phát hiện trùng
-metadata trên dataset thật. Kết quả test không chứng minh split PulseDB,
-calibration hoặc phần cứng đã được nghiệm thu.
+Mock trong `test_pulsedb.py` chưa chứng minh reader đọc đúng mọi file PulseDB
+thật. Kết quả test không chứng minh split PulseDB, calibration hoặc phần cứng đã
+được nghiệm thu.
 
 ## Cách chạy và đầu ra
 

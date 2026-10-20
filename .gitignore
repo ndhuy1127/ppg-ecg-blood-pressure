@@ -62,3 +62,17 @@ data/pulsedb_data/*.mat
 
 # Pipeline outputs
 software/pulsedb/outputs/
+
+# Run outputs written by old pipelines and evidence logs (docs/testing.md)
+outputs/
+evidence/
+data/results/
+
+# KiCad local and generated files (design sources stay tracked)
+*.kicad_prl
+*-backups/
+fp-info-cache
+_autosave-*
+\#auto_saved_files\#
+*.lck
+hardware/kicad/**/.history/

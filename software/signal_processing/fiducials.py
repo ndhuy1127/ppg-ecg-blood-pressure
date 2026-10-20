@@ -110,6 +110,8 @@ def prepare(channel: Channel, config: SignalConfig, kind: str):
     flags = []
     if channel.timestamps is not None:
         given = np.asarray(channel.timestamps)
+        if np.ma.isMaskedArray(channel.timestamps):
+            raise ValueError("Masked timestamps are not accepted; pass explicit values")
         if given.shape != values.shape or given.dtype.kind not in "iuf":
             raise ValueError("Timestamp vector must match signal shape")
         times = given.astype(float, copy=True) * {"s": 1, "ms": 1e-3, "us": 1e-6}[channel.timestamp_unit]
@@ -123,7 +125,9 @@ def prepare(channel: Channel, config: SignalConfig, kind: str):
             flags.append("sampling_inconsistent")
     if channel.processing_delay_s is not None:
         times = times - channel.processing_delay_s
-    if not np.isfinite(times).all() or (np.diff(times) <= 0).any():
+    if "invalid_timestamps" not in flags and (
+        not np.isfinite(times).all() or (np.diff(times) <= 0).any()
+    ):
         flags.append("invalid_timestamps")
     finite_fraction = float(np.isfinite(values).mean()) if len(values) else 0.0
     if not len(values):

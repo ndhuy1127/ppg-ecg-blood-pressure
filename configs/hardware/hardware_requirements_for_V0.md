@@ -62,14 +62,16 @@ Tần số lấy mẫu mục tiêu của V0:
 ECG: 500 Hz
 PPG: 500 Hz
 Tại 500 Hz:
-[
-T_s=\frac{1}{500}=2,ms
-]
+
+$$
+T_s = \frac{1}{500}\,\text{s} = 2\,\text{ms}
+$$
+
 Do đó khoảng thời gian giữa hai mẫu liên tiếp là 2 ms.
 Mục đích của việc chọn 500 Hz là tăng độ phân giải thời gian của dữ liệu ECG–PPG khi xác định các mốc như R-peak ECG và mốc chân sóng PPG.
 500 Hz được chọn làm cấu hình thu thập ban đầu của prototype; sau khi thu dữ liệu có thể thực hiện downsample để phục vụ các thí nghiệm sử dụng bộ dữ liệu có tần số thấp hơn.
 
-> Ghi chú khả thi: MAX30001 cấu hình được 500 sps (FMSTR 32 000 Hz) hoặc 512 sps (FMSTR 32 768 Hz); packet schema đang ghi 512. MAX30101/MAX30102 không có tốc độ 500 sps gốc, chỉ đạt bằng 1000 sps lấy trung bình 2 mẫu, kèm độ trễ cần ghi; ở SpO2 mode, 1000 sps chỉ cho phép độ rộng xung 69 hoặc 118 µs (MAX30102 tr. 23, Bảng 11). Bảng đầy đủ và các quyết định cần chốt: `interface_power_sampling_v0.md` mục 4.
+> Ghi chú khả thi: MAX30001 cấu hình được 500 sps (FMSTR 32 000 Hz) hoặc 512 sps (FMSTR 32 768 Hz); packet schema đang ghi 512. MAX30101/MAX30102 không có tốc độ 500 sps gốc, chỉ đạt bằng 1000 sps lấy trung bình 2 mẫu, kèm độ trễ cần ghi; ở SpO2 mode, 1000 sps chỉ cho phép độ rộng xung 69 hoặc 118 µs (MAX30102 tr. 23, Bảng 11). Bảng đầy đủ: [interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 4; các quyết định cần chốt: mục 6 của cùng tài liệu. Giá trị 500 Hz ở trên vẫn là mục tiêu, chưa chốt.
 ### 4.2 Đồng bộ PPG và ECG
 ECG và PPG phải được ghi nhận với mốc thời gian nhất quán.
 Hệ thống phải duy trì thông tin thời gian của hai tín hiệu để phục vụ việc xác định:
@@ -99,24 +101,30 @@ Cũng không dùng R-peak và chân sóng PPG để *kiểm tra* đồng bộ: k
 ### 4.4 Jitter và drift
 
 V0 phải kiểm tra ba vấn đề:
-7.1. Sample interval
+#### 4.4.1 Sample interval
 Kiểm tra khoảng thời gian giữa các mẫu:
-[
-\Delta t_n=t_n-t_{n-1}
-]
+
+$$
+\Delta t_n = t_n - t_{n-1}
+$$
+
 và so sánh với:
-[
-T_s=2,ms
-]
-#### 4.4.1 Jitter
+
+$$
+T_s = 2\,\text{ms}
+$$
+
+#### 4.4.2 Jitter
 Jitter được hiểu là biến thiên ngắn hạn của thời điểm lấy mẫu so với thời điểm lý tưởng.
 V0 phải đo và ghi nhận jitter thực tế thay vì tự đặt một giới hạn chưa có cơ sở đo.
-#### 4.4.2 Clock drift
+#### 4.4.3 Clock drift
 Khi thời gian thu tăng lên, clock của các thiết bị có thể lệch nhau.
 Do đó cần kiểm tra:
-[
-\Delta t(t)=t_{ECG}(t)-t_{PPG}(t)
-]
+
+$$
+\Delta t(t) = t_{\text{ECG}}(t) - t_{\text{PPG}}(t)
+$$
+
 theo thời gian.
 Nếu độ lệch thay đổi theo thời gian, phải ghi nhận drift và xác định phương pháp hiệu chỉnh trước khi sử dụng dữ liệu để tính PAT.
 Ở V0 chưa chốt một con số jitter/drift cứng nếu chưa có phép đo và yêu cầu nghiên cứu cụ thể. Giá trị giới hạn sẽ được xác định sau khi thực hiện thử nghiệm đồng bộ.
@@ -154,7 +162,7 @@ Dữ liệu thô phải được giữ lại để phục vụ các bước xử
 Prototype V0 phải ưu tiên sử dụng nguồn pin khi thực hiện phép đo có tiếp xúc với cơ thể.
 Yêu cầu:
 Thiết bị prototype sử dụng nguồn pin phù hợp.
-Khi thu ECG trên người, laptop nên hoạt động bằng pin.
+Khi thu ECG trên người, laptop phải hoạt động bằng pin.
 Không sử dụng trực tiếp nguồn điện lưới cho hệ thống đang kết nối với điện cực trên cơ thể.
 Kiểm tra hệ thống trước khi thử nghiệm trên người.
 Ưu tiên kiểm tra bằng nguồn tín hiệu/ECG simulator trước khi kết nối điện cực với người.

@@ -95,8 +95,10 @@ tr. 38–40). Trạng thái FIFO đi kèm từng word qua ETAG (tr. 65, Bảng 4
 thời điểm lấy mẫu ở tốc độ dữ liệu ECG (tr. 42), mỗi 1/2/4/16 mẫu tùy `SAMP_IT`
 (tr. 44), đưa ra chân INT2B qua `EN_INT2`. Nếu nối INT2B vào một GPIO và chụp
 `esp_timer` tại cạnh xung, MCU có mốc thời gian lấy mẫu trực tiếp, không phụ thuộc
-độ trễ đọc FIFO. Schematic V1 hiện để trống INT2B; việc nối hay không cần Đức Anh
-quyết định.
+độ trễ đọc FIFO. Schematic V1 của Đức Anh (`V1.SchDoc`, nhánh `dev/ducanh`) để
+trống INT2B; KiCad V1-module nối INT2B vào GPIO47
+(`configs/hardware/custom_board_proposal.md` mục A.7). Việc nối ở pin map V1 của
+Đức Anh và ở bản cuối, và việc firmware có bật `SAMP` hay không, còn mở (mục 15).
 
 ### 5.3. Thời điểm từng mẫu
 
@@ -151,7 +153,7 @@ Mỗi kênh có packet riêng; không giả định 1 mẫu ECG = 1 mẫu PPG.
 | 12 | 4 | `FIRST_SAMPLE_INDEX` | uint32 | Chỉ số tích lũy (từ đầu phiên) của `DATA[0]` trong kênh này |
 | 16 | 8 | `T_ANCHOR_US` | uint64 | Mục 3, 5 |
 | 24 | 8 | `T_FIRST_US` | uint64 | Mục 5.3 (ước lượng firmware) |
-| 32 | 4 | `FS_NOMINAL_MHZ` | uint32 | Tốc độ danh định, đơn vị milli-hertz (ví dụ 512 000) |
+| 32 | 4 | `FS_NOMINAL_MHZ` | uint32 | Tốc độ danh định, đơn vị mHz (millihertz), **không phải** MHz: 512 000 = 512 Hz |
 | 36 | 2 | `SAMPLE_COUNT` | uint16 | N; `DATA[0] … DATA[N−1]` |
 | 38 | 2 | `STATUS` | uint16 | Mục 9 |
 | 40 | 4·N | `DATA[]` | int32[N] | Mục 8 |
@@ -273,7 +275,11 @@ vào file riêng.
 2. `VERSION` được hỗ trợ.
 3. `SEQ` liên tục **theo từng kênh**: thiếu → mất packet; lặp cùng nội dung →
    trùng; nhỏ hơn giá trị đã nhận → đảo thứ tự. Mở rộng `SEQ` và
-   `FIRST_SAMPLE_INDEX` qua mốc tràn 2³² (ở 512 sps là khoảng 97 ngày).
+   `FIRST_SAMPLE_INDEX` qua mốc tràn 2³² (cả hai là uint32).
+   `FIRST_SAMPLE_INDEX` tăng theo mẫu nên tràn sau 2³²/fs giây: ở 512 sps là
+   khoảng 8,39·10⁶ s ≈ 97 ngày. `SEQ` tăng theo packet nên tràn sau 2³²·N/fs
+   giây: ECG 512 sps, N = 16 (32 packet/s, mục 6) là khoảng 1,34·10⁸ s ≈ 1 553
+   ngày.
 4. `FIRST_SAMPLE_INDEX[k] = FIRST_SAMPLE_INDEX[k−1] + SAMPLE_COUNT[k−1]`; nếu
    không → khoảng mất mẫu, kể cả khi `SEQ` liên tục. Đối chiếu với `STATUS`.
 5. `SAMPLE_COUNT` trong giới hạn (≤ 32 mẫu mỗi lần đọc FIFO); `STATUS` được ghi
@@ -303,7 +309,8 @@ không phải decoder của schema này.
 | `SEQ` uint32 | `sequence` int | Mô phỏng không xử lý tràn uint32 |
 | `FIRST_SAMPLE_INDEX` | — | Mô phỏng chưa có |
 | `T_FIRST_US` / `T_ANCHOR_US` | `timestamp_us` (`first_sample`) | Mô phỏng coi timestamp là thời điểm mẫu đầu chính xác |
-| `FS_NOMINAL_MHZ` | `fs_hz` | Mô phỏng dùng PPG 128 Hz, không có trong bảng tốc độ MAX3010x (MAX30102 tr. 19, Bảng 6) |
+| `FS_NOMINAL_MHZ` (mHz) | `fs_hz` (integer Hz) | Đơn vị khác nhau. Mô phỏng dùng PPG 128 Hz, không có trong bảng tốc độ MAX3010x (MAX30102 tr. 19, Bảng 6) |
+| `SAMPLE_COUNT` uint16; mục 12 bước 5: ≤ 32 mẫu mỗi lần đọc FIFO, N đổi theo từng lần đọc (mục 5) | `sample_count` | Mô phỏng: cố định theo kênh trong config, mỗi packet phải bằng giá trị config; `validate_config` cho 1–4 096 và tổng ≤ 1 000 000 mẫu; config mặc định ECG 16, PPG 4. Giới hạn 4 096 lớn hơn giới hạn 32 của phần cứng |
 | `STATUS`, `SYNC`, `CRC16` | — | Mô phỏng chưa có |
 | `DATA` int32 (ECG giữ ETAG/PTAG) | `samples` int32, `sample_unit` | |
 
@@ -312,5 +319,27 @@ không phải decoder của schema này.
 - PPG AFE, chế độ LED, tốc độ lấy mẫu, độ rộng xung, có lấy trung bình hay không.
 - Tốc độ ECG 500 hay 512 sps.
 - `N` mỗi packet, `EFIT` và `FIFO_A_FULL`.
-- Có nối INT2B (xung `SAMP`) vào GPIO không.
+- INT2B (xung `SAMP`): KiCad V1-module đã nối vào GPIO47; còn mở cho pin map V1
+  của Đức Anh và bản cuối, và firmware có bật `SAMP` (`EN_INT2`, `SAMP_IT`) hay
+  không.
 - Độ trễ hiệu dụng `L` của từng cấu hình (đo theo kế hoạch đo 10 phút).
+- Tên `FS_NOMINAL_MHZ` dễ đọc nhầm là MHz trong khi giá trị là mHz (mục 6). Có
+  đổi tên trường không; đổi tên là thay đổi schema, đi cùng quyết định version.
+- Định nghĩa timestamp khác bản gốc của Đức Anh. File
+  `Packet_Schema_V0.1_Metadata_Table.docx` (nhánh `dev/ducanh`) ghi Timestamp là
+  "Thời điểm lấy mẫu của sample đầu tiên trong packet, đơn vị µs (microsecond).
+  Không phải thời điểm đọc FIFO hay truyền packet." Bản này dùng `T_ANCHOR_US`
+  (thời điểm MCU chốt số mẫu đọc từ FIFO, mục 3, 5) và `T_FIRST_US` (ước lượng
+  của firmware, chưa trừ `δ` và `d_pipe`, mục 5.3).
+- `STATUS` được đánh số lại so với bản gốc
+  (`git show origin/dev/ducanh:configs/hardware/Packet_Schema_V0.1.md`, mục 5):
+  bản gốc dự kiến bit 0 packet/data error, bit 1 FIFO overflow, bit 2
+  sensor/AFE warning và ghi "Chi tiết bit chưa chốt"; bản này dùng bit 0 tràn
+  FIFO AFE, bit 1 tràn bộ đệm MCU, bit 2 lead-off ECG, bit 3–6 như mục 9.
+- Hai khác biệt trên (cùng layout byte mới ở mục 6) chưa thống nhất với bản gốc.
+  Theo mục 2, đổi layout hoặc ý nghĩa trường thì tăng version; giữ V0.1 hay
+  chuyển V0.2 còn mở.
+- Packet sự kiện `0xC1` (mục 10): các kiểm tra ở mục 12 về `FIRST_SAMPLE_INDEX`
+  (bước 4) và `T_ANCHOR_US` khớp chỉ số mẫu / `fs` (bước 6), cùng giá trị
+  `FS_NOMINAL_MHZ` và `T_FIRST_US`, chưa định nghĩa cho packet sự kiện: gửi giá
+  trị gì và receiver có bỏ qua các kiểm tra này không.

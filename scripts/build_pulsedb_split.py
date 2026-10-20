@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 def run(config_path, output):
+    from software._provenance import text_file_sha256
     from software.data_io.split_manifest import (
         VERSION, build_inventory, canonical_json, file_sha256, make_manifest,
         manifest_bytes, summarize_manifest,
@@ -62,7 +63,7 @@ def run(config_path, output):
         commit, dirty = None, None
     files = (
         "scripts/build_pulsedb_split.py", "software/data_io/split_manifest.py",
-        "software/pulsedb/reader.py",
+        "software/pulsedb/reader.py", "software/_provenance.py",
     )
     report = {
         "schema_version": VERSION, "source_type": "PUBLIC_ABP",
@@ -71,7 +72,8 @@ def run(config_path, output):
         "inventory_sha256": hashlib.sha256(inventory_payload).hexdigest(),
         "manifest_sha256": hashlib.sha256(manifest_payload).hexdigest(),
         "commit": commit, "working_tree_dirty": dirty,
-        "code_sha256": {file: file_sha256(repo / file) for file in files},
+        # Tracked code hashed with LF endings (as in Git), not CRLF checkout bytes.
+        "code_sha256_lf": {file: text_file_sha256(repo / file) for file in files},
         "python": platform.python_version(),
         "dependencies": {name: version(name) for name in ("numpy", "pandas", "mat73")},
         "split_summary": summarize_manifest(manifest, inventory),
@@ -82,6 +84,7 @@ def run(config_path, output):
             "No original record/window metadata or cross-source identity verified",
             "Config declarations (license, pool, identity) are not verified automatically",
             "No learned preprocessing, demographics, calibration or cuff inference",
+            "split_summary gives counts only for test; test BP labels are not summarised",
             "All reader rows retained; no implicit subsampling or quality exclusion",
             "Exact waveform matches across splits require review; partial overlaps are not detected",
         ],

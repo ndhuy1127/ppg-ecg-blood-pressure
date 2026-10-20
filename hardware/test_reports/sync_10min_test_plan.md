@@ -38,18 +38,30 @@ ghi lại:
 - **Kênh ECG:** đưa xung qua mạch chia áp vào đầu vào điện cực của breakout
   MAX30001, để biên độ ở mức vài mV (đúng dải ECG). Nếu có ECG simulator có
   đầu vào trigger thì dùng simulator. Không nối GPIO trực tiếp vào đầu vào ECG.
+  Nút tham chiếu của mạch chia áp (GND của bo, hay VCM/chân sleeve của jack điện
+  cực) **chưa chốt** (mục 8); phải ghi rõ trên sơ đồ đấu nối.
 - **Kênh PPG:** cùng xung đó điều khiển một LED ngoài (qua điện trở hạn dòng)
   đặt trên cửa sổ cảm biến MAX3010x, trong hộp tối. Ánh sáng tăng làm số đếm ADC
   tăng. Chọn dòng LED để không bão hòa ADC hay tràn khử ánh sáng môi trường
   (STATUS bit 6 phải bằng 0).
+- **Chưa kiểm:** MAX3010x có khử ánh sáng môi trường (ambient light
+  cancellation, ALC). LED ngoài sáng liên tục trong cả xung 50 ms có thể bị ALC
+  coi là ánh sáng môi trường và trừ đi, khi đó số đếm ADC không tăng như giả định
+  ở trên [chưa đối chiếu datasheet]. Bit 6 = 0 (`ALC_OVF` không bật) chỉ cho biết
+  ALC chưa tràn, không chứng minh kích thích thấy được trong dữ liệu PPG. Phải
+  thử trên bench, nhìn trực tiếp số đếm ADC tại cạnh xung, trước khi chạy đủ 10
+  phút (mục 8).
 - Ghi lại sơ đồ đấu nối thực tế, giá trị điện trở, khoảng cách LED–cảm biến.
 
 Nếu chưa dựng được kích thích chung, vẫn đo được mục 1–3 và 5 (chỉ dùng chỉ số
 mẫu và `T_ANCHOR_US`), nhưng **chưa** đo được offset ECG–PPG (mục 4).
 
-Nếu INT2B của MAX30001 được nối vào GPIO (xung `SAMP` tại thời điểm lấy mẫu ECG,
-MAX30001 tr. 42, tr. 44), ghi thêm thời điểm các cạnh xung này. Chúng cho tốc độ
-ECG thực độc lập với mốc đọc FIFO và kiểm tra chéo được kết quả hồi quy ở mục 5.
+Trên KiCad V1-module, INT2B của MAX30001 đã nối vào GPIO47
+(`configs/hardware/custom_board_proposal.md` mục A.7); với pin map V1 của Đức Anh
+và bản cuối thì còn mở. Nếu INT2B được nối và firmware bật xung `SAMP` (tại thời
+điểm lấy mẫu ECG, MAX30001 tr. 42, tr. 44), ghi thêm thời điểm các cạnh xung này.
+Chúng cho tốc độ ECG thực độc lập với mốc đọc FIFO và kiểm tra chéo được kết quả
+hồi quy ở mục 5.
 
 Độ trễ ECG dự kiến theo datasheet để đối chiếu với `L_ECG` đo được: MAX30001
 tr. 26, Bảng 4 (ví dụ 512 sps: 19,836 ms không LPF, 31,555 ms có LPF). Kết quả đo
@@ -82,6 +94,17 @@ Ký hiệu cho mỗi kênh c: `k` là chỉ số mẫu tích lũy của mẫu cu
 | Ổn định theo thời gian | Vẽ hiệu trên theo thời gian; độ dốc khác 0 là drift chưa hiệu chỉnh |
 | Mất dữ liệu | Số `SEQ` thiếu / tổng; số mẫu mất từ `FIRST_SAMPLE_INDEX`; số lần STATUS bit 0, 1, 5; số lỗi CRC |
 
+**Dấu của offset so với mô phỏng.** `L_c` là lượng thời điểm cạnh trên trục `t'`
+của kênh c đi sau `T_ANCHOR_US` của sự kiện, nên cùng một cạnh vật lý có nhãn
+thời gian trên kênh PPG trừ nhãn trên kênh ECG bằng `L_PPG − L_ECG`. Mô phỏng
+`synthetic-packet-v2` báo `offset_ppg_minus_ecg_us` = anchor PPG − anchor ECG
+(`software/data_io/packet_simulation.py`, `replay_packets`; anchor là
+`timestamp_us` của packet hợp lệ đầu tiên quy về sequence start, hai kênh cùng
+epoch giả lập), tức cùng ý nghĩa "nhãn PPG trừ nhãn ECG". Vì vậy
+`offset_ppg_minus_ecg_us` tương ứng `L_PPG − L_ECG = −(L_ECG − L_PPG)`: đổi dấu
+offset ở bảng trên trước khi so với mô phỏng. Dương nghĩa là kênh PPG gán nhãn
+muộn hơn kênh ECG.
+
 Cách phát hiện cạnh (ngưỡng, nội suy giữa hai mẫu) phải chốt **trước** khi xem
 kết quả và giữ nguyên cho mọi lần đo. Độ phân giải thời gian bị giới hạn bởi
 chu kỳ lấy mẫu; ghi rõ trong báo cáo.
@@ -101,3 +124,13 @@ hạn. Ghi riêng "giá trị thiết kế/datasheet" và "giá trị đo đư�
   lấy mẫu; nếu nghi ngờ, kiểm tra bằng oscilloscope.
 - Độ trễ hiệu dụng phụ thuộc cấu hình: đổi tốc độ, bộ lọc hay lấy trung bình
   thì phải đo lại.
+
+## 8. Việc còn mở
+
+1. Kích thích PPG bằng LED ngoài có bị ALC của MAX3010x trừ đi không, và cách
+   hiểu STATUS bit 6 (`ALC_OVF`) trong phép đo này (mục 3). Kiểm trên bench
+   trước.
+2. Nút tham chiếu của mạch chia áp đưa xung vào đầu vào ECG: GND của bo hay
+   VCM/sleeve của jack điện cực (mục 3).
+3. INT2B (xung `SAMP`): đã nối GPIO47 trên KiCad V1-module; còn mở cho pin map V1
+   của Đức Anh, bản cuối và cấu hình firmware (mục 3).

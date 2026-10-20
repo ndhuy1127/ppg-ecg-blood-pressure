@@ -3,15 +3,22 @@
 - **bom/**: danh mục linh kiện và phương án thay thế.
 - **datasheets/**: liên kết datasheet chính thức và mức độ đối chiếu thông số
   ([README](datasheets/README.md)); không lưu file PDF.
-- **schematics/**: sơ đồ nguyên lý và bản xuất.
-- **pcb/**: nguồn thiết kế PCB; output và Gerber được Git bỏ qua.
+- **kicad/**: thiết kế KiCad của V1-module, gồm `kicad/v1_module/base` (bo đế)
+  và `kicad/v1_module/wrist` (bo cổ tay), mỗi bo có `.kicad_sch`, `.kicad_pcb`,
+  `.kicad_pro`. PCB lưu theo định dạng KiCad 10.0, schematic theo 9.0: mở
+  `.kicad_pcb` bằng KiCad ≥ 10. Mô tả, bảng GPIO và bảng chân cáp:
+  [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md) Phần A.
+- **schematics/**: sơ đồ nguyên lý và bản xuất; hiện chỉ có `.gitkeep`.
+- **pcb/**: nguồn thiết kế PCB; output và Gerber được Git bỏ qua. Hiện chỉ có
+  `.gitkeep`; PCB của V1-module nằm ở `kicad/`.
 - **mechanical/**: thiết kế cơ khí và ràng buộc kích thước.
 - **test_reports/**: kế hoạch và báo cáo kiểm thử thiết bị:
   - [sync_10min_test_plan.md](test_reports/sync_10min_test_plan.md): đo tốc độ
     thực, drift, jitter, độ trễ và lệch ECG–PPG trên bench.
 
 Tài liệu cấu hình liên quan ở `configs/hardware/`: yêu cầu V0, sơ đồ khối,
-[nguồn/giao tiếp/lấy mẫu](../configs/hardware/interface_power_sampling_v0.md) và
+[nguồn/giao tiếp/lấy mẫu](../configs/hardware/interface_power_sampling_v0.md),
+[V1 dùng module và bản chip trần](../configs/hardware/custom_board_proposal.md) và
 [packet schema](../configs/hardware/Packet_Schema_V0.1.md).
 
 Mọi quyết định mua linh kiện phải được duyệt. Tài liệu ở đây không chứng nhận

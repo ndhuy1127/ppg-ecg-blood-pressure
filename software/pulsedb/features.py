@@ -16,6 +16,8 @@ FEATURE_NAMES = tuple(
 
 
 def _signal(values, name):
+    if np.ma.isMaskedArray(values):
+        raise ValueError(f"{name} must not be a masked array; masks are not imputed")
     array = np.asarray(values)
     if array.ndim != 1 or array.size == 0 or array.dtype.kind not in "iuf":
         raise ValueError(f"{name} must be a nonempty 1-D numeric vector")

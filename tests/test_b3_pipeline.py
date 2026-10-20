@@ -191,22 +191,28 @@ def test_rejects_raw_segments_that_differ_from_inventory():
 
 # --- runner -----------------------------------------------------------------------
 
-def write_inputs(tmp_path, monkeypatch):
+def write_inputs(tmp_path, monkeypatch, split_config=None, report_overrides=(),
+                 inventory_sha=None):
+    split_config = {"pool_decision": "SYN pool"} if split_config is None else split_config
+    report_overrides = dict(report_overrides)
     raw = tmp_path / "SYN_raw.mat"
     raw.write_bytes(b"SYNTHETIC placeholder; reader is monkeypatched")
     segments = make_segments()
-    manifest, inventory = make_split(segments, file_sha256(raw))
+    manifest, inventory = make_split(segments, inventory_sha or file_sha256(raw))
     monkeypatch.setattr(PulseDBReader, "read", lambda self, limit=None: segments)
     split_dir = tmp_path / "split"
     split_dir.mkdir()
     payloads = {"inventory.csv": manifest_bytes(inventory),
-                "manifest.csv": manifest_bytes(manifest)}
+                "manifest.csv": manifest_bytes(manifest),
+                "config.json": json.dumps(split_config).encode()}
     for name, payload in payloads.items():
         (split_dir / name).write_bytes(payload)
     (split_dir / "report.json").write_text(json.dumps({
         "schema_version": "pulsedb-split-v2", "raw_sha256": file_sha256(raw),
         "inventory_sha256": hashlib.sha256(payloads["inventory.csv"]).hexdigest(),
         "manifest_sha256": hashlib.sha256(payloads["manifest.csv"]).hexdigest(),
+        "config_sha256": hashlib.sha256(payloads["config.json"]).hexdigest(),
+        **report_overrides,
     }))
     config = tmp_path / "config.json"
     config.write_text(json.dumps(small_config()))
@@ -235,3 +241,48 @@ def test_runner_rejects_raw_that_differs_from_split_report(tmp_path, monkeypatch
     with pytest.raises(ValueError, match="raw_sha256"):
         run(raw, split_dir, config, tmp_path / "out", REPO)
     assert not (tmp_path / "out").exists()
+
+
+def test_runner_writes_report_last_with_output_hashes(tmp_path, monkeypatch):
+    raw, split_dir, config = write_inputs(tmp_path, monkeypatch)
+    report, _ = run(raw, split_dir, config, tmp_path / "out", REPO)
+    saved = json.loads((tmp_path / "out" / "report.json").read_text(encoding="utf-8"))
+    names = {"baseline_table.md", "predictions_val.csv", "xgboost_sbp.json",
+             "xgboost_dbp.json"}
+    assert set(saved["outputs_sha256"]) == names
+    for name, digest in saved["outputs_sha256"].items():
+        assert file_sha256(tmp_path / "out" / name) == digest
+    assert saved["split_pool_decision"] == "SYN pool"
+    assert b"\r\n" not in (tmp_path / "out" / "report.json").read_bytes()
+
+
+@pytest.mark.parametrize("case", [
+    "inventory_source", "config_hash", "no_pool_decision", "schema_version",
+])
+def test_runner_rejects_inconsistent_split_handover(tmp_path, monkeypatch, case):
+    kwargs = {
+        "inventory_source": {"inventory_sha": "f" * 64},
+        "config_hash": {"report_overrides": {"config_sha256": "e" * 64}},
+        "no_pool_decision": {"split_config": {"pool_decision": " "}},
+        "schema_version": {"report_overrides": {"schema_version": "pulsedb-split-v1"}},
+    }[case]
+    raw, split_dir, config = write_inputs(tmp_path, monkeypatch, **kwargs)
+    with pytest.raises(ValueError):
+        run(raw, split_dir, config, tmp_path / "out", REPO)
+    assert not (tmp_path / "out").exists()
+
+
+def test_runner_rejects_split_dir_without_config(tmp_path, monkeypatch):
+    raw, split_dir, config = write_inputs(tmp_path, monkeypatch)
+    (split_dir / "config.json").unlink()
+    with pytest.raises(FileNotFoundError):
+        run(raw, split_dir, config, tmp_path / "out", REPO)
+
+
+def test_masked_inputs_are_rejected_not_unmasked():
+    masked = np.ma.masked_array([1.0, 1e6, 2.0], mask=[False, True, False])
+    with pytest.raises(ValueError, match="masked"):
+        features.extract_features(masked, [1.0, 2.0])
+    with pytest.raises(ValueError, match="masked"):
+        XGBoostBaseline(seed=1).fit(np.ma.masked_array([[0.0], [1.0]], mask=[[0], [1]]),
+                                    [[120, 80], [121, 81]])

@@ -38,7 +38,8 @@ jobs:
       - name: Check for unresolved git conflict markers
         run: |
           echo "Checking for conflict markers..."
-          if grep -rnE "^(<<<<<<<|=======|>>>>>>>)" --exclude-dir=.venv .; then
+          # Tracked text files only (-I skips binaries); exact marker forms only.
+          if git grep -nI -E '^(<<<<<<<( |$)|=======$|>>>>>>>( |$))'; then
             echo "Error: Found unresolved Git conflict markers!"
             exit 1
           fi

@@ -8,6 +8,10 @@ Không dùng dữ liệu này để đánh giá
 waveform, PAT, BP, độ trễ sinh lý, năng lượng hoặc hiệu năng thiết bị.
 
 Tham khảo yêu cầu generator/replay và packet ở `origin/dev/ducanh@40ede49`.
+Ở commit đó, `configs/hardware/Packet_Schema_V0.1.md` là bản gốc của Đức Anh. Bản
+cùng tên trong nhánh này đã được viết lại (layout byte, `T_ANCHOR_US`/`T_FIRST_US`,
+`STATUS`) và khác bản gốc; mô phỏng giữ định nghĩa timestamp của bản gốc (thời
+điểm sample đầu batch). Các khác biệt chưa thống nhất nằm ở mục 15 của schema.
 Version riêng `synthetic-packet-v2`; JSON, không phải binary wire format.
 Bảng đối chiếu trường với schema phần cứng dự kiến nằm ở
 [Packet_Schema_V0.1.md mục 14](../../configs/hardware/Packet_Schema_V0.1.md).
@@ -82,6 +86,12 @@ gian dự kiến trên clock giả lập, không phải mẫu đo hay nội suy 
 
 **Giới hạn offset:** anchor là packet hợp lệ đầu tiên về cấu trúc, quy về sequence
 start. Hai sequence start giả lập có cùng epoch đã biết nên có thể so offset.
+**Dấu:** `offset_ppg_minus_ecg_us` = anchor PPG − anchor ECG; dương nghĩa là
+timestamp PPG muộn hơn timestamp ECG cho cùng một thời điểm giả lập (case
+`offset` cho +20 000 µs). Trong
+[kế hoạch đo 10 phút](../../hardware/test_reports/sync_10min_test_plan.md) mục 5,
+đại lượng tương ứng là `L_PPG − L_ECG`, ngược dấu với offset `L_ECG − L_PPG` của
+kế hoạch.
 Nếu anchor bị hỏng hoặc clock có drift, kết quả có thể mơ hồ; chưa có estimator
 đồng bộ sensor tổng quát, clock mapping/correction, sequence wrap/reset, live
 reorder buffer, FIFO/CRC/status hoặc decoder phần cứng. Không dịch kênh để ép

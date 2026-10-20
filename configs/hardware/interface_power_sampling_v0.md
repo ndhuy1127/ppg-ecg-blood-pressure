@@ -67,6 +67,11 @@ Pin map dưới đây lấy từ `configs/hardware/Pin_Map_V1.md` trên nhánh
 DevKitC và không trùng chân strapping (0, 3, 45, 46), PSRAM octal (35–37), USB
 (19, 20) hay UART0 (43, 44).
 
+Thiết kế KiCad V1-module (`hardware/kicad/v1_module/`) dùng một pin map **khác**
+(MAX30001 riêng SPI bus 1, BMI270 sang SPI bus 2, INT2B nối GPIO47); bảng đầy đủ
+ở [custom_board_proposal.md](custom_board_proposal.md) mục A.7. Cả hai đều gọi
+là "V1"; bản nào là chuẩn còn mở (mục 6).
+
 | Tín hiệu | GPIO | Thiết bị | Ghi chú |
 | --- | ---: | --- | --- |
 | `SPI_SCK` | 11 | MAX30001, BMI270 | Không phải chân IOMUX gốc của FSPI (GPIO12), đi qua GPIO matrix; chấp nhận được ở vài MHz. MAX30001 cho SCLK tới 12 MHz, SPI mode 0 hoặc 3 (MAX30001 tr. 10, tr. 36) |
@@ -74,10 +79,10 @@ DevKitC và không trùng chân strapping (0, 3, 45, 46), PSRAM octal (35–37),
 | `SPI_MISO` | 13 | MAX30001, BMI270 | **Rủi ro:** SDO của MAX30001 tự chuyển trở kháng cao khi CSB mức cao (tr. 19), nhưng trên breakout tín hiệu đi qua TXB0108 luôn bật [BRK], có thể không nhả đường MISO → cần đo, hoặc tách bus |
 | `ECG_CS` | 14 | MAX30001 CSB | |
 | `ECG_INT` | 5 | MAX30001 INTB | Tích cực mức thấp. Mặc định open-drain kéo lên nội 125 kΩ; chọn được CMOS bằng `INTB_TYPE` (tr. 43). Đi qua TXB0108 nên nên kiểm tra và cân nhắc CMOS |
-| — (đề xuất) | trống | MAX30001 INT2B | Mang xung `SAMP` tại thời điểm lấy mẫu ECG (tr. 42, tr. 44). V1 để trống chân này; đề xuất nối vào một GPIO rảnh (mục 5) |
+| — (đề xuất) | trống | MAX30001 INT2B | Mang xung `SAMP` tại thời điểm lấy mẫu ECG (tr. 42, tr. 44). Pin map này để trống chân INT2B; KiCad V1-module nối vào GPIO47. Với pin map này và bản cuối, việc nối và việc firmware bật `SAMP` còn mở (mục 5, mục 6) |
 | `BMI_CS` | 12 | BMI270 CSB | Chỉ khi dùng IMU |
 | `BMI_INT` | 4 | BMI270 INT1 | Chỉ khi dùng IMU |
-| `PPG_SDA` | 8 | MAX3010x SDA | I²C tối đa 400 kHz; địa chỉ ghi/đọc 0xAE/0xAF (MAX30102 tr. 5) |
+| `PPG_SDA` | 8 | MAX3010x SDA | I²C tối đa 400 kHz; địa chỉ ghi/đọc 0xAE/0xAF (MAX30102 tr. 5 [chưa đối chiếu]; `custom_board_proposal.md` ghi tr. 29) |
 | `PPG_SCL` | 9 | MAX3010x SCL | Kiểm tra mức pull-up |
 | `PPG_INT` | 6 | MAX3010x INT | Open-drain, tích cực mức thấp; cần pull-up (ví dụ 4,7 kΩ) tới điện áp ≤ 5 V (MAX30102 tr. 24) |
 
@@ -146,12 +151,14 @@ sang tốc độ đã chốt khi cập nhật mô phỏng.
   khởi động) trên ESP32-S3. Mọi timestamp trong packet theo clock này.
 - MAX30001 báo FIFO ECG đạt ngưỡng `EFIT` qua INTB → GPIO5 (tr. 41, tr. 44).
   MAX3010x báo FIFO gần đầy (`A_FULL`) hoặc có mẫu mới (`PPG_RDY`) qua INT → GPIO6
-  (MAX30102 tr. 12). Cách chốt số mẫu và ghi mốc thời gian: packet schema mục 5.
+  (MAX30102 tr. 12). Số GPIO theo pin map ở mục 3; KiCad V1-module dùng GPIO21
+  (INTB) và GPIO18 (INT PPG). Cách chốt số mẫu và ghi mốc thời gian: packet
+  schema mục 5.
 - Không có clock chung giữa hai AFE. Drift giữa hai kênh là chắc chắn có; độ lớn
   phải đo.
 - **Đề xuất:** nối INT2B của MAX30001 vào một GPIO rảnh và bật xung `SAMP`
-  (`EN_INT2`, `SAMP_IT`; tr. 42–44). MCU chụp `esp_timer` tại cạnh xung, được mốc
-  lấy mẫu ECG trực tiếp. MAX3010x không có chân tương đương; phía PPG vẫn dựa vào
+  (`EN_INT2`, `SAMP_IT`; tr. 42–44). KiCad V1-module đã nối INT2B vào GPIO47.
+  MCU chụp `esp_timer` tại cạnh xung, được mốc lấy mẫu ECG trực tiếp. MAX3010x không có chân tương đương; phía PPG vẫn dựa vào
   mốc đọc FIFO và phép đo bench.
 - Không dùng PAT hay mốc sinh lý để ước lượng lệch clock.
 
@@ -162,5 +169,12 @@ sang tốc độ đã chốt khi cập nhật mô phỏng.
 3. Tốc độ ECG: 500 hay 512 sps (cùng FMSTR tương ứng); xem
    `custom_board_proposal.md`.
 4. IMU BMI270 có trong phạm vi V0/V1 không.
-5. Có nối INT2B (xung `SAMP`) vào GPIO không.
+5. INT2B (xung `SAMP`): KiCad V1-module đã nối vào GPIO47; còn mở cho pin map
+   ở mục 3 và cho bản cuối, và firmware có bật `SAMP` hay không.
 6. Nguồn V0: USB từ laptop chạy pin, hay thêm khối pin riêng.
+7. Pin map nào là chuẩn: bảng ở mục 3 (`Pin_Map_V1.md`, `V1.SchDoc`) hay KiCad
+   V1-module (`custom_board_proposal.md` mục A.7).
+8. KiCad V1-module dùng GPIO15/16 cho SCLK/MOSI của MAX30001, trùng XTAL_32K_P/N
+   của ESP32-S3 (datasheet ESP32-S3 v2.2, Bảng 2-4 tr. 21, Bảng 2-8 tr. 24).
+   `custom_board_proposal.md` Phần B mục 5 đề xuất thạch anh 32,768 kHz cho RTC;
+   nếu bản cuối giữ pin map V1-module thì hai việc này xung đột.

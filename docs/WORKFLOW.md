@@ -19,7 +19,7 @@ Tài liệu này dành cho cả thành viên mới dùng GitHub. Mục tiêu là
 
 - main: phiên bản ổn định dùng cho các mốc báo cáo, demo hoặc phát hành.
 - develop: nơi tích hợp công việc đã qua CI.
-- dev/linh: nhánh làm việc của Linh.
+- dev/ngoclinh: nhánh làm việc của Linh.
 - dev/ducanh: nhánh làm việc của Đức Anh.
 - dev/huy: nhánh làm việc của Huy.
 - feat/..., fix/..., docs/...: nhánh ngắn hạn cho một nhiệm vụ cụ thể khi cần.
@@ -38,15 +38,15 @@ Cài Git, sau đó mở Terminal hoặc PowerShell và chạy:
 
 Chuyển sang đúng nhánh cá nhân:
 
-    git switch dev/linh
+    git switch dev/ngoclinh
 
-Linh thay tên nhánh thành dev/linh, Đức Anh dùng dev/ducanh, Huy dùng dev/huy.
+Ví dụ trên là nhánh của Linh (dev/ngoclinh); Đức Anh dùng dev/ducanh, Huy dùng dev/huy.
 
 Nếu Git báo chưa có nhánh trên máy:
 
-    git switch --track origin/dev/linh
+    git switch --track origin/dev/ngoclinh
 
-Chỉ thay dev/linh bằng nhánh của đúng thành viên.
+Chỉ thay dev/ngoclinh bằng nhánh của đúng thành viên.
 
 ## 4. Quy trình làm việc hằng ngày
 

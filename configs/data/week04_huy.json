@@ -1,5 +1,5 @@
 {
-  "version": "features-sqi-v0",
+  "version": "features-sqi-v1",
   "status": "NOT_TEST_TUNED",
   "signal": {
     "flat_std": 1e-8,
