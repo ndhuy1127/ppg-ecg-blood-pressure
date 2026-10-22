@@ -1,5 +1,7 @@
 ﻿# Khung Protocol Nghiên cứu Thực nghiệm (Protocol Outline) - Phiên bản v0.1
 
+> **Đã có bản mới:** [v0.2](protocol_outline_v0.2.md) (2026-10-21) thay mục 5–6 theo thiết bị V1-module và thêm nghiệm pháp tạo ΔBP. Bản v0.1 giữ làm lịch sử.
+>
 > **Phiên bản:** v0.1
 > **Người biên soạn:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu

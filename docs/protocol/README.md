@@ -5,9 +5,12 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 
 ## Protocol và định nghĩa phương pháp
 
-- [Khung protocol nghiên cứu thực nghiệm v0.1](protocol_outline_v0.1.md): thiết
-  kế đo lặp nhiều phiên, quy trình đo đối chứng bằng cuff, ghép cửa sổ tín hiệu
-  và kế hoạch phân tích thống kê.
+- [Khung protocol nghiên cứu thực nghiệm v0.2](protocol_outline_v0.2.md): bản
+  hiện hành (2026-10-21). Phân bổ tay/điện cực theo V1-module, kiểm tra xung đột,
+  nghiệm pháp tạo ΔBP và tiêu chí pilot; mục 5 và 6.4–6.5 chờ Đức Anh xác nhận.
+- [Khung protocol nghiên cứu thực nghiệm v0.1](protocol_outline_v0.1.md): bản
+  lịch sử; thiết kế đo lặp nhiều phiên, quy trình đo đối chứng bằng cuff, ghép
+  cửa sổ tín hiệu và kế hoạch phân tích thống kê.
 - [Định nghĩa mẫu, nhãn và thuật ngữ (Tuần 2)](week_02_sample_label_glossary.md):
   PAT/PTT/PEP/PWA, đơn vị quan sát, cửa sổ ứng viên và metadata tối thiểu.
 - [Baseline B0/B1 và chỉ số đánh giá (Tuần 3)](week_03_baselines_metrics.md):
