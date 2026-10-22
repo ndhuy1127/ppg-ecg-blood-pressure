@@ -1,5 +1,11 @@
 # Evaluation — chỉ số sai số huyết áp
 
+Ngoài `bp_metrics.py` (dưới đây) và `subject_bootstrap.py`, thư mục có
+[fiducial_agreement.py](fiducial_agreement.py) (Tuần 5): so mốc R/foot tự động với
+đánh dấu tay, chỉ train/val. Mô tả đầu vào/đầu ra ở
+[week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
+mục 4.
+
 [bp_metrics.py](bp_metrics.py) chứa hàm đánh giá và các lớp chứa kết quả.
 Demo/pipeline gọi hàm với nhãn và dự đoán; chạy riêng file không tự tạo dữ liệu
 hay in báo cáo.

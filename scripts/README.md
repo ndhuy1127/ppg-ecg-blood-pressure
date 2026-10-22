@@ -13,6 +13,7 @@ mục gốc repository; demo còn hỗ trợ chạy trực tiếp từ thư mụ
 | [build_pulsedb_split.py](build_pulsedb_split.py) | Tạo split có inventory đối chiếu từ reader repo | Một file raw và config/checksum/pool đã chốt; giữ mọi dòng reader | Inventory, manifest, config và report trong thư mục mới; không ghi đè bàn giao cũ |
 | [run_b3_pulsedb.py](run_b3_pulsedb.py) | Fit B0/B3 XGBoost trên train, đánh giá val | Raw `.mat`, thư mục split v2 và config `configs/models/b3_pulsedb_v0.json`; không đụng test | Report, bảng baseline, dự đoán val và model trong thư mục mới của `runs/` |
 | [demo_week04_huy.py](demo_week04_huy.py) | Kiểm tra mốc R/foot, PAT, đặc trưng/SQI `features-sqi-v1` và bootstrap trên fixture giải tích | Config `configs/data/week04_huy.json`; fixture SYNTHETIC tự tạo | JSON, CSV fixture và SVG; **ghi đè** đường dẫn mặc định trong `reports/`, nên truyền `--output`/`--figure` mới nếu muốn giữ bản cũ |
+| [week05_fiducials.py](week05_fiducials.py) | Tuần 5: bản ghi SYNTHETIC có đáp án, xuất tập nhỏ train/val PulseDB, hình và công cụ đánh dấu tay, chạy mọi phương pháp mốc, so với đánh dấu tay | Config `configs/data/week05_huy.json`; SYNTHETIC tự tạo hoặc raw + split v2 (không bao giờ test) | Lệnh `synth`/`export`/`plot`/`annotate`/`detect`/`compare`; mỗi lệnh ghi provenance và từ chối ghi đè |
 | [simulate_packets.py](simulate_packets.py) | Sinh/replay packet giả lập và kiểm tra lỗi | Config/seed SYNTHETIC: v2 (6 case hoặc JSON giả lập) hoặc v3 `configs/hardware/packet_simulation_v3.json` (13 case) | v2: packet, timeline/gap và report; v3: `stream.bin` theo layout V0.1, metadata phiên và report. Output mới; không phải đồng bộ phần cứng |
 | [packet_logger.py](packet_logger.py) | Logger phía máy tính: `record` một nguồn byte, `replay` một raw | File byte (`--source-file`) hoặc `raw.bin`, metadata phiên, `configs/hardware/packet_logger.json`; serial trực tiếp chưa có (chờ `pyserial`) | Raw bất biến, `t_rx` riêng, decode/issue/gap, session manifest có hash trong `runs/packet_logger/` |
 
@@ -22,6 +23,7 @@ Hướng dẫn split mới: [inventory, config, hash và giới hạn](../docs/p
 Hướng dẫn B0/B3: [đặc trưng, model, đầu ra và giới hạn](../docs/protocol/run_b3_pulsedb.md).
 Hướng dẫn mô phỏng: [schema riêng, expected results và giới hạn](../docs/protocol/packet_simulation.md).
 Hướng dẫn demo Tuần 4: [đặc trưng, SQI và bootstrap](../docs/protocol/week04_features_sqi_bootstrap.md).
+Hướng dẫn Tuần 5: [mốc thứ hai, PAT hợp lệ, so với đánh dấu tay](../docs/protocol/week05_fiducials_pat_validity.md).
 Runner CSV có đầu vào riêng; các mô tả dữ liệu tự tạo bên dưới chỉ áp dụng demo.
 Có thể mở `run_b0_pulsedb_csv.py` và bấm **Run Python File in Terminal**:
 không truyền đối số thì script dùng `configs/data/b0_pulsedb_validation.json`

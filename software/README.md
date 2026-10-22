@@ -24,7 +24,9 @@ chứa `__init__.py`.
 | [_provenance.py](_provenance.py) | SHA-256 của file text tracked (code, config JSON) sau khi đổi CRLF thành LF | Byte file → hash không phụ thuộc checkout Windows/Linux |
 | [pulsedb/reader.py](pulsedb/reader.py), [pulsedb/validator.py](pulsedb/validator.py) | Đọc file Subset PulseDB `.mat`; gắn cờ NaN/Inf, nhãn bất thường, waveform trùng (không xóa dòng) | File `.mat` → `PulseSegment`; segment → bảng cờ |
 | [data_io/split_manifest.py](data_io/split_manifest.py) | Inventory, split theo người `pulsedb-split-v2`, kiểm tra bảo toàn/leakage, CSV chuẩn | Segment → inventory → manifest train/val/test |
-| [signal_processing/fiducials.py](signal_processing/fiducials.py) | Chuẩn bị kênh, R-peak, PPG foot tiếp tuyến, ghép PAT | Vector ECG/PPG + fs/clock/timestamp → mốc và PAT |
+| [signal_processing/fiducials.py](signal_processing/fiducials.py) | Chuẩn bị kênh, R-peak, PPG foot tiếp tuyến, ghép PAT; phương pháp ứng viên Tuần 5 (`derivative_energy`, `d2_max`, `valley_min`) chọn qua `SignalConfig`, mặc định giữ v1 | Vector ECG/PPG + fs/clock/timestamp → mốc và PAT |
+| [signal_processing/pat_validity.py](signal_processing/pat_validity.py) | PAT hợp lệ Tuần 5: ghép R–foot trong khoảng R–R, gắn nhãn `out_of_range`/`outlier` (MAD), không xóa nhịp | Thời điểm R và foot → trạng thái từng nhịp; không đọc BP |
+| [evaluation/fiducial_agreement.py](evaluation/fiducial_agreement.py) | So mốc tự động với đánh dấu tay: ghép một–một tối ưu, TP/FP/FN, bias/MAE/SD; chỉ train/val; từ chối đáp án SYNTHETIC nếu không có cờ | Bảng đánh dấu tay + bảng detections → summary và per_record |
 | [feature_extraction/week04.py](feature_extraction/week04.py) | Đặc trưng và cờ SQI theo cửa sổ `features-sqi-v1` | Cửa sổ ECG/PPG có metadata → đặc trưng, quality, flags |
 | [models/constant_baselines.py](models/constant_baselines.py) | Tính dự đoán hằng số B0/B1 | Nhãn train hoặc calibration → cặp dự đoán `[SBP, DBP]` |
 | [models/xgboost_baseline.py](models/xgboost_baseline.py) | B3: XGBoost riêng SBP/DBP | Đặc trưng + nhãn train → model; đặc trưng val → `[SBP, DBP]` |

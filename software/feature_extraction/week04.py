@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from software.signal_processing.fiducials import (
-    Channel, SignalConfig, pair_pat, peaks, ppg_fiducials, prepare,
+    DEFAULT_METHODS, Channel, SignalConfig, pair_pat, peaks, ppg_fiducials, prepare,
 )
 
 VERSION = "features-sqi-v1"
@@ -88,6 +88,11 @@ def _unmatched(r_times, foot_times, pairs, ecg_times, ppg_times, config):
 
 def extract_window(window: SignalWindow, config: SignalConfig) -> dict:
     """Only read ECG/PPG; never read ABP, BP labels, demographics or future data."""
+    if (config.r_method, config.foot_method) != DEFAULT_METHODS:
+        # Output would be labelled features-sqi-v1 without being v1. Using a
+        # candidate method in features needs a new version once it is chosen.
+        raise ValueError("features-sqi-v1 defines only r_method='prominence' and "
+                         "foot_method='tangent'")
     required = ("sample_id", "subject_id", "source", "source_sha256", "raw_index", "split")
     if not isinstance(window.metadata, dict) or any(k not in window.metadata for k in required):
         raise ValueError("Window needs manifest identity/provenance and split")

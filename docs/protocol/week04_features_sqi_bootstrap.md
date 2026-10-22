@@ -75,6 +75,9 @@ Prominence tính theo `prominence_fraction × peak-to-peak` của cả cửa s�
 `filter_mode=none`, trôi đường nền lớn có thể làm prominence vượt biên độ xung
 và không phát hiện được peak nào (gắn cờ `too_few_peaks`, không crash).
 Không mở khảo sát nhiều detector; chưa xác nhận độ nhạy/PPV trên ECG thật.
+Tuần 5 thêm phương pháp ứng viên chọn qua `SignalConfig` (`r_method`,
+`foot_method`), xem [week05_fiducials_pat_validity.md](week05_fiducials_pat_validity.md);
+`features-sqi-v1` chỉ nhận phương pháp mặc định và output không đổi.
 
 Default `filter_mode=none`: không thêm lọc khi chưa biết xử lý upstream.
 Tùy chọn `zero_phase` là Butterworth SOS forward–backward, band/order trong

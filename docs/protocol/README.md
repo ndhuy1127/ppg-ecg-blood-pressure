@@ -17,6 +17,9 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   công thức B0/B1, MAE/bias/SD và đặc tả các chỉ số mở rộng.
 - [Đặc trưng, SQI và bootstrap theo người (Tuần 4)](week04_features_sqi_bootstrap.md):
   giao diện trích đặc trưng, mốc R/foot/PAT và CI bootstrap.
+- [Mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay (Tuần 5)](week05_fiducials_pat_validity.md):
+  phương pháp ứng viên, quy tắc PAT/outlier, công cụ đánh dấu tay và kết quả
+  SYNTHETIC; mẫu CSV ở [templates/](templates/manual_fiducials_template.csv).
 
 ## Hướng dẫn chạy
 

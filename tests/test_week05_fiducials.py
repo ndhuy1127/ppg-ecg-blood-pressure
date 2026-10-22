@@ -1,0 +1,518 @@
+"""Week 5 candidate fiducials, PAT validity and manual-agreement tooling.
+
+Known-answer SYNTHETIC checks only; not evidence of accuracy on people or PulseDB.
+"""
+
+import json
+from dataclasses import replace
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from scripts.demo_week04_huy import fixture
+from scripts.week05_fiducials import (
+    SYNTHETIC_CASES, clicks_to_rows, detection_rows, load_records, main,
+    run_annotate, run_compare, select_review_rows, synthetic_record,
+)
+from software.evaluation.fiducial_agreement import (
+    ANNOTATION_COLUMNS, DETECTION_COLUMNS, agreement, match_events,
+)
+from software.feature_extraction.week04 import extract_window
+from software.signal_processing.fiducials import (
+    Channel, SignalConfig, _vertex_offset, detect,
+)
+from software.signal_processing.pat_validity import (
+    PatRules, classify_pat, pair_between_r, pat_beats,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG_PATH = ROOT / "configs/data/week05_huy.json"
+CONFIG = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+BASE = SignalConfig(**CONFIG["signal"])
+RULES = PatRules(**CONFIG["pat_validity"])
+TOLERANCE = CONFIG["agreement"]["tolerance_s"]
+
+
+def _case(name, **override):
+    ecg, ppg, ecg_fs, ppg_fs, r, feet = synthetic_record(
+        **{**SYNTHETIC_CASES[name], **override})
+    return Channel(ecg, ecg_fs, "u", None), Channel(ppg, ppg_fs, "u", None), r, feet
+
+
+def _inside(times, low=0.5, high=9.5):
+    times = np.asarray(times)
+    return times[(times >= low) & (times <= high)]
+
+
+def _sinusoid_ppg(offset_samples, fs=125, rate_hz=1.25, decimals=None):
+    """-cos PPG: smooth symmetric minima ``offset_samples`` after a sample.
+
+    1.25 Hz = 100 samples per period, so every minimum has the same offset.
+    """
+    t = np.arange(10 * fs) / fs
+    t0 = 1.0 + offset_samples / fs
+    ppg = -np.cos(2 * np.pi * rate_hz * (t - t0))
+    if decimals is not None:
+        ppg = np.round(ppg, decimals)
+    minima = t0 + np.arange(-1, 15) / rate_hz
+    return Channel(ppg, fs, "u", None), minima
+
+
+def test_config_matches_documented_values():
+    """Locked before marking (docs section 3); a change must be deliberate."""
+    assert CONFIG["status"] == "NOT_TEST_TUNED"
+    assert CONFIG["pat_validity"] == {"min_ms": 80.0, "max_ms": 400.0, "mad_k": 3.0,
+                                      "mad_floor_ms": 10.0, "min_pairs": 3}
+    assert TOLERANCE == {"ecg_r": 0.05, "ppg_foot": 0.1}
+    assert (BASE.r_method, BASE.foot_method) == ("prominence", "tangent")
+    assert (BASE.pat_min_s, BASE.pat_max_s) == (0.08, 0.4)
+
+
+def test_defaults_are_v1_methods_and_unknown_methods_rejected():
+    assert (SignalConfig().r_method, SignalConfig().foot_method) == ("prominence",
+                                                                      "tangent")
+    for field in ("r_method", "foot_method"):
+        with pytest.raises(ValueError):
+            SignalConfig(**{field: "pan_tompkins"})
+    with pytest.raises(ValueError):
+        SignalConfig(r_energy_window_s=0)
+
+
+@pytest.mark.parametrize("field,method", [("r_method", "derivative_energy"),
+                                          ("foot_method", "d2_max"),
+                                          ("foot_method", "valley_min")])
+def test_features_sqi_v1_refuses_candidate_methods(field, method):
+    window, _ = fixture()
+    with pytest.raises(ValueError, match="features-sqi-v1"):
+        extract_window(window, replace(SignalConfig(), **{field: method}))
+
+
+@pytest.mark.parametrize("ecg_fs", [125, 500])
+@pytest.mark.parametrize("method", ["prominence", "derivative_energy"])
+def test_clean_r_peaks_known_answer(method, ecg_fs):
+    ecg, _, r, _ = _case("SYN_CLEAN_HR60", ecg_fs=ecg_fs)
+    found, issues = detect(ecg, replace(BASE, r_method=method, refractory_s=0.4), "ecg")
+    assert not issues
+    assert _inside(found) == pytest.approx(_inside(r), abs=1 / ecg.fs_hz)
+
+
+def test_prominence_needs_long_refractory_to_skip_t_waves():
+    """Documented limitation: at 0.25 s the local-maxima detector also returns
+    T waves (R + 0.25 s); the derivative-energy envelope does not."""
+    ecg, _, r, _ = _case("SYN_CLEAN_HR60")
+    prominence, _ = detect(ecg, replace(BASE, r_method="prominence"), "ecg")
+    energy, _ = detect(ecg, replace(BASE, r_method="derivative_energy"), "ecg")
+    matched, _ = match_events(_inside(r), _inside(prominence), 0.05)
+    assert len(matched) == len(_inside(r))
+    assert len(_inside(prominence)) == 2 * len(_inside(r))
+    assert _inside(energy) == pytest.approx(_inside(r), abs=1 / ecg.fs_hz)
+
+
+def test_clean_feet_known_answer_per_method():
+    _, ppg, _, onsets = _case("SYN_CLEAN_HR60")
+    rise, step = SYNTHETIC_CASES["SYN_CLEAN_HR60"].get("rise_s", 0.15), 1 / ppg.fs_hz
+    expected = _inside(onsets)
+    tangent, _ = detect(ppg, replace(BASE, foot_method="tangent"), "ppg")
+    # Half-cosine rise: max-slope tangent meets baseline (1/2 - 1/pi) * rise after
+    # onset.
+    assert _inside(tangent) == pytest.approx(expected + (0.5 - 1 / np.pi) * rise,
+                                             abs=step)
+    valley, _ = detect(ppg, replace(BASE, foot_method="valley_min"), "ppg")
+    assert _inside(valley) == pytest.approx(expected, abs=step)
+    d2, _ = detect(ppg, replace(BASE, foot_method="d2_max"), "ppg")
+    # Discrete second difference peaks on the first sample after the onset kink.
+    assert _inside(d2) == pytest.approx(expected + step, abs=step)
+
+
+@pytest.mark.parametrize("method", ["valley_min", "d2_max"])
+@pytest.mark.parametrize("offset", [0.3, -0.3])
+def test_parabolic_refinement_finds_sub_sample_minimum(method, offset):
+    """A smooth symmetric minimum between samples: refinement must land within
+    0.1 sample; no refinement is 0.3 sample off, the wrong sign 0.6."""
+    ppg, minima = _sinusoid_ppg(offset)
+    feet, issues = detect(ppg, replace(BASE, foot_method=method), "ppg")
+    assert not issues and len(_inside(feet)) >= 10
+    nearest = minima[np.abs(_inside(feet)[:, None] - minima).argmin(axis=1)]
+    assert np.abs(_inside(feet) - nearest).max() <= 0.1 / ppg.fs_hz
+
+
+def test_vertex_offset_needs_the_right_curvature():
+    assert _vertex_offset(1.0, 0.0, 1.0, "min") == 0.0
+    assert _vertex_offset(2.0, 0.0, 1.0, "min") == pytest.approx(1 / 6)
+    # d2 = 3.0, 1.2, 0.2 at the edge of the d2_max search: curved like a
+    # minimum, so no maximum vertex and no shift.
+    assert _vertex_offset(3.0, 1.2, 0.2, "max") == 0.0
+    assert _vertex_offset(-1.0, 0.0, -2.0, "max") == pytest.approx(-1 / 6)
+    # An asymmetric corner is a strict minimum and is still refined (documented).
+    assert _vertex_offset(1.0, 0.0, 10.0, "min") == pytest.approx(-0.409, abs=1e-3)
+
+
+def test_valley_plateau_is_not_refined():
+    """Two equal minimal samples: the last one is kept, no half-sample shift."""
+    ppg, minima = _sinusoid_ppg(0.5, decimals=6)
+    feet, _ = detect(ppg, replace(BASE, foot_method="valley_min"), "ppg")
+    nearest = minima[np.abs(_inside(feet)[:, None] - minima).argmin(axis=1)]
+    assert _inside(feet) - nearest == pytest.approx(0.5 / ppg.fs_hz, abs=1e-9)
+
+
+def test_noisy_record_r_found_and_tangent_feet_complete():
+    ecg, ppg, r, onsets = _case("SYN_NOISY_HR60")
+    for method in ("prominence", "derivative_energy"):
+        found, _ = detect(ecg, replace(BASE, r_method=method, refractory_s=0.4), "ecg")
+        matched, _ = match_events(_inside(r), _inside(found), 0.05)
+        assert len(matched) == len(_inside(r))
+    for method in ("tangent", "d2_max", "valley_min"):
+        feet, _ = detect(ppg, replace(BASE, foot_method=method), "ppg")
+        assert np.isfinite(feet).all() and (np.diff(feet) > 0).all()
+    tangent, _ = detect(ppg, BASE, "ppg")
+    matched, _ = match_events(_inside(onsets), _inside(tangent), 0.1)
+    assert len(matched) == len(_inside(onsets))
+
+
+def test_rejected_channel_returns_issues_and_no_fiducials():
+    ppg, _ = _sinusoid_ppg(0.0)
+    times = np.arange(len(ppg.values)) / ppg.fs_hz
+    times[600:] += 0.5  # a 0.5 s gap in the timestamps
+    gapped = replace(ppg, timestamps=times)
+    found, issues = detect(gapped, BASE, "ppg")
+    assert len(found) == 0 and issues == ["time_gap"]
+
+
+@pytest.mark.parametrize("method", ["prominence", "derivative_energy"])
+def test_pause_creates_no_beat_and_no_pat(method):
+    ecg, ppg, r, _ = _case("SYN_PAUSE_HR60")
+    config = replace(BASE, r_method=method, refractory_s=0.4)
+    found, _ = detect(ecg, config, "ecg")
+    gap = (found > r[3] + 0.1) & (found < r[4] - 0.1)
+    assert not gap.any()
+    feet, _ = detect(ppg, config, "ppg")
+    result = pat_beats(found, feet, RULES)
+    assert result["n_pairs"] == len(found) and result["n_unpaired_r"] == 0
+
+
+def test_ppg_dropout_leaves_r_unpaired_not_mispaired():
+    ecg, ppg, r, _ = _case("SYN_PPG_DROPOUT_HR60")
+    found, _ = detect(ecg, replace(BASE, r_method="derivative_energy"), "ecg")
+    feet, _ = detect(ppg, BASE, "ppg")
+    result = pat_beats(found, feet, RULES)
+    assert result["n_unpaired_r"] == result["n_no_foot"] == 1
+    assert result["n_valid"] == result["n_pairs"] == len(found) - 1
+    pats = np.array([p[2] for p in result["pairs"]])
+    assert pats == pytest.approx(200 + (0.5 - 1 / np.pi) * 150, abs=1000 / ppg.fs_hz)
+
+
+@pytest.mark.parametrize("r_method", ["prominence", "derivative_energy"])
+@pytest.mark.parametrize("foot_method", ["tangent", "d2_max", "valley_min"])
+def test_high_heart_rate_every_beat_once(r_method, foot_method):
+    ecg, ppg, r, onsets = _case("SYN_HIGH_HR143")
+    # prominence keeps the v1 refractory 0.4 s (< RR 0.42 s); at 0.25 s it also
+    # returns the T wave after the last beat (see the T-wave test above).
+    refractory = 0.4 if r_method == "prominence" else BASE.refractory_s
+    config = replace(BASE, r_method=r_method, foot_method=foot_method,
+                     refractory_s=refractory)
+    found, _ = detect(ecg, config, "ecg")
+    feet, _ = detect(ppg, config, "ppg")
+    assert len(match_events(_inside(r), _inside(found), 0.05)[0]) == len(_inside(r))
+    assert len(_inside(found)) == len(_inside(r))
+    assert (len(match_events(_inside(onsets), _inside(feet), 0.05)[0])
+            == len(_inside(onsets)))
+    assert (np.diff(feet) > 0).all()
+    assert pat_beats(found, feet, RULES)["n_unpaired_r"] == 0
+
+
+def test_pat_beats_labels_out_of_range_instead_of_dropping():
+    r = np.arange(1.0, 9.0)
+    pat = np.full(8, 0.2)
+    pat[2], pat[5] = 0.45, 0.06
+    result = pat_beats(r, r + pat, RULES)
+    assert (result["n_pairs"], result["n_unpaired_r"]) == (8, 0)
+    assert result["n_out_of_range"] == 2
+    assert [result["status"][i] for i in (2, 5)] == ["out_of_range"] * 2
+    assert result["median_valid_ms"] == pytest.approx(200)
+
+
+def test_pair_between_r_no_foot_and_ambiguous_are_labelled():
+    r = [1.0, 2.0, 3.0, 4.0]
+    # R2: two feet, only 2.2 s in range -> paired. R3: 3.05 and 3.5 s are both
+    # out of range -> ambiguous. R4 (last): nothing within one RR -> no_foot.
+    feet = [1.2, 2.2, 2.6, 3.05, 3.5]
+    pairs, status = pair_between_r(r, feet, RULES)
+    assert status == ["paired", "paired", "ambiguous", "no_foot"]
+    assert [(i, j) for i, j, _ in pairs] == [(0, 0), (1, 1)]
+    assert [p[2] for p in pairs] == pytest.approx([200, 200])
+    # The last R only looks one RR ahead: a foot 1.5 s later is not its own.
+    assert pair_between_r([1.0, 2.0, 3.0], [1.2, 2.2, 4.5], RULES)[1][-1] == "no_foot"
+    with pytest.raises(ValueError):
+        pair_between_r([1.0, 1.0], [1.2], RULES)
+
+
+def test_pat_limits_are_inclusive_despite_float_rounding():
+    # (0.18 - 0.1) * 1000 = 79.99999999999999 and (1.1 - 0.7) * 1000 =
+    # 400.0000000000001 in binary floating point; both are on the limits.
+    result = pat_beats([0.1, 0.7, 1.7, 2.7], [0.18, 1.1, 1.9, 2.9], RULES)
+    assert result["n_out_of_range"] == 0 and result["n_pairs"] == 4
+    outside = classify_pat([79.9, 400.1, 200, 200, 200], RULES)
+    assert outside["status"][:2] == ["out_of_range"] * 2
+
+
+def test_classify_pat_range_outlier_and_summary():
+    pats = [198, 200, 202, 199, 201, 200, 260, 90, 50, 450]
+    result = classify_pat(pats, RULES)
+    assert result["status"] == (["valid"] * 6 + ["outlier", "outlier"]
+                                + ["out_of_range", "out_of_range"])
+    counts = (result["n_valid"], result["n_outlier"], result["n_out_of_range"])
+    assert counts == (6, 2, 2)
+    assert result["median_valid_ms"] == pytest.approx(200)
+    assert result["median_all_ms"] == pytest.approx(200)
+    constant = classify_pat([200, 200, 200, 300], RULES)
+    # MAD = 0: flagged, and only the absolute floor decides outliers.
+    assert constant["status"] == ["valid"] * 3 + ["outlier"]
+    assert "pat:mad_zero" in constant["flags"]
+    # Quantization-sized spread is not an outlier because of the floor.
+    near = classify_pat([200, 200, 200, 208, 192, 200], RULES)
+    assert near["n_outlier"] == 0
+    no_floor = replace(RULES, mad_floor_ms=0)
+    assert classify_pat([200, 200, 200, 208, 192, 200], no_floor)["n_outlier"] == 2
+    few = classify_pat([200, 500], RULES)
+    assert few["median_valid_ms"] is None and "pat:too_few_valid" in few["flags"]
+    two = classify_pat([200, 300], RULES)
+    assert "pat:too_few_in_range_for_outlier_rule" in two["flags"]
+
+
+def test_mad_rule_uses_k_and_normal_scale():
+    """Median 240, MAD 20 -> limit 3 * 1.4826 * 20 = 88.96 ms (> the 10 ms floor).
+    305 (65 ms away) stays valid, 330 (90 ms) is an outlier. Scale 1 or k = 1
+    would flag 305; k = 10 would keep 330."""
+    pats = [200, 210, 220, 230, 240, 250, 260, 305, 330]
+    assert classify_pat(pats, RULES)["status"] == ["valid"] * 8 + ["outlier"]
+
+
+def test_pat_rules_load_from_config_and_reject_bad_values():
+    for bad in ({"min_ms": 400, "max_ms": 80}, {"mad_k": 0}, {"mad_floor_ms": -1},
+                {"min_pairs": 1}, {"min_ms": True}):
+        with pytest.raises(ValueError):
+            PatRules(**bad)
+    with pytest.raises(ValueError):
+        classify_pat([200, np.nan], RULES)
+
+
+def test_match_events_one_to_one_closest_first():
+    matched, errors = match_events([1.0, 2.0, 3.0], [1.01, 1.02, 2.2, 3.04], 0.05)
+    assert matched == [(0, 0), (2, 3)]
+    assert errors * 1000 == pytest.approx([10, 40])
+
+
+def test_match_events_maximises_pairs_and_never_reuses():
+    # Closest-first greedy would pair 1.06/1.035 and then lose 1.00.
+    matched, _ = match_events([1.00, 1.06], [1.035, 1.105], 0.05)
+    assert matched == [(0, 0), (1, 1)]
+    assert len(match_events([1.0, 1.04], [1.02], 0.05)[0]) == 1
+    assert len(match_events([1.02], [1.0, 1.04], 0.05)[0]) == 1
+    # Exactly one tolerance away matches whatever the binary rounding.
+    assert len(match_events([1.0, 2.0], [1.05, 2.05], 0.05)[0]) == 2
+    assert match_events([1.0], [1.0501], 0.05)[0] == []
+
+
+def _tables(times_det, split="val", marks=(1.0, 2.0, 3.0), annotator="HUY",
+            det_split=None):
+    rows = [(f, t) for f, t in [("ecg_r", t) for t in marks] + [("ppg_foot", None)]]
+    annotations = pd.DataFrame([
+        {"record_id": "SYN_A", "split": split, "fiducial": f, "time_s": t,
+         "review_start_s": 0.5, "review_end_s": 4.5, "annotator": annotator,
+         "annotated_on": "2026-10-21", "note": ""}
+        for f, t in rows
+    ], columns=ANNOTATION_COLUMNS)
+    det_split = det_split or split
+    det = [{"record_id": "SYN_A", "split": det_split, "method": "m", "fiducial": f,
+            "time_s": None} for f in ("ecg_r", "ppg_foot")]
+    det += [{"record_id": "SYN_A", "split": det_split, "method": "m",
+             "fiducial": "ecg_r", "time_s": t} for t in times_det]
+    return annotations, pd.DataFrame(det, columns=DETECTION_COLUMNS)
+
+
+def test_agreement_counts_bias_and_region():
+    annotations, detections = _tables([0.2, 1.004, 2.002, 2.5, 4.9])
+    result = agreement(annotations, detections, TOLERANCE)
+    assert result["reference_type"] == "MANUAL"
+    r = next(s for s in result["summary"] if s["fiducial"] == "ecg_r")
+    # 0.2 and 4.9 are outside the reviewed region and do not count.
+    assert (r["tp"], r["fp"], r["fn"]) == (2, 1, 1)
+    assert r["sensitivity"] == pytest.approx(2 / 3) and r["ppv"] == pytest.approx(2 / 3)
+    assert r["bias_ms"] == pytest.approx(3) and r["mae_ms"] == pytest.approx(3)
+    assert r["sd_ms"] == pytest.approx(np.std([4, 2], ddof=1))
+    foot = next(s for s in result["summary"] if s["fiducial"] == "ppg_foot")
+    assert foot["n_reference"] == 0 and foot["sensitivity"] is None
+
+
+def test_agreement_edge_match_is_tp_and_unmatched_margin_is_not_fp():
+    # Mark 4.49 s inside the region, detection 4.51 s just outside: a TP.
+    # Detection 0.47 s (outside, unmatched): not a false positive.
+    annotations, detections = _tables([0.47, 4.51], marks=(4.49,))
+    r = next(s for s in agreement(annotations, detections, TOLERANCE)["summary"]
+             if s["fiducial"] == "ecg_r")
+    assert (r["tp"], r["fp"], r["fn"], r["n_detected"]) == (1, 0, 0, 1)
+    assert r["bias_ms"] == pytest.approx(20)
+
+
+def test_agreement_rejects_test_split_mismatch_and_missing_run():
+    annotations, detections = _tables([1.0], split="test")
+    with pytest.raises(ValueError, match="train/val"):
+        agreement(annotations, detections, TOLERANCE)
+    annotations, detections = _tables([1.0], det_split="train")
+    with pytest.raises(ValueError, match="split differs"):
+        agreement(annotations, detections, TOLERANCE)
+    annotations, detections = _tables([1.0])
+    with pytest.raises(ValueError, match="No method was run"):
+        agreement(annotations, detections[detections.fiducial == "ecg_r"], TOLERANCE)
+
+
+@pytest.mark.parametrize("name", ["SYNTHETIC_GROUND_TRUTH_NOT_MANUAL",
+                                  " synthetic_ground_truth_not_manual ",
+                                  "Synthetic"])
+def test_agreement_refuses_synthetic_truth_however_written(name):
+    annotations, detections = _tables([1.0], annotator=name)
+    with pytest.raises(ValueError, match="SYNTHETIC"):
+        agreement(annotations, detections, TOLERANCE)
+    result = agreement(annotations, detections, TOLERANCE, allow_synthetic_truth=True)
+    assert result["reference_type"] == "SYNTHETIC_TRUTH"
+    mixed = annotations.copy()
+    mixed.loc[0, "annotator"] = "HUY"
+    with pytest.raises(ValueError, match="mix"):
+        agreement(mixed, detections, TOLERANCE, allow_synthetic_truth=True)
+
+
+def test_select_review_rows_never_test_and_ignores_bp():
+    manifest = pd.DataFrame({
+        "subject_id": [f"S{i % 6}" for i in range(30)],
+        "split": ["train", "val", "test"] * 10,
+        "raw_index": range(30), "sbp": np.arange(30.0),
+        "sample_id": [f"x:{i}" for i in range(30)],
+    })
+    picked = select_review_rows(manifest, 3, 2, seed=1)
+    assert set(picked.split) <= {"train", "val"} and len(picked) <= 6
+    shuffled = manifest.assign(sbp=np.random.default_rng(0).permutation(manifest.sbp))
+    assert (picked.raw_index.tolist()
+            == select_review_rows(shuffled, 3, 2, seed=1).raw_index.tolist())
+
+
+def test_clicks_to_rows_keeps_empty_reviewed_region():
+    class Record:
+        record_id, split = "SYN_A", "val"
+    rows = clicks_to_rows(Record, [("ecg_r", 2.0), ("ecg_r", 1.0)], (0.5, 9.5), "HUY",
+                          "2026-10-21")
+    assert [r["time_s"] for r in rows if r["fiducial"] == "ecg_r"] == ["1.000000",
+                                                                      "2.000000"]
+    assert [r["time_s"] for r in rows if r["fiducial"] == "ppg_foot"] == [""]
+
+
+def test_load_records_refuses_test_split(tmp_path):
+    records = tmp_path / "records"
+    main(["synth", "--out", str(records)])
+    index = records / "records.csv"
+    index.write_text(index.read_text(encoding="utf-8").replace(",val,", ",test,"),
+                     encoding="utf-8")
+    with pytest.raises(ValueError, match="train/val"):
+        list(load_records(records))
+
+
+def test_synth_refuses_existing_directory_before_writing(tmp_path):
+    out = tmp_path / "records"
+    out.mkdir()
+    (out / "keep.txt").write_text("mine", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        main(["synth", "--out", str(out)])
+    assert sorted(p.name for p in out.iterdir()) == ["keep.txt"]
+
+
+def test_detection_rows_mark_every_run_and_report_channel_issues():
+    class Record:
+        record_id, split, ecg_fs_hz, ppg_fs_hz = "SYN_FLAT", "val", 500, 125
+    ecg, _, _, _, _, _ = synthetic_record()
+    rows, issues = detection_rows(Record, ecg, np.zeros(1250), BASE)
+    feet = [r for r in rows if r["fiducial"] == "ppg_foot"]
+    assert sorted(r["method"] for r in feet) == ["d2_max", "tangent", "valley_min"]
+    assert all(r["time_s"] == "" for r in feet)
+    assert issues == {f"ppg_foot/{m}": ["flat"] for m in ("tangent", "d2_max",
+                                                          "valley_min")}
+
+
+def test_script_end_to_end_on_synthetic_and_refuses_overwrite(tmp_path):
+    records = tmp_path / "records"
+    det = tmp_path / "det.csv"
+    main(["synth", "--out", str(records)])
+    synth_info = json.loads((records / "synth.provenance.json").read_text("utf-8"))
+    assert synth_info["provenance"]["source_types"] == ["SYNTHETIC"]
+    main(["detect", "--records", str(records), "--out", str(det)])
+    detect_info = json.loads((tmp_path / "det.provenance.json").read_text("utf-8"))
+    assert detect_info["signal_config"]["refractory_s"] == BASE.refractory_s
+    assert set(detect_info["provenance"]["environment"]) >= {"python", "numpy",
+                                                             "scipy", "pandas"}
+    truth = records / "truth_synthetic.csv"
+    with pytest.raises(ValueError, match="SYNTHETIC"):
+        run_compare(truth, det, CONFIG_PATH, tmp_path / "x.json")
+    assert not (tmp_path / "x.json").exists()
+    result = run_compare(truth, det, CONFIG_PATH, tmp_path / "cmp.json",
+                         allow_synthetic_truth=True)
+    assert result["reference_type"] == "SYNTHETIC_TRUTH"
+    assert result["provenance"]["source_types"] == ["SYNTHETIC"]
+    assert result["detect_provenance"] == detect_info["provenance"]
+    energy = next(s for s in result["summary"]
+                  if s["fiducial"] == "ecg_r" and s["method"] == "derivative_energy")
+    assert energy["fn"] == 0
+    with pytest.raises(FileExistsError):
+        main(["synth", "--out", str(records)])
+    with pytest.raises(FileExistsError):
+        main(["detect", "--records", str(records), "--out", str(det)])
+
+
+def test_compare_refuses_other_config_or_missing_detect_provenance(tmp_path):
+    records = tmp_path / "records"
+    det = tmp_path / "det.csv"
+    main(["synth", "--out", str(records)])
+    main(["detect", "--records", str(records), "--out", str(det)])
+    other = tmp_path / "other.json"
+    other.write_text(json.dumps({**CONFIG, "agreement": {
+        "tolerance_s": {"ecg_r": 0.5, "ppg_foot": 0.1}}}), encoding="utf-8")
+    truth = records / "truth_synthetic.csv"
+    with pytest.raises(ValueError, match="Config differs"):
+        run_compare(truth, det, other, tmp_path / "a.json", allow_synthetic_truth=True)
+    original = det.read_bytes()
+    det.write_bytes(original + b"SYN_CLEAN_HR60,val,tangent,ppg_foot,5.000000\n")
+    with pytest.raises(ValueError, match="Detections differ"):
+        run_compare(truth, det, CONFIG_PATH, tmp_path / "c.json",
+                    allow_synthetic_truth=True)
+    det.write_bytes(original)
+    (tmp_path / "det.provenance.json").unlink()
+    with pytest.raises(ValueError, match="missing"):
+        run_compare(truth, det, CONFIG_PATH, tmp_path / "b.json",
+                    allow_synthetic_truth=True)
+
+
+def test_annotate_refuses_existing_output_before_any_window(tmp_path, monkeypatch):
+    import matplotlib
+    matplotlib.use("Agg", force=True)
+    import matplotlib.pyplot as plt
+
+    shown = []
+    monkeypatch.setattr(plt, "show", lambda *a, **k: shown.append(1))
+    records = tmp_path / "records"
+    main(["synth", "--out", str(records)])
+    existing = tmp_path / "manual.csv"
+    existing.write_text("keep", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        run_annotate(records, existing, "HUY", "2026-10-22", 0.5)
+    assert shown == [] and existing.read_text(encoding="utf-8") == "keep"
+    (tmp_path / "late.provenance.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        run_annotate(records, tmp_path / "late.csv", "HUY", "2026-10-22", 0.5)
+    assert shown == [] and not (tmp_path / "late.csv").exists()
+    with pytest.raises(ValueError, match="person"):
+        run_annotate(records, tmp_path / "s.csv", " synthetic_x", "2026-10-22", 0.5)
+    out = tmp_path / "new.csv"
+    run_annotate(records, out, "HUY", "2026-10-22", 0.5)
+    assert len(shown) == len(SYNTHETIC_CASES)
+    table = pd.read_csv(out)
+    assert len(table) == 2 * len(SYNTHETIC_CASES) and table.time_s.isna().all()
+    assert (tmp_path / "new.provenance.json").exists()
