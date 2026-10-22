@@ -6,6 +6,28 @@
 > **Ngày cập nhật:** 2026-09-22
 > **Lưu ý:** CHƯA PHẢI HỒ SƠ ĐẠO ĐỨC ĐÃ ĐƯỢC PHÊ DUYỆT CHÍNH THỨC.
 
+> [!NOTE]
+> **Cập nhật 2026-10-22 (Huy):** nội dung để nộp nằm trong 5 file bản nháp v0.1:
+> [phiếu thông tin](participant_information_sheet_v0.1.md),
+> [phiếu đồng thuận](consent_form_v0.1.md),
+> [chọn/loại](eligibility_screening_v0.1.md),
+> [an toàn và quy tắc dừng](session_safety_stopping_v0.1.md),
+> [quản lý dữ liệu](data_management_plan_v0.1.md).
+> Outline này giữ làm lịch sử; khi khác nhau thì theo 5 file đó. Các chỗ dưới đây
+> đã cũ hoặc mâu thuẫn, **không dùng khi nộp**:
+>
+> | Mục trong outline | Nội dung đã cũ | Theo bản mới |
+> | --- | --- | --- |
+> | 3, bước 1 | "chạm ngón tay vào điện cực ECG" | V1 dùng điện cực dán, không cần chạm chủ động (protocol v0.2 mục 5.1) |
+> | 3, bước 1 | Mỗi phiên khoảng 20–30 phút | Phiếu thông tin: ước tính khoảng 75 phút, chưa chốt |
+> | 3, bước 4 | Rút lui thì xóa vĩnh viễn **toàn bộ** dữ liệu | Có thể yêu cầu xóa; dữ liệu đã vào kết quả tổng hợp đã công bố thì không rút lại được (phiếu thông tin mục 6, kế hoạch quản lý dữ liệu) |
+> | 4, đoạn đầu | Tự phân loại "rủi ro tối thiểu (minimal risk)" | Phân loại rủi ro do hội đồng quyết định; câu trong outline chỉ là nhận định ban đầu của nhóm |
+> | 4.1 | Quy tắc pin, cấm nối máy tính | V1: USB tới laptop chạy pin, rút sạc (ghi chú trong 4.1) |
+> | 4.2 | Vỏ in 3D; vật liệu điện cực chưa chốt | V1: bo cổ tay gắn velcro, không có vỏ in 3D; điện cực Ag/AgCl dán là phương án chính |
+> | 4.2 | LED < 15 mW | Chưa có nguồn (ghi chú trong 4.2) |
+> | 4.3 | Nghỉ 2–3 phút giữa hai lần cuff | Phiếu thông tin và protocol: ít nhất 2 phút |
+> | 4.4, ý 4 | Ngưỡng SBP > 180 / DBP > 110 mmHg | Chưa có nguồn, chờ thầy/hội đồng ([quy tắc dừng](session_safety_stopping_v0.1.md)) |
+
 ---
 
 ## 1. Tuyên bố bản chất văn bản và Cảnh báo quan trọng
@@ -50,10 +72,19 @@ Trước khi tham gia bất kỳ phiên đo thử nghiệm nào (khi được ph
 
 ## 4. Đánh giá nguy cơ và Tiêu chí đảm bảo an toàn
 
-Nghiên cứu này được phân loại là **nghiên cứu có rủi ro tối thiểu (minimal risk)**, tương đương với các hoạt động sinh hoạt hàng ngày kết hợp đo sức khỏe định kỳ. Tuy nhiên, nhóm nghiên cứu xác định rõ các nguy cơ tiềm ẩn và biện pháp ngăn ngừa:
+*(Ghi chú 2026-10-22: phân loại rủi ro do hội đồng quyết định; câu sau là nhận định ban đầu của nhóm, chưa được xác nhận.)* Nghiên cứu này được phân loại là **nghiên cứu có rủi ro tối thiểu (minimal risk)**, tương đương với các hoạt động sinh hoạt hàng ngày kết hợp đo sức khỏe định kỳ. Tuy nhiên, nhóm nghiên cứu xác định rõ các nguy cơ tiềm ẩn và biện pháp ngăn ngừa:
 
 ### 4.1. An toàn điện và Thiết kế phần cứng
 - **QUY TẮC AN TOÀN TUYỆT ĐỐI:**
+  > [!NOTE]
+  > **Cập nhật 2026-10-21 (V1-module):** V1 không có pin (LiPo thuộc Phần B của
+  > [custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md)).
+  > ESP32-S3 DevKitC lấy nguồn và truyền dữ liệu qua USB từ một laptop **chạy
+  > pin, rút sạc**, không nối thiết bị dùng điện lưới nào khi đang đeo. Với V1,
+  > quy tắc dưới đây đọc là: không có đường nào nối người tham gia với điện lưới.
+  > Quy tắc chi tiết: [session_safety_stopping_v0.1.md](session_safety_stopping_v0.1.md).
+  > Đoạn gốc giữ nguyên bên dưới cho thiết bị đeo dùng pin (Phần B).
+
   > [!CAUTION]
   > **NGHIÊM CẤM SẠC THIẾT BỊ KHI ĐANG ĐEO TRÊN NGƯỜI:**
   > - Thiết bị nguyên mẫu chỉ được phép hoạt động bằng **nguồn pin sạc Li-ion điện áp thấp nội bộ ($3.7\text{V} - 4.2\text{V}$)** khi đang tiếp xúc với cơ thể người tham gia.
@@ -68,6 +99,7 @@ Nghiên cứu này được phân loại là **nghiên cứu có rủi ro tối 
   - Điện cực kim loại tiếp xúc da: vật liệu chưa chốt (thép không gỉ, mạ vàng hoặc Ag/AgCl dùng gel theo [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md)). Thép không gỉ 316L có chứa niken, và lớp mạ vàng có thể nằm trên lớp lót niken; vì vậy phải hỏi tiền sử dị ứng kim loại và loại trừ người dị ứng niken nếu điện cực có niken.
 - **Cảm biến quang học PPG:**
   - Sử dụng chùm sáng LED xanh lá/đỏ/hồng ngoại với công suất phát quang cực thấp ($< 15\text{mW}$), không tạo nhiệt lượng gây bỏng rát hay tổn thương nhiệt biểu bì da khi đo liên tục.
+  - *Ghi chú 2026-10-21:* con số $< 15\text{ mW}$ **chưa có nguồn** và chưa đo; công suất phụ thuộc dòng LED cấu hình trên MAX30101. Không dùng con số này trong hồ sơ nộp cho tới khi có datasheet/đo kiểm.
 
 ### 4.3. Sự khó chịu do Vòng bít đo đối chứng (Reference Cuff)
 - Vòng bít bắp tay tự động bơm căng có thể gây cảm giác tức ép nhẹ tại bắp tay trong thời gian bơm và xả (protocol dự kiến khoảng $45 - 60\text{ giây}$ mỗi lần đo).
