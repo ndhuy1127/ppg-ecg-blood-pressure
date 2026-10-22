@@ -12,7 +12,7 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
   `T_ANCHOR_US` hai chiều, thêm dung sai tốc độ, thêm cột `chain_id`, cách ly
   packet `FS_NOMINAL_MHZ = 0`, thêm cận trên số mẫu mất, đổi cách đếm lỗi decode.
   Chi tiết ở các mục dưới và trong `reports/weekly/week_05/linh.md`. Vẫn là
-  `packet-logger-v0`, vì code chưa từng được commit.
+  `packet-logger-v0`, vì trước lần sửa này code chưa từng được commit.
 - **Chờ:** đọc cổng serial trực tiếp, vì cần `pyserial`, mà gói này chưa có trong
   `requirements.txt` và chưa được nhóm duyệt (mục 7). Cũng chờ chạy 10 phút với
   firmware khung của Đức Anh, vì chưa có firmware.

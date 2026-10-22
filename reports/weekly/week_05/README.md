@@ -6,7 +6,7 @@
 >
 > **Ngày cập nhật:** 2026-10-21; sửa 2026-10-22 theo review độc lập (mục 8)
 >
-> **Nhánh/commit nền:** dev/huy @ 3ff44f2; thay đổi Tuần 5 **chưa commit** (chờ review)
+> **Nhánh/commit nền:** dev/huy @ 3ff44f2; thay đổi Tuần 5 commit trên `dev/huy` ngày 2026-10-22, sau review
 >
 > **Trạng thái:**
 > - Mục 1–4 và 6 có đầu ra. Mục 5 (đánh giá B0/B3) bị chặn chờ Linh.
@@ -23,8 +23,8 @@ G1 và kế hoạch khắc phục; (2) hồ sơ đạo đức; (3) phân bổ ta
 pháp; (4) mốc R/foot thứ hai, PAT hợp lệ, so với đánh dấu tay; (5) đánh giá B0/B3;
 (6) phác thảo P A/P B/P C. Không làm thay việc của Linh (logger, B0/B3 trên raw)
 hay Đức Anh (mua module, A.6, ERC/DRC, firmware). Không sửa
-`hardware/kicad/v1_module/wrist/v1_wrist.kicad_pro` (thay đổi chưa commit có
-trước, không thuộc việc này). Không commit/push/PR.
+`hardware/kicad/v1_module/wrist/v1_wrist.kicad_pro` (thay đổi có trước, không
+thuộc việc này). Push và PR theo quyết định của nhóm.
 
 **Đầu vào đã kiểm 2026-10-21** sau `git fetch origin`: `origin/dev/ducanh` mới
 nhất `9073aa8` (2026-10-14), `origin/dev/ngoclinh` mới nhất `acc8b8b`
@@ -40,8 +40,9 @@ Linh hay Đức Anh.
   - Chưa có giá, ngày giao hay dấu hiệu đã duyệt/đặt.
   - **Không có module PPG**: dòng "PPG AFE" ghi BMI270.
 - `origin/dev/ngoclinh` vẫn ở `acc8b8b`.
-- Linh có bản nháp Tuần 5 (logger, mô phỏng v3, `linh.md`), **chưa commit**, trong
-  worktree cục bộ `tmp/linh_week05`, chưa có trên remote.
+- Linh có bản nháp Tuần 5 (logger, mô phỏng v3, `linh.md`), lúc đó chưa commit và
+  chưa có trên remote. Ngày 2026-10-22, bản đã sửa theo review được commit trên
+  `dev/huy`.
 
 ## 2. Trạng thái G1
 
@@ -67,7 +68,7 @@ xử lý ghi theo kế hoạch, chưa có cập nhật tiến độ của họ):
 | Việc | Người | Mốc kiểm | Trạng thái 2026-10-21 |
 | --- | --- | --- | --- |
 | Chốt `pool_decision` (VitalDB_AAMI_Cal_Subset trùng người với AAMI Test), tạo split v2 từ raw, chạy `run_b3_pulsedb.py`, bàn giao bảng dự đoán val | Linh (pool: Linh + Huy) | Bảng B0/B3 val có provenance | Chưa có; **pool chưa chốt** |
-| Logger phía máy tính, generator đủ trường | Linh | Test 5 lỗi + CRC | Chưa có trên remote. 2026-10-22: có bản nháp cục bộ chưa commit; chưa có review của Đức Anh |
+| Logger phía máy tính, generator đủ trường | Linh | Test 5 lỗi + CRC | 2026-10-22: sửa theo review và commit trên `dev/huy` (decoder, logger, mô phỏng v3, 13 case); chưa có review của Đức Anh |
 | Danh sách mua và đặt module Phần A | Đức Anh | Đơn đã đặt, ngày giao | 2026-10-22: có danh sách (`1e95d29`), chưa giá, ngày giao hay duyệt; **thiếu module PPG MAX30101** |
 | Đóng A.6, một pin map chuẩn | Đức Anh | A.6 không còn điểm mở | Chưa có. `Pin_Map_V1.md` còn ghi MAX30102, trong khi nhóm đã chọn MAX30101 (2026-10-22) |
 | ERC/DRC V1-module | Đức Anh | Log ERC/DRC | Chưa có |
@@ -82,7 +83,7 @@ cần quyết định ghi vào báo cáo Tuần 6.
 ### 3.1. Nhật ký quyết định (ngày ghi là bằng chứng khóa trước khi xem dữ liệu)
 
 Không có dữ liệu PulseDB raw hay dữ liệu người trên máy khi ra các quyết định này
-(kiểm 2026-10-21). Bằng chứng Git có khi commit; hiện chưa commit theo yêu cầu.
+(kiểm 2026-10-21). Bằng chứng Git: các commit Tuần 5 trên `dev/huy` ngày 2026-10-22.
 
 | Ngày | Quyết định | Ai | Nơi ghi |
 | --- | --- | --- | --- |
@@ -338,7 +339,7 @@ giao raw + split v2. B0/B3: xem 3.5.
 | Output `runs/b3_pulsedb/<run>/` (report.json, predictions_val.csv) | Linh | Đánh giá B0/B3, CI theo người |
 | Xác nhận phân bổ tay/điện cực, câu hỏi 3.8 | Đức Anh | Đóng protocol v0.2 mục 5 |
 | Câu trả lời 3.7 | Thầy | Hoàn thiện và nộp hồ sơ đạo đức |
-| Review code mốc Tuần 5 | Linh | Trước khi dùng trong pipeline. Bản nháp `linh.md` mục 7.1 (chưa commit) có 8 phát hiện; review độc lập xác nhận cả 8, đã xử lý ở mục 8. Cần Linh review lại bản đã sửa trên PR |
+| Review code mốc Tuần 5 | Linh | Trước khi dùng trong pipeline. `linh.md` mục 7.1 có 8 phát hiện; review độc lập xác nhận cả 8, đã xử lý ở mục 8. Cần Linh review lại bản đã sửa trên PR |
 
 Hạn chế:
 

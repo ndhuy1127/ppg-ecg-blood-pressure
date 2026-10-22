@@ -173,7 +173,8 @@ online hoặc review chéo. Push nhánh cá nhân không đồng nghĩa nghiệm
 ### 6.4. Runner B0 và CSV bàn giao ngày 2026-10-08
 
 - Workspace chính chuyển sang `dev/ngoclinh`, chưa có baseline/metrics. Đã tạo
-  checkout riêng `tmp/b0_pulsedb_work` từ `dev/huy@7ba230f`, giữ nhánh chính.
+  checkout riêng `tmp/b0_pulsedb_work` từ `dev/huy@7ba230f` (đã gỡ 2026-10-22),
+  giữ nhánh chính.
   Khi workspace chính đã trở lại `dev/huy@7ba230f` và Git sạch, đã sao các file
   runner/test/tài liệu đã kiểm thử cùng JSON kết quả về workspace chính. Không
   tự checkout, commit, push hoặc merge; checkout riêng vẫn giữ bản kiểm thử.
@@ -226,8 +227,8 @@ online hoặc review chéo. Push nhánh cá nhân không đồng nghĩa nghiệm
 - `scripts/check_environment.py` và `pip check` đạt trong môi trường hiện có
   Python 3.13.12. Chưa kiểm thử runtime/CI Python 3.11 hoặc review chéo.
 - Không thấy secret hay dữ liệu thật theo người trong sáu file dự kiến commit.
-  CSV ở `data/processed/`, JSON kết quả ở `runs/`, checkout tạm ở `tmp/` vẫn
-  được ignore và không nằm trong danh sách file thay đổi Git.
+  CSV ở `data/processed/`, JSON kết quả ở `runs/`, checkout tạm ở `tmp/` (đã gỡ
+  2026-10-22) được ignore và không nằm trong danh sách file thay đổi Git.
 - Các đường dẫn JSON ở mục 6.4 là artifact cục bộ, không có trong GitHub.
   Hướng dẫn runner ghi cách lấy CSV đúng version và chạy lại để tạo kết quả.
 

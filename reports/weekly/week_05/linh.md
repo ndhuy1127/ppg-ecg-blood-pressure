@@ -6,9 +6,10 @@
 >
 > **Ngày cập nhật:** 2026-10-22 (sửa theo review độc lập Tuần 5, tóm tắt ở mục 11)
 >
-> **Nhánh/commit nền:** `dev/ngoclinh`, fast-forward lên `origin/develop`
-> `c23e2e0`; thay đổi **chưa commit** (chờ review). Làm trong git worktree cục bộ
-> `tmp/linh_week05` để không đụng thay đổi chưa commit của Huy trên `dev/huy`.
+> **Nhánh/commit nền:** soạn trên `dev/ngoclinh`, fast-forward lên `origin/develop`
+> `c23e2e0`, trong một git worktree tạm, để không đụng thay đổi chưa commit của
+> Huy trên `dev/huy`. Sau review, phần này được commit trên `dev/huy` ngày
+> 2026-10-22, và worktree tạm đã gỡ.
 >
 > **Trạng thái:**
 > - Việc 1 (B0/B3 trên raw): **chờ raw và `pool_decision`**.
@@ -170,8 +171,9 @@ công khai của một subset PulseDB, không phải cuff, ΔBP cross-session ha
 
 ## 6. Lệnh đã chạy và kết quả
 
-Chạy trong `tmp/linh_week05` bằng Python của venv repo (`.venv`, Python 3.13.12),
-ngày 2026-10-21 và chạy lại ngày 2026-10-22 sau khi sửa theo review:
+Chạy trong worktree tạm nói ở đầu báo cáo, bằng Python của venv repo (`.venv`,
+Python 3.13.12), ngày 2026-10-21 và chạy lại ngày 2026-10-22 sau khi sửa theo
+review:
 
 | Lệnh | Kết quả |
 | --- | --- |
@@ -190,14 +192,15 @@ ngày 2026-10-21 và chạy lại ngày 2026-10-22 sau khi sửa theo review:
 Máy không có Python 3.11, nên các kết quả trên **chưa thay cho CI** Python 3.11
 trên PR.
 
-**Chạy end-to-end bằng CLI** (output ngoài Git trong
-`tmp/linh_week05/runs/week05_linh/`; code chưa commit nên manifest ghi
-`workspace_has_changes: true`, commit nền `c23e2e0`). Ngày 2026-10-22 chạy lại
-13 case với code đã sửa, output trong `tmp/linh_week05/runs/week05_review_fix/`.
-`stream.bin` và `issue_counts` của 12 case cũ không đổi. `decode.json`,
-`packets.csv` và `samples.csv` có đổi (cột `chain_id`, trường
-`sync_candidates_rejected`), nên `replay --expect` code mới trên các manifest cũ
-trong `runs/week05_linh/` sẽ báo lệch hash ba file đó. Với mỗi case:
+**Chạy end-to-end bằng CLI.** Output nằm ngoài Git, trong thư mục `runs/` của
+worktree tạm, và đã xóa cùng worktree. Bảng dưới giữ SHA-256 của từng luồng,
+nên có thể chạy lại bằng các lệnh ở đây để đối chiếu. Lúc chạy, code chưa commit
+nên manifest ghi `workspace_has_changes: true`, commit nền `c23e2e0`.
+
+Ngày 2026-10-22 chạy lại 13 case với code đã sửa. `stream.bin` và `issue_counts`
+của 12 case cũ không đổi. `decode.json`, `packets.csv` và `samples.csv` có đổi
+(cột `chain_id`, trường `sync_candidates_rejected`), nên hash ba file này khác
+lần chạy 2026-10-21. Với mỗi case:
 
 1. `simulate_packets.py --config configs/hardware/packet_simulation_v3.json
    --case <case>` chạy hai lần → cùng SHA-256 `stream.bin`.
@@ -222,7 +225,7 @@ trong `runs/week05_linh/` sẽ báo lệch hash ba file đó. Với mỗi case:
 
 ## 7. Review chéo
 
-### 7.1. Code mốc Tuần 5 của Huy (chưa commit trên `dev/huy`)
+### 7.1. Code mốc Tuần 5 của Huy (lúc review còn chưa commit trên `dev/huy`)
 
 Review chỉ đọc, 2026-10-21. Phát hiện 3 tôi kiểm lại bằng cách đọc
 `pair_pat`/`pat_beats`. Các phát hiện còn lại được tái hiện bằng script thăm dò
@@ -317,9 +320,9 @@ Cùng với các điểm pin map ở 7.2.
 
 ## 11. Sửa theo review độc lập Tuần 5 (2026-10-22)
 
-**Nguồn:** review độc lập (`tmp/review_week05/review.md`) và danh sách sửa
-(`tmp/review_week05/linh_fix_list.md`), cả hai ngoài Git. Chưa commit, chưa push,
-chưa mở PR.
+**Nguồn:** review độc lập Tuần 5 và danh sách sửa kèm theo. Hai tài liệu này là
+file tạm ngoài Git, đã xóa sau khi sửa xong. Quyết định và các mục sửa được tóm
+tắt ở 11.1–11.2. Phần sửa được commit trên `dev/huy` ngày 2026-10-22.
 
 ### 11.1. Quyết định (chốt 2026-10-22)
 
@@ -327,9 +330,9 @@ chưa mở PR.
 | --- | --- | --- |
 | A3 | Kiểm `T_ANCHOR_US` **xuôi và ngược** theo từng chuỗi. Giữ chiều cách ly ít packet hơn; bằng nhau thì giữ chiều xuôi | Không chọn "so hàng xóm", vì cách đó không báo bước nhảy kéo dài hay 2 packet sai liền nhau. Không thêm ngưỡng. Bước nhảy kéo dài nay cách ly **phía ngắn hơn**, trước đây là mọi packet phía sau |
 | A4 | Thêm `anchor_rate_tolerance_ppm` = 30 000 (±3 %), áp cho mọi kênh | Nguồn: clock ADC MAX30101 10,2–10,8 MHz (schema mục 4). Giả định tốc độ mẫu tỉ lệ với clock và danh định ở giữa dải; **chưa đo**. Câu hỏi D10 |
-| A5 | Thêm `chain_id` vào `packets.csv`, `samples.csv`; giữ `packet-logger-v0` | Code chưa từng commit, nên chưa có artifact chính thức dùng v0. Hash output khác lần chạy 2026-10-21 |
+| A5 | Thêm `chain_id` vào `packets.csv`, `samples.csv`; giữ `packet-logger-v0` | Trước lần sửa này code chưa từng commit, nên chưa có artifact chính thức dùng v0. Hash output khác lần chạy 2026-10-21 |
 | A6 | Tài liệu theo code: bảng 14.1 ghi `FIRST_SAMPLE_INDEX` của `0xC1` là thứ tự sự kiện | `stream.bin` và fixture không đổi. D6 vẫn chờ Đức Anh |
-| A1 | Chưa commit | Chờ review |
+| A1 | Commit trên `dev/huy` (2026-10-22) | Push và PR vào `develop` theo quyết định của nhóm |
 | A7, A8 | Không đổi | Chờ raw `.mat` / nhóm duyệt `pyserial` |
 
 ### 11.2. Thay đổi và test
@@ -348,7 +351,8 @@ chưa mở PR.
 | C7 | Sửa câu ở mục 1 | — |
 | D | Test cho M8a, M12–M17; ca M3 mạnh hơn (độ dài khai báo phủ packet thật) | Mutation: 33/33 bị bắt (mục 6) |
 
-**Probe đối kháng của review** (`adv.py`, `adv2.py`, chạy lại trên code đã sửa):
+**Probe đối kháng của review** (script tạm `adv.py`, `adv2.py` của review, đã xóa
+cùng tài liệu review; chạy lại trên code đã sửa):
 
 - x1, x1b: 7/8 packet được nhận.
 - x2: mọi ô của lưới drift 0–3 % × mất 5–50 packet giữ đủ packet.
