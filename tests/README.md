@@ -19,6 +19,7 @@ không có dataset thật hoặc dữ liệu người tham gia trong những tes
 | [test_subject_bootstrap.py](test_subject_bootstrap.py) | Bootstrap theo người: cluster lặp, cùng draws cho mọi model, trường hợp ít người/suy biến, bảng dự đoán đối chiếu manifest | ID và dự đoán SYNTHETIC |
 | [test_check_environment.py](test_check_environment.py) | So sánh `requires-python` và pin của `scripts/check_environment.py` | Chuỗi requirement tự tạo |
 | [test_packet_simulation.py](test_packet_simulation.py) | Sáu case packet, decoder validation, dữ liệu/timeline/gap/offset, tái lập và CLI | Chỉ SYNTHETIC; config và expected fixture, output tạm |
+| [test_packet_logger.py](test_packet_logger.py) | CRC-16/CCITT-FALSE known-answer và oracle `binascii`; packet ghép tay; 13 case `synthetic-packet-v3`; `T_FIRST_US`; chia đoạn byte bất kỳ; rác/`SYNC` giả, không nhảy theo độ dài khai báo, một packet hỏng là một lỗi, đuôi cụt/`0xA5` lẻ, header vô lý; xung đột, mất liền nhiều packet, tràn 2³², index nhảy/lùi/vượt 32 mẫu mỗi packet vắng, neo lại lùi (`chain_id`), `FS = 0`, dữ liệu ngoài dải, bit STATUS dự trữ; anchor không tăng, anchor đầu/cuối sai, bước nhảy kéo dài, drift ±3 % qua khoảng mất, quy tắc `0xC1`; không báo offset cho `DEVICE`; metadata/config sai; record/replay cùng hash, mở exclusive, manifest ghi sau cùng, CLI | Chỉ SYNTHETIC; `tests/fixtures/packet_v3_expected.json` (đáp án suy tay), output tạm |
 
 Mock trong `test_pulsedb.py` chưa chứng minh reader đọc đúng mọi file PulseDB
 thật. Kết quả test không chứng minh split PulseDB, calibration hoặc phần cứng đã

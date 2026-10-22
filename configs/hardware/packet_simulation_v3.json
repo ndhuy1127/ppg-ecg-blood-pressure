@@ -1,0 +1,31 @@
+{
+  "schema_version": "synthetic-packet-v3",
+  "source_type": "SYNTHETIC",
+  "wire_version": 1,
+  "seed": 20261021,
+  "session_id": 1,
+  "restart_session_id": 2,
+  "epoch_us": 1000000,
+  "anchor_delay_us": 1000,
+  "anchor_jitter_us": 200,
+  "seq_start": 0,
+  "index_start": 0,
+  "packet_count": 8,
+  "status": 16,
+  "channels": {
+    "0xE1": {"fs_nominal_mhz": 512000, "sample_count": 16},
+    "0xF1": {"fs_nominal_mhz": 100000, "sample_count": 4},
+    "0xF2": {"fs_nominal_mhz": 100000, "sample_count": 4}
+  },
+  "events": [
+    {"code": 1, "time_us": 1050000},
+    {"code": 2, "time_us": 1080000}
+  ],
+  "fault_channel": "0xF1",
+  "fault_index": 2,
+  "time_fault_us": 20000,
+  "index_jump_samples": 5,
+  "reanchor_jump_samples": 40,
+  "byte_loss_count": 5,
+  "unsupported_version": 2
+}

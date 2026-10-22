@@ -20,4 +20,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Chạy B0 trên CSV PulseDB](run_b0_pulsedb_csv.md)
 - [Tạo inventory và split PulseDB](run_pulsedb_split.md)
 - [Chạy B0/B3 trên PulseDB split v2](run_b3_pulsedb.md)
-- [Sinh và replay packet giả lập](packet_simulation.md)
+- [Sinh và replay packet giả lập](packet_simulation.md): `synthetic-packet-v2`
+  (JSON) và `synthetic-packet-v3` (luồng byte theo Packet Schema V0.1)
+- [Logger packet phía máy tính](packet_logger.md): decoder `SYNC`/CRC16, kiểm tra
+  mục 12 theo kênh, raw bất biến, session manifest; serial trực tiếp chờ duyệt
+  `pyserial`

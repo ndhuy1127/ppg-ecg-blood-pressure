@@ -13,8 +13,10 @@ mục gốc repository; demo còn hỗ trợ chạy trực tiếp từ thư mụ
 | [build_pulsedb_split.py](build_pulsedb_split.py) | Tạo split có inventory đối chiếu từ reader repo | Một file raw và config/checksum/pool đã chốt; giữ mọi dòng reader | Inventory, manifest, config và report trong thư mục mới; không ghi đè bàn giao cũ |
 | [run_b3_pulsedb.py](run_b3_pulsedb.py) | Fit B0/B3 XGBoost trên train, đánh giá val | Raw `.mat`, thư mục split v2 và config `configs/models/b3_pulsedb_v0.json`; không đụng test | Report, bảng baseline, dự đoán val và model trong thư mục mới của `runs/` |
 | [demo_week04_huy.py](demo_week04_huy.py) | Kiểm tra mốc R/foot, PAT, đặc trưng/SQI `features-sqi-v1` và bootstrap trên fixture giải tích | Config `configs/data/week04_huy.json`; fixture SYNTHETIC tự tạo | JSON, CSV fixture và SVG; **ghi đè** đường dẫn mặc định trong `reports/`, nên truyền `--output`/`--figure` mới nếu muốn giữ bản cũ |
-| [simulate_packets.py](simulate_packets.py) | Sinh/replay packet giả lập và kiểm tra lỗi | Config/seed SYNTHETIC, 6 case hoặc JSON giả lập | Packet, timeline/gap và report trong output mới; không phải đồng bộ phần cứng |
+| [simulate_packets.py](simulate_packets.py) | Sinh/replay packet giả lập và kiểm tra lỗi | Config/seed SYNTHETIC: v2 (6 case hoặc JSON giả lập) hoặc v3 `configs/hardware/packet_simulation_v3.json` (13 case) | v2: packet, timeline/gap và report; v3: `stream.bin` theo layout V0.1, metadata phiên và report. Output mới; không phải đồng bộ phần cứng |
+| [packet_logger.py](packet_logger.py) | Logger phía máy tính: `record` một nguồn byte, `replay` một raw | File byte (`--source-file`) hoặc `raw.bin`, metadata phiên, `configs/hardware/packet_logger.json`; serial trực tiếp chưa có (chờ `pyserial`) | Raw bất biến, `t_rx` riêng, decode/issue/gap, session manifest có hash trong `runs/packet_logger/` |
 
+Hướng dẫn logger: [decoder, kiểm tra mục 12, đầu ra và câu hỏi mở](../docs/protocol/packet_logger.md).
 Hướng dẫn runner CSV: [chạy B0 trên PulseDB](../docs/protocol/run_b0_pulsedb_csv.md).
 Hướng dẫn split mới: [inventory, config, hash và giới hạn](../docs/protocol/run_pulsedb_split.md).
 Hướng dẫn B0/B3: [đặc trưng, model, đầu ra và giới hạn](../docs/protocol/run_b3_pulsedb.md).

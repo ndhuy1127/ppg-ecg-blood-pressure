@@ -314,6 +314,31 @@ không phải decoder của schema này.
 | `STATUS`, `SYNC`, `CRC16` | — | Mô phỏng chưa có |
 | `DATA` int32 (ECG giữ ETAG/PTAG) | `samples` int32, `sample_unit` | |
 
+### 14.1. Đối chiếu với `synthetic-packet-v3` và logger `packet-logger-v0` (2026-10-21)
+
+`software/data_io/packet_simulation_v3.py` (Linh) sinh **luồng byte** theo đúng
+mục 6. `software/data_io/packet_wire.py` và `packet_receiver.py` là decoder và
+kiểm tra mục 12 của logger ([hướng dẫn](../../docs/protocol/packet_logger.md)).
+v2 ở bảng trên giữ nguyên.
+
+| Schema V0.1 | v3 / logger | Ghi chú |
+| --- | --- | --- |
+| `SYNC` `0xA5 0x5A` | Sinh đúng; decoder dò `SYNC`, lỗi thì bỏ 1 byte rồi dò tiếp | Case `byte_loss` kiểm bắt lại `SYNC` |
+| `VERSION` `0x01` | Sinh `0x01`; decoder từ chối version khác **trước** khi kiểm CRC | Khác thứ tự liệt kê ở mục 12 (version lạ thì không biết độ dài). Case `version` |
+| `CHANNEL_ID` | `0xE1`, `0xF1`, `0xF2`, `0xC1` trong config mặc định; decoder nhận `0xF1`–`0xF4` | Mã lạ có CRC đúng: báo `unknown_channel`, bỏ cả packet |
+| `SESSION_ID` | uint32; đổi `SESSION_ID` = phiên mới, kiểm riêng, không nối | Case `session_restart` |
+| `SEQ` uint32 | Riêng từng kênh, mở rộng qua 2³² | Test bắt đầu từ 2³² − 3 |
+| `FIRST_SAMPLE_INDEX` uint32 | Có; mở rộng qua 2³²; kiểm liên tục, đối chiếu `STATUS` | Case `index_jump`, `reanchor` |
+| `T_ANCHOR_US`, `T_FIRST_US` uint64 | Có; `T_FIRST_US` = `T_ANCHOR_US − (N−1)·T` làm tròn; logger chỉ kiểm `T_ANCHOR_US` | Dung sai trong `configs/hardware/packet_logger.json`, chưa kiểm chứng phần cứng |
+| `FS_NOMINAL_MHZ` (mHz) | Có, đơn vị mHz; ECG 512 000, PPG 100 000 là **thông số mô phỏng** | PPG 100 Hz có trong bảng tốc độ MAX3010x; fs phần cứng vẫn mở |
+| `SAMPLE_COUNT` ≤ 32 | Config 1–32; decoder từ chối 0 và > 32 | 0 bị coi là vô lý (câu hỏi D7 trong hướng dẫn logger) |
+| `STATUS` (mục 9) | Bit 4 bật trên mọi packet; bit 0/5 ở case lỗi; bit 7–15 = 0 | Logger đếm từng bit và báo bit dự trữ |
+| `DATA` int32 | ECG: word 24 bit, ETAG/PTAG = 0; PPG: 18 bit không dấu | Số ngẫu nhiên, không phải waveform |
+| `CRC16` CCITT-FALSE | Có; đọc/ghi little-endian | Byte order chưa xác nhận (D1). Known-answer `0x29B1` |
+| Packet `0xC1` (mục 10) | `SAMPLE_COUNT` 1, mã 1–4. Giá trị tạm: `FIRST_SAMPLE_INDEX` = thứ tự sự kiện trong phiên (0, 1, …), `FS_NOMINAL_MHZ` = 0, `T_FIRST_US` = `T_ANCHOR_US` | Logger tạm bỏ bước 4 và 6 cho `0xC1` (mục 15). Giá trị firmware gửi chờ Đức Anh (câu hỏi D6 trong hướng dẫn logger) |
+| Metadata phiên (mục 11) | `session_metadata.json` (`packet-session-metadata-v0`), trường chưa biết là `null` kèm lý do; manifest `schema_version` `packet-v0.1` | |
+| `t_rx` (mục 3) | File riêng `rx_chunks.csv`, `t_rx_packets.csv`; không vào kết quả decode | |
+
 ## 15. Việc còn mở
 
 - PPG AFE, chế độ LED, tốc độ lấy mẫu, độ rộng xung, có lấy trung bình hay không.
@@ -342,4 +367,7 @@ không phải decoder của schema này.
 - Packet sự kiện `0xC1` (mục 10): các kiểm tra ở mục 12 về `FIRST_SAMPLE_INDEX`
   (bước 4) và `T_ANCHOR_US` khớp chỉ số mẫu / `fs` (bước 6), cùng giá trị
   `FS_NOMINAL_MHZ` và `T_FIRST_US`, chưa định nghĩa cho packet sự kiện: gửi giá
-  trị gì và receiver có bỏ qua các kiểm tra này không.
+  trị gì và receiver có bỏ qua các kiểm tra này không. Logger hiện dùng quy tắc
+  tạm (bỏ bước 4, 6 cho `0xC1`); xem câu hỏi D1–D10 trong
+  `docs/protocol/packet_logger.md` (byte order CRC16, packet mang bit 0/5, giá trị
+  `SEQ` đầu phiên, `SAMPLE_COUNT = 0`, độ lệch tốc độ mẫu thật).
