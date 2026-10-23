@@ -4,15 +4,31 @@
 
 Logger đọc luồng byte theo [Packet Schema V0.1](../../configs/hardware/Packet_Schema_V0.1.md)
 (mục 6), làm các kiểm tra ở mục 12 theo **từng phiên và từng kênh**, ghi raw bất
-biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger-v0`.
+biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger-v1`
+(config `configs/hardware/packet_logger.json` cùng version).
 
 - **Đã có (2026-10-21):** decoder, kiểm tra, runner `record`/`replay`, test với
   luồng SYNTHETIC `synthetic-packet-v3` ([mô phỏng](packet_simulation.md)).
 - **Sửa theo review độc lập Tuần 5 (2026-10-22):** kiểm
   `T_ANCHOR_US` hai chiều, thêm dung sai tốc độ, thêm cột `chain_id`, cách ly
   packet `FS_NOMINAL_MHZ = 0`, thêm cận trên số mẫu mất, đổi cách đếm lỗi decode.
-  Chi tiết ở các mục dưới và trong `reports/weekly/week_05/linh.md`. Vẫn là
-  `packet-logger-v0`, vì trước lần sửa này code chưa từng được commit.
+  Chi tiết ở các mục dưới và trong `reports/weekly/week_05/README.md`. Vẫn là
+  `packet-logger-v0`, vì trước lần sửa này code chưa từng được commit; v0 được
+  commit ở `250139d`.
+- **`packet-logger-v1` (2026-10-23):** cùng một luồng byte có thể cho output khác
+  v0, nên nâng version (config và manifest cùng ghi `packet-logger-v1`):
+  - thêm `channel_missing` và `channels_missing` của phiên;
+  - kiểm số thứ tự sự kiện so với `SEQ` (`events_lost_before_send`,
+    `event_ordinal_inconsistent`), thêm `event_ordinal` vào sự kiện (R1);
+  - packet `FS_NOMINAL_MHZ = 0` không còn làm mốc index;
+  - dung sai ±3 % áp lên tốc độ mẫu, không phải lên chu kỳ (dung sai mặc định);
+  - packet có bit 0 giữ mẫu nhưng anchor không được kiểm, không làm mốc
+    (`accepted_anchor_unreliable`, bước 6);
+  - `record` ghi bản sao config/metadata trước byte đầu tiên.
+
+  Wire format (`packet-v0.1`) và metadata phiên (`packet-session-metadata-v0`)
+  không đổi. Phiên ghi bằng v0 vẫn đọc được manifest; replay bằng v1 so với
+  manifest v0 có thể lệch hash và manifest ghi rõ `logger_version` của mỗi bên.
 - **Chờ:** đọc cổng serial trực tiếp, vì cần `pyserial`, mà gói này chưa có trong
   `requirements.txt` và chưa được nhóm duyệt (mục 7). Cũng chờ chạy 10 phút với
   firmware khung của Đức Anh, vì chưa có firmware.
@@ -73,19 +89,24 @@ giờ nối sang phiên khác.
 | Bước mục 12 | Cách làm | Issue |
 | --- | --- | --- |
 | 3. `SEQ` | Mở rộng uint32 qua mốc 2³² (giá trị gần nhất với `SEQ` lớn nhất đã nhận). Thiếu = mất. Lặp cùng nội dung = trùng (giữ bản đầu). Lặp khác nội dung = xung đột (cách ly **cả hai** bản). Nhỏ hơn giá trị lớn nhất đã nhận = đảo thứ tự (vẫn nhận, sắp lại offline) | `missing_packets` (một issue mỗi đoạn, kèm `count`), `duplicate`, `conflicting_duplicate`, `out_of_order` |
-| 4. `FIRST_SAMPLE_INDEX` | Mở rộng uint32 rồi so với `index + N` của packet trước. Nhảy tiến khi `SEQ` liên tục: có bit 0 hoặc 1 thì biết số mẫu mất, không có bit nào là không giải thích được. Bit 5: neo lại, không biết số mẫu mất, chuỗi mới (`chain_id` + 1). Index lùi: cách ly packet. Báo bất nhất khi số mẫu mất ít hơn số packet vắng, hoặc nhiều hơn 32 × số packet vắng (`SAMPLE_COUNT` ≤ 32) mà không có bit 0/1 | `sample_gap_status`, `sample_gap_unexplained`, `sample_index_reanchored`, `sample_index_overlap`, `sample_index_inconsistent` |
+| 4. `FIRST_SAMPLE_INDEX` | Mở rộng uint32 rồi so với `index + N` của packet trước. Packet `FS_NOMINAL_MHZ = 0` có header không tin được: có `sample_index_ext` trong `packets.csv` nhưng không bao giờ làm mốc cho packet sau (cách ly ở bước 6). Nhảy tiến khi `SEQ` liên tục: có bit 0 hoặc 1 thì biết số mẫu mất, không có bit nào là không giải thích được. Index nhảy kèm bit 5: neo lại, không biết số mẫu mất, chuỗi mới (`chain_id` + 1). Index lùi: cách ly packet. Báo bất nhất khi số mẫu mất ít hơn số packet vắng, hoặc nhiều hơn 32 × số packet vắng (`SAMPLE_COUNT` ≤ 32) mà không có bit 0/1 | `sample_gap_status`, `sample_gap_unexplained`, `sample_index_reanchored`, `sample_index_overlap`, `sample_index_inconsistent` |
 | 5. `STATUS` | Đếm từng bit theo kênh (`status_bit_counts`) và ghi `status` của từng packet trong `packets.csv`. Bit dự trữ 7–15 khác 0 thì báo | `status_reserved_bits` |
-| 6. `T_ANCHOR_US` | Theo từng chuỗi (`chain_id`). Packet có `FS_NOMINAL_MHZ = 0` bị cách ly trước và không cắt chuỗi. Mỗi packet so với packet được giữ gần nhất trước nó: phải tăng cùng chiều với chỉ số mẫu, và \|ΔA − Δk·T\| ≤ `anchor_tolerance_samples`·T + `anchor_tolerance_extra_us` + `anchor_rate_tolerance_ppm`·10⁻⁶·\|Δk\|·T, với T = 10⁹/`FS_NOMINAL_MHZ` µs và Δk là số mẫu tính từ mốc. Sai thì cách ly packet, mốc giữ nguyên. Phép kiểm chạy **xuôi và ngược**, giữ chiều cách ly ít packet hơn (bằng nhau thì giữ chiều xuôi). Chuỗi mới sau neo lại hoặc khi đổi FS | `timestamp_anomaly` (`kind` = `not_increasing`/`mismatch`, `deviation_us`, `reference_seq`), `fs_changed`, `fs_invalid` |
+| 6. `T_ANCHOR_US` | Theo từng chuỗi (`chain_id`). Packet có `FS_NOMINAL_MHZ = 0` bị cách ly trước và không cắt chuỗi. Packet có bit 0 (FIFO AFE tràn) giữ mẫu nhưng anchor không được kiểm và không làm mốc, vì FIFO đã đầy nên anchor đến muộn so với mẫu cuối (`disposition` = `accepted_anchor_unreliable`, đếm ở `packets_anchor_unreliable`; từ 2026-10-23, trước đó cả packet bị cách ly `timestamp_anomaly`). Mỗi packet so với packet được giữ gần nhất trước nó: phải tăng cùng chiều với chỉ số mẫu, và \|Δk\|·T/(1 + r) − F ≤ ΔA ≤ \|Δk\|·T/(1 − r) + F (ΔA tính theo chiều của Δk), với T = 10⁹/`FS_NOMINAL_MHZ` µs, Δk là số mẫu tính từ mốc, r = `anchor_rate_tolerance_ppm`·10⁻⁶ là dung sai của **tốc độ** mẫu (chu kỳ thật nằm trong [T/(1 + r), T/(1 − r)]) và F = `anchor_tolerance_samples`·T + `anchor_tolerance_extra_us`. `deviation_us` vẫn báo ΔA − Δk·T. Sai thì cách ly packet, mốc giữ nguyên. Phép kiểm chạy **xuôi và ngược**, giữ chiều cách ly ít packet hơn (bằng nhau thì giữ chiều xuôi). Chuỗi mới sau neo lại hoặc khi đổi FS | `timestamp_anomaly` (`kind` = `not_increasing`/`mismatch`, `deviation_us`, `reference_seq`), `fs_changed`, `fs_invalid` |
 | 7. Không nội suy | `gaps` liệt kê lỗ hổng chỉ số mẫu (`index_from`, `index_to`, `lost_samples`, lý do). `samples.csv` chỉ chứa mẫu của packet được nhận | — |
 | 8. Không ghép ECG–PPG | Không ghép theo chỉ số mẫu, không dịch kênh, không dùng PAT. Offset kênh chỉ tính ở mô phỏng (mục dưới) | `channel_offset` (chỉ SYNTHETIC) |
 
 Kiểm tra bổ sung: `channel_without_metadata`, `fs_metadata_mismatch`, và
 `data_out_of_range` (ECG ngoài [0, 2²⁴), PPG ngoài [0, 2¹⁸), mục 8; dữ liệu vẫn
-giữ). Với packet sự kiện có thêm `event_sample_count` và `unknown_event_code`
-(mã ngoài 1–4 ở mục 10).
+giữ). Kênh dữ liệu (ECG/PPG) khai báo trong `channels` của metadata mà cả phiên
+không có packet nào giải mã được thì báo `channel_missing` và liệt kê trong
+`channels_missing` của phiên; kênh chỉ có packet bị cách ly vẫn tính là có mặt.
+Metadata vì vậy chỉ khai báo các kênh dự kiến chạy. Không có packet `0xC1` thì không
+báo (buổi bench có thể không bấm t0). Luồng không giải mã được packet nào thì không
+có phiên để báo. Packet sự kiện: xem R1.
 
-**Dung sai mặc định (chưa kiểm chứng trên phần cứng):** 1 chu kỳ mẫu + 500 µs +
-3 % của khoảng mẫu tính từ mốc (`anchor_rate_tolerance_ppm` = 30 000).
+**Dung sai mặc định (chưa kiểm chứng trên phần cứng):** 1 chu kỳ mẫu + 500 µs, cộng
+phần do tốc độ mẫu thật lệch tới ±3 % so với danh định (`anchor_rate_tolerance_ppm` =
+30 000).
 
 - **Phần cố định:** theo mục 5.1–5.2, `0 ≤ δ < 10⁶/fs + d`, với d khoảng
   0,1–0,2 ms (I²C) hoặc 6 µs (SPI). Vì vậy hiệu δ giữa hai packet nằm trong
@@ -94,9 +115,11 @@ giữ). Với packet sự kiện có thêm `event_sample_count` và `unknown_eve
   ADC MAX30101 10,2–10,8 MHz và ghi rằng tốc độ PPG thực **chưa biết**. Giá trị
   ±3 % dựa trên **giả định** tốc độ mẫu tỉ lệ với clock ADC và giá trị danh định
   ứng với khoảng giữa dải (10,5 MHz ± 2,9 %); datasheet không nêu điều này.
-- Sau một khoảng mất k packet, sai số do tốc độ tích lũy theo cả khoảng
-  (khoảng 3 % · k · N · T). Nếu không có phần này, mọi packet sau khoảng mất bị
-  cách ly (review 2026-10-22: lệch 3 % và mất 10 packet PPG là đủ).
+- Sau một khoảng mất k packet, sai số do tốc độ tích lũy theo cả khoảng: với
+  Δk = k · N mẫu, khoảng thời gian thật nằm trong [Δk·T/1,03; Δk·T/0,97]. Nếu
+  không có phần này, mọi packet sau khoảng mất bị cách ly (review 2026-10-22: lệch
+  3 % và mất 10 packet PPG là đủ). Trước 2026-10-23, logger áp ±3 % lên **chu kỳ**
+  (3 % · Δk · T hai phía), tức tốc độ chậm đúng 3 % bị loại oan.
 - Hệ số được áp cho mọi kênh. Với ECG (FCLK 32,768 kHz, mục 4), hệ số này chỉ làm
   giảm độ nhạy, không gây cách ly giả.
 - Hệ số này không phải ước lượng tốc độ thực ở mục 5.3. Thay bằng số đo bench
@@ -108,9 +131,19 @@ R1–R4 và R6 khớp quy ước của firmware khung (câu hỏi D3–D7 ở cu
 chạy đúng trên luồng giả lập theo firmware (mục "Đối chiếu với firmware khung").
 R5 vẫn là giá trị tạm, chờ số đo bench (D8, D10).
 
-- **R1, packet `0xC1`:** chỉ kiểm CRC/`SYNC`/`VERSION` và `SEQ` (bước 1–3, 5),
-  **bỏ bước 4 và 6**. `FIRST_SAMPLE_INDEX`, `FS_NOMINAL_MHZ`, `T_FIRST_US` được ghi
-  lại nhưng không diễn giải. `SAMPLE_COUNT` phải bằng 1 (mục 10).
+- **R1, packet `0xC1`:** kiểm CRC/`SYNC`/`VERSION` và `SEQ` (bước 1–3, 5), **bỏ
+  bước 6**; `FS_NOMINAL_MHZ`, `T_FIRST_US` được ghi lại nhưng không diễn giải.
+  `SAMPLE_COUNT` phải bằng 1 (mục 10). Từ 2026-10-23 bước 4 áp cho thứ tự sự kiện:
+  `FIRST_SAMPLE_INDEX` là số thứ tự sự kiện (`event_ordinal` trong `decode.json`).
+  `SEQ` gán lúc gửi, nên giữa hai sự kiện nhận được, số thứ tự tăng bằng khoảng
+  `SEQ` (sự kiện mất trên USB, đã có `missing_packets`) cộng số sự kiện bị bỏ trước
+  khi có `SEQ`. Tăng nhiều hơn: `events_lost_before_send` kèm `lost_events`. Tăng ít
+  hơn hoặc lùi: `event_ordinal_inconsistent`, rồi kiểm tiếp từ sự kiện đó (số mất
+  cạnh một số thứ tự sai không tin được). Bit 1 mà không có khoảng đếm được (sự
+  kiện đầu, hoặc firmware bỏ một cạnh t0 trước khi thành sự kiện):
+  `events_lost_before_send` với `lost_events` = null. Không suy ra `SEQ` bắt đầu
+  từ 0; mất sự kiện cuối phiên không phát hiện được. Trước 2026-10-23 logger bỏ cả
+  bước 4, nên t0 (mốc bơm cuff) bị bỏ trong hàng đợi MCU không để lại issue nào.
 - **R2:** bit 0/1/5 ở packet **trước hoặc sau** chỗ nhảy đều được chấp nhận làm
   lời giải thích.
 - **R3:** bit 1 (tràn bộ đệm MCU) giải thích một bước nhảy index khi `SEQ` liên
@@ -120,9 +153,13 @@ R5 vẫn là giá trị tạm, chờ số đo bench (D8, D10).
 - **R5:** dung sai ở `configs/hardware/packet_logger.json`, kể cả dung sai tốc độ
   ±3 % (thêm 2026-10-22).
 - **R6 (2026-10-22):** chuỗi chỉ số/thời gian (`chain_id`) đánh số từ 0 trong
-  từng phiên và kênh, tăng 1 khi neo lại (bit 5) hoặc khi `FS_NOMINAL_MHZ` đổi.
-  Phiên mới luôn bắt đầu chuỗi 0 của phiên đó. Packet `FS_NOMINAL_MHZ = 0` bị cách
-  ly (`fs_invalid`) và không cắt chuỗi.
+  từng phiên và kênh, tăng 1 khi index nhảy kèm bit 5 (neo lại, `sample_index_reanchored`)
+  hoặc khi `FS_NOMINAL_MHZ` đổi. Theo R2 bit 5 có thể ở packet trước hoặc sau chỗ
+  nhảy, nên bit 5 mà index vẫn liên tục **không** cắt chuỗi; nếu khi đó anchor cũng
+  đổi thì bước 6 báo `timestamp_anomaly`. Đây là giới hạn đã biết: neo lại mà chỉ
+  số tình cờ trùng giá trị kỳ vọng không được coi là chuỗi mới. Phiên mới luôn bắt
+  đầu chuỗi 0 của phiên đó. Packet `FS_NOMINAL_MHZ = 0` bị cách ly (`fs_invalid`)
+  và không cắt chuỗi.
 
 ## Lệch kênh: chỉ có nghĩa trong mô phỏng
 
@@ -184,8 +221,11 @@ Với firmware khung (`firmware/README.md`), lấy các giá trị sau:
 
 ## Đầu ra
 
-`record` ghi các file sau (manifest **sau cùng**; thiếu manifest nghĩa là phiên
-chưa hoàn tất, giữ nguyên `raw.bin` dở để kiểm tra, không xóa):
+`record` ghi các file sau. Hai bản sao đầu vào được ghi **trước** byte đầu tiên,
+nên phiên bị ngắt vẫn biết đã thu với config và metadata nào; manifest ghi **sau
+cùng**. Thiếu manifest nghĩa là phiên chưa hoàn tất: giữ nguyên `raw.bin` dở để
+kiểm tra, không xóa. Bản sao đầu vào chỉ giúp khi tiến trình bị ngắt, không bảo
+đảm dữ liệu còn nguyên khi mất điện.
 
 | File | Nội dung |
 | --- | --- |
@@ -195,7 +235,7 @@ chưa hoàn tất, giữ nguyên `raw.bin` dở để kiểm tra, không xóa):
 | `decode.json` | Lỗi decode, `sync_candidates_rejected`, issue, `issue_counts`, tóm tắt từng phiên/kênh (kể cả số chuỗi `chains`), `gaps`, sự kiện, offset (chỉ SYNTHETIC), giới hạn |
 | `packets.csv` | Mỗi packet đã giải mã theo thứ tự đến: trường header, `seq_ext`, `sample_index_ext`, `chain_id`, `disposition`. `chain_id` để trống với bản trùng, xung đột và packet `0xC1` |
 | `samples.csv` | Mẫu của packet được nhận: phiên, kênh, `chain_id`, `seq_ext`, `sample_index_ext`, giá trị. Sắp theo (phiên, kênh, `chain_id`, `sample_index_ext`); khóa này là duy nhất, còn `sample_index_ext` có thể lặp giữa hai chuỗi khi neo lại lùi. Không có cột thời gian |
-| `logger_config.json`, `session_metadata.json` | Bản sao đầu vào |
+| `logger_config.json`, `session_metadata.json` | Bản sao đầu vào, ghi trước khi đọc nguồn |
 | `session_manifest.json` | Trường mục 11 (`schema_version` `packet-v0.1`, `session_id`/`session_ids`, `clock_id`, firmware, thiết bị, giờ PC lúc bắt đầu/kết thúc, metadata kênh, `null_reasons`); SHA-256 raw và mọi output; `issue_counts`; hash config/metadata; git commit/dirty, hash code (LF), Python; `source_type` |
 
 Trong `record`, decode chạy trực tiếp theo từng đoạn đọc. Sau đó `raw.bin` được
@@ -243,8 +283,10 @@ firmware"); D8 và D10 chờ bench.
   tràn hay packet đã neo lại)? `SEQ` được gán trước hay sau bộ đệm MCU (bit 1)?
   → **Bit 0 bật ở packet đọc lúc phát hiện tràn; packet kế có index nhảy. `SEQ`
   gán lúc gửi, sau hàng đợi MCU: packet bị bỏ ở hàng đợi không có `SEQ`, packet
-  kế bật bit 1 (đúng giả định của R3); nếu packet mang bit 1 lại mất trên USB,
-  bit 1 chuyển sang packet gửi được kế tiếp. Firmware khung chưa sinh bit 5.**
+  kế bật bit 1 (đúng giả định của R3); nếu packet mang bit 0 hoặc 1 bị bỏ ở hàng
+  đợi hoặc firmware gửi thất bại (driver USB không nhận trong 20 ms), các bit đó
+  chuyển sang packet gửi được kế tiếp (bit 0 từ
+  2026-10-23). Firmware khung chưa sinh bit 5.**
 - **D4.** Bit 4 bật từ khi nào và tắt khi nào (theo từng cấu hình sau bench)?
   Có bật cho `0xC1` không? → **Bật trên mọi packet ECG/PPG cho tới khi đo xong
   `L` của cấu hình; không bật cho `0xC1`.**
@@ -275,8 +317,11 @@ Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
       little-endian, CRC trên byte 2 … 39 + 4N.
 - [x] CRC: known answer `0x29B1` cho `"123456789"`; packet ví dụ 50 byte trong
       `tests/fixtures/packet_v3_expected.json` giống từng byte với known-answer của
-      firmware (`tests/test_firmware_packet_kat.py`). Firmware tự kiểm lại trên bo
-      lúc khởi động; phần này chưa chạy vì chưa có bo.
+      firmware (`tests/test_firmware_packet_kat.py`). Encoder C chạy thật trên máy
+      tính trong `tests/test_firmware_c_encoder.py` (cần trình biên dịch C, xem
+      `firmware/README.md`), cho cùng byte với `packet_wire.py` trên packet ngẫu
+      nhiên. Firmware tự kiểm lại trên bo lúc khởi động; phần này chưa chạy vì chưa
+      có bo.
 - [x] Mã kênh (mục 7) và tên bit STATUS (mục 9) trong `packet_wire.py` khớp
       `firmware/include/packet_v01.h`.
 - [x] Quy tắc R1–R6: R1–R4 và R6 giữ nguyên; R5 giữ giá trị tạm tới khi có số đo
@@ -303,5 +348,9 @@ firmware. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 
 packet kế), PPG khe 2 mất 4 mẫu. Không có `timestamp_anomaly`. Test thứ hai cho
 thấy khi mất 48 mẫu ECG (hai lần tràn hàng đợi cộng một USB timeout), logger chỉ
 giải thích được khoảng trống nhờ bit 1 được chuyển sang packet kế; không chuyển
-thì báo `sample_index_inconsistent`. Đây là luồng SYNTHETIC dựng bằng
+thì báo `sample_index_inconsistent`. Tương tự với bit 0: một packet ECG báo tràn
+FIFO AFE 40 mẫu rồi gửi thất bại chỉ được giải thích khi bit 0 được chuyển sang
+packet kế. Hai test khác kiểm sự kiện t0: packet sự kiện bị bỏ ở hàng đợi MCU cho
+`events_lost_before_send` với `lost_events` = 1; cạnh bị hàng đợi ISR bỏ cho issue
+đó với `lost_events` = null ở sự kiện kế tiếp. Đây là luồng SYNTHETIC dựng bằng
 `encode_packet` trong Python theo quy ước của firmware, không phải byte từ MCU.

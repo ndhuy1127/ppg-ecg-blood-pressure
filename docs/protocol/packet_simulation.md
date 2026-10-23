@@ -141,7 +141,11 @@ mở). Seed `20261021`, 8 packet mỗi kênh dữ liệu.
 - ECG `0xE1`: 512 000 mHz, N = 16. PPG `0xF1`/`0xF2`: 100 000 mHz, N = 4, hai khe
   chung một lần đọc FIFO nên chung `FIRST_SAMPLE_INDEX` và `T_ANCHOR_US`.
 - Hai sự kiện `0xC1` (mã 1 lúc 1 050 000 µs, mã 2 lúc 1 080 000 µs).
-- `STATUS` = 16 (bit 4: `L` chưa đo) trên mọi packet.
+- `STATUS` = 16 (bit 4: `L` chưa đo) trên mọi packet ECG/PPG. Packet sự kiện
+  `0xC1` gửi `STATUS` = 0 như firmware (schema mục 10; sửa tại chỗ 2026-10-23, giữ
+  tên `synthetic-packet-v3`: trước ngày này packet sự kiện cũng mang 16, nên
+  `stream.bin` sinh trước đó khác byte ở các packet sự kiện; số issue và mẫu được
+  nhận không đổi vì logger không dựa vào bit 4).
 
 Mô hình thời gian: mẫu k của kênh c ở thời điểm `epoch_us + k·10⁹/FS_mHz`, với
 `epoch_us` = 1 000 000 µs. `T_ANCHOR_US` là thời điểm mẫu cuối cộng

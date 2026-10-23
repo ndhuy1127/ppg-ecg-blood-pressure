@@ -170,11 +170,13 @@ def _session(config, rng, case, session_id, packet_count, with_events):
                          channel_id, ordinal, packet))
     if with_events:
         for ordinal, event in enumerate(config["events"]):
-            # Provisional values for fields that schema section 15 leaves open.
+            # Schema section 10: STATUS bit 4 (latency unmeasured) is off for
+            # events; config "status" applies to data packets only (2026-10-23,
+            # as the firmware sends them).
             packet = Packet(
                 WIRE_VERSION, EVENT_CHANNEL, session_id,
                 (config["seq_start"] + ordinal) & UINT32, ordinal, event["time_us"],
-                event["time_us"], 0, config["status"], (event["code"],),
+                event["time_us"], 0, 0, (event["code"],),
             )
             rows.append(((event["time_us"], ORDER.index(EVENT_CHANNEL), ordinal),
                          EVENT_CHANNEL, ordinal, packet))

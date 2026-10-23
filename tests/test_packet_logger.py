@@ -71,6 +71,17 @@ def device(sim_config):
     return metadata
 
 
+def only(metadata, *keys):
+    """Metadata that declares only the given channels (and their null reasons)."""
+    metadata = copy.deepcopy(metadata)
+    metadata["channels"] = {k: v for k, v in metadata["channels"].items() if k in keys}
+    metadata["null_reasons"] = {
+        name: reason for name, reason in metadata["null_reasons"].items()
+        if not name.startswith("channels.") or name.split(".")[1] in keys
+    }
+    return metadata
+
+
 def shifted(packet, microseconds):
     return replace(packet, t_anchor_us=packet.t_anchor_us + microseconds,
                    t_first_us=packet.t_first_us + microseconds)
@@ -323,23 +334,80 @@ def test_lasting_anchor_step_quarantines_shorter_side(sim, logger, start,
 @pytest.mark.parametrize("gap", [10, 50])
 @pytest.mark.parametrize("shift", [0, 20000, -20000])
 def test_rate_error_and_gap_keep_good_packets(sim, logger, rate, gap, shift):
-    # PPG 0xF1, 100 Hz nominal, N = 4; the true period is ``rate`` times the
-    # nominal one. SEQ 10 .. 10 + gap - 1 are lost; ``shift`` hits the next one.
+    # PPG 0xF1, 100 Hz nominal, N = 4; the true sample RATE is ``rate`` times
+    # the nominal one (period / rate). SEQ 10 .. 10 + gap - 1 are lost; ``shift``
+    # hits the next one.
     lost, period = range(10, 10 + gap), Fraction(10 ** 9, 100000)
     packets = []
     for seq in range(120):
         if seq in lost:
             continue
-        anchor = round(1_000_000 + (4 * seq + 3) * period * rate + 1000)
+        anchor = round(1_000_000 + (4 * seq + 3) * period / rate + 1000)
         anchor += shift if seq == lost.stop else 0
         packets.append(Packet(1, 0xF1, 1, seq, 4 * seq, anchor,
                               round(anchor - 3 * period), 100000, 16, (7,) * 4))
-    result, _, _ = analyze(restream(packets), sim, logger, metadata=device(sim))
+    result, _, _ = analyze(restream(packets), sim, logger,
+                           metadata=only(device(sim), "0xF1"))
     bad = [i["seq"] for i in result["issues"] if i["code"] == "timestamp_anomaly"]
     assert bad == ([lost.stop] if shift else [])
     assert result["issue_counts"] == {"missing_packets": 1, **(
         {"timestamp_anomaly": 1} if shift else {})}
     assert channel(result)["packets_accepted"] == 120 - gap - len(bad)
+
+
+def test_afe_overflow_packet_keeps_samples_but_not_its_late_anchor(sim, logger):
+    # PPG 100 Hz, N = 4. The FIFO was full when SEQ 5 was read: its 4 samples
+    # are old, the anchor is the read time, 10 samples (100 ms) late, and 10
+    # samples were lost after it (bit 0; the next index jumps by 10).
+    period, lost = 10_000, 10
+    packets = []
+    for seq in range(12):
+        first = 4 * seq + (lost if seq > 5 else 0)
+        anchor = 1_000_000 + (first + 3) * period + (lost * period if seq == 5 else 0)
+        packets.append(Packet(1, 0xF1, 1, seq, first, anchor, anchor - 3 * period,
+                              100000, 16 | (1 if seq == 5 else 0), (7,) * 4))
+    result, rows, samples = analyze(restream(packets), sim, logger,
+                                    metadata=only(device(sim), "0xF1"))
+    assert result["issue_counts"] == {"sample_gap_status": 1}
+    summary = channel(result)
+    assert summary["packets_accepted"] == 12
+    assert summary["packets_anchor_unreliable"] == 1
+    assert summary["samples_accepted"] == 48
+    assert {r["seq"]: r["disposition"] for r in rows}[5] == "accepted_anchor_unreliable"
+    # Before 2026-10-23 the late anchor quarantined the whole packet.
+    assert summary["packets_quarantined"] == {}
+
+
+def test_late_anchor_of_overflow_packet_is_not_the_channel_offset_reference(sim,
+                                                                            logger):
+    packets = [replace(shifted(p, 50_000), status=p.status | 1)
+               if (p.channel_id, p.seq) == (0xF1, 0) else p
+               for p in decoded(generate_stream(sim)[0])]
+    result, _, _ = analyze(restream(packets), sim, logger)
+    assert result["issue_counts"] == {}
+    assert channel(result)["packets_anchor_unreliable"] == 1
+
+
+@pytest.mark.parametrize("steps,elapsed,flagged", [
+    # r = 3 %, no fixed slack, T = 10 000 us. The true period lies in
+    # [T/1.03, T/0.97]: 97 samples take at most 1 000 000 us (rate -3 %) and
+    # 103 samples at least 1 000 000 us (rate +3 %), both exactly on the bound.
+    (97, 1_000_000, False), (97, 1_000_001, True),
+    (103, 1_000_000, False), (103, 999_999, True),
+])
+def test_rate_tolerance_is_on_the_rate_not_the_period(sim, logger, steps, elapsed,
+                                                      flagged):
+    # The old bound 3 % * steps * T rejected the first case (excess 30 000 us >
+    # 29 100 us) although a rate exactly 3 % slow is inside the tolerance.
+    config = dict(logger, anchor_tolerance_samples=0, anchor_tolerance_extra_us=0)
+    first = Packet(1, 0xF1, 1, 0, 0, 1_000_000, 970_000, 100000, 16, (7,) * 4)
+    # SEQ 25 after 24 lost packets keeps the index jump consistent with SEQ.
+    second = Packet(1, 0xF1, 1, 25, steps, 1_000_000 + elapsed, 0, 100000, 16,
+                    (7,) * 4)
+    result, _, _ = analyze(restream([first, second]), sim, config,
+                           metadata=only(device(sim), "0xF1"))
+    assert ("timestamp_anomaly" in result["issue_counts"]) is flagged
+    assert result["issue_counts"]["missing_packets"] == 1
 
 
 def test_backward_reanchor_keeps_chains_apart(sim, logger):
@@ -436,19 +504,111 @@ def test_t_first_is_anchor_minus_n_minus_1_periods(sim):
                 packet.t_anchor_us - (len(packet.data) - 1) * period)
 
 
-def test_event_packets_skip_index_and_anchor_checks(sim, logger):
+def test_simulated_events_send_status_zero_like_the_firmware(sim):
+    # Schema section 10: bit 4 (latency unmeasured) is off for event packets.
+    packets = decoded(generate_stream(sim)[0])
+    assert {p.status for p in packets if p.channel_id == 0xC1} == {0}
+    assert {p.status for p in packets if p.channel_id != 0xC1} == {sim["status"]}
+
+
+def test_event_packets_skip_anchor_check(sim, logger):
     packets = decoded(generate_stream(sim)[0])
     events = [p for p in packets if p.channel_id == 0xC1]
     odd = [
-        replace(events[0], first_sample_index=999, t_anchor_us=5, fs_nominal_mhz=7),
+        replace(events[0], t_anchor_us=5, fs_nominal_mhz=7),
         replace(events[1], data=(9,)),
     ]
     others = [p for p in packets if p.channel_id != 0xC1]
     result, _, _ = analyze(restream(others + odd), sim, logger)
     assert result["issue_counts"] == {"unknown_event_code": 1}
+    assert [e["event_ordinal"] for e in result["sessions"][0]["events"]] == [0, 1]
     two = replace(events[0], data=(1, 2))
     result, _, _ = analyze(restream(others + [two]), sim, logger)
     assert result["issue_counts"] == {"event_sample_count": 1}
+
+
+def event(seq, ordinal, status=0):
+    return Packet(1, 0xC1, 1, seq % (1 << 32), ordinal % (1 << 32),
+                  2_000_000 + 1000 * ordinal, 2_000_000 + 1000 * ordinal, 0, status,
+                  (1,))
+
+
+@pytest.mark.parametrize("pairs,expected,lost", [
+    # (SEQ, ordinal) of received events. SEQ is given at send time, so an event
+    # dropped in the MCU queue moves the ordinal but not SEQ.
+    ([(10, 0), (11, 2)], {"events_lost_before_send": 1}, [1]),
+    ([(10, 0), (12, 2)], {"missing_packets": 1}, []),  # Lost on USB only.
+    ([(10, 0), (12, 4)], {"missing_packets": 1, "events_lost_before_send": 1}, [2]),
+    # Both counters wrap past 2**32 independently.
+    ([((1 << 32) - 1, (1 << 32) - 2), (1 << 32, 1 << 32)],
+     {"events_lost_before_send": 1}, [1]),
+])
+def test_event_ordinal_gap_is_a_lost_event(sim, logger, pairs, expected, lost):
+    result, _, _ = analyze(restream([event(s, o) for s, o in pairs]), sim, logger,
+                           metadata=only(device(sim), "0xC1"))
+    assert result["issue_counts"] == expected
+    assert [i["lost_events"] for i in result["issues"]
+            if i["code"] == "events_lost_before_send"] == lost
+
+
+def test_event_status_bit1_and_bad_ordinal(sim, logger):
+    metadata = only(device(sim), "0xC1")
+    # Bit 1 on the first event: something was dropped, count unknown.
+    result, _, _ = analyze(restream([event(0, 0, status=2), event(1, 1)]), sim,
+                           logger, metadata=metadata)
+    assert [(i["code"], i["lost_events"]) for i in result["issues"]] == [
+        ("events_lost_before_send", None)]
+    # Bit 1 together with a counted gap is one issue, not two.
+    result, _, _ = analyze(restream([event(0, 0), event(1, 2, status=2)]), sim,
+                           logger, metadata=metadata)
+    assert [(i["code"], i["lost_events"]) for i in result["issues"]] == [
+        ("events_lost_before_send", 1)]
+    # An ordinal going back is flagged once; the next events are checked from it.
+    result, _, _ = analyze(restream([event(0, 5), event(1, 3), event(2, 4),
+                                     event(3, 5)]), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {"event_ordinal_inconsistent": 1}
+    assert [e["event_ordinal"] for e in result["sessions"][0]["events"]] == [
+        5, 3, 4, 5]
+
+
+@pytest.mark.parametrize("dead", [("0xE1",), ("0xF2",), ("0xE1", "0xF1")])
+def test_declared_channel_without_packets_is_missing(sim, logger, dead):
+    keep = [p for p in decoded(generate_stream(sim)[0])
+            if f"0x{p.channel_id:02X}" not in dead]
+    result, _, _ = analyze(restream(keep), sim, logger)
+    assert result["issue_counts"] == {"channel_missing": len(dead)}
+    assert result["sessions"][0]["channels_missing"] == sorted(dead)
+    # Events may be absent (a bench session without t0).
+    no_events = [p for p in keep if p.channel_id != 0xC1]
+    result, _, _ = analyze(restream(no_events), sim, logger)
+    assert result["sessions"][0]["channels_missing"] == sorted(dead)
+
+
+def test_channel_with_only_quarantined_packets_is_not_missing(sim, logger):
+    packets = [replace(p, fs_nominal_mhz=0) if p.channel_id == 0xF2 else p
+               for p in decoded(generate_stream(sim)[0])]
+    result, _, _ = analyze(restream(packets), sim, logger)
+    assert "channel_missing" not in result["issue_counts"]
+    assert result["sessions"][0]["channels_missing"] == []
+
+
+@pytest.mark.parametrize("at", [0, 3])
+@pytest.mark.parametrize("offset", [400, -400, (1 << 32) - 7])
+def test_fs_zero_packet_with_bad_index_does_not_move_the_reference(sim, logger, at,
+                                                                    offset):
+    # FS 0 marks an untrusted header: whatever its index, the packets after it
+    # are still checked against the last trusted packet.
+    packets = [
+        replace(p, fs_nominal_mhz=0,
+                first_sample_index=(p.first_sample_index + offset) % (1 << 32))
+        if p.channel_id == 0xF1 and p.seq in (at, at + 1) else p
+        for p in decoded(generate_stream(sim)[0])
+    ]
+    result, _, _ = analyze(restream(packets), sim, logger)
+    assert result["issue_counts"] == {"fs_invalid": 2, "fs_metadata_mismatch": 1}
+    assert channel(result)["packets_quarantined"] == {"fs_invalid": 2}
+    assert channel(result)["packets_accepted"] == 6
+    assert channel(result)["chains"] == 1
 
 
 def test_device_source_never_reports_channel_offset(sim, logger):
@@ -478,7 +638,7 @@ def test_metadata_needs_reason_for_each_null(sim):
 
 @pytest.mark.parametrize("field,value", [
     ("wire_versions", [2]), ("anchor_tolerance_samples", -1),
-    ("schema_version", "packet-logger-v1"), ("read_chunk_bytes", 0),
+    ("schema_version", "packet-logger-v0"), ("read_chunk_bytes", 0),
     ("anchor_rate_tolerance_ppm", 10 ** 5 + 1),
 ])
 def test_logger_config_rejected(logger, field, value):
@@ -525,6 +685,14 @@ def test_record_replay_identical_and_no_overwrite(tmp_path):
     result = replay(session / "raw.bin", replayed, LOGGER_CONFIG, metadata, ROOT,
                     session / "session_manifest.json")
     assert result["expected_manifest"]["mismatches"] == []
+    assert manifest["logger_version"] == result["logger_version"] == "packet-logger-v1"
+    # A manifest written by another logger version is named as a mismatch.
+    older = tmp_path / "older_manifest.json"
+    older.write_text(json.dumps({**manifest, "logger_version": "packet-logger-v0"}),
+                     encoding="utf-8")
+    result = replay(session / "raw.bin", tmp_path / "replay_old", LOGGER_CONFIG,
+                    metadata, ROOT, older)
+    assert result["expected_manifest"]["mismatches"] == ["logger_version"]
     for name in ("decode.json", "packets.csv", "samples.csv"):
         assert (replayed / name).read_bytes() == (session / name).read_bytes()
     with pytest.raises(FileExistsError), (generated / "stream.bin").open("rb") as s:
@@ -548,6 +716,33 @@ def test_manifest_is_written_last(tmp_path, monkeypatch):
                generated / "session_metadata.json", ROOT, "stream.bin")
     assert written[-1] == "session_manifest.json"
     assert "session_manifest.json" not in written[:-1]
+
+
+def test_input_copies_exist_before_first_read_and_survive_interruption(tmp_path):
+    generated = tmp_path / "generated"
+    simulate(SIM_CONFIG, "valid", generated)
+    metadata = generated / "session_metadata.json"
+    stream = (generated / "stream.bin").read_bytes()
+    session = tmp_path / "session"
+
+    class Interrupted:
+        reads = 0
+
+        def read(self, n):
+            # The copies are on disk before any byte is taken from the source.
+            for name, source in (("logger_config.json", LOGGER_CONFIG),
+                                 ("session_metadata.json", metadata)):
+                assert (session / name).read_bytes() == source.read_bytes()
+            self.reads += 1
+            if self.reads > 1:
+                raise KeyboardInterrupt
+            return stream[:n]
+
+    with pytest.raises(KeyboardInterrupt):
+        record(Interrupted(), session, LOGGER_CONFIG, metadata, ROOT, "stream.bin")
+    chunk = json.loads(LOGGER_CONFIG.read_bytes())["read_chunk_bytes"]
+    assert (session / "raw.bin").read_bytes() == stream[:chunk]
+    assert not (session / "session_manifest.json").exists()
 
 
 def test_raw_and_outputs_are_opened_exclusively(tmp_path, monkeypatch):

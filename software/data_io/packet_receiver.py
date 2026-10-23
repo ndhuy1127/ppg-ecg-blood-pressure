@@ -19,7 +19,9 @@ from software.data_io.packet_wire import (
     STATUS_BITS, STATUS_RESERVED_MASK, WIRE_VERSION,
 )
 
-LOGGER_VERSION = "packet-logger-v0"
+# v1 (2026-10-23): channel_missing, event ordinal check, FS 0 never an index
+# reference, rate (not period) tolerance. v0 was committed in 250139d.
+LOGGER_VERSION = "packet-logger-v1"
 PACKET_SCHEMA = "packet-v0.1"
 METADATA_VERSION = "packet-session-metadata-v0"
 SOURCE_TYPES = ("SYNTHETIC", "DEVICE")
@@ -27,8 +29,11 @@ UINT32 = 1 << 32
 # Provisional rules, pending Duc Anh (docs/protocol/packet_logger.md): a
 # FIRST_SAMPLE_INDEX jump of known length is explained by STATUS bit 0 or 1, a
 # re-anchor of unknown length by bit 5; the bit may be on either packet next to
-# the jump. Event packets (0xC1) skip the index and anchor checks (steps 4, 6).
-KNOWN_GAP_BITS = (1 << 0) | (1 << 1)
+# the jump. Event packets (0xC1) skip the anchor check (step 6); their
+# FIRST_SAMPLE_INDEX is the event ordinal and is checked against SEQ instead.
+AFE_OVERFLOW_BIT = 1 << 0
+MCU_BUFFER_BIT = 1 << 1
+KNOWN_GAP_BITS = AFE_OVERFLOW_BIT | MCU_BUFFER_BIT
 REANCHOR_BIT = 1 << 5
 DATA_LIMITS = {ECG_CHANNEL: 1 << 24, **{channel: 1 << 18 for channel in PPG_CHANNELS}}
 EVENT_CODES = (1, 2, 3, 4)
@@ -65,6 +70,10 @@ LIMITATIONS = [
     "The anchor rate tolerance assumes the true sample rate is within "
     "anchor_rate_tolerance_ppm of FS_NOMINAL_MHZ; it is not measured",
     "A false SYNC followed by a passing CRC (about 1 in 65536) is not excluded",
+    "Anchors of packets with STATUS bit 0 (AFE FIFO overflow) are neither checked "
+    "nor used as references: the FIFO held older samples, so the anchor is late. "
+    "Their samples are kept (disposition accepted_anchor_unreliable); a bit 0 "
+    "carried from a lost packet also skips the check",
 ]
 
 
@@ -241,8 +250,15 @@ def analyze_stream(decoded, decoder, config, metadata):
             samples += channel_samples
             if first is not None:
                 firsts[channel_id] = first
+        # A declared data channel with no decoded packet at all in this session
+        # (a dead AFE, say) would otherwise leave no trace. Events may be absent.
+        missing = [key for key in sorted(metadata["channels"])
+                   if int(key, 16) != EVENT_CHANNEL and int(key, 16) not in channels]
+        for key in missing:
+            issue("channel_missing", session_id=session_id, channel=key)
         result_sessions.append({
-            "session_id": session_id, "channels": summaries, "events": events,
+            "session_id": session_id, "channels": summaries,
+            "channels_missing": missing, "events": events,
             "channel_offset": _channel_offset(session_id, firsts, config, metadata,
                                               issue),
         })
@@ -295,18 +311,7 @@ def _check_channel(session_id, channel_id, state, config, metadata, issue):
         "fs_nominal_mhz": sorted({received[s].packet.fs_nominal_mhz for s in seqs}),
     }
     if channel_id == EVENT_CHANNEL:
-        events = []
-        for seq in present:
-            packet = received[seq].packet
-            rows[seq]["disposition"] = "event"
-            if len(packet.data) != 1:
-                issue("event_sample_count", **where, seq=seq)
-            elif packet.data[0] not in EVENT_CODES:
-                issue("unknown_event_code", **where, seq=seq,
-                      event_code=packet.data[0])
-            events.append({"session_id": session_id, "seq_ext": seq,
-                           "t_anchor_us": packet.t_anchor_us,
-                           "data": list(packet.data)})
+        events = _check_events(session_id, present, received, rows, where, issue)
         summary["events"] = len(events)
         return summary, events, [], None
 
@@ -316,8 +321,13 @@ def _check_channel(session_id, channel_id, state, config, metadata, issue):
         issue("fs_metadata_mismatch", **where)
     index, quarantine, jumps = _index_pass(present, received, where, issue)
     chain_of, chains = _chains(present, received, quarantine, jumps, where, issue)
+    # Bit 0: the FIFO was full, so the samples are older than the anchor. Keep
+    # the samples; leave the anchor out of the timing check and the references.
+    untimed = {seq for seq in present
+               if received[seq].packet.status & AFE_OVERFLOW_BIT}
     for chain in chains:
-        _timing_pass(chain, received, index, quarantine, config, where, issue)
+        _timing_pass([seq for seq in chain if seq not in untimed], received, index,
+                     quarantine, config, where, issue)
     accepted = [seq for seq in present if seq not in quarantine]
     gaps = _gaps(seqs, accepted, received, index, quarantine, conflicts, jumps)
     samples = []
@@ -325,32 +335,85 @@ def _check_channel(session_id, channel_id, state, config, metadata, issue):
     for seq in present:
         rows[seq]["sample_index_ext"] = index[seq]
         rows[seq]["chain_id"] = chain_of[seq]
-        rows[seq]["disposition"] = quarantine.get(seq, "accepted")
+        rows[seq]["disposition"] = quarantine.get(
+            seq, "accepted_anchor_unreliable" if seq in untimed else "accepted")
     for seq in accepted:
         packet = received[seq].packet
         if any(not 0 <= value < limit for value in packet.data):
             issue("data_out_of_range", **where, seq=seq)
         samples += [(session_id, key, chain_of[seq], seq, index[seq] + i, value)
                     for i, value in enumerate(packet.data)]
+    timed = [seq for seq in accepted if seq not in untimed]
     summary.update({
         "packets_accepted": len(accepted),
+        "packets_anchor_unreliable": len(accepted) - len(timed),
         "packets_quarantined": dict(sorted(Counter(quarantine.values()).items())),
         "chains": len(chains),
         "first_sample_index": index[accepted[0]] if accepted else None,
         "samples_accepted": len(samples), "gaps": gaps,
     })
     first = None
-    if accepted:
-        packet = received[accepted[0]].packet
-        first = (index[accepted[0]] + len(packet.data) - 1, packet)
+    if timed:
+        packet = received[timed[0]].packet
+        first = (index[timed[0]] + len(packet.data) - 1, packet)
     return summary, [], samples, first
 
 
+def _check_events(session_id, present, received, rows, where, issue):
+    """Event packets: code checks, and the event ordinal against SEQ.
+
+    FIRST_SAMPLE_INDEX of 0xC1 is the event ordinal (schema section 10). SEQ is
+    assigned at send time, so between two received events the ordinal moves by
+    the SEQ gap (events lost on USB, already ``missing_packets``) plus the events
+    dropped before a SEQ was given. More is ``events_lost_before_send``; less is
+    ``event_ordinal_inconsistent``, after which the check restarts from that
+    event, so one bad ordinal does not flag every later event (the loss count
+    next to a bad ordinal is then unreliable). STATUS bit 1 with no counted gap
+    (the first event, or an edge the firmware dropped before it became an
+    event) gives a loss of unknown count.
+    """
+    events, previous = [], None
+    for seq in present:
+        packet = received[seq].packet
+        rows[seq]["disposition"] = "event"
+        if len(packet.data) != 1:
+            issue("event_sample_count", **where, seq=seq)
+        elif packet.data[0] not in EVENT_CODES:
+            issue("unknown_event_code", **where, seq=seq, event_code=packet.data[0])
+        if previous is None:
+            ordinal, lost = packet.first_sample_index, 0
+        else:
+            ordinal = _unwrap(packet.first_sample_index, previous[1])
+            lost = (ordinal - previous[1]) - (seq - previous[0])
+        detail = {**where, "seq": seq, "event_ordinal": ordinal}
+        if lost < 0:
+            issue("event_ordinal_inconsistent", **detail, previous_seq=previous[0],
+                  previous_ordinal=previous[1])
+        elif lost > 0:
+            issue("events_lost_before_send", **detail, lost_events=lost)
+        elif packet.status & MCU_BUFFER_BIT:
+            issue("events_lost_before_send", **detail, lost_events=None)
+        previous = (seq, ordinal)
+        events.append({"session_id": session_id, "seq_ext": seq,
+                       "event_ordinal": ordinal, "t_anchor_us": packet.t_anchor_us,
+                       "data": list(packet.data)})
+    return events
+
+
 def _index_pass(present, received, where, issue):
-    """Schema step 4: FIRST_SAMPLE_INDEX continuity, cross-checked with STATUS."""
+    """Schema step 4: FIRST_SAMPLE_INDEX continuity, cross-checked with STATUS.
+
+    A packet with FS 0 is quarantined as ``fs_invalid`` later; its header is not
+    trusted, so it gets an index for its row but never becomes the reference.
+    """
     index, quarantine, jumps, previous = {}, {}, {}, None
     for seq in present:
         packet = received[seq].packet
+        if packet.fs_nominal_mhz == 0:
+            index[seq] = packet.first_sample_index if previous is None else _unwrap(
+                packet.first_sample_index,
+                index[previous] + len(received[previous].packet.data))
+            continue
         if previous is None:
             index[seq] = packet.first_sample_index
             previous = seq
@@ -388,8 +451,9 @@ def _index_pass(present, received, where, issue):
 def _chains(present, received, quarantine, jumps, where, issue):
     """Split a channel into index/timing chains; return ``(chain_of, chains)``.
 
-    A new chain starts at a re-anchor (STATUS bit 5) or an FS change, so a
-    sample index can repeat only across chains. A packet with FS 0 is
+    A new chain starts at a re-anchor (an index jump with STATUS bit 5 on either
+    side) or an FS change, so a sample index can repeat only across chains. Bit
+    5 with a continuous index does not split the chain. A packet with FS 0 is
     quarantined and does not split its chain. ``chain_of`` maps every present
     SEQ to its chain id; ``chains`` lists the SEQs left for the timing check.
     """
@@ -421,8 +485,9 @@ def _timing_pass(chain, received, index, quarantine, config, where, issue):
     from both ends of the chain and the direction that quarantines fewer
     packets is kept (forward on a tie), so a bad first anchor costs one packet,
     not the chain. The true sample rate is only known within
-    ``anchor_rate_tolerance_ppm``, so the tolerance grows with the number of
-    samples since the reference (a gap of missing packets).
+    ``anchor_rate_tolerance_ppm`` (r) of the nominal rate, so the true period is
+    in [T/(1+r), T/(1-r)] and the allowed time grows with the number of samples
+    since the reference (a gap of missing packets).
     """
     if not chain:
         return
@@ -430,7 +495,8 @@ def _timing_pass(chain, received, index, quarantine, config, where, issue):
     period = Fraction(10 ** 9, received[chain[0]].packet.fs_nominal_mhz)
     fixed = (config["anchor_tolerance_samples"] * period
              + config["anchor_tolerance_extra_us"])
-    per_sample = Fraction(config["anchor_rate_tolerance_ppm"], 10 ** 6) * period
+    rate = Fraction(config["anchor_rate_tolerance_ppm"], 10 ** 6)
+    shortest, longest = period / (1 + rate), period / (1 - rate)
     points = [(seq, index[seq] + len(received[seq].packet.data) - 1,
                received[seq].packet.t_anchor_us) for seq in chain]
 
@@ -439,12 +505,15 @@ def _timing_pass(chain, received, index, quarantine, config, where, issue):
         for seq, last, anchor in order:
             if reference is not None:
                 steps = last - reference[1]
-                deviation = anchor - reference[2] - steps * period
+                elapsed = anchor - reference[2]
+                deviation = elapsed - steps * period
+                # Time elapsed in the direction of the index, over |steps| samples.
+                along = elapsed if steps > 0 else -elapsed
+                inside = (abs(steps) * shortest - fixed <= along
+                          <= abs(steps) * longest + fixed)
                 # Anchors must move the same way as the sample index.
-                kind = ("not_increasing" if (anchor - reference[2]) * steps <= 0
-                        else "mismatch"
-                        if abs(deviation) > fixed + per_sample * abs(steps)
-                        else None)
+                kind = ("not_increasing" if elapsed * steps <= 0
+                        else "mismatch" if not inside else None)
                 if kind:
                     flagged[seq] = (kind, deviation, reference[0])
                     continue

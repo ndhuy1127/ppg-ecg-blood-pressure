@@ -103,6 +103,12 @@ def record(source, output, config_path, metadata_path, repo, source_name):
     config, metadata, input_hashes, config_bytes, metadata_bytes = _inputs(
         config_path, metadata_path)
     output.mkdir(parents=True, exist_ok=False)
+    # Input copies go first, so an interrupted capture still says what it was
+    # recorded with. The manifest is still written last.
+    inputs = {"logger_config.json": config_bytes,
+              "session_metadata.json": metadata_bytes}
+    for name, payload in inputs.items():
+        _write(output, name, payload)
     started = datetime.now(timezone.utc).isoformat()
     origin = time.monotonic_ns()
     decoder, packets, chunks = StreamDecoder(config["wire_versions"]), [], []
@@ -141,11 +147,10 @@ def record(source, output, config_path, metadata_path, repo, source_name):
                               chunks),
         "t_rx_packets.csv": _csv(("stream_offset", "session_id", "channel_id", "seq",
                                   "chunk", "t_rx_monotonic_ns"), t_rx),
-        "logger_config.json": config_bytes,
-        "session_metadata.json": metadata_bytes,
     }
     for name, payload in files.items():
         _write(output, name, payload)
+    files.update(inputs)
 
     session_ids = [session["session_id"] for session in result["sessions"]]
     null_reasons = dict(metadata["null_reasons"])
@@ -201,6 +206,9 @@ def replay(raw_path, output, config_path, metadata_path, repo, expect=None):
     if expect is not None:
         manifest = json.loads(Path(expect).read_bytes())
         checks = {
+            # A manifest of another logger version explains decode differences.
+            "logger_version": (manifest.get("logger_version"),
+                               result["logger_version"]),
             "raw.bin": (manifest["raw"]["sha256"], raw_sha256),
             **{name: (manifest["outputs_sha256"][name], outputs_sha256[name])
                for name in DECODE_OUTPUTS},
