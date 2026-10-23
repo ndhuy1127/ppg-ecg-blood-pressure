@@ -162,7 +162,7 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
      (0x59) = 0x00, ghi file cấu hình của Bosch vào `INIT_DATA` (0x5E), `INIT_CTRL`
      = 0x01, rồi kiểm trạng thái khởi tạo theo datasheet;
    - chụp SCK tại TP5 (phía cáp): dội nhiều thì chỉnh R9–R11; ổn mới lên 2 MHz (A.2).
-6. Tốc độ PPG (A.6 mục 3): multi-LED ba khe (xanh, đỏ, IR) ở ≤ 200 sps,
+6. Tốc độ PPG (A.6 mục 3): multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps,
    `SMP_AVE = 1`. Đọc lại `SPO2_SR` và đo tốc độ ra từng khe: phải bằng tốc độ cấu
    hình trong sai số dao động; còn một nửa hay bội số khác nghĩa là chip đã đổi tốc
    độ.

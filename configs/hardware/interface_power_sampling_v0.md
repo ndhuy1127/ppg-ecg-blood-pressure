@@ -115,13 +115,14 @@ Lưu ý khi chốt:
   (xem kế hoạch đo 10 phút).
 
 **Cấu hình V1:** ECG 512 sps (FMSTR 00, đúng tần số dao động trên breakout; chốt
-2026-10-23, `custom_board_proposal.md` A.2). PPG multi-LED ba khe (xanh, đỏ, IR) ở
-≤ 200 sps (A.6 mục 3); tốc độ, độ rộng xung và lấy trung bình còn mở (mục 6).
+2026-10-23, `custom_board_proposal.md` A.2). PPG multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR)
+ở 200 sps mỗi khe, `SMP_AVE = 1` (chốt 2026-10-24, A.6 mục 3); độ rộng xung (411 hay
+215 µs) còn mở (mục 6).
 
 `configs/hardware/packet_simulation.json` (mô phỏng SYNTHETIC v2, giữ nguyên) dùng
 PPG 128 Hz, **không có trong bảng tốc độ MAX3010x**. Mô phỏng v3
-(`packet_simulation_v3.json`) và nguồn giả của firmware dùng PPG 100 sps; đây là
-tham số mô phỏng, chưa phải tốc độ PPG đã chốt.
+(`packet_simulation_v3.json`) và nguồn giả của firmware dùng PPG 100 sps, khác
+tốc độ đã chốt 200 sps; đây chỉ là tham số mô phỏng.
 
 ## 5. Clock, ngắt và đồng bộ
 
@@ -143,9 +144,9 @@ tham số mô phỏng, chưa phải tốc độ PPG đã chốt.
 
 ## 6. Quyết định còn mở
 
-1. Chế độ LED, độ rộng xung, tốc độ lấy mẫu PPG và có lấy trung bình hay không.
-   V1 dùng multi-LED ba khe (xanh, đỏ, IR) ở ≤ 200 sps
-   (`custom_board_proposal.md` A.6 mục 3); tốc độ và độ rộng xung cụ thể còn mở.
+1. Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up. V1 chốt
+   multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps, `SMP_AVE = 1`
+   (2026-10-24, `custom_board_proposal.md` A.6 mục 3).
 2. Firmware có bật xung `SAMP` (`EN_INT2`, `SAMP_IT`) hay không; bản hoàn chỉnh có
    nối INT2B không (V1 đã nối vào GPIO47, chạy 3,3 V; `custom_board_proposal.md`
    A.6 mục 4).

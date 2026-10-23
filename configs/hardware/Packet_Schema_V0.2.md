@@ -237,8 +237,9 @@ sau.
   hay không (chưa bắt buộc ở V1 nếu đo được ngân sách sai số timing).
 - Ma trận cảm biến → cổ tay và quy ước khung cổ tay (đề xuất: +X hướng ngón tay, +Z
   ra mặt lưng bàn tay, +Y theo quy tắc tay phải), xác nhận trên bench.
-- Kiểm tải: với ECG 512 sps (N = 16), PPG ba khe 100 sps (N = 4, như nguồn giả) và IMU
-  sáu trục 100 Hz (N = 10), tổng khoảng 167 packet/s, 12,7 kB/s (ECG 3,4 + PPG 4,35 +
-  IMU 4,9 kB/s). Hàng đợi MCU 64 packet chịu khoảng 0,38 s khi USB không nhận. PPG
-  thật tới 200 sps sẽ tăng con số này. Cần test burst, host ngừng đọc và timeout
+- Kiểm tải: với ECG 512 sps (N = 16), PPG ba khe 200 sps (chốt 2026-10-24) và IMU
+  sáu trục 100 Hz (N = 10): PPG N = 4 cho khoảng 242 packet/s, 17,0 kB/s (ECG 3,4 +
+  PPG 8,7 + IMU 4,9 kB/s), hàng đợi MCU 64 packet chịu khoảng 0,26 s khi USB không
+  nhận; PPG N = 8 cho 167 packet/s, 13,9 kB/s. Nguồn giả hiện vẫn chạy PPG 100 sps
+  (N = 4). Cần test burst, host ngừng đọc và timeout
   20 ms.

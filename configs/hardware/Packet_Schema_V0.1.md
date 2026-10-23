@@ -374,7 +374,7 @@ v2 ở bảng trên giữ nguyên.
 | `SEQ` uint32 | Riêng từng kênh, mở rộng qua 2³² | Test bắt đầu từ 2³² − 3 |
 | `FIRST_SAMPLE_INDEX` uint32 | Có; mở rộng qua 2³²; kiểm liên tục, đối chiếu `STATUS` | Case `index_jump`, `reanchor` |
 | `T_ANCHOR_US`, `T_FIRST_US` uint64 | Có; `T_FIRST_US` = `T_ANCHOR_US − (N−1)·T` làm tròn; logger chỉ kiểm `T_ANCHOR_US` | Dung sai trong `configs/hardware/packet_logger.json`, chưa kiểm chứng phần cứng |
-| `FS_NOMINAL_MHZ` (mHz) | Có, đơn vị mHz; ECG 512 000, PPG 100 000 là **thông số mô phỏng** | PPG 100 Hz có trong bảng tốc độ MAX3010x; fs phần cứng vẫn mở |
+| `FS_NOMINAL_MHZ` (mHz) | Có, đơn vị mHz; ECG 512 000, PPG 100 000 là **thông số mô phỏng** | PPG 100 Hz có trong bảng tốc độ MAX3010x; phần cứng V1 chốt PPG 200 sps (2026-10-24) |
 | `SAMPLE_COUNT` ≤ 32 | Config 1–32; decoder từ chối 0 và > 32 | 0 bị coi là vô lý (câu hỏi D7 trong hướng dẫn logger) |
 | `STATUS` (mục 9) | Bit 4 bật trên mọi packet ECG/PPG; `0xC1` gửi 0 như mục 10 và firmware (sửa 2026-10-23; trước đó `0xC1` cũng bật bit 4); bit 0/5 ở case lỗi; bit 7–15 = 0 | Logger đếm từng bit và báo bit dự trữ, không dựa vào bit 4 để kiểm |
 | `DATA` int32 | ECG: word 24 bit, ETAG/PTAG = 0; PPG: 18 bit không dấu | Số ngẫu nhiên, không phải waveform |
@@ -385,8 +385,8 @@ v2 ở bảng trên giữ nguyên.
 
 ## 15. Việc còn mở
 
-- Chế độ LED (V1 dự kiến multi-LED ba khe ở ≤ 200 sps), tốc độ lấy mẫu, độ rộng
-  xung, có lấy trung bình hay không.
+- Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up (V1 chốt
+  multi-LED ba khe ở 200 sps, `SMP_AVE = 1`, 2026-10-24).
 - `N` mỗi packet, `EFIT` và `FIFO_A_FULL`.
 - INT2B (xung `SAMP`): V1 nối vào GPIO47; còn mở cho bản cuối, và firmware có bật
   `SAMP` (`EN_INT2`, `SAMP_IT`) hay không.

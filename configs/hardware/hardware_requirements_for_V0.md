@@ -46,7 +46,7 @@ Kiểm tra mức nhiễu và các thành phần nhiễu trong tín hiệu.
 ### 3.2 PPG
 Hệ thống PPG của V1-module sử dụng:
 MAX30101 làm cảm biến PPG.
-> Ghi chú: linh kiện PPG đã chốt ngày 2026-10-22 là MAX30101 trên bo SparkFun SEN-16474 (`custom_board_proposal.md` A.3–A.4). BOM V1 và schematic V1 cũ trên nhánh `dev/ducanh` ghi MAX30102 và không dùng nữa. Chế độ LED và tốc độ PPG còn mở: `interface_power_sampling_v0.md` mục 6.
+> Ghi chú: linh kiện PPG đã chốt ngày 2026-10-22 là MAX30101 trên bo SparkFun SEN-16474 (`custom_board_proposal.md` A.3–A.4). BOM V1 và schematic V1 cũ trên nhánh `dev/ducanh` ghi MAX30102 và không dùng nữa. Chế độ LED và tốc độ PPG: mục 4.1; độ rộng xung còn mở: `interface_power_sampling_v0.md` mục 6.
 ESP32-S3-DevKitC-1-N8R8 làm MCU.
 
 Luồng dữ liệu:
@@ -69,9 +69,15 @@ $$
 T_s = \frac{1}{512}\,\text{s} \approx 1{,}953\,\text{ms}
 $$
 
-PPG: MAX30101 multi-LED ba khe (xanh, đỏ, IR) ở ≤ 200 sps (`custom_board_proposal.md` A.6 mục 3); tốc độ cụ thể, độ rộng xung và lấy trung bình còn mở ([interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 6), đọc lại thanh ghi và đo khi bring-up.
+PPG: 200 sps mỗi khe, MAX30101 multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR), `SMP_AVE = 1` (không lấy trung bình trên chip); chốt 2026-10-24 (`custom_board_proposal.md` A.6 mục 3). Khoảng thời gian giữa hai mẫu của một khe:
 
-Tần số ghi trong packet là giá trị danh định; tốc độ thực của từng kênh phải đo (mục 4.4). Sau khi thu có thể downsample để so với bộ dữ liệu có tần số thấp hơn.
+$$
+T_s = \frac{1}{200}\,\text{s} = 5\,\text{ms}
+$$
+
+Độ rộng xung (411 hay 215 µs) còn mở, chọn bằng số đo bring-up ([interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 4 và 6). Các khe của một mẫu không phát LED cùng lúc: khe sau lệch khe trước 1 107 µs (411 µs) hoặc 720 µs (215 µs), receiver cộng độ lệch này khi dựng thời gian từng khe (`Packet_Schema_V0.1.md` mục 7).
+
+Tần số ghi trong packet là giá trị danh định; tốc độ thực của từng kênh phải đo (mục 4.4). Phát hiện R-peak và chân sóng PPG trên mẫu gốc của từng kênh. Đổi tần số (ví dụ về 125 Hz để so với PulseDB) là một thí nghiệm riêng, ghi trong cấu hình phân tích, không thay dữ liệu gốc.
 ### 4.2 Đồng bộ PPG và ECG
 ECG và PPG phải được ghi nhận với mốc thời gian nhất quán.
 Hệ thống phải duy trì thông tin thời gian của hai tín hiệu để phục vụ việc xác định:
@@ -108,7 +114,7 @@ $$
 \Delta t_n = t_n - t_{n-1}
 $$
 
-và so sánh với chu kỳ danh định $T_s = 1/f_s$ của từng kênh (ECG: $1/512$ s ≈ 1,953 ms).
+và so sánh với chu kỳ danh định $T_s = 1/f_s$ của từng kênh (ECG: $1/512$ s ≈ 1,953 ms; PPG: $1/200$ s = 5 ms).
 
 #### 4.4.2 Jitter
 Jitter được hiểu là biến thiên ngắn hạn của thời điểm lấy mẫu so với thời điểm lý tưởng.

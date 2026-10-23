@@ -129,15 +129,15 @@ nhận hàng ở
      `interface_power_sampling_v0.md` mục 4 cũng chỉ có SpO2 và HR; chưa kiểm lại
      phần còn lại của Rev 3. Với multi-LED chỉ có khoảng cách cạnh lên giữa hai khe
      427 / 525 / 720 / 1 107 µs ứng với độ rộng xung 69 / 118 / 215 / 411 µs
-     (Rev 2: Bảng 14, tr. 26). Mức trần tạm thời cho V1: ba khe (xanh, đỏ, IR) ở
-     **≤ 200 sps**. Ở 200 sps, với độ rộng xung 411 µs, từ cạnh lên của khe đầu
+     (Rev 2: Bảng 14, tr. 26). V1 chốt ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở
+     **200 sps** mỗi khe, `SMP_AVE = 1` (2026-10-24). Ở 200 sps, với độ rộng xung 411 µs, từ cạnh lên của khe đầu
      tới cạnh xuống của khe cuối là 2 × 1 107 + 411 = 2 625 µs, khoảng nửa chu kỳ
      5 000 µs. Con số này chỉ tính thời gian phát xung theo giá trị danh định,
      chưa gồm thời gian xử lý sau khe cuối, nên không chứng minh tổ hợp được hỗ
      trợ. Không dùng 400 sps với 411 µs (2 625 µs > 2 500 µs). Chip tự đổi sang
      tốc độ hợp lệ nếu tổ hợp không được phép (`interface_power_sampling_v0.md`
-     mục 4). **Khi có bo:** đọc lại thanh ghi `SPO2_SR` và đo tốc độ ra từng khe,
-     ban đầu với `SMP_AVE = 1`.
+     mục 4). **Khi có bo:** đọc lại thanh ghi `SPO2_SR` và đo tốc độ ra từng khe;
+     chọn độ rộng xung 411 hay 215 µs bằng số đo này.
    - VLED: bo SparkFun tạo VLED+ bằng boost PAM2401 (A.4) với chia áp phản hồi
      R1 750 kΩ / R4 100 kΩ, tức 0,6 × (1 + 7,5) = **5,1 V danh định** (công thức
      VOUT = 0,6 (1 + R1/R2), Diodes DS37285 Rev 1-2, tr. 5). Mức này nằm trong dải
@@ -337,13 +337,14 @@ kênh/khe một packet):
 | Kênh | Giả định | Tốc độ ghi |
 | --- | --- | ---: |
 | ECG | 512 sps, N = 16 (106 B/packet) | ≈ 3,4 kB/s |
-| PPG | Ví dụ 400 sps, 3 khe (xanh + đỏ + IR), N = 16 | ≈ 8,0 kB/s |
-| IMU | Packet schema V0.1 chưa có kênh IMU | chưa tính |
+| PPG | 200 sps, 3 khe (xanh + đỏ + IR), N = 16 (106 B/packet) | ≈ 4,0 kB/s |
+| IMU | Packet schema V0.2: 6 trục 100 Hz, N = 10 (82 B/packet) | ≈ 4,9 kB/s |
 
-ECG + PPG theo schema ≈ 11,3 kB/s, nên W25Q128 (16 MiB) chứa khoảng **25 phút**
-ghi thô. Nếu ghi theo định dạng nén 3 B mỗi mẫu, không có header từng packet, thì
-thời lượng khoảng gấp đôi. Với đo theo cửa sổ vài chục giây, tổng thời gian ghi
-mỗi buổi thường dưới mức này; phải tính lại khi chốt tốc độ PPG và kênh IMU.
+ECG + PPG theo schema ≈ 7,4 kB/s, nên W25Q128 (16 MiB) chứa khoảng **38 phút**
+ghi thô; thêm IMU (≈ 12,3 kB/s) thì khoảng **23 phút**. Nếu ghi theo định dạng nén
+3 B mỗi mẫu, không có header từng packet, thì thời lượng khoảng gấp đôi. Với đo theo
+cửa sổ vài chục giây, tổng thời gian ghi mỗi buổi thường dưới mức này. `N` mỗi
+packet còn mở; tính lại khi chốt `N` và khi bản hoàn chỉnh chốt có giữ IMU không.
 
 Bản hoàn chỉnh (Phần B) dự kiến truyền qua BLE hoặc ghi flash, nên mục 13 "Truyền
 USB/Serial" của packet schema sẽ cần cập nhật khi làm bản này. V1-module (Phần A)
@@ -360,7 +361,7 @@ vẫn truyền qua USB tới laptop.
 
 ## 7. Việc còn mở
 
-1. Tốc độ lấy mẫu PPG và kênh LED chính (chọn từ dữ liệu ba kênh của V1).
+1. Kênh LED chính của PPG (chọn từ dữ liệu ba kênh của V1).
 2. Bản hoàn chỉnh có giữ BMI270, TMP117 và FSR 402 không (V1 có BMI270, không có
    TMP117 và FSR).
 3. ADC cho FSR ở bản hoàn chỉnh (nếu giữ FSR): ADC nội ESP32 hay ADC ngoài.
