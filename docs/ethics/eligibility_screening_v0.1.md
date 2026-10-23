@@ -23,7 +23,7 @@ Loại nếu có **bất kỳ** điều sau (tự khai; nhóm không khám):
 | L2 | Đang dùng thuốc tác động lên tim mạch hoặc thần kinh giao cảm (ví dụ chẹn beta, giãn mạch, an thần) | Protocol v0.1; làm thay đổi đáp ứng huyết áp và PAT |
 | L3 | Mang máy tạo nhịp hoặc thiết bị điện tử cấy ghép | Protocol v0.1; có dòng điện qua điện cực ECG |
 | L4 | Đang mang thai hoặc nghi ngờ có thai | Protocol v0.1 |
-| L5 | Vết thương hở, viêm da, kích ứng tại cổ tay trái, ngón tay đặt điện cực hoặc bắp tay phải | Vị trí đeo thiết bị, dán điện cực và quấn cuff |
+| L5 | Vết thương hở, viêm da, kích ứng tại cổ tay hoặc cẳng tay trái, cổ tay phải hoặc bắp tay phải | Vị trí đeo thiết bị, dán điện cực và quấn cuff (protocol v0.2 mục 5.2) |
 | L6 | Dị ứng với băng dán, keo y tế, gel điện cực hoặc kim loại (niken) | Điện cực Ag/AgCl dán có keo và gel. [Nếu nhóm quyết định dùng điện cực khô trên người: bổ sung vật liệu của điện cực đó] |
 | L7 | Không được đo huyết áp ở tay phải (ví dụ phẫu thuật vú/nách bên phải, phù bạch huyết, cầu nối mạch máu ở tay phải) | Cuff ở bắp tay phải; đề xuất, **cần chuyên môn y tế xác nhận** |
 | L8 | Tiền sử ngất, động kinh, hoặc khó thở khi gắng sức | Đề xuất cho nghiệm pháp vận động/thở chậm; cần xác nhận |

@@ -12,7 +12,7 @@
 | Phiếu đồng thuận có chữ ký | Giấy | Có (họ tên, chữ ký) |
 | Bảng liên kết danh tính ↔ `subject_id` | File mã hóa, máy quản lý dữ liệu | Có |
 | Phiếu sàng lọc | Giấy, chỉ mang `subject_id` | Không trực tiếp; có tuổi, tay thuận, trả lời sức khỏe |
-| Tín hiệu raw ECG/PPG/IMU/FSR, sự kiện `t0` | Logger trên laptop (qua USB) | Không trực tiếp; waveform sinh trắc không phải ẩn danh tuyệt đối |
+| Tín hiệu raw ECG/PPG/IMU, sự kiện `t0` | Logger trên laptop (qua USB) | Không trực tiếp; waveform sinh trắc không phải ẩn danh tuyệt đối |
 | Số đo cuff (SBP, DBP, mạch) và thời điểm | Biểu mẫu nghiên cứu theo `event_id` | Không trực tiếp |
 | Metadata buổi (thanh ghi AFE, firmware, vị trí đeo, nhiệt độ phòng) | Logger/biểu mẫu | Không |
 | Nhật ký sự cố | Biểu mẫu, chỉ mã | Không trực tiếp |

@@ -37,7 +37,7 @@
 | --- | --- | --- |
 | MCU | ESP32-S3-DevKitC-1 N16R8 | Cấp nguồn và truyền dữ liệu qua USB với laptop **đang chạy pin, không cắm sạc** |
 | ECG | Breakout ProtoCentral MAX30001 | **SPI bus 1, dùng riêng.** Oscillator 32,768 kHz, LDO 1,8 V và TXB0108 có sẵn trên breakout. Thiết lập V1 chốt ngày 2026-10-23: 512 sps, gain/DHPF/DLPF cố định (độ trễ ECG phụ thuộc các thiết lập này, Table 4 tr. 26, nên bản hoàn chỉnh phải giữ cùng thiết lập); SPI MAX30001 4 MHz; SPI BMI270 bắt đầu 1 MHz, lên 2 MHz sau khi đo scope; I²C MAX30101 400 kHz (lùi 100 kHz nếu sườn lên qua cáp quá chậm) |
-| Điện cực ECG | Điện cực dán Ag/AgCl (bộ kèm breakout hoặc 3M Red Dot 2228) | Qua jack 3,5 mm của breakout. Đạo trình I, đề xuất 3 điện cực theo Figure 17c của datasheet MAX30001 (tr. 84): ECGP ở cổ tay trái (vị trí mặt lưng đồng hồ), ECGN ở ngón tay phải, điện cực VCM ở cổ tay trái cạnh ECGP; tắt lead bias nội. Vài phiên dùng điện cực khô BIOPAC để so sánh. Chưa chốt 2 hay 3 điện cực: cần pilot so sánh |
+| Điện cực ECG | Ba điện cực dán Ag/AgCl (10 miếng kèm kit, hoặc 3M Red Dot 2228) qua cáp 3 điện cực LA/RA/RL kèm kit | Qua jack 3,5 mm của breakout. Đạo trình I, 3 điện cực theo Figure 17c của datasheet MAX30001 (tr. 84), chốt 2026-10-23 (protocol v0.2 mục 5.2): LA → ring → ECGP ở **mặt lòng** cổ tay trái (mặt lưng đã có bo PPG); RA → tip → ECGN ở mặt lòng cổ tay phải; RL → sleeve → R3 → VCM ở cẳng tay trái, cách LA khoảng 5 cm. Ánh xạ jack theo schematic `pc_max30001_brk_v1.0`: ring → R4 51 kΩ → ECGP, tip → R5 51 kΩ → ECGN, sleeve → R3 → VCM. Tắt lead bias nội. Cấu hình 2 điện cực (bật lead bias nội) và điện cực khô BIOPAC chỉ để so sánh trên bench. Màu nắp đầu bấm khác nhau tùy lô: đo thông mạch trước khi dùng |
 | Sửa trên breakout | R3 (VCM → sleeve của jack) 10 kΩ thay bằng 220 kΩ ±1% (datasheet yêu cầu ≥ 200 kΩ, tr. 22, 31, 35, 84); gỡ R7, R8 (0 Ω nối điện cực vào BIP/BIN) | Làm trước khi đo trên người, sau khi đối chiếu bo thật với `pc_max30001_brk_v1.0`. BioZ không dùng (`EN_BIOZ = 0`). Firmware đặt `INTB_TYPE = 01` (CMOS) ở `EN_INT` (0x02) và `EN_INT2` (0x03) vì INTB/INT2B đi qua TXB0108 (mặc định là open-drain, Table 14, tr. 43) |
 | Sự kiện | Nút bấm `t0` (SW1) vào GPIO4, kéo lên 10 kΩ (R2) và tụ 100 nF (C2); LED trạng thái D1 qua 1 kΩ (R3) ở GPIO5 | Đánh dấu bắt đầu bơm cuff trên cùng đồng hồ `esp_timer` |
 | SPI BMI270 qua cáp | R9, R10, R11 33 Ω ở mặt dưới bo đế, nối tiếp `BMI_SCK`, `BMI_MOSI`, `BMI_CS` (net phía MCU mang hậu tố `_MCU`) | Giảm chấn ở đầu phát cho cáp 20–30 cm; giá trị chỉnh theo đo scope. `BMI_MISO` không có điện trở ở bo cổ tay vì không còn chỗ ngoài courtyard của M1/M3 |
@@ -101,30 +101,67 @@ Phần B.
 
 ### A.6. Cần kiểm tra trước khi vẽ
 
-1. ~~Header breakout MAX30001 có đưa chân INT2B ra không.~~ Có (chân 4 của SV1,
-   theo `pc_max30001_brk_v1.0.brd`); trên KiCad V1-module đã nối vào GPIO47
-   (net `/ECG_INT2B`, U1 pad 28). Vẫn phải kiểm revision breakout thật.
-2. Đối chiếu module thật đã mua với footprint.
-3. Tổ hợp tốc độ × độ rộng xung cho ba khe LED của MAX30101 (bảng trong
-   datasheet), và VLED 5 V đủ cho dòng LED xanh đã chọn.
-4. Thầy chấp nhận MAX30101 dùng I²C trên bus riêng.
-5. Pin map: KiCad V1-module (MAX30001 riêng SPI bus 1, BMI270 sang SPI bus 2,
-   nút `t0`; bảng ở A.7) khác pin map V1 của Đức Anh
-   ([interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 3).
-   Chọn bản nào làm chuẩn là việc còn mở (mục 7 Việc còn mở).
-6. DevKitC N16R8 dùng chip nào; với ESP32-S3R8V/R16V thì GPIO47 (`ECG_INT2B`)
-   chạy 1,8 V (datasheet ESP32-S3 v2.2, Bảng 2-1, chú thích 4, tr. 17)
-   [chưa đối chiếu với tài liệu module].
+Trạng thái ngày 2026-10-23. Mục còn lại chỉ làm được khi có hàng hoặc có câu trả
+lời của thầy; bước kiểm khi nhận hàng ở
+[danh sách mua](../../hardware/bom/purchase_list_v1_module.md) mục 3.
+
+1. **Đã xong trên thiết kế.** Header breakout MAX30001 đưa INT2B ra chân 4 của SV1
+   (`pc_max30001_brk_v1.0.brd`); KiCad V1-module nối vào GPIO47 (net
+   `/ECG_INT2B`, U1 pad 28). **Khi nhận hàng:** kiểm revision breakout thật.
+2. **Khi nhận hàng:** đối chiếu module thật với footprint (khoảng cách hai hàng
+   chân DevKitC 22,86 mm, pinout, lỗ bắt vít).
+3. **LED MAX30101.**
+   - Tổ hợp tốc độ × độ rộng xung: datasheet Rev 2 (19-8453, 10/18, bản SparkFun
+     lưu) chỉ có bảng tổ hợp được phép cho chế độ SpO2 và HR (Bảng 11–12, tr. 24),
+     không có bảng cho multi-LED. Bảng 15–16 của Rev 3 (tr. 29–30) chép ở
+     `interface_power_sampling_v0.md` mục 4 cũng chỉ có SpO2 và HR; chưa kiểm lại
+     phần còn lại của Rev 3. Với multi-LED chỉ có khoảng cách cạnh lên giữa hai khe
+     427 / 525 / 720 / 1 107 µs ứng với độ rộng xung 69 / 118 / 215 / 411 µs
+     (Rev 2: Bảng 14, tr. 26). Mức trần tạm thời cho V1: ba khe (xanh, đỏ, IR) ở
+     **≤ 200 sps**. Ở 200 sps, với độ rộng xung 411 µs, từ cạnh lên của khe đầu
+     tới cạnh xuống của khe cuối là 2 × 1 107 + 411 = 2 625 µs, khoảng nửa chu kỳ
+     5 000 µs. Con số này chỉ tính thời gian phát xung theo giá trị danh định,
+     chưa gồm thời gian xử lý sau khe cuối, nên không chứng minh tổ hợp được hỗ
+     trợ. Không dùng 400 sps với 411 µs (2 625 µs > 2 500 µs). Chip tự đổi sang
+     tốc độ hợp lệ nếu tổ hợp không được phép (`interface_power_sampling_v0.md`
+     mục 4). **Khi có bo:** đọc lại thanh ghi `SPO2_SR` và đo tốc độ ra từng khe,
+     ban đầu với `SMP_AVE = 1`.
+   - VLED: bo SparkFun tạo VLED+ bằng boost PAM2401 (A.4) với chia áp phản hồi
+     R1 750 kΩ / R4 100 kΩ, tức 0,6 × (1 + 7,5) = **5,1 V danh định** (công thức
+     VOUT = 0,6 (1 + R1/R2), Diodes DS37285 Rev 1-2, tr. 5). Mức này nằm trong dải
+     4,5–5,5 V của LED xanh nhưng vượt 0,1 V dải 3,1–5,0 V mà datasheet bảo đảm
+     PSRR cho LED đỏ/IR; giới hạn tuyệt đối là 6,0 V (MAX30101 Rev 2, tr. 2).
+     Datasheet PAM2401 ghi dòng ra tới 1 000 mA ở VIN 3 V, VOUT 5 V (tr. 1), sơ đồ
+     ứng dụng MAX30101 ghi nguồn +5 V "200 mA MAX" (tr. 32); hai số này không
+     chứng minh bo đủ dòng, vì còn phụ thuộc cuộn cảm, nguồn 3V3 vào (dòng vào
+     ≈ 5,1 × I_out / (3,3 × hiệu suất), cộng tải của MCU, ECG và IMU) và LDO 3V3
+     của DevKitC OEM. **Khi có bo:** đo VLED+ khi không tải, quá áp lúc khởi động
+     và gợn khi LED xanh chạy xung dòng cao nhất đã chọn, so với dải chung
+     4,5–5,0 V của cả ba LED; đo 3V3 tại bo cổ tay cùng lúc, vì 3V3 đi qua cáp
+     20–30 cm từ DevKitC.
+4. **Chờ thầy:** xác nhận chấp nhận MAX30101 dùng I²C trên bus riêng (A.1).
+5. **Đã chốt 2026-10-23:** pin map chuẩn của V1 là KiCad V1-module (bảng A.7).
+   Pin map V1 cũ (`Pin_Map_V1.md`, `V1.SchDoc` trên nhánh `dev/ducanh`: MAX30001 và
+   BMI270 chung SPI, không nối INT2B) không dùng nữa.
+6. **Đã đối chiếu tài liệu module.** Module ESP32-S3-WROOM-1-N16R8 có flash 16 MB
+   Quad SPI và PSRAM 8 MB Octal SPI (datasheet WROOM-1/1U v1.8, Bảng 1-1, tr. 3);
+   VDD_SPI 1,8 V chỉ có ở bản N16R16VA (chú thích 7, tr. 4), và GPIO47/48 chạy
+   1,8 V chỉ ở module dùng chip ESP32-S3R16V (chú thích c, tr. 12). Với module có
+   PSRAM, VDD_SPI được cố định bằng eFuse lúc xuất xưởng, không theo mức GPIO45
+   (tr. 39). Vậy với WROOM-1-N16R8 và N8R8 chính hãng, GPIO47 (`ECG_INT2B`) chạy
+   3,3 V như các GPIO khác; kết luận này chỉ áp dụng cho họ module WROOM-1.
+   **Khi nhận hàng:** bo DevKitC là hàng OEM, nên đọc ký hiệu trên vỏ module, đọc
+   loại chip và cấu hình eFuse VDD_SPI bằng lệnh chỉ đọc của esptool, và đo
+   INT2B ở phía MCU (sau TXB0108 của breakout) lên 3,3 V. Nếu GPIO47 chạy 1,8 V
+   thì không dùng được với thiết kế này.
 
 ### A.7. Bảng chân của KiCad V1-module
 
 Bảng dưới lấy từ `hardware/kicad/v1_module/base/v1_base.kicad_pcb` (pad → net
 của U1) và tên chân trong symbol `ESP32-S3-DevKitC-1` của
 `v1_base.kicad_sch`; cáp lấy từ J1 của `v1_wrist.kicad_pcb` và J2 của
-`v1_base.kicad_pcb`. Đây là pin map của **KiCad V1-module**, khác pin map V1 của
-Đức Anh ở [interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 3
-(`Pin_Map_V1.md`, `V1.SchDoc` trên nhánh `dev/ducanh`). Cả hai đều gọi là "V1";
-bản nào là chuẩn còn mở (mục 7 Việc còn mở).
+`v1_base.kicad_pcb`. Đây là **pin map chuẩn của V1** (chốt 2026-10-23, A.6 mục 5);
+firmware dùng cùng bảng này trong `firmware/boards/board_v1_module.h`.
 
 **GPIO của DevKitC (U1):**
 
@@ -135,7 +172,7 @@ bản nào là chuẩn còn mở (mục 7 Việc còn mở).
 | `/ECG_MOSI` | 16 | 9 | MAX30001 MOSI (J1 bo đế = SV1 chân 9) | GPIO16 cũng là XTAL_32K_N (mục 7 Việc còn mở) |
 | `/ECG_MISO` | 17 | 10 | MAX30001 MISO (J1 bo đế = SV1 chân 10) | |
 | `/ECG_INTB` | 21 | 27 | MAX30001 INTB (J1 bo đế = SV1 chân 5) | |
-| `/ECG_INT2B` | 47 | 28 | MAX30001 INT2B (J1 bo đế = SV1 chân 4) | Xung `SAMP` nếu firmware bật (mục 7 Việc còn mở). Datasheet ESP32-S3 v2.2 (Bảng 2-1, chú thích 4, tr. 17): GPIO47/48 chạy 1,8 V ở chip ESP32-S3R8V/R16V; chip trên DevKitC N16R8 [chưa đối chiếu] |
+| `/ECG_INT2B` | 47 | 28 | MAX30001 INT2B (J1 bo đế = SV1 chân 4) | Xung `SAMP` nếu firmware bật (mục 7 Việc còn mở). Chạy 3,3 V với module WROOM-1-N16R8/N8R8; 1,8 V chỉ ở chip ESP32-S3R16V (A.6 mục 6) |
 | `/PPG_SDA` | 8 | 12 | MAX30101 SDA (cáp chân 3) | I²C bus 1 |
 | `/PPG_SCL` | 9 | 15 | MAX30101 SCL (cáp chân 5) | TP4 |
 | `/PPG_INT` | 18 | 11 | MAX30101 INT (cáp chân 6) | |
@@ -180,7 +217,7 @@ còn mở của cả Phần A và Phần B.
 
 | Khối | Linh kiện | Ghi chú |
 | --- | --- | --- |
-| MCU | Module ESP32-S3 (ví dụ WROOM-1 N16R8) | Dùng module có anten và chứng nhận RF, không dùng chip trần. PSRAM octal chiếm GPIO35–37 [chưa đối chiếu] |
+| MCU | Module ESP32-S3 (ví dụ WROOM-1 N16R8) | Dùng module có anten và chứng nhận RF, không dùng chip trần. PSRAM octal chiếm GPIO35–37 (datasheet WROOM-1/1U v1.8, chú thích b, tr. 12) |
 | ECG AFE | MAX30001 (IC trần) | Mục 3, 4 |
 | PPG AFE | MAX30101 (IC trần) | Có LED xanh, đỏ, IR. Mục 3, 4 |
 | Nguồn LED | Boost 5 V cho VLED+ (ví dụ PAM2401, như bo SparkFun ở A.4) | LED xanh cần 4,5–5,5 V; mục 4 [chưa đối chiếu] |
@@ -318,15 +355,15 @@ packet schema sẽ cần cập nhật sau (không sửa trong tài liệu này).
    2026-10-23); bản hoàn chỉnh chưa quyết.
 4. ADC cho FSR ở bản hoàn chỉnh (nếu giữ FSR): ADC nội ESP32 hay ADC ngoài.
 5. Có jack điện cực dán Ag/AgCl để lấy ECG tham chiếu không.
-6. INT2B (xung `SAMP`) của MAX30001: KiCad V1-module đã nối vào GPIO47 (A.7).
-   Còn mở cho pin map V1 của Đức Anh và cho bản hoàn chỉnh, và firmware có bật
-   `SAMP` (`EN_INT2`, `SAMP_IT`) hay không.
+6. INT2B (xung `SAMP`) của MAX30001: KiCad V1-module đã nối vào GPIO47 (A.7),
+   chạy 3,3 V (A.6 mục 6). Còn mở cho bản hoàn chỉnh, và firmware có bật `SAMP`
+   (`EN_INT2`, `SAMP_IT`) hay không.
 7. Ngủ giữa các cửa sổ (thêm thạch anh 32 kHz) hay giữ MCU thức suốt phiên.
-8. Pin map nào là chuẩn: KiCad V1-module (A.7) hay pin map V1 của Đức Anh
-   (`interface_power_sampling_v0.md` mục 3). Cả hai đều mang tên "V1".
+8. ~~Pin map nào là chuẩn.~~ Đã chốt 2026-10-23: KiCad V1-module (A.6 mục 5).
 9. Xung đột chân: KiCad V1-module dùng GPIO15/16 cho `ECG_SCLK`/`ECG_MOSI`, trùng
-   XTAL_32K_P/N của ESP32-S3 (mục 5). Nếu bản hoàn chỉnh giữ pin map này thì
-   phải bỏ thạch anh 32 kHz hoặc đổi chân SPI ECG.
+   XTAL_32K_P/N của ESP32-S3 (mục 5). V1 không có thạch anh 32 kHz nên không bị
+   ảnh hưởng. Nếu bản hoàn chỉnh giữ pin map này thì phải bỏ thạch anh 32 kHz hoặc
+   đổi chân SPI ECG.
 10. Đầu nối J1 bo cổ tay (V1-draft3): cả hai đầu cáp nay đều cắm vào box header có
     khóa. Thân nhựa J1 nằm hoàn toàn ngoài mép bo, chỉ treo trên 16 chân. Nhóm chốt
     (2026-10-23) giữ nguyên, không nới PCB: luôn giữ thân header khi cắm/rút và buộc

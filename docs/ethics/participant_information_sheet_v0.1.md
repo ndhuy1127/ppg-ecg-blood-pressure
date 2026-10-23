@@ -38,12 +38,12 @@ Trong mỗi buổi:
 3. Nhóm gắn thiết bị:
    - Một bo cảm biến nhỏ (khoảng 4 × 3 cm) gắn bằng dây dán (velcro) ở **mặt
      lưng cổ tay trái**. Bo có đèn LED xanh lá, đỏ và hồng ngoại cùng cảm biến
-     ánh sáng (đo mạch), cảm biến chuyển động và có thể có cảm biến lực ép. Bo nối
-     bằng một dây cáp dẹt dài khoảng 20–30 cm tới bo mạch đế đặt trên bàn.
-   - **[Hai hoặc ba — chờ chốt có cần điện cực thứ ba hay không] miếng điện cực
-     dán dùng một lần** (loại Ag/AgCl có gel, như điện cực đo điện tim thông
-     thường) để ghi điện tim: [một miếng ở cổ tay trái, một miếng ở ngón trỏ tay
-     phải — vị trí cuối cùng chờ xác nhận]. Da được lau sạch trước khi dán.
+     ánh sáng (đo mạch) và cảm biến chuyển động. Bo nối bằng một dây cáp dẹt dài
+     khoảng 20–30 cm tới bo mạch đế đặt trên bàn.
+   - **Ba miếng điện cực dán dùng một lần** (loại Ag/AgCl có gel, như điện cực đo
+     điện tim thông thường) để ghi điện tim: một miếng ở mặt trong cổ tay trái, một
+     miếng ở mặt trong cẳng tay trái, một miếng ở mặt trong cổ tay phải. Da được
+     lau sạch trước khi dán.
    - [Điện cực khô (không gel) để so sánh: chỉ ghi vào đây nếu nhóm quyết định
      dùng trên người; khi đó cần thêm mục đồng thuận riêng.]
    - **Vòng bít máy đo huyết áp** ở bắp tay phải. Máy sẽ bơm và xả nhiều lần trong

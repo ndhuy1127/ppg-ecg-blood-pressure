@@ -1,6 +1,7 @@
 # Phần cứng
 
-- **bom/**: danh mục linh kiện và phương án thay thế.
+- **bom/**: danh mục linh kiện và phương án thay thế;
+  [danh sách mua V1-module](bom/purchase_list_v1_module.md).
 - **datasheets/**: liên kết datasheet chính thức và mức độ đối chiếu thông số
   ([README](datasheets/README.md)); không lưu file PDF.
 - **kicad/**: thiết kế KiCad của V1-module, gồm `kicad/v1_module/base` (bo đế)
@@ -13,6 +14,8 @@
   `.gitkeep`; PCB của V1-module nằm ở `kicad/`.
 - **mechanical/**: thiết kế cơ khí và ràng buộc kích thước.
 - **test_reports/**: kế hoạch và báo cáo kiểm thử thiết bị:
+  - [v1_bringup_procedure.md](test_reports/v1_bringup_procedure.md): trình tự
+    kiểm khi nhận hàng, sửa module, hàn, cấp nguồn và kiểm từng khối của V1-module;
   - [sync_10min_test_plan.md](test_reports/sync_10min_test_plan.md): đo tốc độ
     thực, drift, jitter, độ trễ và lệch ECG–PPG trên bench.
 

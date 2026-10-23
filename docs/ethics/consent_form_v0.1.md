@@ -16,7 +16,7 @@ Người tham gia đánh dấu từng ô (☐ → ☒) và ký cuối phiếu:
 | ---: | --- | :---: |
 | 1 | Tôi đã đọc (hoặc được đọc cho nghe) phiếu thông tin phiên bản ghi ở trên, có thời gian cân nhắc và được trả lời các câu hỏi. | ☐ |
 | 2 | Tôi hiểu thiết bị là nguyên mẫu nghiên cứu, không phải thiết bị y tế, và kết quả không dùng để chẩn đoán hay điều trị. | ☐ |
-| 3 | Tôi đồng ý đeo bo cảm biến ở cổ tay [trái], dán [hai/ba] điện cực Ag/AgCl để ghi điện tim và đo huyết áp bằng vòng bít ở bắp tay [phải], theo mô tả trong phiếu thông tin. [Bên tay và số điện cực theo phân bổ được Đức Anh xác nhận, protocol v0.2 mục 5.2.] | ☐ |
+| 3 | Tôi đồng ý đeo bo cảm biến ở cổ tay trái, dán ba điện cực Ag/AgCl (cổ tay trái, cẳng tay trái, cổ tay phải) để ghi điện tim và đo huyết áp bằng vòng bít ở bắp tay phải, theo mô tả trong phiếu thông tin. | ☐ |
 | 4 | Tôi hiểu thiết bị nối USB với máy tính xách tay chạy pin, không cắm sạc trong lúc tôi đeo. | ☐ |
 | 5 | Tôi hiểu việc tham gia là tự nguyện; tôi có thể dừng một nghiệm pháp, dừng buổi đo hoặc rút lui bất cứ lúc nào mà không cần nêu lý do và không bị ảnh hưởng. | ☐ |
 | 6 | Tôi đồng ý để dữ liệu tín hiệu và số đo huyết áp được lưu dưới mã nghiên cứu, theo kế hoạch quản lý dữ liệu, và chỉ công bố ở dạng tổng hợp không nhận ra cá nhân. | ☐ |

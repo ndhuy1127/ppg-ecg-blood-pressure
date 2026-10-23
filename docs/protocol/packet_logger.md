@@ -102,7 +102,11 @@ giữ). Với packet sự kiện có thêm `event_sample_count` và `unknown_eve
 - Hệ số này không phải ước lượng tốc độ thực ở mục 5.3. Thay bằng số đo bench
   khi có (D10).
 
-### Quy tắc tạm, chờ Đức Anh xác nhận (ghi ngày 2026-10-21)
+### Quy tắc R1–R6 (ghi ngày 2026-10-21, đối chiếu với firmware ngày 2026-10-23)
+
+R1–R4 và R6 khớp quy ước của firmware khung (câu hỏi D3–D7 ở cuối tài liệu) và đã
+chạy đúng trên luồng giả lập theo firmware (mục "Đối chiếu với firmware khung").
+R5 vẫn là giá trị tạm, chờ số đo bench (D8, D10).
 
 - **R1, packet `0xC1`:** chỉ kiểm CRC/`SYNC`/`VERSION` và `SEQ` (bước 1–3, 5),
   **bỏ bước 4 và 6**. `FIRST_SAMPLE_INDEX`, `FS_NOMINAL_MHZ`, `T_FIRST_US` được ghi
@@ -168,6 +172,16 @@ khóa là đường dẫn như `channels.0xE1.latency_l_us`. Lý do cho trườn
 bị từ chối. Generator v3 tự ghi `session_metadata.json`. Với thiết bị, người vận
 hành điền tay trước phiên; không có giá trị thì để `null` kèm lý do, không đoán.
 
+Với firmware khung (`firmware/README.md`), lấy các giá trị sau:
+
+- `firmware_version`: phiên bản và ELF SHA-256 in trên log UART0 lúc khởi động;
+  `firmware_commit`: commit đã build. `SESSION_ID` cũng in trên log UART0.
+- `electrode_placement`: theo protocol v0.2 mục 5.2 (LA cổ tay trái, RA cổ tay
+  phải, RL cẳng tay trái).
+- Mỗi kênh trong luồng phải có mục trong `channels`, kể cả `0xC1`; thiếu thì logger
+  báo `channel_without_metadata`.
+- `afe_config` của PPG ghi cả ánh xạ khe → LED (schema mục 7, 11).
+
 ## Đầu ra
 
 `record` ghi các file sau (manifest **sau cùng**; thiếu manifest nghĩa là phiên
@@ -194,7 +208,11 @@ và hash config/metadata được so với manifest.
 
 - Chưa chạy với MCU thật hay cổng serial; chưa có dữ liệu `DEVICE`.
 - Không phát hiện được packet mất trước `SEQ` đầu tiên hoặc sau `SEQ` cuối cùng
-  đã nhận, vì giá trị `SEQ` khởi đầu chưa được quy định (D5).
+  đã nhận. D5 nay đã chốt `SEQ` bắt đầu từ 0 mỗi phiên, nên logger có thể báo mất
+  đầu phiên khi `SEQ` nhận đầu tiên lớn hơn 0; code hiện chưa dùng điều này.
+- Trên thiết bị, cổng USB native có chữ của ROM và bootloader trước packet đầu
+  tiên. Decoder bỏ qua và báo một `skipped_bytes` ở offset 0; đây là bình thường,
+  không phải lỗi đường truyền.
 - `T_ANCHOR_US` được kiểm xuôi và ngược, rồi giữ chiều cách ly ít packet hơn. Vì
   vậy một anchor sai ở đầu chuỗi, ở cuối chuỗi, hoặc ngay sau khoảng mất (khi dung
   sai đã nới theo Δk) chỉ làm mất packet đó. Hai trường hợp vẫn khó:
@@ -212,20 +230,37 @@ và hash config/metadata được so với manifest.
 
 ## Câu hỏi cho Đức Anh
 
+Trả lời ngày 2026-10-23 theo firmware khung
+([firmware/README.md](../../firmware/README.md), mục "Quy ước packet của
+firmware"); D8 và D10 chờ bench.
+
 - **D1.** Byte order của CRC16: little-endian như các trường khác (đang giả định)
-  hay big-endian?
+  hay big-endian? → **Little-endian.**
 - **D2.** Firmware có lúc nào gửi `VERSION` khác `0x01` trên cùng cổng không? Đổi
-  layout thì có tăng `VERSION` (mục 2) không?
+  layout thì có tăng `VERSION` (mục 2) không? → **Luôn `0x01`; đổi layout thì
+  tăng `VERSION` cùng bản firmware mới, không trộn trong một phiên.**
 - **D3.** Bit 0/5 bật ở packet nào so với khoảng mất (packet đọc lúc phát hiện
   tràn hay packet đã neo lại)? `SEQ` được gán trước hay sau bộ đệm MCU (bit 1)?
+  → **Bit 0 bật ở packet đọc lúc phát hiện tràn; packet kế có index nhảy. `SEQ`
+  gán lúc gửi, sau hàng đợi MCU: packet bị bỏ ở hàng đợi không có `SEQ`, packet
+  kế bật bit 1 (đúng giả định của R3); nếu packet mang bit 1 lại mất trên USB,
+  bit 1 chuyển sang packet gửi được kế tiếp. Firmware khung chưa sinh bit 5.**
 - **D4.** Bit 4 bật từ khi nào và tắt khi nào (theo từng cấu hình sau bench)?
-  Có bật cho `0xC1` không?
-- **D5.** `SEQ` và `FIRST_SAMPLE_INDEX` có bắt đầu từ 0 ở mỗi phiên không?
+  Có bật cho `0xC1` không? → **Bật trên mọi packet ECG/PPG cho tới khi đo xong
+  `L` của cấu hình; không bật cho `0xC1`.**
+- **D5.** `SEQ` và `FIRST_SAMPLE_INDEX` có bắt đầu từ 0 ở mỗi phiên không? →
+  **Có.**
 - **D6.** Packet `0xC1`: gửi giá trị gì cho `FIRST_SAMPLE_INDEX`, `FS_NOMINAL_MHZ`,
-  `T_FIRST_US`? `SEQ` của `0xC1` có đếm riêng không? (mục 15)
-- **D7.** Có khi nào `SAMPLE_COUNT = 0` (đọc FIFO rỗng) không? Có gửi packet đó không?
+  `T_FIRST_US`? `SEQ` của `0xC1` có đếm riêng không? (mục 15) → **Như quy tắc tạm
+  R1: số thứ tự sự kiện, 0, `T_ANCHOR_US`; `SEQ` đếm riêng (schema mục 10).**
+- **D7.** Có khi nào `SAMPLE_COUNT = 0` (đọc FIFO rỗng) không? Có gửi packet đó
+  không? → **Không gửi.**
 - **D8.** Sau bench: `d_ptr_us`/`d_word_us` đo được để chốt dung sai `T_ANCHOR_US`.
-- **D9.** USB CDC: baud, kích thước buffer; có log text nào đi chung cổng packet không (mục 13)?
+- **D9.** USB CDC: baud, kích thước buffer; có log text nào đi chung cổng packet
+  không (mục 13)? → **Packet đi USB Serial/JTAG native, không có baud; bộ đệm TX
+  8 192 byte, hàng đợi MCU 64 packet, timeout ghi 20 ms. Log chữ đi UART0;
+  firmware không ghi chữ ra cổng packet, nhưng lúc khởi động có thể có chữ của
+  ROM và bootloader trước packet đầu tiên.**
 - **D10 (thêm 2026-10-22).** Tốc độ lấy mẫu thật của PPG (và ECG) lệch bao nhiêu so
   với `FS_NOMINAL_MHZ` trên board? Logger đang giả định ±3 %
   (`anchor_rate_tolerance_ppm` = 30 000), suy từ clock ADC MAX30101
@@ -233,14 +268,40 @@ và hash config/metadata được so với manifest.
 
 ## Danh sách để Đức Anh review logger theo spec
 
-- [ ] `HEADER = struct.Struct("<2sBBIIIQQIHH")` và vị trí DATA/CRC khớp struct firmware.
-- [ ] CRC: known answer `0x29B1` cho `"123456789"`; packet ví dụ 50 byte trong
-      `tests/fixtures/packet_v3_expected.json` giống từng byte với firmware.
-- [ ] Mã kênh (mục 7) và tên bit STATUS (mục 9) trong `packet_wire.py`.
-- [ ] Quy tắc tạm R1–R6: đồng ý hoặc sửa.
-- [ ] Dung sai mặc định phù hợp cấu hình dự kiến (ECG 512 sps, N = 16), kể cả
-      dung sai tốc độ ±3 % (D10).
-- [ ] Trường metadata phiên đủ cho mục 11, nhất là danh sách thanh ghi trong `afe_config`.
-- [ ] Khi có firmware khung và `pyserial` được duyệt: chạy 10 phút không tải,
+Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
+
+- [x] `HEADER = struct.Struct("<2sBBIIIQQIHH")` và vị trí DATA/CRC khớp struct
+      firmware: encoder C (`firmware/app/packet_v01.c`) ghi đúng thứ tự, độ rộng,
+      little-endian, CRC trên byte 2 … 39 + 4N.
+- [x] CRC: known answer `0x29B1` cho `"123456789"`; packet ví dụ 50 byte trong
+      `tests/fixtures/packet_v3_expected.json` giống từng byte với known-answer của
+      firmware (`tests/test_firmware_packet_kat.py`). Firmware tự kiểm lại trên bo
+      lúc khởi động; phần này chưa chạy vì chưa có bo.
+- [x] Mã kênh (mục 7) và tên bit STATUS (mục 9) trong `packet_wire.py` khớp
+      `firmware/include/packet_v01.h`.
+- [x] Quy tắc R1–R6: R1–R4 và R6 giữ nguyên; R5 giữ giá trị tạm tới khi có số đo
+      bench.
+- [x] Dung sai mặc định phù hợp cấu hình dự kiến (ECG 512 sps, N = 16): dung sai
+      một packet bình thường khoảng 3,4 ms. Dung sai tốc độ ±3 % giữ tới khi có
+      số đo (D10).
+- [x] Trường metadata phiên đủ cho mục 11; cách điền cho firmware khung ở mục
+      "Metadata phiên".
+- [ ] Khi có bo và cách đọc cổng serial được duyệt: chạy 10 phút không tải,
       `SEQ` và `T_ANCHOR_US` tăng đơn điệu, lưu raw + manifest, ghi rõ là dữ liệu
       thiết bị, không đo trên người.
+
+### Đối chiếu với firmware khung
+
+[`tests/test_firmware_stream_compat.py`](../../tests/test_firmware_stream_compat.py)
+dựng luồng byte theo đúng quy ước của firmware khung trong 10 phút: chữ ROM ở đầu,
+ECG giả 1 953 µs × 16 mẫu, PPG giả ba khe 10 000 µs × 4 mẫu dùng chung mốc neo,
+task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, một lần tràn hàng đợi MCU kèm USB
+timeout của chính packet mang bit 1, một USB timeout ở PPG khe 2. Với config mặc
+định, logger nhận 64 206 packet, 487 196 mẫu, tất cả đúng công thức `DATA` của
+firmware. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
+`missing_packets`, cùng hai khoảng trống: ECG mất 32 mẫu (bit 1 đã chuyển sang
+packet kế), PPG khe 2 mất 4 mẫu. Không có `timestamp_anomaly`. Test thứ hai cho
+thấy khi mất 48 mẫu ECG (hai lần tràn hàng đợi cộng một USB timeout), logger chỉ
+giải thích được khoảng trống nhờ bit 1 được chuyển sang packet kế; không chuyển
+thì báo `sample_index_inconsistent`. Đây là luồng SYNTHETIC dựng bằng
+`encode_packet` trong Python theo quy ước của firmware, không phải byte từ MCU.

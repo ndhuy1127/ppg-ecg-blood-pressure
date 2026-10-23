@@ -86,10 +86,11 @@
 ## 5. Bố trí thiết bị, điện cực và tư thế đo
 
 > [!IMPORTANT]
-> **Toàn bộ mục 5 và mục 6.4–6.5: đề xuất của Huy (2026-10-21), CHỜ ĐỨC ANH XÁC NHẬN.**
-> Các nghiệm pháp ở 6.4 còn chờ thầy và hội đồng đạo đức chấp thuận. Chưa đo
-> trên người, kể cả thành viên nhóm. Kiểm tra xung đột ở 5.4 là kiểm tra trên
-> giấy; dòng "chưa kiểm chứng" cần bản ghi bench/G2.
+> **Mục 5 và mục 6.4–6.5: đề xuất của Huy (2026-10-21).** Phân bổ tay, số và vị
+> trí điện cực, cực tính (5.1, 5.2) đã xác nhận về phần cứng ngày 2026-10-23. Các
+> nghiệm pháp ở 6.4 còn chờ thầy và hội đồng đạo đức chấp thuận. Chưa đo trên
+> người, kể cả thành viên nhóm. Kiểm tra xung đột ở 5.4 là kiểm tra trên giấy;
+> dòng "chưa kiểm chứng" cần bản ghi bench/G2.
 
 ### 5.1. Thiết bị V1-module
 
@@ -97,24 +98,25 @@ Theo [custom_board_proposal.md, Phần A](../../configs/hardware/custom_board_pr
 
 - **Bo cảm biến cổ tay** 40,4 × 31,5 mm, gắn dây velcro 20 mm: PPG SparkFun
   MAX30101 (SEN-16474, ba kênh xanh lá, đỏ, IR; **nhóm đã chọn**, Huy xác nhận
-  2026-10-22), IMU BMI270, FSR 402 tùy chọn. Nối bo đế bằng cáp dẹt 16 dây dài dự
-  kiến 20–30 cm. `Pin_Map_V1.md` và `BOM_V1.xlsx` trên nhánh Đức Anh còn ghi
-  MAX30102, danh sách mua (1e95d29) chưa có module PPG: Đức Anh cập nhật.
+  2026-10-22), IMU BMI270; V1 không dùng FSR (chốt 2026-10-23). Nối bo đế bằng cáp
+  dẹt 16 dây dài dự kiến 20–30 cm. Pin map chuẩn: KiCad V1-module
+  (`configs/hardware/custom_board_proposal.md` A.7, chốt 2026-10-23); danh sách
+  mua: `hardware/bom/purchase_list_v1_module.md`.
 - **Bo đế đặt trên bàn:** ESP32-S3-DevKitC-1 N16R8, breakout ProtoCentral
   MAX30001 (ECG), nút `t0` đánh dấu bắt đầu bơm cuff trên cùng đồng hồ
   `esp_timer`.
 - **Nguồn và dữ liệu:** DevKitC nối USB với laptop **chạy pin, rút sạc**; không
   thiết bị nào nối điện lưới khi người tham gia đang đeo
   ([quy tắc an toàn](../ethics/session_safety_stopping_v0.1.md)).
-- **ECG:** điện cực dán Ag/AgCl có gel, dùng một lần, qua jack 3,5 mm của
-  breakout; đạo trình I giữa **cổ tay và ngón tay**. Ag/AgCl là phương án chính,
+- **ECG:** **ba** điện cực dán Ag/AgCl có gel, dùng một lần (LA, RA và RL tham
+  chiếu), qua cáp 3 điện cực kèm kit và jack 3,5 mm của breakout; đạo trình I
+  giữa **hai cổ tay** (chốt 2026-10-23, vị trí ở 5.2). Ag/AgCl là phương án chính,
   điện cực khô chỉ để so sánh
   ([Hai_phuong_an_dien_cuc_ECG.pdf](../../hardware/Hai_phuong_an_dien_cuc_ECG.pdf)).
-  **Chờ quyết định:**
-  - số điện cực: hai, hoặc ba nếu cần điện cực bias/RLD (Đức Anh, 5.2);
-  - loại Ag/AgCl dán được lên ngón tay;
-  - điện cực khô dùng trên người hay chỉ trên bench. Nếu dùng trên người thì phải
-    thêm vào phiếu thông tin, phiếu đồng thuận và tiêu chí loại L6.
+  Cấu hình hai điện cực (bỏ RL, bật lead bias nội) chỉ so sánh trên bench.
+  **Chờ quyết định:** điện cực khô dùng trên người hay chỉ trên bench. Nếu dùng
+  trên người thì phải thêm vào phiếu thông tin, phiếu đồng thuận và tiêu chí
+  loại L6.
 - **Cuff:** máy đo bắp tay tự động có kết quả validation đã công bố cho đúng
   model; model chưa chốt (mục 12). Không coi "cùng hãng" là đã validate. Sai số
   của máy cuff truyền thẳng vào nhãn và vào mốc hiệu chuẩn $\text{BP}_0$: AHA
@@ -135,21 +137,20 @@ thuộc vào việc giữ ngón tay trong lúc cuff bơm.
 | --- | --- | --- |
 | Bo PPG cổ tay | Mặt lưng cổ tay **trái**, cách mỏm trâm trụ khoảng 1,5–2,0 cm (như v0.1); cố định cho mọi người, ghi tay thuận vào metadata | Không đổi bên giữa người/lượt để tránh thêm biến số |
 | Cuff đối chứng | Bắp tay **phải**, ngang tim, đúng cỡ vòng bít | Khác tay với PPG (5.4, K1) |
-| Điện cực ECG 1 | Cổ tay **trái**, mặt lòng, không nằm dưới dây đeo hay bo PPG | Phía tay trái của đạo trình I |
-| Điện cực ECG 2 | Ngón trỏ tay **phải**, mặt lòng đốt gần | Phía tay phải; nằm xa vị trí cuff |
-| Cực tính | Tay trái là cực dương của đạo trình I; ánh xạ ECGP/ECGN của MAX30001 và có cần điện cực bias thứ ba hay không: **Đức Anh chốt** | `ecg_polarity` trong config phải khớp |
+| Điện cực LA (ECGP) | Cổ tay **trái**, mặt lòng, không nằm dưới dây đeo hay bo PPG | Phía tay trái của đạo trình I |
+| Điện cực RA (ECGN) | Cổ tay **phải**, mặt lòng | Phía tay phải; nằm xa cuff ở bắp tay. Điện cực 4 × 3,3 cm dán vừa, không cần loại nhỏ cho ngón tay |
+| Điện cực RL (tham chiếu, VCM) | Cẳng tay **trái**, mặt lòng, cách LA khoảng 5 cm về phía khuỷu | Mặt lòng cổ tay không đủ chỗ cho hai miếng; tay đeo cuff chỉ mang một dây điện cực |
+| Cực tính | Tay trái là cực dương của đạo trình I: LA → ECGP (vòng giữa, ring của jack), RA → ECGN (đầu, tip), RL → sleeve → VCM qua R3 (theo schematic `pc_max30001_brk_v1.0`); tắt lead bias nội (`custom_board_proposal.md` A.2) | `ecg_polarity = 1`. Màu nắp đầu bấm khác nhau tùy lô cáp: đo thông mạch đầu bấm ↔ tip/ring/sleeve trước buổi đo đầu tiên |
 | Cáp | Cáp dẹt PPG và dây điện cực đi dọc cẳng tay, cố định bằng băng dính y tế, không kéo căng bo PPG | Giảm nhiễu do cáp lay |
 | Tư thế | Như 5.3 | |
 
-**Phương án B (dự phòng):** điện cực 1 ở cổ tay phải, điện cực 2 ở ngón tay trái.
-Điện cực 1 khi đó nằm dưới cuff một đoạn ngắn trên cùng cánh tay; điện cực 2 ở
-bàn tay đeo PPG, dây có thể kéo cổ tay. Chọn A vì PPG chỉ chịu một dây điện cực
-ở chính cổ tay đó. Đức Anh quyết định A hay B theo khả năng dán điện cực lên ngón
-tay và chiều dài dây.
+**Phương án B cũ** (điện cực ở cổ tay phải và ngón tay trái) không dùng nữa: phương
+án A đã dời RA từ ngón trỏ sang cổ tay phải, nên không còn vướng việc dán điện cực
+lên ngón tay. Chiều dài dây và việc dây không kéo bo PPG kiểm khi có module (K5).
 
 **Chi dùng cho từng nghiệm pháp** (chi tiết ở 6.4):
 
-| Nghiệm pháp | Chi hoạt động | Tay trái (PPG + ECG 1) | Tay phải (cuff + ECG 2) |
+| Nghiệm pháp | Chi hoạt động | Tay trái (PPG + LA + RL) | Tay phải (cuff + RA) |
 | --- | --- | --- | --- |
 | M0 Nghỉ ngồi | Không | Yên trên bàn | Yên trên bàn |
 | M1 Thở chậm có hướng dẫn | Hô hấp | Yên | Yên |
@@ -177,8 +178,8 @@ hoạch 28 tuần.
 | K1 | Cuff không cùng tay đeo PPG | **Đạt:** cuff tay phải, PPG tay trái | — |
 | K2 | Không nghiệm pháp nào làm chuyển động tay đeo PPG | **Đạt trên giấy** cho M0–M2. **Chưa kiểm chứng** cho M3: thao tác đưa và rút chân, đau do lạnh có thể làm người tham gia cử động thân hoặc bám tay vào bàn. **Đạt có điều kiện** cho M4: thân người chuyển động khi đạp, nên chỉ lấy cửa sổ tín hiệu và đo cuff sau khi dừng đạp, tay vẫn đặt trên bàn (thời điểm cửa sổ còn mâu thuẫn, 6.4). **Không đạt** cho M5 nếu bóp bằng tay trái | IMU BMI270 kiểm chuyển động thực tế |
 | K3 | Tránh nhiễu cơ trên chi gắn điện cực ECG | Đạo trình I cần điện cực ở **cả hai tay**, nên mọi hoạt động cơ tay đều gây nhiễu. **Không đạt** cho M5 với bất kỳ tay nào → loại M5. **Chưa kiểm chứng** cho M3 (đau do lạnh có thể làm người tham gia gồng cả người) và cho lúc cuff bơm (căng cơ tay phải). **Chưa đánh giá:** M1 (thở sâu làm trôi nền, có thể làm cửa sổ bị loại có hệ thống theo quy tắc SQI ở mục 7), M2 (nói, cơ hô hấp), M4 (tì tay, mồ hôi, thở mạnh sau đạp) | Xem ECG trong M1–M4 và lúc cuff bơm ở G2 |
-| K4 | ECG có tín hiệu tại thời điểm đo cuff | **Đạt về thiết kế:** điện cực dán, không cần chạm chủ động. Với đạo trình I, tay đeo cuff **luôn** mang một điện cực: ngón trỏ phải ở phương án A, cổ tay phải nằm dưới cuff ở phương án B. Đổi A/B không xử lý được; pha cuff bơm được loại khỏi phân tích chính (6.2, giai đoạn 2). **Chưa kiểm chứng** ảnh hưởng của cuff bơm lên ECG | Bản ghi có cuff bơm trên bench/G2, sau khi được phép |
-| K5 | Dây điện cực và cáp không đè hay kéo bo PPG | Chưa kiểm (chưa có module) | Đức Anh thử khi có module |
+| K4 | ECG có tín hiệu tại thời điểm đo cuff | **Đạt về thiết kế:** điện cực dán, không cần chạm chủ động. Với đạo trình I, tay đeo cuff **luôn** mang một điện cực (RA ở cổ tay phải); đổi vị trí điện cực không xử lý được. Pha cuff bơm được loại khỏi phân tích chính (6.2, giai đoạn 2). **Chưa kiểm chứng** ảnh hưởng của cuff bơm lên ECG | Bản ghi có cuff bơm trên bench/G2, sau khi được phép |
+| K5 | Dây điện cực và cáp không đè hay kéo bo PPG | Chưa kiểm (chưa có module). Tay trái mang cáp dẹt PPG và hai dây LA, RL | Thử khi có module |
 | K6 | Chân dùng cho M3/M4 không ảnh hưởng tay | **Đạt trên giấy** cho M3 (xem K2). **Có điều kiện** cho M4: đạp làm thân người chuyển động (K2) | IMU kiểm ở G2 |
 
 Kết luận (trên giấy, 2026-10-22):
@@ -187,7 +188,7 @@ Kết luận (trên giấy, 2026-10-22):
 - K2 đạt trên giấy cho M0–M2, chưa kiểm chứng cho M3, có điều kiện cho M4.
 - K3, K4, K5 chưa kiểm chứng; K3 chưa đánh giá M1, M2, M4.
 - Vì vậy **chưa thể nói** phương án A không còn xung đột với M0–M4. Cần bản ghi
-  bench/G2, trục thời gian M2/M4 (5.3, 6.4) và xác nhận của Đức Anh.
+  bench/G2 và trục thời gian M2/M4 (5.3, 6.4).
 
 ---
 
@@ -214,12 +215,12 @@ Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, g�
 
 ### 6.3. Đồng bộ thời gian phần cứng giữa ECG và PPG
 - ECG và PPG cần cùng quy chiếu thời gian hoặc ánh xạ clock được kiểm chứng; không mặc định hai AFE lấy mẫu đồng thời chỉ vì dùng cùng MCU.
-- V1-module dùng MAX30001 (ECG) và MAX30101 (PPG). Tần số lấy mẫu chưa chốt: ECG dự kiến 512 sps (Phần A.2, chưa chốt); bảng tốc độ cấu hình được và phương án PPG 100 hoặc 200 sps ở [interface_power_sampling_v0.md, mục 4](../../configs/hardware/interface_power_sampling_v0.md); [packet schema V0.1](../../configs/hardware/Packet_Schema_V0.1.md) vẫn để mở ECG 500 hay 512 sps (mục 15). Tần số cuối cùng phải là giá trị mà từng AFE hỗ trợ theo datasheet và phải được đo lại trên thiết bị.
+- V1-module dùng MAX30001 (ECG) và MAX30101 (PPG). ECG chốt 512 sps (`custom_board_proposal.md` Phần A.2, 2026-10-23). PPG dùng multi-LED ba khe ở ≤ 200 sps (A.6 mục 3), tốc độ cụ thể chưa chốt; bảng tốc độ cấu hình được ở [interface_power_sampling_v0.md, mục 4](../../configs/hardware/interface_power_sampling_v0.md). Tần số cuối cùng phải là giá trị mà từng AFE hỗ trợ theo datasheet và phải được đo lại trên thiết bị.
 - Với độ phân giải thời gian, mỗi mẫu ở 500 Hz là 2 ms; sai số định vị R peak và PPG foot cộng với sai số đồng bộ hai kênh đi thẳng vào PAT, nên cần đo jitter/offset thực tế ([kế hoạch đo 10 phút](../../hardware/test_reports/sync_10min_test_plan.md)) trước khi diễn giải các thay đổi PAT cỡ vài ms. Phương pháp foot khác nhau lệch nhau có hệ thống hàng chục ms trên cùng xung ([Tuần 5](week05_fiducials_pat_validity.md)); không trộn phương pháp trong một phân tích.
 - Phải phân biệt timestamp **lấy mẫu**, timestamp **đọc FIFO** và thời điểm **nhận gói tại PC**. Counter MCU không tự loại bỏ độ trễ sensor/FIFO, sai lệch clock hoặc jitter. Cần ghi clock, đơn vị, tần số theo kênh, mất mẫu và cách suy ra thời điểm từng mẫu từ timestamp mẫu đầu gói.
 - Marker bắt đầu bơm cuff (`t0`) phải cùng clock hoặc có ánh xạ có thể kiểm tra. Không dịch PPG để trùng đỉnh R vì sẽ mất độ trễ cần tính PAT.
 
-### 6.4. Nghiệm pháp tạo ΔBP (đề xuất, chờ Đức Anh xác nhận phân bổ và thầy/hội đồng chấp thuận)
+### 6.4. Nghiệm pháp tạo ΔBP (đề xuất, chờ thầy/hội đồng chấp thuận)
 
 Mục đích chung: mở rộng dải ΔBP so với mốc hiệu chuẩn, vì đo lúc nghỉ ở người
 trẻ cho ΔBP nhỏ và baseline zero-change khó bị vượt (mục 3). Mukkamala et al.
@@ -369,7 +370,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 
 > [!IMPORTANT]
 > **Checklist trước khi hoàn thiện protocol v1.0:**
-> 1. [ ] Đức Anh xác nhận phân bổ tay/điện cực (mục 5.2, phương án A hay B), cực tính và có cần điện cực bias thứ ba; kiểm K3–K5 ở mục 5.4 khi có module.
+> 1. [x] Phân bổ tay/điện cực (mục 5.2): phương án A, ba điện cực LA cổ tay trái, RA cổ tay phải, RL cẳng tay trái; cực tính LA → ECGP (xác nhận 2026-10-23). Còn kiểm K3–K5 ở mục 5.4 khi có module.
 > 2. [ ] Linh xác nhận cấu trúc gói dữ liệu nhị phân/JSON truyền từ thiết bị vào máy tính có trường lưu `subject_id`, `session_id`, `event_id` và timestamp vi giây.
 > 3. [ ] Thống nhất nhãn hiệu và model máy đo huyết áp bắp tay đối chứng dùng trong phòng thí nghiệm.
 > 4. [ ] Xin ý kiến giảng viên hướng dẫn về quy trình làm việc với hội đồng đạo đức trước khi tuyển tình nguyện viên.

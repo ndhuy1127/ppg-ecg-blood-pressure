@@ -21,7 +21,8 @@ dùng PAT hay mốc sinh lý để suy ra lệch clock.
 
 ## 2. Điều kiện trước khi đo
 
-- Bring-up đạt tới bước giao tiếp và thu được dữ liệu từ cả hai AFE.
+- Bring-up đạt tới bước giao tiếp và thu được dữ liệu từ cả hai AFE
+  ([v1_bringup_procedure.md](v1_bringup_procedure.md) mục 7–8).
 - Firmware gửi packet theo `configs/hardware/Packet_Schema_V0.1.md`, có
   `FIRST_SAMPLE_INDEX`, `T_ANCHOR_US` và packet sự kiện `0xC1`.
 - Cấu hình AFE (tốc độ, FMSTR, chế độ LED, lấy trung bình, bộ lọc) đã ghi vào
@@ -56,16 +57,21 @@ ghi lại:
 Nếu chưa dựng được kích thích chung, vẫn đo được mục 1–3 và 5 (chỉ dùng chỉ số
 mẫu và `T_ANCHOR_US`), nhưng **chưa** đo được offset ECG–PPG (mục 4).
 
-Trên KiCad V1-module, INT2B của MAX30001 đã nối vào GPIO47
-(`configs/hardware/custom_board_proposal.md` mục A.7); với pin map V1 của Đức Anh
-và bản cuối thì còn mở. Nếu INT2B được nối và firmware bật xung `SAMP` (tại thời
+Trên KiCad V1-module (pin map chuẩn của V1), INT2B của MAX30001 đã nối vào GPIO47
+(`configs/hardware/custom_board_proposal.md` mục A.6, A.7); với bản cuối thì còn
+mở. Nếu INT2B được nối và firmware bật xung `SAMP` (tại thời
 điểm lấy mẫu ECG, MAX30001 tr. 42, tr. 44), ghi thêm thời điểm các cạnh xung này.
 Chúng cho tốc độ ECG thực độc lập với mốc đọc FIFO và kiểm tra chéo được kết quả
 hồi quy ở mục 5.
 
-Độ trễ ECG dự kiến theo datasheet để đối chiếu với `L_ECG` đo được: MAX30001
-tr. 26, Bảng 4 (ví dụ 512 sps: 19,836 ms không LPF, 31,555 ms có LPF). Kết quả đo
-lệch xa giá trị này là dấu hiệu sai cấu hình hoặc sai cách gán thời điểm.
+Độ trễ ECG dự kiến để đối chiếu với `L_ECG` đo được: MAX30001 tr. 26, Bảng 4 chỉ
+cho độ trễ bộ lọc số (ví dụ 512 sps: 19,836 ms không LPF, 31,555 ms có LPF). Ghi
+chú ứng dụng của ADI cho MAX30003 đo thêm 1,003 ms trễ lấy mẫu ADC, tức 20,839 /
+32,558 ms tính từ lúc lấy mẫu analog tới cạnh xuống của xung `SAMP` (ngay sau khi
+mẫu vào FIFO), độ lệch chuẩn khoảng 3–4 µs (`Packet_Schema_V0.1.md` mục 5.2).
+`L_ECG` tính theo `T_ANCHOR_US` còn cộng thêm thời gian mẫu nằm trong FIFO trước khi
+được đọc. Kết quả đo lệch xa các giá trị này là dấu hiệu sai cấu hình hoặc sai cách
+gán thời điểm.
 
 ## 4. Quy trình
 
@@ -132,5 +138,11 @@ hạn. Ghi riêng "giá trị thiết kế/datasheet" và "giá trị đo đư�
    trước.
 2. Nút tham chiếu của mạch chia áp đưa xung vào đầu vào ECG: GND của bo hay
    VCM/sleeve của jack điện cực (mục 3).
-3. INT2B (xung `SAMP`): đã nối GPIO47 trên KiCad V1-module; còn mở cho pin map V1
-   của Đức Anh, bản cuối và cấu hình firmware (mục 3).
+3. INT2B (xung `SAMP`): đã nối GPIO47 trên KiCad V1-module; còn mở cho bản cuối
+   và cấu hình firmware (mục 3).
+4. MAX30101 ở multi-LED ba khe: datasheet không có bảng tổ hợp tốc độ × độ rộng
+   xung cho chế độ này (`custom_board_proposal.md` A.6 mục 3), và chip tự đổi tốc
+   độ khi tổ hợp không được phép. Trước khi đo, đọc lại thanh ghi `SPO2_SR`; khi
+   đo, so tốc độ thực từng khe với tốc độ cấu hình chia `SMP_AVE` (bắt đầu với
+   `SMP_AVE = 1`). Chênh lệch nằm trong sai số dao động nội là bình thường; chênh
+   theo bội số (ví dụ còn một nửa) nghĩa là chip đã đổi tốc độ.

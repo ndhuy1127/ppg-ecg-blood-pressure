@@ -15,18 +15,18 @@ Lưu trữ khung hồ sơ, biểu mẫu trống và tài liệu đã được ph
 | [An toàn buổi đo và quy tắc dừng v0.1](session_safety_stopping_v0.1.md) | Checklist trước khi đeo, dừng buổi/nghiệm pháp, nhật ký sự cố | Nháp, ngưỡng BP chưa có nguồn |
 | [Quản lý và giả danh hóa dữ liệu v0.1](data_management_plan_v0.1.md) | Loại dữ liệu, giả danh hóa, lưu trữ, rút lui, tiêu hủy | Nháp |
 
-Protocol đi kèm: [protocol_outline_v0.2.md](../protocol/protocol_outline_v0.2.md) (phân bổ tay/điện cực và nghiệm pháp, chờ Đức Anh xác nhận).
+Protocol đi kèm: [protocol_outline_v0.2.md](../protocol/protocol_outline_v0.2.md) (phân bổ tay/điện cực đã xác nhận 2026-10-23; nghiệm pháp chờ thầy/hội đồng).
 
 ## Còn thiếu trước khi nộp
 
 1. Câu trả lời của thầy: hội đồng nào, mẫu biểu, thời gian xét; đo thử trên thành viên nhóm (G2) có cần phê duyệt; thiết bị cuff tham chiếu.
 2. Biên bản đo dòng rò trên bo V1 thật (Đức Anh) — chưa có phần cứng.
 3. Model máy cuff và cỡ vòng bít.
-4. Đức Anh xác nhận phân bổ tay/điện cực (protocol v0.2 mục 5).
+4. ~~Xác nhận phân bổ tay/điện cực.~~ Xong 2026-10-23: ba điện cực, LA cổ tay trái, RA cổ tay phải, RL cẳng tay trái (protocol v0.2 mục 5.2).
 5. Quyết định ngưỡng BP dừng phiên, đầu mối y tế, việc báo số đo cho người tham gia.
 6. Thông tin liên hệ, chủ nhiệm đề tài, bồi dưỡng (nếu có).
-7. Số điện cực (hai hay ba, nếu cần bias) và loại dán được lên ngón tay (Đức Anh); điện cực khô dùng trên người hay chỉ bench (nếu trên người: thêm vào phiếu thông tin, đồng thuận và L6).
+7. Điện cực khô dùng trên người hay chỉ bench (nếu trên người: thêm vào phiếu thông tin, đồng thuận và L6). Số điện cực đã chốt là ba, không dán lên ngón tay.
 8. Trục thời gian M2 (cách và lúc trả lời) và M4 (cửa sổ tín hiệu so với cuff sau khi dừng đạp): protocol v0.2 mục 5.3 và 6.4.
 9. Thống nhất protocol v0.2 mục 4 với tiêu chí L1–L10; quy tắc dùng lượt đo bị dừng trong phân tích (protocol mục 10).
 
-Thiết bị: PPG là MAX30101 (nhóm đã chọn, Huy xác nhận 2026-10-22). Pin map và BOM trên nhánh Đức Anh còn ghi MAX30102 và cần cập nhật.
+Thiết bị: PPG là MAX30101 (nhóm đã chọn, Huy xác nhận 2026-10-22). Pin map chuẩn là KiCad V1-module (`configs/hardware/custom_board_proposal.md` A.7, chốt 2026-10-23); pin map và BOM cũ trên nhánh `dev/ducanh` không dùng nữa.
