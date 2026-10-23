@@ -12,11 +12,16 @@ Trích dẫn dạng "MAX30001 tr. 26, Bảng 4" là trang/bảng của datasheet
 
 ## 1. Sơ đồ khối (bản văn bản, thay cho các điểm sai trong PNG)
 
+Sơ đồ khối đầy đủ của V1-module (bo đế, bo cổ tay, cáp, bus, nguồn, điện cực):
+[hardware_diagram_v1.svg](hardware_diagram_v1.svg). Bản này thay `Hardware_Diagram.png`
+của Tuần 1 và đã sửa mọi điểm ở bảng "Các điểm cần sửa" bên dưới; PNG giữ lại làm
+bản giao nộp Tuần 1. Sơ đồ mermaid sau là bản rút gọn cho V0.
+
 ```mermaid
 flowchart LR
     E["Điện cực ECG<br/>Ag/AgCl gel hoặc điện cực khô"] -->|analog, qua jack 3,5 mm| ECG["Breakout MAX30001<br/>LDO 1,8 V + TXB0108 + dao động 32,768 kHz"]
     PPGM["Bo SparkFun MAX30101 (SEN-16474)<br/>(LED + photodiode + ADC tích hợp;<br/>bo tự tạo 1,8 V và VLED+ 5 V)"]
-    ECG -->|SPI + INTB (+ INT2B nếu dùng SAMP)| MCU["ESP32-S3-DevKitC-1 N16R8<br/>clock thời gian chung: esp_timer µs"]
+    ECG -->|SPI + INTB (+ INT2B nếu dùng SAMP)| MCU["ESP32-S3-DevKitC-1-N8R8<br/>clock thời gian chung: esp_timer µs"]
     PPGM -->|I²C + INT| MCU
     MCU -->|USB| PC["Laptop chạy pin<br/>ghi packet + thời điểm nhận"]
     USB5["5 V từ USB laptop"] --> MCU
@@ -45,7 +50,7 @@ linh kiện cụ thể.
 
 | Khối | Linh kiện / module | Cấp vào module | Rail bên trong IC | Mức logic tại MCU | Nguồn |
 | --- | --- | --- | --- | --- | --- |
-| MCU | ESP32-S3-DevKitC-1 N16R8 | USB 5 V, hoặc chân 5V, hoặc chân 3V3 — **ba cách loại trừ nhau**, không cấp đồng thời | 3,3 V qua LDO trên DevKitC | GPIO 3,3 V; VIH ≥ 0,75·VDD ≈ 2,48 V; VIL ≤ 0,25·VDD ≈ 0,83 V | DevKitC User Guide v1.1; ESP32-S3 datasheet v2.2 |
+| MCU | ESP32-S3-DevKitC-1-N8R8 | USB 5 V, hoặc chân 5V, hoặc chân 3V3 — **ba cách loại trừ nhau**, không cấp đồng thời | 3,3 V qua LDO trên DevKitC | GPIO 3,3 V; VIH ≥ 0,75·VDD ≈ 2,48 V; VIL ≤ 0,25·VDD ≈ 0,83 V | DevKitC User Guide v1.1; ESP32-S3 datasheet v2.2 |
 | ECG AFE | ProtoCentral MAX30001 breakout | VDD 3,3 V tại header [BRK] | AVDD = DVDD 1,1–2,0 V; OVDD 1,65–3,6 V (MAX30001 tr. 8); breakout cấp 1,8 V từ LDO AP2112K-1.8 [BRK] | SPI qua TXB0108, logic theo VDD = 3,3 V [BRK]. Ở chân IC: VIH ≥ 0,7·OVDD (tr. 8) | MAX30001 tr. 8; [BRK] |
 | PPG AFE | MAX30101, bo SparkFun SEN-16474 (chốt 2026-10-22) | 3,3 V; bo tự tạo VDD 1,8 V (LDO SP6214) và VLED+ 5 V (boost PAM2401) ([custom_board_proposal.md](custom_board_proposal.md) A.4) | VDD 1,7–2,0 V. VLED+ 3,1–5,0 V cho đỏ/IR và **4,5–5,5 V cho LED xanh** (MAX30101 tr. 2) | SDA, INT open-drain; SCL/SDA của IC có VIH ≥ 0,7·VDD và chịu được tới 6 V (tuyệt đối tối đa "All other pins", tr. 2). Bo SparkFun chuyển mức I²C bằng MOSFET, kéo lên 2,2 kΩ ở phía 3,3 V; INT kéo lên 4,7 kΩ lên 3,3 V (A.4). Kiểm mức thực khi nhận hàng | MAX30101 tr. 2, 5, 9; A.4 |
 | IMU (tùy chọn) | BMI270 | 3V3 | VDD 1,71–3,6 V; VDDIO 1,2–3,6 V, **bắt buộc cấp** cho giao tiếp; tụ 100 nF tại VDDIO và VDD | Theo VDDIO | BST-BMI270-DS000-08 |
@@ -78,7 +83,7 @@ Ghi chú giao tiếp theo bảng A.7:
 | --- | --- | --- |
 | SPI bus 1, MAX30001 (SCLK, MOSI, MISO, CS) | 15, 16, 17, 7 | Bus riêng, nên đường MISO không dùng chung với thiết bị khác qua TXB0108 luôn bật của breakout [BRK]. Đi qua GPIO matrix, chạy 4 MHz (A.2); MAX30001 cho SCLK tới 12 MHz, SPI mode 0 hoặc 3 (MAX30001 tr. 10, tr. 36). GPIO15/16 trùng XTAL_32K_P/N, chỉ ảnh hưởng bản hoàn chỉnh (mục 6 ý 8) |
 | MAX30001 INTB | 21 | Tích cực mức thấp. Mặc định open-drain kéo lên nội 125 kΩ; đi qua TXB0108 nên firmware đặt CMOS (`INTB_TYPE = 01`, tr. 43; A.2) |
-| MAX30001 INT2B | 47 | Xung `SAMP` tại thời điểm lấy mẫu ECG (tr. 42, tr. 44). Chạy 3,3 V với module WROOM-1-N16R8/N8R8 (A.6 mục 6) |
+| MAX30001 INT2B | 47 | Xung `SAMP` ở tốc độ dữ liệu ECG (tr. 42, tr. 44): đánh dấu lúc mẫu vào FIFO, không phải lúc lấy mẫu analog (`Packet_Schema_V0.1.md` mục 5.2). Chạy 3,3 V với module WROOM-1-N16R8/N8R8 (A.6 mục 6) |
 | I²C bus 1, MAX30101 (SDA, SCL) | 8, 9 | Bus riêng, tối đa 400 kHz; địa chỉ ghi/đọc 0xAE/0xAF (MAX30101 Rev 2, Bảng 17, tr. 30). Kéo lên trên bo SparkFun (A.4) |
 | MAX30101 INT | 18 | Open-drain, tích cực mức thấp; bo SparkFun kéo lên 4,7 kΩ lên 3,3 V (A.4) |
 | SPI bus 2, BMI270 (SCK, MOSI, MISO, CS) | 12, 11, 13, 10 | Bus riêng, bắt đầu 1 MHz, lên 2 MHz sau khi đo scope (A.2); điện trở 33 Ω nối tiếp trên SCK, MOSI, CS |
@@ -157,7 +162,9 @@ sang tốc độ đã chốt khi cập nhật mô phỏng.
   phải đo.
 - **Đề xuất:** nối INT2B của MAX30001 vào một GPIO rảnh và bật xung `SAMP`
   (`EN_INT2`, `SAMP_IT`; tr. 42–44). KiCad V1-module đã nối INT2B vào GPIO47.
-  MCU chụp `esp_timer` tại cạnh xung, được mốc lấy mẫu ECG trực tiếp. MAX3010x không có chân tương đương; phía PPG vẫn dựa vào
+  MCU chụp `esp_timer` tại cạnh xung, được mốc phần cứng lúc mẫu ECG vào FIFO;
+  thời điểm lấy mẫu analog bằng mốc này trừ độ trễ đo ở bench
+  (`Packet_Schema_V0.1.md` mục 5.2). MAX3010x không có chân tương đương; phía PPG vẫn dựa vào
   mốc đọc FIFO và phép đo bench.
 - Không dùng PAT hay mốc sinh lý để ước lượng lệch clock.
 

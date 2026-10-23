@@ -1,7 +1,7 @@
 # Trình tự bring-up V1-module
 
 > **Chưa thực hiện**: chưa có module và PCB. Áp dụng cho KiCad V1-module (bo đế
-> V1-draft2, bo cổ tay V1-draft3), pin map chuẩn ở
+> V1-draft3, bo cổ tay V1-draft3), pin map chuẩn ở
 > [custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) mục
 > A.7 và [firmware khung](../../firmware/README.md).
 >
@@ -25,8 +25,8 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 
 | Module | Kiểm | Đạt khi |
 | --- | --- | --- |
-| DevKitC | Đo khoảng cách tâm hai hàng chân bằng thước kẹp; đặt lên bản in 1:1 của bo đế | **22,86 mm**, khớp footprint U1. Bo OEM N16R8 ở danh sách mua có bản vẽ 25,40 mm, không cắm vừa bo đế |
-| DevKitC | Đọc ký hiệu trên vỏ module | ESP32-S3-WROOM-1-N8R8 hoặc -N16R8 (A.6 mục 6). Bản N16R16VA hoặc chip R16V thì dừng: GPIO47 chạy 1,8 V |
+| DevKitC | Đo khoảng cách tâm hai hàng chân bằng thước kẹp; đặt lên bản in 1:1 của bo đế | **22,86 mm**, khớp footprint U1 (bo chính hãng ESP32-S3-DevKitC-1-N8R8, danh sách mua dòng 6) |
+| DevKitC | Đọc ký hiệu trên vỏ module | ESP32-S3-WROOM-1-N8R8 (A.6 mục 6). Bản N16R16VA hoặc chip R16V thì dừng: GPIO47 chạy 1,8 V |
 | DevKitC | Đối chiếu nhãn từng chân với bảng A.7 (đủ kích thước chưa đủ: phải đúng vị trí) | Pad U1 1–2 là 3V3, 21 là 5V, 22–24 và 44 là GND; các GPIO ở đúng pad như A.7 |
 | Breakout MAX30001 | So với `pc_max30001_brk_v1.0` | Có R3 (10 kΩ, cỡ 0805) nối sleeve của jack với VCM; R7, R8 (0 Ω, cỡ 0402); header SV1 10 chân (A.2) |
 | Cáp ECG của kit | Đếm số dây; đo thông mạch từng đầu bấm với tip/ring/sleeve của giắc 3,5 mm | Ba dây: LA ↔ ring, RA ↔ tip, RL ↔ sleeve (protocol v0.2 mục 5.2). Khác thì dán nhãn lại theo kết quả đo, không theo màu nắp. Chỉ có hai dây hoặc không có dây nối sleeve: dừng cấu hình 3 điện cực cho tới khi có cáp 3 dây (danh sách mua mục 3) |
@@ -186,7 +186,7 @@ Theo [sync_10min_test_plan.md](sync_10min_test_plan.md), sau khi bước 7 và 8
 
 Mỗi lần bring-up ghi một file `hardware/test_reports/<YYYY-MM-DD>_v1_bringup.md`:
 
-- ngày, người làm, revision hai bo (V1-draft2, V1-draft3);
+- ngày, người làm, revision hai bo (theo title block KiCad, hiện cả hai là V1-draft3);
 - ký hiệu module, kết quả `chip_id` và `espefuse summary` (các trường VDD_SPI),
   revision breakout MAX30001, kết quả đo thông mạch cáp ECG;
 - commit firmware và ELF SHA-256, `SESSION_ID` của mỗi lần ghi;

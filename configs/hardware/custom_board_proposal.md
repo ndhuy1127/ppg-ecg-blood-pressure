@@ -35,7 +35,7 @@
 
 | Khối | Linh kiện | Giao tiếp, ghi chú |
 | --- | --- | --- |
-| MCU | ESP32-S3-DevKitC-1 N16R8 | Cấp nguồn và truyền dữ liệu qua USB với laptop **đang chạy pin, không cắm sạc** |
+| MCU | ESP32-S3-DevKitC-1-N8R8 chính hãng (chốt 2026-10-24; không dùng bo OEM vì không bảo đảm hàng chân 22,86 mm) | Cấp nguồn và truyền dữ liệu qua USB với laptop **đang chạy pin, không cắm sạc** |
 | ECG | Breakout ProtoCentral MAX30001 | **SPI bus 1, dùng riêng.** Oscillator 32,768 kHz, LDO 1,8 V và TXB0108 có sẵn trên breakout. Thiết lập V1 chốt ngày 2026-10-23: 512 sps, gain/DHPF/DLPF cố định (độ trễ ECG phụ thuộc các thiết lập này, Table 4 tr. 26, nên bản hoàn chỉnh phải giữ cùng thiết lập); SPI MAX30001 4 MHz; SPI BMI270 bắt đầu 1 MHz, lên 2 MHz sau khi đo scope; I²C MAX30101 400 kHz (lùi 100 kHz nếu sườn lên qua cáp quá chậm) |
 | Điện cực ECG | Ba điện cực dán Ag/AgCl (10 miếng kèm kit, hoặc 3M Red Dot 2228) qua cáp 3 điện cực LA/RA/RL kèm kit | Qua jack 3,5 mm của breakout. Đạo trình I, 3 điện cực theo Figure 17c của datasheet MAX30001 (tr. 84), chốt 2026-10-23 (protocol v0.2 mục 5.2): LA → ring → ECGP ở **mặt lòng** cổ tay trái (mặt lưng đã có bo PPG); RA → tip → ECGN ở mặt lòng cổ tay phải; RL → sleeve → R3 → VCM ở cẳng tay trái, cách LA khoảng 5 cm. Ánh xạ jack theo schematic `pc_max30001_brk_v1.0`: ring → R4 51 kΩ → ECGP, tip → R5 51 kΩ → ECGN, sleeve → R3 → VCM. Tắt lead bias nội. Cấu hình 2 điện cực (bật lead bias nội) và điện cực khô BIOPAC chỉ để so sánh trên bench. Màu nắp đầu bấm khác nhau tùy lô: đo thông mạch trước khi dùng |
 | Sửa trên breakout | R3 (VCM → sleeve của jack) 10 kΩ thay bằng 220 kΩ ±1% (datasheet yêu cầu ≥ 200 kΩ, tr. 22, 31, 35, 84); gỡ R7, R8 (0 Ω nối điện cực vào BIP/BIN) | Làm trước khi đo trên người, sau khi đối chiếu bo thật với `pc_max30001_brk_v1.0`. BioZ không dùng (`EN_BIOZ = 0`). Firmware đặt `INTB_TYPE = 01` (CMOS) ở `EN_INT` (0x02) và `EN_INT2` (0x03) vì INTB/INT2B đi qua TXB0108 (mặc định là open-drain, Table 14, tr. 43) |
@@ -77,7 +77,8 @@
   5 V vì bo MAX30101 tự tạo 5 V.
 
 Bảng chân từng dây: A.7. Schematic và PCB (đã đi dây) của hai bo:
-`hardware/kicad/v1_module/base/` và `hardware/kicad/v1_module/wrist/`.
+`hardware/kicad/v1_module/base/` và `hardware/kicad/v1_module/wrist/`. Sơ đồ khối:
+[hardware_diagram_v1.svg](hardware_diagram_v1.svg).
 
 ### A.4. Bo SparkFun MAX30101: điều đã kiểm trong schematic
 
@@ -135,7 +136,7 @@ lời của thầy; bước kiểm khi nhận hàng ở
      ứng dụng MAX30101 ghi nguồn +5 V "200 mA MAX" (tr. 32); hai số này không
      chứng minh bo đủ dòng, vì còn phụ thuộc cuộn cảm, nguồn 3V3 vào (dòng vào
      ≈ 5,1 × I_out / (3,3 × hiệu suất), cộng tải của MCU, ECG và IMU) và LDO 3V3
-     của DevKitC OEM. **Khi có bo:** đo VLED+ khi không tải, quá áp lúc khởi động
+     của DevKitC. **Khi có bo:** đo VLED+ khi không tải, quá áp lúc khởi động
      và gợn khi LED xanh chạy xung dòng cao nhất đã chọn, so với dải chung
      4,5–5,0 V của cả ba LED; đo 3V3 tại bo cổ tay cùng lúc, vì 3V3 đi qua cáp
      20–30 cm từ DevKitC.
@@ -150,7 +151,7 @@ lời của thầy; bước kiểm khi nhận hàng ở
    PSRAM, VDD_SPI được cố định bằng eFuse lúc xuất xưởng, không theo mức GPIO45
    (tr. 39). Vậy với WROOM-1-N16R8 và N8R8 chính hãng, GPIO47 (`ECG_INT2B`) chạy
    3,3 V như các GPIO khác; kết luận này chỉ áp dụng cho họ module WROOM-1.
-   **Khi nhận hàng:** bo DevKitC là hàng OEM, nên đọc ký hiệu trên vỏ module, đọc
+   **Khi nhận hàng:** dùng bản chính hãng DevKitC-1-N8R8 (chốt 2026-10-24), vẫn đọc ký hiệu trên vỏ module, đọc
    loại chip và cấu hình eFuse VDD_SPI bằng lệnh chỉ đọc của esptool, và đo
    INT2B ở phía MCU (sau TXB0108 của breakout) lên 3,3 V. Nếu GPIO47 chạy 1,8 V
    thì không dùng được với thiết kế này.
@@ -237,9 +238,10 @@ còn mở của cả Phần A và Phần B.
 
 ## 2. Cách đo và tốc độ ECG
 
-- **ECG 512 sps, FMSTR 00**, FCLK = 32,768 kHz (MAX30001 tr. 49, Bảng 26). Chưa
-  chốt; quyết định số 3 trong mục 6 của tài liệu V0 vẫn mở. Nếu chốt, khớp `FS_NOMINAL_MHZ = 512 000` trong packet
-  schema (đơn vị mHz, tức 512 Hz).
+- **ECG 512 sps, FMSTR 00**, FCLK = 32,768 kHz (MAX30001 tr. 49, Bảng 26). Chốt
+  cho V1 ngày 2026-10-23 (A.2) và bản hoàn chỉnh giữ cùng thiết lập (packet schema
+  mục 15); khớp `FS_NOMINAL_MHZ = 512 000` trong packet schema (đơn vị mHz, tức
+  512 Hz).
 - **Đo theo cửa sổ:** ECG đạo trình I chỉ có khi người đo chạm ngón tay vào điện
   cực mặt trên, nên mỗi lần đo chỉ vài chục giây, không đo ECG liên tục suốt buổi
   1–2 giờ.
@@ -334,8 +336,9 @@ ghi thô. Nếu ghi theo định dạng nén 3 B mỗi mẫu, không có header 
 thời lượng khoảng gấp đôi. Với đo theo cửa sổ vài chục giây, tổng thời gian ghi
 mỗi buổi thường dưới mức này; phải tính lại khi chốt tốc độ PPG và kênh IMU.
 
-V1 dự kiến truyền qua BLE hoặc ghi flash, nên mục 13 "Truyền USB/Serial" của
-packet schema sẽ cần cập nhật sau (không sửa trong tài liệu này).
+Bản hoàn chỉnh (Phần B) dự kiến truyền qua BLE hoặc ghi flash, nên mục 13 "Truyền
+USB/Serial" của packet schema sẽ cần cập nhật khi làm bản này. V1-module (Phần A)
+vẫn truyền qua USB tới laptop.
 
 ### 6.3. Pin
 

@@ -19,7 +19,8 @@
   - [sync_10min_test_plan.md](test_reports/sync_10min_test_plan.md): đo tốc độ
     thực, drift, jitter, độ trễ và lệch ECG–PPG trên bench.
 
-Tài liệu cấu hình liên quan ở `configs/hardware/`: yêu cầu V0, sơ đồ khối,
+Tài liệu cấu hình liên quan ở `configs/hardware/`: yêu cầu V0,
+[sơ đồ khối V1-module](../configs/hardware/hardware_diagram_v1.svg),
 [nguồn/giao tiếp/lấy mẫu](../configs/hardware/interface_power_sampling_v0.md),
 [V1 dùng module và bản chip trần](../configs/hardware/custom_board_proposal.md) và
 [packet schema](../configs/hardware/Packet_Schema_V0.1.md).

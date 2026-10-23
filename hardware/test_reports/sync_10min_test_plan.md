@@ -59,8 +59,9 @@ mẫu và `T_ANCHOR_US`), nhưng **chưa** đo được offset ECG–PPG (mục 
 
 Trên KiCad V1-module (pin map chuẩn của V1), INT2B của MAX30001 đã nối vào GPIO47
 (`configs/hardware/custom_board_proposal.md` mục A.6, A.7); với bản cuối thì còn
-mở. Nếu INT2B được nối và firmware bật xung `SAMP` (tại thời
-điểm lấy mẫu ECG, MAX30001 tr. 42, tr. 44), ghi thêm thời điểm các cạnh xung này.
+mở. Nếu INT2B được nối và firmware bật xung `SAMP` (ở tốc độ dữ liệu ECG, lúc mẫu
+vào FIFO chứ không phải lúc lấy mẫu analog; MAX30001 tr. 42, tr. 44;
+`Packet_Schema_V0.1.md` mục 5.2), ghi thêm thời điểm các cạnh xung này.
 Chúng cho tốc độ ECG thực độc lập với mốc đọc FIFO và kiểm tra chéo được kết quả
 hồi quy ở mục 5.
 

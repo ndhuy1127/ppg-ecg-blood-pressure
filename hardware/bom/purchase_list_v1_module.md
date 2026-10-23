@@ -18,10 +18,18 @@
 | 2 | IMU | SparkFun 6DoF IMU Breakout BMI270 (Qwiic), bản 1" × 1" | SEN-22397 | 1568-22397-ND | 1 | $18,50 | 491 | Mouser 474-SEN-22397, $18,50 |
 | 3 | Bench | SparkFun Flexible Qwiic Cable – Breadboard Jumper (nối MAX30101 ra breadboard) | 17912 | 1568-17912-ND | 1 | $1,95 | 1 579 | Hàn header đực rồi dùng dây Dupont |
 | 4 | Sửa breakout ECG | Điện trở 220 kΩ ±1% 0805 (thay R3) | Yageo RC0805FR-07220KL | 311-220KCRCT-ND | 10 | $0,034 | 2 171 | Yageo AC0805FR-07220KL |
+| 6 | MCU | Espressif ESP32-S3-DevKitC-1-N8R8 (chính hãng, module ESP32-S3-WROOM-1-N8R8, hai cổng Micro-USB) | ESP32-S3-DEVKITC-1-N8R8 | 1965-ESP32-S3-DEVKITC-1-N8R8-ND | 1 | $15,00 | Kiểm khi đặt | Cùng mã ở nhà phân phối khác (chưa tra) |
 
 - Không nhầm BMI270 với bản SEN-22398 ("Micro", 0,75" × 0,30"); footprint bo cổ
   tay theo bản SEN-22397.
-- Tạm tính: $55,82 + phí ship $25 (đơn dưới $150) = **$80,82**, chưa gồm thuế
+- **MCU (dòng 6, chốt 2026-10-24):** chỉ dùng bản chính hãng, vì footprint U1 của bo
+  đế theo DevKitC-1 (hai hàng chân cách 22,86 mm) và bo OEM bán trong nước không
+  công bố kích thước hay pinout. Theo
+  [hướng dẫn DevKitC-1 v1.1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html),
+  cổng USB-to-UART là Micro-USB và cáp đi kèm hướng dẫn là USB-A – Micro-B. Flash
+  8 MB đủ cho firmware (khoảng 208 KB); GPIO47 chạy 3,3 V với WROOM-1-N8R8
+  (custom_board_proposal.md A.6 mục 6).
+- Tạm tính: $70,82 + phí ship $25 (đơn dưới $150) = **$95,82**, chưa gồm thuế
   nhập khẩu/VAT. DigiKey giao 1–5 ngày bằng DHL/FedEx/UPS; thuế và phí hải quan
   thu khi nhận hàng
   ([biểu phí ship](https://www.digikey.com/en/help-support/delivery-information/international-shipping-rates?country=VN)).
@@ -44,20 +52,21 @@
 
 | STT | Khối | Linh kiện | Nơi bán | SL | Đơn giá | Tồn kho | Phương án thay thế |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 6 | MCU | [ESP32-S3-DevKitC N16R8](https://www.thegioiic.com/esp32-s3-devkitc-n16r8-mach-phat-trien-wifi-bluetooth) (OEM, hai cổng USB-C, đã hàn chân), mã IC42459 | thegioiic | 1 | 192.660 đ | 416 | ESP32-S3-DevKitC-1-N8R8 chính hãng, DigiKey 1965-ESP32-S3-DEVKITC-1-N8R8-ND, $15,00 |
 | 7 | Điện cực | [3M Red Dot 2228](https://minhtrimedical.com/dien-cuc-do-tim-3m-2228-red-dot-4cm-x-33cm), 4 × 3,3 cm, hộp 50 miếng | Minh Trí Medical | 1 hộp | 150.000 đ | Còn hàng | 10 điện cực kèm kit MAX30001 |
-| 8 | Kết nối | [Cáp USB-C – USB-A 1 m, truyền dữ liệu](https://hshop.vn/cap-usb-type-c) | hshop | 1 | 35.000 đ | Còn hàng | Cáp USB-C có dữ liệu bất kỳ |
+| 8 | Kết nối | Cáp USB-A – Micro-USB (Micro-B), có dây dữ liệu, khoảng 1 m | Chưa chọn nơi bán | 2 | Chưa tra | — | Cáp Micro-USB có dữ liệu bất kỳ (không dùng cáp chỉ sạc) |
 | 9 | Bench | [Header đực 1×40, 2,54 mm](https://hshop.vn/rao-duc-don-chon-thang-40chon) | hshop | 2 | 2.000 đ | Còn hàng | — |
 | 10 | Bench | [Dây Dupont cái–cái 20 cm, 40 sợi](https://hshop.vn/day-cam-breadboard-cai-cai-20cm-cap-det-40-soi-f-f-jumper-wire) | hshop | 1 | 30.000 đ | Còn hàng | — |
 | 11 | Bench | [Dây Dupont đực–cái 20 cm, 40 sợi](https://hshop.vn/day-cam-breadboard-duc-cai-20cm-cap-det-40-soi-m-f-jumper-wire) | hshop | 1 | 30.000 đ | Còn hàng | — |
 
-Tạm tính mua trong nước: **441.660 đ** (chưa gồm phí ship).
+Tạm tính mua trong nước: **214.000 đ** cộng 2 cáp Micro-USB (chưa tra giá), chưa
+gồm phí ship.
 
-- **ESP32 (dòng 6) là bo OEM, không phải bo Espressif.** Hướng dẫn DevKitC-1
-  v1.1 của Espressif chỉ có các bản N8R8, 1U-N8R8 và N32R16V
-  ([ordering information](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html));
-  bo chính hãng dùng cổng Micro-USB. Trang bán không ghi module, kích thước hay
-  pinout. Khi nhận hàng phải kiểm như mục 3 trước khi cắm vào bo đế.
+- MCU mua qua DigiKey (dòng 6, mục 1.1). Bo OEM "ESP32-S3-DevKitC N16R8" (thegioiic,
+  mã IC42459) trong bản trước của danh sách không mua nữa (2026-10-24): trang bán
+  không ghi module, kích thước hay pinout, nên không bảo đảm cắm vừa bo đế.
+- Hai cáp Micro-USB dùng cho bench: một vào cổng USB native (packet), một vào cổng
+  UART (log). Khi đo trên người chỉ nối một cáp
+  ([an toàn buổi đo](../../docs/ethics/session_safety_stopping_v0.1.md)).
 
 ### 1.4. Đồ dựng kích thích cho phép đo 10 phút
 
@@ -100,12 +109,13 @@ Chỉ đặt sau khi đối chiếu module thật với footprint (A.6 mục 2) 
 Trình tự đầy đủ, kể cả bước cấp nguồn:
 [v1_bringup_procedure.md](../test_reports/v1_bringup_procedure.md).
 
-1. **ESP32 OEM:**
+1. **ESP32-S3-DevKitC-1-N8R8:**
    - Đo khoảng cách hai hàng chân (footprint KiCad: 22,86 mm).
    - So từng chân với bảng A.7, đặc biệt GPIO47 (`ECG_INT2B`), 3V3 và GND.
-   - Đọc ký hiệu trên vỏ module, đọc loại chip và eFuse VDD_SPI bằng lệnh chỉ
-     đọc của esptool, đo INT2B ở phía MCU: GPIO47 phải chạy 3,3 V (A.6 mục 6).
-   - Nếu không khớp, đặt bản N8R8 chính hãng (dòng 6, cột thay thế).
+   - Ký hiệu trên vỏ module phải là ESP32-S3-WROOM-1-N8R8; đọc loại chip và eFuse
+     VDD_SPI bằng lệnh chỉ đọc của esptool, đo INT2B ở phía MCU: GPIO47 phải chạy
+     3,3 V (A.6 mục 6).
+   - Đọc nhãn hai cổng (UART và USB) để biết cổng nào gửi packet (firmware README).
 2. **Breakout MAX30001:** kiểm revision so với `pc_max30001_brk_v1.0` và cỡ của R3,
    R7, R8. Theo file Eagle ở commit `99705eb` (2022-10-11) của repo
    `Protocentral/protocentral_max30001`: R3 10 kΩ cỡ 0805, R7/R8 0 Ω cỡ 0402.
