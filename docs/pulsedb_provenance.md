@@ -209,7 +209,18 @@ mmHg, pulse pressure khoảng 7 mmHg. Đây nhiều khả năng là artifact ABP
 ngưỡng pulse pressure, DBP ≥ SBP) phải được định nghĩa trước, chỉ dựa trên
 train/validation, và chỉ gắn cờ. `PulseValidator` đã xuất các cột
 `pulse_pressure`, `dbp_ge_sbp`, `label_nonfinite` và `waveform_duplicate_of` để
-phục vụ việc này. Ngưỡng chưa được chốt.
+phục vụ việc này.
+
+**Quy tắc QC nhãn (Huy, 2026-10-24; khóa trước khi đọc nhãn của pool Train):**
+
+- Chỉ loại nhãn **bất khả về vật lý**: DBP ≥ SBP (hiệu áp ≤ 0). Dòng bị loại khỏi cả
+  fit lẫn chấm điểm, ở **mọi split**; inventory và manifest vẫn giữ đủ mọi dòng (luật
+  bảo toàn của split v2), việc loại chỉ xảy ra ở bước mô hình.
+- Không loại theo ngưỡng BP cao/thấp hay hiệu áp nhỏ (ví dụ dòng 265,6/258,5 mmHg ở
+  trên vẫn được giữ), vì các ngưỡng đó chưa có nguồn và có thể loại cực trị thật.
+- Report ghi số dòng bị loại theo từng split và phân bố hiệu áp trên train.
+- Triển khai: cùng reader pool Train, trong config mới `b3-pipeline-v1`
+  (`b3-pipeline-v0` giữ hành vi cũ, không loại dòng nào).
 
 ## 10. Chính sách dữ liệu
 
