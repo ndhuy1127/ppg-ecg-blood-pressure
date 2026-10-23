@@ -12,6 +12,10 @@ bản gốc:
 - B0 và B3 chạy cùng một lần, trên cùng các dòng val và cùng lượt bootstrap.
 - Metrics qua `evaluate_prediction_table`: MAE/bias trung bình đều theo người,
   MAE/bias/SD theo mẫu (`ddof=1`, `None` khi n=1), CI 95% bootstrap theo người.
+  Từ 2026-10-23 có thêm hiệu ghép cặp B3 − B0 của MAE (`evaluation.contrasts`,
+  một dòng cho mỗi huyết áp dưới bảng `baseline_table.md`), tính trong từng lượt
+  bootstrap chung. Đây là so sánh BP tuyệt đối trên PulseDB, không phải kết quả
+  ΔBP của RQ1.
 - Config, seed, hash input, commit và phiên bản thư viện được ghi kèm output.
   Runner nằm trong `scripts/`, ghi vào `runs/`, không ghi đè.
 

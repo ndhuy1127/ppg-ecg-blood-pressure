@@ -146,6 +146,16 @@ người của predictions đã có, không chứng minh CI nominal coverage.
 dù >=2 vẫn cần cảnh báo diễn giải. Replicates thiếu SD được đếm, phân phối hằng
 gắn `degenerate`; không coi CI hằng là bằng chứng chắc chắn trên quần thể.
 
+**So sánh ghép cặp (thêm 2026-10-23):** `bootstrap_bp(..., contrasts=[(A, B)])`
+trả thêm `contrasts`, mỗi phần tử có `model`, `reference`, `point` và `ci` của hiệu
+A − B cho `subject_balanced_mae` và `sample_weighted_mae` theo từng huyết áp. Hiệu
+được lấy **trong từng lượt** từ cùng draw, rồi mới lấy percentile; không trừ đầu
+mút của hai CI riêng, và không kết luận từ việc hai CI riêng chồng nhau hay không.
+Hiệu MAE âm nghĩa là A sai số thấp hơn B. Hiệu của MAE trung bình đều theo người
+bằng trung bình theo người của MAE_s(A) − MAE_s(B), tức đại lượng $d_s$ của
+[RQ](../research_questions_v0.1.md) khi A là PPG + PAT và B là PPG-only. Không
+truyền `contrasts` thì output giữ nguyên như trước.
+
 `evaluate_prediction_table(manifest, inventory, predictions, split='val')`
 gọi validator v2 rồi join theo sample_id, kiểm tra đúng subject/split, số dòng,
 không trùng/mất/thêm ID và cùng tập cho các model. Prediction table có đúng:
