@@ -14,7 +14,12 @@
   encoder).
 - **tests/**: chưa có test chạy trên bo. Known-answer của encoder được đối chiếu
   với codec Python bằng
-  [tests/test_firmware_packet_kat.py](../tests/test_firmware_packet_kat.py).
+  [tests/test_firmware_packet_kat.py](../tests/test_firmware_packet_kat.py) (không
+  biên dịch C). [tests/test_firmware_c_encoder.py](../tests/test_firmware_c_encoder.py)
+  biên dịch `app/packet_v01.c` bằng trình biên dịch C của máy (`$CC`, `cc`, `gcc`
+  hoặc `clang`; không có thì bỏ qua, CI Ubuntu có `gcc`) rồi chạy lại phép tự kiểm
+  lúc khởi động và so packet ngẫu nhiên (seed cố định) với `packet_wire.py`. Test
+  này chỉ kiểm encoder, không kiểm ISR, task, USB hay phần cứng.
 
 Không commit khóa hoặc thông tin kết nối thật.
 
@@ -22,8 +27,8 @@ Không commit khóa hoặc thông tin kết nối thật.
 
 | Mục | Giá trị |
 | --- | --- |
-| Board | ESP32-S3 DevKitC N16R8 (bo OEM trong [danh sách mua](../hardware/bom/purchase_list_v1_module.md)) hoặc ESP32-S3-DevKitC-1-N8R8 chính hãng |
-| Board PlatformIO | `esp32-s3-devkitc-1`. Image khai báo flash 2 MB (mặc định ESP-IDF), không bật PSRAM, nên nạp được lên bo 8 MB và 16 MB |
+| Board | ESP32-S3-DevKitC-1-N8R8 chính hãng (dòng 6 của [danh sách mua](../hardware/bom/purchase_list_v1_module.md), chốt 2026-10-24) |
+| Board PlatformIO | `esp32-s3-devkitc-1`. Image khai báo flash 2 MB (mặc định ESP-IDF), không bật PSRAM, nên nạp được lên bo 8 MB |
 | Toolchain | PlatformIO Core 6.1.19, platform `espressif32@6.13.0`, ESP-IDF 5.5.3 (`framework-espidf` 3.50503.0), GCC xtensa 14.2.0 |
 | Cấu hình | [platformio.ini](platformio.ini), [sdkconfig.defaults](sdkconfig.defaults) |
 
@@ -47,9 +52,11 @@ pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0
 | USB native (USB Serial/JTAG của ESP32-S3) | Packet nhị phân V0.1. Lúc khởi động, trước packet đầu tiên có thể có chữ của ROM và bootloader; decoder bỏ qua và báo là byte bị bỏ. Khi đã chạy, firmware không ghi chữ ra cổng này |
 | UART0 (cổng COM qua chip cầu USB–UART), 115 200 baud | Log chữ: tên và phiên bản firmware, ESP-IDF, ELF SHA-256, kết quả tự kiểm encoder, `SESSION_ID`, thống kê mỗi 10 s |
 
-Cổng nào trên bo OEM là USB native, cổng nào là chip cầu: **chưa kiểm trên bo**;
-xem nhãn in cạnh cổng khi nhận hàng. Ghi ELF SHA-256 và `SESSION_ID` từ log UART0
-vào metadata phiên (schema mục 11).
+Bo chính hãng có hai cổng Micro-USB: theo
+[hướng dẫn DevKitC-1 v1.1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html),
+cổng USB-to-UART (nhãn UART) đi qua chip cầu, cổng còn lại (nhãn USB) là USB native
+của ESP32-S3. **Chưa kiểm trên bo**: đọc nhãn in cạnh cổng khi nhận hàng. Ghi ELF
+SHA-256 và `SESSION_ID` từ log UART0 vào metadata phiên (schema mục 11).
 
 Khi khởi động, firmware kiểm encoder với `packet_kat.h` (CRC `"123456789"` =
 `0x29B1`, packet mẫu 50 byte của `tests/fixtures/packet_v3_expected.json`). Sai
@@ -78,7 +85,7 @@ Trả lời các câu hỏi D trong [hướng dẫn logger](../docs/protocol/pac
 | --- | --- |
 | D1 | `CRC16` little-endian như các trường khác |
 | D2 | `VERSION` luôn `0x01`. Đổi layout hoặc ý nghĩa trường thì tăng `VERSION` cùng bản firmware mới; không trộn hai version trong một phiên |
-| D3 | `SEQ` gán **lúc gửi**, khi lấy packet ra khỏi hàng đợi MCU. Thiếu `SEQ`: packet mất sau hàng đợi (USB không nhận trong 20 ms). Hàng đợi MCU đầy: packet bị bỏ trước khi có `SEQ`; packet kế của kênh đó bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy, `SEQ` vẫn liên tục. Nếu chính packet mang bit 1 lại mất trên USB, bit 1 chuyển sang packet gửi được kế tiếp của kênh. FIFO AFE tràn: bit 0 bật ở packet đọc lúc phát hiện, khoảng mất nằm sau mẫu cuối của packet đó, packet kế có `FIRST_SAMPLE_INDEX` nhảy. Firmware khung chưa sinh bit 5 |
+| D3 | `SEQ` gán **lúc gửi**, khi lấy packet ra khỏi hàng đợi MCU. Thiếu `SEQ`: packet mất sau hàng đợi (USB không nhận trong 20 ms). Hàng đợi MCU đầy: packet bị bỏ trước khi có `SEQ`; packet kế của kênh đó bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy, `SEQ` vẫn liên tục. FIFO AFE tràn: bit 0 bật ở packet đọc lúc phát hiện, khoảng mất nằm sau mẫu cuối của packet đó, packet kế có `FIRST_SAMPLE_INDEX` nhảy. Nếu packet mang bit 0 hoặc 1 bị bỏ ở hàng đợi, hoặc firmware gửi thất bại (driver USB không nhận đủ packet trong 20 ms), các bit đó chuyển sang packet gửi được kế tiếp của kênh (sửa 2026-10-23; trước đó chỉ chuyển bit 1 và chỉ khi gửi thất bại), để bước nhảy index vẫn có lời giải thích theo R2. Packet đã vào bộ đệm driver mà sau đó mất trên đường USB thì firmware không biết, nên không chuyển bit; logger vẫn thấy khoảng `SEQ`. Firmware khung chưa sinh bit 5 |
 | D4 | Bit 4 bật trên mọi packet ECG/PPG cho tới khi đo xong độ trễ hiệu dụng `L` của cấu hình; không bật trên `0xC1` |
 | D5 | `SEQ` (riêng từng kênh) và `FIRST_SAMPLE_INDEX` bắt đầu từ 0 ở mỗi phiên. `SESSION_ID` là số ngẫu nhiên 32 bit lấy lúc khởi động |
 | D6 | `0xC1`: `SEQ` đếm riêng; `FIRST_SAMPLE_INDEX` = số thứ tự sự kiện trong phiên (0, 1, …); `FS_NOMINAL_MHZ` = 0; `T_ANCHOR_US` = `T_FIRST_US` = thời điểm cạnh xuống đầu tiên của nút |
@@ -92,7 +99,12 @@ Trả lời các câu hỏi D trong [hướng dẫn logger](../docs/protocol/pac
 GPIO4, tích cực mức thấp, có kéo lên trong chip (bo đế V1 có thêm 10 kΩ và
 100 nF). Trên DevKitC trần: nối công tắc giữa GPIO4 và GND. Thời điểm sự kiện là
 cạnh xuống đầu tiên; bỏ qua cạnh trong 200 ms sau đó, và chỉ nhận nếu nút vẫn
-được giữ sau 20 ms (lọc dội khi nhả).
+được giữ sau 20 ms (lọc dội khi nhả). `FIRST_SAMPLE_INDEX` của `0xC1` chỉ đếm sự
+kiện đã qua lọc dội. Nếu hàng đợi của ISR (8 cạnh) đầy, cạnh đó bị bỏ trước khi lọc
+dội nên không có số thứ tự; số cạnh bị bỏ đi kèm cạnh được xếp hàng kế tiếp, và
+packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một lần bấm, logger báo
+`events_lost_before_send` với số lượng không xác định). Packet sự kiện bị bỏ ở hàng
+đợi MCU thì đã có số thứ tự, nên logger đếm được số sự kiện mất.
 
 ## Kiểm tra khi có bo (chưa làm)
 

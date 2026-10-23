@@ -71,11 +71,20 @@ typedef struct {
     uint32_t queue_drop; /* MCU queue full: dropped before SEQ was assigned */
 } channel_stats_t;
 
+/* STATUS bits that explain a FIRST_SAMPLE_INDEX jump (logger rules R2, R3). */
+#define GAP_BITS (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_MCU_BUFFER_OVERFLOW)
+
+/* One t0 edge from the ISR, with the edges its queue dropped just before it. */
+typedef struct {
+    int64_t t_us;
+    uint32_t lost_before;
+} t0_edge_t;
+
 static QueueHandle_t s_tx_queue;
 static QueueHandle_t s_event_queue;
 static uint32_t s_session_id;
 static channel_stats_t s_stats[CH_COUNT];
-static bool s_drop_pending[CH_COUNT];
+static uint16_t s_drop_bits[CH_COUNT];
 static volatile uint32_t s_events_lost;
 
 static int channel_index(uint8_t channel_id)
@@ -91,18 +100,18 @@ static int channel_index(uint8_t channel_id)
 /*
  * Called only by the channel's own producer task. A packet dropped here never
  * gets a SEQ, so the next packet of that channel carries STATUS bit 1 and a
- * FIRST_SAMPLE_INDEX jump while SEQ stays continuous (logger rule R3).
+ * FIRST_SAMPLE_INDEX jump while SEQ stays continuous (logger rule R3). If the
+ * dropped packet carried bit 0 (AFE FIFO overflow), bit 0 moves on as well:
+ * the jump then also holds the samples lost in the AFE.
  */
 static void enqueue(pkt_t *p)
 {
     int k = channel_index(p->channel_id);
-    if (s_drop_pending[k]) {
-        p->status |= PKT_STATUS_MCU_BUFFER_OVERFLOW;
-    }
+    p->status |= s_drop_bits[k];
     if (xQueueSend(s_tx_queue, p, 0) == pdTRUE) {
-        s_drop_pending[k] = false;
+        s_drop_bits[k] = 0;
     } else {
-        s_drop_pending[k] = true;
+        s_drop_bits[k] = (p->status & GAP_BITS) | PKT_STATUS_MCU_BUFFER_OVERFLOW;
         s_stats[k].queue_drop++;
     }
 }
@@ -116,27 +125,27 @@ static void tx_task(void *arg)
 {
     static uint8_t buf[PKT_MAX_SIZE];
     uint32_t seq[CH_COUNT] = {0};
-    /* Bit 1 of a packet that was then lost on USB moves to the next packet of
-     * the channel; otherwise the queue-drop gap would go unexplained. */
-    bool carry_bit1[CH_COUNT] = {false};
+    /* Bits 0 and 1 of a packet the USB driver did not take (a send failure the
+     * firmware sees; a loss after the driver took it is not seen) move to the next
+     * packet of the channel; otherwise the index jump it explained would be
+     * left unexplained. */
+    uint16_t carry[CH_COUNT] = {0};
     pkt_t p;
     for (;;) {
         xQueueReceive(s_tx_queue, &p, portMAX_DELAY);
         int k = channel_index(p.channel_id);
         p.seq = seq[k]++;
-        if (carry_bit1[k]) {
-            p.status |= PKT_STATUS_MCU_BUFFER_OVERFLOW;
-        }
+        p.status |= carry[k];
         size_t n = pkt_encode(&p, buf, sizeof(buf));
         if (n > 0 && usb_serial_jtag_write_bytes(buf, n, pdMS_TO_TICKS(TX_TIMEOUT_MS)) == (int)n) {
             s_stats[k].sent++;
-            carry_bit1[k] = false;
+            carry[k] = 0;
         } else {
             if (n == 0) {
                 ESP_LOGE(TAG, "cannot encode packet on channel 0x%02X", p.channel_id);
             }
             s_stats[k].tx_timeout++;
-            carry_bit1[k] = (p.status & PKT_STATUS_MCU_BUFFER_OVERFLOW) != 0;
+            carry[k] = p.status & GAP_BITS;
         }
     }
 }
@@ -180,13 +189,20 @@ static void afe_reader_task(void *arg)
 static void t0_isr(void *arg)
 {
     static int64_t last_us = -T0_LOCKOUT_US;
+    /* Edges dropped since the last one queued; only this ISR touches it, and it
+     * travels with the next queued edge, so the warning lands on the right event. */
+    static uint32_t lost_since_queued;
     int64_t now = esp_timer_get_time();
     if (now - last_us < T0_LOCKOUT_US) {
         return;
     }
     last_us = now;
+    const t0_edge_t edge = {.t_us = now, .lost_before = lost_since_queued};
     BaseType_t woken = pdFALSE;
-    if (xQueueSendFromISR(s_event_queue, &now, &woken) != pdTRUE) {
+    if (xQueueSendFromISR(s_event_queue, &edge, &woken) == pdTRUE) {
+        lost_since_queued = 0;
+    } else {
+        lost_since_queued++;
         s_events_lost++;
     }
     if (woken) {
@@ -197,14 +213,20 @@ static void t0_isr(void *arg)
 /*
  * Event packet 0xC1 (schema section 10): SAMPLE_COUNT 1, DATA[0] the event
  * code, T_ANCHOR_US = T_FIRST_US = edge time, FIRST_SAMPLE_INDEX counts the
- * events of the session, FS_NOMINAL_MHZ 0, STATUS bit 4 off.
+ * confirmed events of the session, FS_NOMINAL_MHZ 0, STATUS bit 4 off. An
+ * edge the ISR queue dropped was never debounced, so it does not take an
+ * ordinal; the next event packet sets bit 1 instead (possible lost press).
  */
 static void event_task(void *arg)
 {
     uint32_t ordinal = 0;
-    int64_t t;
+    bool edges_lost = false;
+    t0_edge_t edge;
     for (;;) {
-        xQueueReceive(s_event_queue, &t, portMAX_DELAY);
+        xQueueReceive(s_event_queue, &edge, portMAX_DELAY);
+        if (edge.lost_before > 0) {
+            edges_lost = true; /* kept until an event is sent, even past a bounce */
+        }
         vTaskDelay(pdMS_TO_TICKS(T0_CONFIRM_MS));
         if (gpio_get_level(BOARD_T0_GPIO) != 0) {
             continue; /* released again: bounce, not a press */
@@ -213,15 +235,17 @@ static void event_task(void *arg)
             .channel_id = PKT_CH_EVENT,
             .session_id = s_session_id,
             .first_sample_index = ordinal++,
-            .t_anchor_us = (uint64_t)t,
-            .t_first_us = (uint64_t)t,
+            .t_anchor_us = (uint64_t)edge.t_us,
+            .t_first_us = (uint64_t)edge.t_us,
             .fs_nominal_mhz = 0,
             .sample_count = 1,
-            .status = 0,
+            .status = edges_lost ? PKT_STATUS_MCU_BUFFER_OVERFLOW : 0,
             .data = {PKT_EVENT_T0},
         };
+        edges_lost = false;
         enqueue(&p);
-        ESP_LOGI(TAG, "t0 event %" PRIu32 " at %" PRId64 " us", p.first_sample_index, t);
+        ESP_LOGI(TAG, "t0 event %" PRIu32 " at %" PRId64 " us", p.first_sample_index,
+                 edge.t_us);
     }
 }
 
@@ -301,7 +325,7 @@ void app_main(void)
     ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb));
 
     s_tx_queue = xQueueCreate(TX_QUEUE_LEN, sizeof(pkt_t));
-    s_event_queue = xQueueCreate(EVENT_QUEUE_LEN, sizeof(int64_t));
+    s_event_queue = xQueueCreate(EVENT_QUEUE_LEN, sizeof(t0_edge_t));
     if (s_tx_queue == NULL || s_event_queue == NULL) {
         ESP_LOGE(TAG, "cannot create queues");
         abort();

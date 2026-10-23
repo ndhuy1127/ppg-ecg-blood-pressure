@@ -4,9 +4,11 @@ SYNTHETIC only. The stream mirrors firmware/app/main.c and
 firmware/drivers/fake_afe.c (change both together): fake ECG every 1953 us read
 16 at a time, fake PPG with three slots every 10000 us read 4 at a time and
 sharing one anchor, t0 event packets, SEQ assigned at send per channel, STATUS
-bit 4 on data packets, bit 1 after an MCU queue drop and carried to the next
-packet sent when the marked packet is lost on USB, ROM text before the first
-packet. It checks the conventions, not the C code, and no MCU is involved.
+bit 4 on data packets, bit 1 after an MCU queue drop, bits 0 and 1 of a dropped
+or USB-lost packet moved to the next packet of the channel, bit 1 on the next
+event after a t0 edge the ISR queue dropped (no ordinal for it), ROM text
+before the first packet. It checks the conventions, not the C code (see
+test_firmware_c_encoder.py for the encoder), and no MCU is involved.
 """
 
 import json
@@ -20,7 +22,8 @@ from software.data_io.packet_wire import Packet, StreamDecoder, encode_packet
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = json.loads((ROOT / "configs/hardware/packet_logger.json").read_bytes())
 ROM_TEXT = b"ESP-ROM:esp32s3-20210327\r\nrst:0x1 (POWERON),boot:0x8\r\n"
-BIT1, BIT4 = 1 << 1, 1 << 4
+BIT0, BIT1, BIT4 = 1 << 0, 1 << 1, 1 << 4
+GAP_BITS = BIT0 | BIT1
 ECG, PPG, EVENT = 0xE1, (0xF1, 0xF2, 0xF3), 0xC1
 SOURCES = ((ECG,), 1953, 16, 512000), (PPG, 10000, 4, 100000)
 
@@ -33,8 +36,12 @@ def ppg_count(index, slot):
     return index % 4096 + 32768 * (slot + 1)
 
 
-def produced(duration_us, seed=7):
-    """Packets in send order as header fields without SEQ (firmware producers)."""
+def produced(duration_us, seed=7, isr_losses=()):
+    """Packets in send order as header fields without SEQ (firmware producers).
+
+    ``isr_losses``: indices of t0 edges the ISR queue drops; they get no ordinal
+    and the next event packet sets bit 1 (firmware event_task).
+    """
     rng = random.Random(seed)
     items = []
     for channels, period, batch, fs in SOURCES:
@@ -53,34 +60,62 @@ def produced(duration_us, seed=7):
                     t_first_us=anchor - offset, fs_nominal_mhz=fs, status=BIT4,
                     data=tuple(data))))
             first += count
-    for ordinal, t in enumerate(range(5_000_000, duration_us, 97_000_000)):
+    ordinal, edges_lost = 0, False
+    for edge, t in enumerate(range(5_000_000, duration_us, 97_000_000)):
+        if edge in isr_losses:
+            edges_lost = True
+            continue
         items.append((t, dict(channel_id=EVENT, first_sample_index=ordinal,
                               t_anchor_us=t, t_first_us=t, fs_nominal_mhz=0,
-                              status=0, data=(1,))))
+                              status=BIT1 if edges_lost else 0, data=(1,))))
+        ordinal, edges_lost = ordinal + 1, False
     return [fields for _, fields in sorted(items, key=lambda item: item[0])]
 
 
-def stream(items, queue_drops=(), usb_losses=(), carry_bit1=True):
-    """Bytes as the TX task sends them; drops are positions in ``items``."""
-    seq, pending, carry = Counter(), Counter(), Counter()
+def afe_overflow(items, position, lost):
+    """The AFE FIFO overflowed after ``items[position]`` and lost ``lost`` samples:
+    that packet sets bit 0 and the later packets of its channel move on."""
+    channel, period = items[position]["channel_id"], 1953
+    assert channel == ECG
+    out = list(items)
+    out[position] = dict(items[position], status=items[position]["status"] | BIT0)
+    for i in range(position + 1, len(items)):
+        if items[i]["channel_id"] == channel:
+            first = items[i]["first_sample_index"] + lost
+            out[i] = dict(items[i], first_sample_index=first,
+                          t_anchor_us=items[i]["t_anchor_us"] + lost * period,
+                          t_first_us=items[i]["t_first_us"] + lost * period,
+                          data=tuple(ecg_word(first + k)
+                                     for k in range(len(items[i]["data"]))))
+    return out
+
+
+def stream(items, queue_drops=(), usb_losses=(), carry_bits=GAP_BITS):
+    """Bytes as the TX task sends them; drops are positions in ``items``.
+
+    A queue drop sets bit 1 on the next packet of the channel; the bits in
+    ``carry_bits`` of a packet dropped in the queue or not taken by the USB driver
+    (``usb_losses``: send failures the firmware sees) move on too,
+    as in firmware enqueue() and tx_task(). The firmware before 2026-10-23
+    carried bit 1 only (``carry_bits=BIT1``).
+    """
+    seq, pending, carried = Counter(), Counter(), Counter()
     out = bytearray(ROM_TEXT)
     for position, fields in enumerate(items):
-        channel, status = fields["channel_id"], fields["status"]
-        if pending[channel]:
-            status |= BIT1
+        channel = fields["channel_id"]
+        status = fields["status"] | pending[channel]
         if position in queue_drops:
-            pending[channel] = 1
+            pending[channel] = (status & carry_bits) | BIT1
             continue
         pending[channel] = 0
-        if carry[channel]:
-            status |= BIT1
+        status |= carried[channel]
         packet = Packet(version=1, session_id=0x5EED1234, seq=seq[channel],
                         **dict(fields, status=status))
         seq[channel] += 1
         if position in usb_losses:
-            carry[channel] = bool(carry_bit1 and status & BIT1)
+            carried[channel] = status & carry_bits
             continue
-        carry[channel] = False
+        carried[channel] = 0
         out += encode_packet(packet)
     return bytes(out)
 
@@ -143,8 +178,51 @@ def test_carried_bit1_explains_a_gap_longer_than_one_packet():
     ecg = positions(items, ECG)
     drops, lost = {ecg[100], ecg[101]}, {ecg[102]}
     with_carry, _, _ = analyze(stream(items, drops, lost))
-    without_carry, _, _ = analyze(stream(items, drops, lost, carry_bit1=False))
+    without_carry, _, _ = analyze(stream(items, drops, lost, carry_bits=0))
     gap = with_carry["sessions"][0]["channels"]["0xE1"]["gaps"]
     assert [g["lost_samples"] for g in gap] == [48]
     assert "sample_index_inconsistent" not in with_carry["issue_counts"]
     assert without_carry["issue_counts"]["sample_index_inconsistent"] == 1
+
+
+def test_carried_bit0_explains_an_afe_overflow_lost_on_usb():
+    # ECG packet 50 reports an AFE overflow of 40 samples and is then lost on
+    # USB: the next packet's index moves 16 + 40 > 32 samples for one absent
+    # packet, which only bit 0 (carried) can explain.
+    items = produced(20_000_000)
+    ecg = positions(items, ECG)
+    items = afe_overflow(items, ecg[50], 40)
+    carried, _, _ = analyze(stream(items, usb_losses={ecg[50]}))
+    assert carried["issue_counts"] == {"missing_packets": 1, "skipped_bytes": 1}
+    channels = carried["sessions"][0]["channels"]
+    assert [g["lost_samples"] for g in channels["0xE1"]["gaps"]] == [56]
+    assert channels["0xE1"]["status_bit_counts"]["afe_fifo_overflow"] == 1
+    old, _, _ = analyze(stream(items, usb_losses={ecg[50]}, carry_bits=BIT1))
+    assert old["issue_counts"]["sample_index_inconsistent"] == 1
+    # Dropped in the MCU queue instead: bit 1 explains the jump, bit 0 still says
+    # that AFE samples were lost too.
+    dropped, _, _ = analyze(stream(items, queue_drops={ecg[50]}))
+    assert dropped["issue_counts"] == {"sample_gap_status": 1, "skipped_bytes": 1}
+    bits = dropped["sessions"][0]["channels"]["0xE1"]["status_bit_counts"]
+    assert bits["afe_fifo_overflow"] == 1 and bits["mcu_buffer_overflow"] == 1
+
+
+def test_t0_edge_dropped_by_isr_is_reported_on_the_next_event():
+    items = produced(600_000_000, isr_losses={2})
+    result, _, _ = analyze(stream(items))
+    assert result["issue_counts"] == {"events_lost_before_send": 1,
+                                      "skipped_bytes": 1}
+    lost = [i for i in result["issues"] if i["code"] == "events_lost_before_send"]
+    assert lost[0]["lost_events"] is None and lost[0]["event_ordinal"] == 2
+    events = result["sessions"][0]["events"]
+    assert [e["event_ordinal"] for e in events] == list(range(6))
+
+
+def test_t0_event_dropped_in_mcu_queue_is_counted():
+    items = produced(600_000_000)
+    events = positions(items, EVENT)
+    result, _, _ = analyze(stream(items, queue_drops={events[3]}))
+    assert result["issue_counts"] == {"events_lost_before_send": 1,
+                                      "skipped_bytes": 1}
+    lost = [i for i in result["issues"] if i["code"] == "events_lost_before_send"]
+    assert lost[0]["lost_events"] == 1 and lost[0]["event_ordinal"] == 4

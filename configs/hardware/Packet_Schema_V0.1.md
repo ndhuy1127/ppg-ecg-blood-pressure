@@ -148,6 +148,14 @@ fs_thực        = 10⁶ / b_us
 jitter của mốc neo. Dùng `fs_thực` thay `fs` danh định khi dựng thời gian bản ghi
 dài, vì sai số danh định tích lũy theo chỉ số mẫu.
 
+**Packet có bit 0 (FIFO AFE tràn):** FIFO đã đầy trước lúc đọc, nên mẫu cuối cũ
+hơn `T_ANCHOR_US` một khoảng chưa biết (cỡ số mẫu mất × chu kỳ). Không dùng anchor
+của packet đó trong hồi quy trên và không lấy nó làm mốc; mẫu của nó vẫn hợp lệ
+(PPG) và lấy thời điểm theo hồi quy của các packet khác trong cùng chuỗi. Logger
+`packet-logger-v1` làm đúng như vậy (chốt 2026-10-23, `docs/protocol/packet_logger.md`).
+Packet nhận bit 0 do chuyển tiếp từ packet bị mất (mục 9) cũng bị bỏ anchor như
+vậy; đó chỉ là mất một mốc, không mất mẫu.
+
 `T_FIRST_US` trong packet là ước lượng tiện dụng của firmware:
 `T_ANCHOR_US − (N − 1) · 10⁶ / fs_danh_định`, **chưa** trừ `δ` và `d_pipe`. Phân
 tích PAT phải tính lại theo các công thức trên.
@@ -261,7 +269,11 @@ Bảng 11). Khe thứ j lệch khoảng (j−1) lần giá trị này so với k
 **Bộ đệm MCU (bit 1):** `SEQ` được gán **lúc gửi**, khi lấy packet ra khỏi hàng
 đợi MCU (chốt 2026-10-23). Packet bị bỏ vì hàng đợi đầy không có `SEQ`; packet kế
 tiếp của cùng kênh bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy trong khi `SEQ` liên
-tục. Thiếu `SEQ` nghĩa là packet mất sau hàng đợi, trên đường USB.
+tục. Thiếu `SEQ` nghĩa là packet mất sau hàng đợi, trên đường USB. Nếu packet bị
+bỏ ở hàng đợi hoặc firmware gửi thất bại (driver không nhận trong thời hạn) mà mang bit 0
+hay bit 1, packet gửi được kế tiếp của kênh mang thêm các bit đó (2026-10-23), nên
+khoảng mất vẫn được giải thích dù packet đánh dấu không tới. Mất sau khi driver đã
+nhận packet thì firmware không biết và không chuyển bit.
 
 ## 10. Packet sự kiện
 
@@ -277,8 +289,13 @@ Các trường còn lại (chốt 2026-10-23, [firmware/README.md](../../firmwar
 - `FIRST_SAMPLE_INDEX` = số thứ tự sự kiện trong phiên (0, 1, …).
 - `FS_NOMINAL_MHZ = 0`; `T_FIRST_US = T_ANCHOR_US`.
 - `STATUS` bit 4 không bật (độ trễ AFE không áp dụng cho sự kiện); bit 1 bật ở
-  packet sự kiện kế tiếp nếu một packet sự kiện bị bỏ do hàng đợi MCU đầy.
-- Receiver không kiểm bước 4 và 6 của mục 12 cho `0xC1`.
+  packet sự kiện kế tiếp nếu một packet sự kiện bị bỏ do hàng đợi MCU đầy, hoặc
+  nếu hàng đợi của ISR bỏ một cạnh nút trước khi lọc dội (cạnh đó không có số thứ
+  tự; xem `firmware/README.md`, mục Nút t0).
+- Receiver không kiểm bước 6 của mục 12 cho `0xC1`. Bước 4 áp cho số thứ tự sự
+  kiện (sửa 2026-10-23, layout byte không đổi): giữa hai sự kiện nhận được, số thứ
+  tự tăng bằng khoảng `SEQ` cộng số sự kiện bị bỏ trước khi có `SEQ`, để mất một
+  mốc t0 luôn để lại issue ([packet_logger.md](../../docs/protocol/packet_logger.md), R1).
 
 ## 11. Metadata phiên (file JSON do PC ghi)
 
@@ -341,7 +358,7 @@ không phải decoder của schema này.
 | `STATUS`, `SYNC`, `CRC16` | — | Mô phỏng chưa có |
 | `DATA` int32 (ECG giữ ETAG/PTAG) | `samples` int32, `sample_unit` | |
 
-### 14.1. Đối chiếu với `synthetic-packet-v3` và logger `packet-logger-v0` (2026-10-21)
+### 14.1. Đối chiếu với `synthetic-packet-v3` và logger `packet-logger-v0` (2026-10-21; v1 từ 2026-10-23)
 
 `software/data_io/packet_simulation_v3.py` (Linh) sinh **luồng byte** theo đúng
 mục 6. `software/data_io/packet_wire.py` và `packet_receiver.py` là decoder và
@@ -359,10 +376,10 @@ v2 ở bảng trên giữ nguyên.
 | `T_ANCHOR_US`, `T_FIRST_US` uint64 | Có; `T_FIRST_US` = `T_ANCHOR_US − (N−1)·T` làm tròn; logger chỉ kiểm `T_ANCHOR_US` | Dung sai trong `configs/hardware/packet_logger.json`, chưa kiểm chứng phần cứng |
 | `FS_NOMINAL_MHZ` (mHz) | Có, đơn vị mHz; ECG 512 000, PPG 100 000 là **thông số mô phỏng** | PPG 100 Hz có trong bảng tốc độ MAX3010x; fs phần cứng vẫn mở |
 | `SAMPLE_COUNT` ≤ 32 | Config 1–32; decoder từ chối 0 và > 32 | 0 bị coi là vô lý (câu hỏi D7 trong hướng dẫn logger) |
-| `STATUS` (mục 9) | Bit 4 bật trên mọi packet, kể cả `0xC1`; bit 0/5 ở case lỗi; bit 7–15 = 0 | Logger đếm từng bit và báo bit dự trữ, không dựa vào bit 4 để kiểm. Mô phỏng v3 khác firmware: mục 10 không bật bit 4 cho `0xC1` |
+| `STATUS` (mục 9) | Bit 4 bật trên mọi packet ECG/PPG; `0xC1` gửi 0 như mục 10 và firmware (sửa 2026-10-23; trước đó `0xC1` cũng bật bit 4); bit 0/5 ở case lỗi; bit 7–15 = 0 | Logger đếm từng bit và báo bit dự trữ, không dựa vào bit 4 để kiểm |
 | `DATA` int32 | ECG: word 24 bit, ETAG/PTAG = 0; PPG: 18 bit không dấu | Số ngẫu nhiên, không phải waveform |
 | `CRC16` CCITT-FALSE | Có; đọc/ghi little-endian | Firmware cũng ghi little-endian (D1). Known-answer `0x29B1` |
-| Packet `0xC1` (mục 10) | `SAMPLE_COUNT` 1, mã 1–4. `FIRST_SAMPLE_INDEX` = thứ tự sự kiện trong phiên (0, 1, …), `FS_NOMINAL_MHZ` = 0, `T_FIRST_US` = `T_ANCHOR_US` | Logger bỏ bước 4 và 6 cho `0xC1`. Firmware gửi đúng các giá trị này (mục 10, D6) |
+| Packet `0xC1` (mục 10) | `SAMPLE_COUNT` 1, mã 1–4. `FIRST_SAMPLE_INDEX` = thứ tự sự kiện trong phiên (0, 1, …), `FS_NOMINAL_MHZ` = 0, `T_FIRST_US` = `T_ANCHOR_US` | Logger bỏ bước 6 cho `0xC1`; bước 4 kiểm số thứ tự sự kiện so với `SEQ` (từ 2026-10-23). Firmware gửi đúng các giá trị này (mục 10, D6) |
 | Metadata phiên (mục 11) | `session_metadata.json` (`packet-session-metadata-v0`), trường chưa biết là `null` kèm lý do; manifest `schema_version` `packet-v0.1` | |
 | `t_rx` (mục 3) | File riêng `rx_chunks.csv`, `t_rx_packets.csv`; không vào kết quả decode | |
 
