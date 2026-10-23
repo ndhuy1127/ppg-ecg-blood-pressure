@@ -11,6 +11,7 @@ import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+import h5py
 import matplotlib
 import mat73
 import numpy as np
@@ -78,6 +79,7 @@ def main() -> int:
         f"scikit-learn={sklearn.__version__},",
         f"xgboost={xgboost.__version__},",
         f"mat73={version(mat73.__name__)},",
+        f"h5py={h5py.__version__},",
         f"pyyaml={yaml.__version__}",
     )
     print(f"NumPy result: {doubled.tolist()}")
