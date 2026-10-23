@@ -1,405 +1,280 @@
-# Báo cáo tiến độ Tuần 5 — phần Huy
+# Báo cáo tiến độ Tuần 5
 
-> **Giai đoạn:** Tuần 5 / 28 tuần
+> **Giai đoạn:** Tuần 5 / 28 tuần (2026-10-20 → 2026-10-23)
 >
-> **Người tổng hợp:** Nguyễn Đức Huy
->
-> **Ngày cập nhật:** 2026-10-21; sửa 2026-10-22 theo review độc lập (mục 8)
->
-> **Nhánh/commit nền:** dev/huy @ 3ff44f2; thay đổi Tuần 5 commit trên `dev/huy` ngày 2026-10-22, sau review
->
-> **Trạng thái:**
-> - Mục 1–4 và 6 có đầu ra. Mục 5 (đánh giá B0/B3) bị chặn chờ Linh.
-> - G1 phần mềm gần đạt, G1 phần cứng chưa đạt.
-> - Hồ sơ đạo đức là bản nháp, chưa nộp.
-> - Phân bổ tay/điện cực chờ Đức Anh xác nhận. Chưa đo trên người.
-> - Hai tiêu chí nghiệm thu của mục 2 và 3 trong WEEK_05 **chưa đạt**: chưa có câu
->   trả lời của thầy, chưa có xác nhận của Đức Anh.
+> **Thành viên:** Linh, Trương Đức Anh, Nguyễn Đức Huy
 
-## 1. Mục tiêu và phạm vi
+## 1. Tóm tắt công việc của tuần (mục tiêu)
 
-Theo hàng "Huy" của [WEEK_05.md](../../../docs/plans/WEEK_05.md): (1) trạng thái
-G1 và kế hoạch khắc phục; (2) hồ sơ đạo đức; (3) phân bổ tay/điện cực và nghiệm
-pháp; (4) mốc R/foot thứ hai, PAT hợp lệ, so với đánh dấu tay; (5) đánh giá B0/B3;
-(6) phác thảo P A/P B/P C. Không làm thay việc của Linh (logger, B0/B3 trên raw)
-hay Đức Anh (mua module, A.6, ERC/DRC, firmware). Không sửa
-`hardware/kicad/v1_module/wrist/v1_wrist.kicad_pro` (thay đổi có trước, không
-thuộc việc này). Push và PR theo quyết định của nhóm.
+Theo [kế hoạch Tuần 5](../../../docs/plans/WEEK_05.md), tuần này khắc phục G1 và
+kéo các việc nằm trên đường găng của giai đoạn thu dữ liệu lên trước:
 
-**Đầu vào đã kiểm 2026-10-21** sau `git fetch origin`: `origin/dev/ducanh` mới
-nhất `9073aa8` (2026-10-14), `origin/dev/ngoclinh` mới nhất `acc8b8b`
-(2026-10-17), `origin/develop` `c23e2e0`. Khi đó chưa có bàn giao Tuần 5 nào của
-Linh hay Đức Anh.
+1. Đóng phần mềm G1: chạy B0/B3 trên raw PulseDB, đánh giá bằng bootstrap theo người.
+2. Gỡ nút thắt phần cứng: danh sách mua module V1-module, pin map chuẩn, ERC/DRC,
+   firmware khung.
+3. Logger phía máy tính và mô phỏng packet đủ trường (kéo từ Tuần 8).
+4. Hồ sơ đạo đức (kéo từ Tuần 6); phân bổ tay/điện cực và nghiệm pháp tạo ΔBP
+   (kéo từ Tuần 10).
+5. Phương pháp mốc R/foot thứ hai, định nghĩa PAT hợp lệ, so với đánh dấu tay.
+6. Phác thảo ba kịch bản bài báo P A/P B/P C.
 
-**Kiểm lại 2026-10-22:**
+Không đo trên người trong tuần này.
 
-- `origin/dev/ducanh` mới nhất là `1e95d29` "Them danh sach mua" (2026-10-21
-  23:06), chỉ thêm `hardware/bom/Danh sách mua.xlsx`.
-  - Danh sách liệt kê ESP32-S3-DevKitC-1 N16R8, MAX30001, BMI270, điện cực 3M
-    Red Dot 2228, điện cực khô BIOPAC và FSR 402, kèm phương án thay thế và link.
-  - Chưa có giá, ngày giao hay dấu hiệu đã duyệt/đặt.
-  - **Không có module PPG**: dòng "PPG AFE" ghi BMI270.
-- `origin/dev/ngoclinh` vẫn ở `acc8b8b`.
-- Linh có bản nháp Tuần 5 (logger, mô phỏng v3, `linh.md`), lúc đó chưa commit và
-  chưa có trên remote. Ngày 2026-10-22, bản đã sửa theo review được commit trên
-  `dev/huy`.
+## 2. Thành viên phụ trách và phân công công việc
 
-## 2. Trạng thái G1
+| Thành viên | Công việc Tuần 5 |
+| --- | --- |
+| Linh | Logger packet V0.1 phía máy tính (decoder, kiểm tra, ghi raw, replay); mô phỏng `synthetic-packet-v3`; chuẩn bị chạy B0/B3 trên raw và phương án chọn pool PulseDB |
+| Đức Anh | Danh sách mua module V1-module |
+| Phần cứng và firmware | Firmware khung; pin map chuẩn theo KiCad; phân bổ điện cực; chốt các điểm mở của packet schema và review logger theo spec; trình tự bring-up; sơ đồ khối V1 |
+| Huy | Trạng thái G1; hồ sơ đạo đức; protocol v0.2 (phân bổ tay, nghiệm pháp, tiêu chí pilot); mốc R/foot thứ hai, PAT hợp lệ, công cụ so với đánh dấu tay; kịch bản bài báo |
 
-G1 theo kế hoạch 28 tuần (tài liệu ngoài repo): *pipeline tái lập; split theo
-người có test; baseline đầu tiên; PPG–ECG đồng bộ và báo cáo v0*. Thời điểm cổng
-gốc là Tuần 4; đánh giá lại ngày 2026-10-21.
+## 3. Tóm tắt công việc đã hoàn thành của từng người
+
+### Linh
+
+- **Codec packet V0.1** (`packet_wire.py`): CRC-16/CCITT-FALSE, đóng gói,
+  `StreamDecoder` dò `SYNC` theo luồng; CRC sai hoặc header vô lý thì bỏ 1 byte và
+  dò tiếp, không nhảy theo độ dài khai báo.
+- **Kiểm tra packet** (`packet_receiver.py`) theo từng phiên/kênh: mất, trùng, xung
+  đột, đảo thứ tự; mở rộng `SEQ`/`FIRST_SAMPLE_INDEX` qua 2³²; index liên tục đối
+  chiếu `STATUS`; `T_ANCHOR_US` kiểm hai chiều với dung sai tốc độ ±3%; đổi
+  `SESSION_ID` là phiên mới; `chain_id` tăng khi neo lại hoặc đổi Fs.
+- **Logger** (`packet_logger.py`): `record` ghi raw bằng exclusive-create, ghi `t_rx`
+  ra file riêng, decode trực tiếp rồi decode lại từ raw trên đĩa; ghi
+  `session_manifest.json` sau cùng kèm hash; `replay --expect` so hash với manifest.
+- **Mô phỏng `synthetic-packet-v3`**: luồng byte đúng schema (SYNC, VERSION,
+  CHANNEL_ID, SESSION_ID, SEQ, FIRST_SAMPLE_INDEX, T_ANCHOR_US, FS_NOMINAL_MHZ,
+  SAMPLE_COUNT ≤ 32, STATUS, DATA int32, CRC16), 13 case lỗi, packet sự kiện `0xC1`;
+  v2 giữ nguyên.
+- Bảng đối chiếu schema (mục 14.1) trong Packet Schema V0.1.
+- Soạn hai phương án chọn pool PulseDB và các bước chạy B0/B3 khi có file raw.
+
+### Đức Anh
+
+- Lập danh sách mua V1-module: ESP32-S3-DevKitC-1 N16R8, MAX30001, BMI270, điện cực
+  3M Red Dot 2228, điện cực khô BIOPAC, FSR 402, kèm phương án thay thế và link.
+
+### Huy
+
+- **Trạng thái G1** có ngày và bằng chứng (mục 5.1).
+- **Hồ sơ đạo đức v0.1** (5 file): phiếu thông tin, phiếu đồng thuận, tiêu chuẩn
+  chọn/loại L1–L10 và phiếu sàng lọc, an toàn buổi đo và quy tắc dừng, kế hoạch
+  quản lý và giả danh hóa dữ liệu. Sửa mâu thuẫn trong khung v0.1 (nối USB với
+  laptop chạy pin, không có đường nối người tham gia với điện lưới).
+- **Protocol v0.2:** phân bổ tay phương án A; kiểm tra xung đột K1–K6;
+  nghiệm pháp M0–M4 kèm nguồn; tiêu chí biên độ ΔBP pilot P1–P4; xác nhận module PPG
+  MAX30101 (SparkFun SEN-16474).
+- **Mốc thứ hai:** R bằng `derivative_energy`; foot bằng `d2_max` và `valley_min`,
+  nội suy parabol dưới một mẫu có kiểm chiều cong; chọn qua `SignalConfig`, output
+  mặc định `features-sqi-v1` không đổi.
+- **PAT hợp lệ** (`pat_validity.py`): ghép R–foot trong khoảng R–R rồi gắn nhãn;
+  giới hạn 80–400 ms, outlier MAD k = 3, sàn 10 ms, tối thiểu 3 cặp; không dùng BP;
+  nhịp không hợp lệ được gắn nhãn, không xóa.
+- **So với đánh dấu tay** (`fiducial_agreement.py`, `week05_fiducials.py`): các lệnh
+  synth/export/plot/annotate/detect/compare, ghép một–một tối ưu, mọi lệnh ghi
+  provenance, `compare` chỉ chạy với đúng config của `detect`, chặn split test, không
+  tự sinh nhãn tay; mẫu CSV đánh dấu tay.
+- **Kịch bản bài báo P A/P B/P C**: điều kiện kích hoạt, thông điệp chính, RQ trả lời
+  được, bảng/hình chính.
+
+### Phần cứng và firmware
+
+- **Danh sách mua dạng Markdown** thay file Excel: đợt 1 gồm MAX30001 (breakout
+  ProtoCentral), MAX30101 (SparkFun SEN-16474), BMI270 (SparkFun SEN-22397),
+  ESP32-S3 DevKitC, điện cực 3M 2228; đợt 2 là linh kiện hàn cùng PCB V1; mục kiểm
+  tra khi nhận hàng. Bỏ FSR 402 (V1 không dùng FSR), điện cực khô BIOPAC để đợt sau.
+- **KiCad V1-module:** bỏ FSR, dùng box header có khóa ở bo cổ tay, thêm R9–R11 và C9.
+- **Pin map chuẩn:** bảng A.7 trong `custom_board_proposal.md` lấy từ KiCad V1-module
+  và thay các bảng chân cũ; A.6 ghi trạng thái từng mục.
+- **Phân bổ điện cực:** 3 điện cực, LA cổ tay trái và RA cổ tay phải (mặt lòng), RL
+  cẳng tay trái; LA → ECGP, RA → ECGN, RL → VCM qua R3; tắt lead bias nội. Cập nhật
+  protocol v0.2 mục 5.2 và hồ sơ đạo đức theo cách đặt này.
+- **Firmware khung** (ESP32-S3, PlatformIO + ESP-IDF 5.5.3): gửi packet V0.1 qua USB
+  Serial/JTAG từ nguồn AFE giả; `SEQ` gán lúc gửi; hàng đợi MCU đầy thì packet bị bỏ
+  trước khi có `SEQ` và packet kế của kênh bật bit 1 của `STATUS` (bit 1 chuyển tiếp
+  nếu firmware gửi chính packet đó thất bại; từ 2026-10-23 chuyển cả bit 0); packet sự kiện `0xC1` từ nút t0; tự kiểm
+  known-answer khi khởi động. Chưa có driver AFE thật, chưa chạy trên bo.
+- **Test tương thích firmware–logger:** known-answer 50 byte trong header C khớp
+  codec Python; encoder C biên dịch trên máy tính cho cùng byte với codec Python
+  trên packet ngẫu nhiên (`test_firmware_c_encoder.py`, cần trình biên dịch C);
+  luồng dựng theo quy ước firmware trong 10 phút đi qua `analyze_stream` của logger
+  với đúng số lỗi chờ đợi. Các test này không chạy code ISR/task của firmware.
+- **Chốt packet schema V0.1** (2026-10-23): giữ `VERSION = 0x01` và tên
+  `FS_NOMINAL_MHZ`; định nghĩa lại mốc SAMP/INT2B của MAX30001 (cạnh xung đánh dấu
+  lúc mẫu vào FIFO, không phải lúc lấy mẫu analog; ghi chú ADI cho MAX30003 đo trễ
+  20,839 ms khi bỏ DLPF hoặc 32,558 ms khi DLPF 40 Hz ở 512 sps, chưa kiểm trên
+  MAX30001); trả lời D1–D10 và xác nhận R1–R6 trong review logger.
+- **Trình tự bring-up V1-module** thay file Word: kiểm khi nhận hàng, DevKitC đứng
+  riêng, PCB trần, sửa module, hàn lắp, MAX30001, bo cổ tay, đo 10 phút.
+- **Sơ đồ khối V1** (SVG) thay `Hardware_Diagram.png`.
+
+## 4. Danh mục sản phẩm đầu ra và đường dẫn
+
+| STT | Sản phẩm | Người làm | Đường dẫn |
+| --- | --- | --- | --- |
+| 1 | Codec packet V0.1 | Linh | [packet_wire.py](../../../software/data_io/packet_wire.py) |
+| 2 | Kiểm tra packet, metadata phiên | Linh | [packet_receiver.py](../../../software/data_io/packet_receiver.py) |
+| 3 | Logger | Linh | [packet_logger.py](../../../scripts/packet_logger.py), [packet_logger.json](../../../configs/hardware/packet_logger.json) |
+| 4 | Mô phỏng v3 | Linh | [packet_simulation_v3.py](../../../software/data_io/packet_simulation_v3.py), [packet_simulation_v3.json](../../../configs/hardware/packet_simulation_v3.json), [simulate_packets.py](../../../scripts/simulate_packets.py) |
+| 5 | Test logger và đáp án | Linh | [test_packet_logger.py](../../../tests/test_packet_logger.py), [packet_v3_expected.json](../../../tests/fixtures/packet_v3_expected.json) |
+| 6 | Hướng dẫn logger và mô phỏng | Linh | [packet_logger.md](../../../docs/protocol/packet_logger.md), [packet_simulation.md](../../../docs/protocol/packet_simulation.md) |
+| 7 | Bảng đối chiếu schema (mục 14.1) | Linh | [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) |
+| 8 | Danh sách mua (Excel) | Đức Anh | [Danh sách mua.xlsx](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/blob/225832dce33c08f1d6c2468dc3b2bf1ac0afe6e1/hardware/bom/Danh%20s%C3%A1ch%20mua.xlsx) (nhánh `dev/ducanh`, commit `225832d`); bản hiện hành ở dòng 19 |
+| 9 | Hồ sơ đạo đức v0.1 | Huy | [docs/ethics/](../../../docs/ethics/README.md) |
+| 10 | Protocol v0.2 | Huy | [protocol_outline_v0.2.md](../../../docs/protocol/protocol_outline_v0.2.md) |
+| 11 | Mốc ứng viên, `detect` | Huy | [fiducials.py](../../../software/signal_processing/fiducials.py) |
+| 12 | PAT hợp lệ | Huy | [pat_validity.py](../../../software/signal_processing/pat_validity.py) |
+| 13 | So với đánh dấu tay | Huy | [fiducial_agreement.py](../../../software/evaluation/fiducial_agreement.py), [week05_fiducials.py](../../../scripts/week05_fiducials.py), [mẫu CSV](../../../docs/protocol/templates/manual_fiducials_template.csv) |
+| 14 | Config Tuần 5 | Huy | [week05_huy.json](../../../configs/data/week05_huy.json) |
+| 15 | Tài liệu phương pháp | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) |
+| 16 | Test mốc Tuần 5 | Huy | [test_week05_fiducials.py](../../../tests/test_week05_fiducials.py) |
+| 17 | Kết quả SYNTHETIC | Huy | [synthetic_fiducials/](synthetic_fiducials/agreement_synthetic.json) (thêm biến thể [refractory_040/](synthetic_fiducials/refractory_040/agreement_synthetic.json)) |
+| 18 | Kịch bản bài báo | Huy | [paper_scenarios_v0.1.md](../../../docs/paper_scenarios_v0.1.md) |
+| 19 | Danh sách mua V1-module | Phần cứng | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md) |
+| 20 | KiCad V1-module (bo đế, bo cổ tay) | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/) |
+| 21 | Pin map chuẩn A.7, trạng thái A.6 | Phần cứng | [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) |
+| 22 | Phân bổ điện cực | Phần cứng | [protocol_outline_v0.2.md](../../../docs/protocol/protocol_outline_v0.2.md) mục 5.2 |
+| 23 | Firmware khung V1-module | Firmware | [firmware/](../../../firmware/README.md) |
+| 24 | Test firmware–logger | Firmware | [test_firmware_packet_kat.py](../../../tests/test_firmware_packet_kat.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py), [test_firmware_stream_compat.py](../../../tests/test_firmware_stream_compat.py) |
+| 25 | Chốt packet schema V0.1, review logger | Firmware | [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) mục 15, [packet_logger.md](../../../docs/protocol/packet_logger.md) |
+| 26 | Trình tự bring-up V1-module | Phần cứng | [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
+| 27 | Sơ đồ khối V1 | Phần cứng | [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
+
+## 5. Tóm tắt các nội dung chuyên môn chính
+
+### 5.1. Trạng thái G1 (đánh giá ngày 2026-10-21)
 
 | Hạng mục | Trạng thái | Bằng chứng |
 | --- | --- | --- |
-| Pipeline tái lập (reader, inventory, provenance) | **Có** | `software/pulsedb/reader.py` (`6ad1954`), `software/data_io/split_manifest.py` (split v2 từ `6c3c210`, làm chặt ở `96c8d7a`), hash không phụ thuộc CRLF (`dbd8c5a`), runner kiểm bàn giao split (`d4b7a2b`) |
-| Split theo người có test rò rỉ | **Có** | `pulsedb-split-v2`, `tests/test_split_manifest.py`; pytest cục bộ 379 passed sau sửa đổi 2026-10-22 (mục 5) |
-| Baseline đầu tiên | **Gần đạt** | B0/B1/metrics (`9f0ab5b`), B3 + runner split v2 (`937205e`, `36649de`), test SYNTHETIC. **Chưa chạy B0/B3 trên raw PulseDB thật**: không có `runs/b3_pulsedb/` (kiểm 2026-10-21). Chờ Linh |
-| Đặc trưng/SQI/bootstrap | **Có** (SYNTHETIC) | `features-sqi-v1` (`645df5d`), `subject_bootstrap.py`; mốc thứ hai Tuần 5 (mục 3.4) |
-| PPG–ECG đồng bộ, báo cáo phần cứng v0 | **Chưa đạt** | Chưa mua module; `firmware/` chỉ có `README.md` và `.gitkeep`; `hardware/test_reports/` chỉ có kế hoạch đo 10 phút (`sync_10min_test_plan.md`, "chưa thực hiện"). Có thiết kế KiCad V1-module (`1dc0eba`, `e6ca81b`) |
-| Hồ sơ đạo đức | **Bản nháp** | Mục 3.2; chưa nộp |
+| Pipeline tái lập (reader, inventory, provenance) | Có | `reader.py`, `split_manifest.py` (split v2), hash không phụ thuộc CRLF |
+| Split theo người có test rò rỉ | Có | `pulsedb-split-v2`, `tests/test_split_manifest.py` |
+| Baseline đầu tiên | Gần đạt | B0/B1/metrics, B3 + runner split v2, test SYNTHETIC; chưa chạy trên raw PulseDB |
+| Đặc trưng/SQI/bootstrap | Có (SYNTHETIC) | `features-sqi-v1`, `subject_bootstrap.py`, mốc thứ hai Tuần 5 |
+| PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-module, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút và firmware khung build được (cập nhật 2026-10-23); chưa có module, chưa chạy firmware trên bo, chưa có bản ghi bench |
+| Hồ sơ đạo đức | Bản nháp v0.1 | `docs/ethics/` |
 
-**Kết luận:** G1 phần mềm **gần đạt** (còn B0/B3 trên raw thật, Linh). G1 phần
-cứng **chưa đạt** (chưa có module, firmware, bản ghi bench). Không đánh dấu G1 đạt.
+G1 phần mềm gần đạt; G1 phần cứng chưa đạt.
 
-**Kế hoạch khắc phục** (theo [WEEK_05.md](../../../docs/plans/WEEK_05.md), người
-xử lý ghi theo kế hoạch, chưa có cập nhật tiến độ của họ):
+### 5.2. Logger và packet V0.1 (Linh)
 
-| Việc | Người | Mốc kiểm | Trạng thái 2026-10-21 |
-| --- | --- | --- | --- |
-| Chốt `pool_decision` (VitalDB_AAMI_Cal_Subset trùng người với AAMI Test), tạo split v2 từ raw, chạy `run_b3_pulsedb.py`, bàn giao bảng dự đoán val | Linh (pool: Linh + Huy) | Bảng B0/B3 val có provenance | Chưa có; **pool chưa chốt** |
-| Logger phía máy tính, generator đủ trường | Linh | Test 5 lỗi + CRC | 2026-10-22: sửa theo review và commit trên `dev/huy` (decoder, logger, mô phỏng v3, 13 case); chưa có review của Đức Anh |
-| Danh sách mua và đặt module Phần A | Đức Anh | Đơn đã đặt, ngày giao | 2026-10-22: có danh sách (`1e95d29`), chưa giá, ngày giao hay duyệt; **thiếu module PPG MAX30101** |
-| Đóng A.6, một pin map chuẩn | Đức Anh | A.6 không còn điểm mở | Chưa có. `Pin_Map_V1.md` còn ghi MAX30102, trong khi nhóm đã chọn MAX30101 (2026-10-22) |
-| ERC/DRC V1-module | Đức Anh | Log ERC/DRC | Chưa có |
-| Firmware khung DevKitC gửi packet | Đức Anh | Logger đọc packet MCU 10 phút | Chưa có |
-| Phần Huy (mục 3) | Huy | Báo cáo này | Có đầu ra, chờ review |
+- Packet little-endian dài 42 + 4N byte; CRC-16/CCITT-FALSE (known-answer
+  `"123456789"` → `0x29B1`).
+- Quy tắc logger R1–R5: `0xC1` bỏ kiểm index/timestamp nhưng vẫn kiểm `SEQ`/CRC; bit
+  0/1/5 của `STATUS` giải thích nhảy index; kiểm `VERSION` trước CRC; `SAMPLE_COUNT = 0`
+  là vô lý; dung sai timestamp 1 chu kỳ + 500 µs cộng dung sai tốc độ ±3%.
+- Không nội suy, không ghép ECG–PPG theo index, không dịch kênh; offset giữa kênh
+  không phải PAT.
+- 13 case mô phỏng: `valid`, `missing`, `duplicate`, `reordered`, `timestamp`,
+  `timestamp_first`, `offset`, `crc`, `byte_loss`, `index_jump`, `reanchor`,
+  `version`, `session_restart`.
 
-Phần nào chưa đạt ở cuối tuần chuyển sang Tuần 6 với cùng người xử lý; hoãn tiếp
-cần quyết định ghi vào báo cáo Tuần 6.
+### 5.3. Phương án chọn pool PulseDB (Linh)
 
-## 3. Việc đã làm
+| | A (nối tiếp lịch sử) | B (pool lớn) |
+| --- | --- | --- |
+| Pool chia train/val/test | `VitalDB_AAMI_Cal_Subset.mat` (116 người) | `VitalDB_Train_Subset.mat` (1 293 người) |
+| Không dùng vì trùng người | `VitalDB_AAMI_Test_Subset.mat` | `VitalDB_CalBased_Test_Subset.mat` |
+| Held-out ngoài | `VitalDB_CalFree_Test_Subset.mat` (144 người) | `VitalDB_CalFree_Test_Subset.mat` |
+| Số người theo split (seed 72) | 92/11/13 | — |
 
-### 3.1. Nhật ký quyết định (ngày ghi là bằng chứng khóa trước khi xem dữ liệu)
+### 5.4. Phân bổ tay và nghiệm pháp (Huy)
 
-Không có dữ liệu PulseDB raw hay dữ liệu người trên máy khi ra các quyết định này
-(kiểm 2026-10-21). Bằng chứng Git: các commit Tuần 5 trên `dev/huy` ngày 2026-10-22.
+- **Phương án A:** PPG cổ tay trái, cuff bắp tay phải, ECG đạo trình I với điện cực
+  dán Ag/AgCl ở mặt lòng hai cổ tay (LA trái, RA phải) và RL ở cẳng tay trái (cập
+  nhật 2026-10-23, protocol v0.2 mục 5.2).
+- Kiểm tra xung đột: K1 (cuff khác tay PPG) đạt; K2 (không làm chuyển động tay PPG)
+  đạt trên giấy cho M0–M2; K3 loại nghiệm pháp bóp tay tĩnh vì đạo trình I có điện
+  cực ở cả hai tay.
+- **Nghiệm pháp:** M0 nghỉ; M1 thở chậm (giảm BP, Adler 2019); M2 tính nhẩm (tăng,
+  Carroll 2012, Jern 1991); M3 ngâm chân nước lạnh (tăng SBP/DBP, Korhonen 2006,
+  Velasco 1997); M4 đạp xe ngồi (tăng khi gắng sức, Stergiou 2023). 9/9 DOI đã đối
+  chiếu metadata qua OpenAlex/Europe PMC.
+- Tiêu chí biên độ ΔBP pilot P1–P4, ngưỡng 15 mmHg lấy từ kế hoạch 28 tuần.
 
-| Ngày | Quyết định | Ai | Nơi ghi |
-| --- | --- | --- | --- |
-| 2026-10-21 | Output mặc định `features-sqi-v1` không đổi; phương pháp mốc mới chỉ chọn qua `SignalConfig`; `extract_window` từ chối phương pháp khác mặc định | Huy | `fiducials.py`, `week04.py` |
-| 2026-10-21 | PAT hợp lệ: 80–400 ms, MAD k = 3, sàn 10 ms, tối thiểu 3 cặp; không loại theo BP | Huy, `NOT_TEST_TUNED` | `configs/data/week05_huy.json` |
-| 2026-10-21 | Dung sai so khớp với đánh dấu tay: R 50 ms, foot 100 ms (chốt trước khi đánh dấu) | Huy | Như trên |
-| 2026-10-21 | Phân bổ tay phương án A (PPG cổ tay trái, cuff bắp tay phải, ECG cổ tay trái – ngón trỏ phải) | Huy **đề xuất**, chờ Đức Anh | Protocol v0.2 mục 5 |
-| 2026-10-21 | Nghiệm pháp M1–M4 (thở chậm, tính nhẩm, ngâm chân nước lạnh, đạp xe ngồi) | Huy **đề xuất**, chờ thầy/hội đồng và Đức Anh | Protocol v0.2 mục 6.4 |
-| 2026-10-21 | Loại nghiệm pháp bóp tay tĩnh (M5) và đổi tư thế vì xung đột tay đeo PPG/điện cực | Huy, chờ Đức Anh | Protocol v0.2 mục 5.4, 6.4 |
-| 2026-10-21 | Tiêu chí biên độ ΔBP pilot P1–P4 | Huy **đề xuất, khóa trước pilot** | Protocol v0.2 mục 6.5 |
-| 2026-10-22 | Module PPG là **MAX30101** (SparkFun SEN-16474) | Huy xác nhận (nhóm đã chọn) | Protocol v0.2 mục 5.1; Đức Anh cập nhật pin map, BOM, danh sách mua |
-| 2026-10-22 | `pat_beats` ghép R–foot trong khoảng R–R (`pair_between_r`) rồi mới gắn nhãn; 80–400 ms không còn là cổng ghép | Huy (sửa lỗi review C1) | `pat_validity.py`, tài liệu Tuần 5 mục 3 |
-| 2026-10-22 | `compare` chỉ chạy với đúng config mà `detect` đã dùng | Huy (sửa lỗi review C2) | `week05_fiducials.py`, tài liệu Tuần 5 mục 4 |
-| — | `pool_decision` PulseDB | **Chưa quyết**, Linh + Huy | — |
-| — | Các điểm chờ quyết định ở mục 8.2 | **Chưa quyết** | Mục 8.2 |
+### 5.5. Mốc thứ hai và PAT hợp lệ (Huy)
 
-### 3.2. Hồ sơ đạo đức (mục 2)
+- `derivative_energy`: đạo hàm bình phương, trung bình trượt, dời về cực đại tín
+  hiệu (không phải Pan–Tompkins).
+- `d2_max`: cực đại đạo hàm bậc hai trước sườn lên; `valley_min`: cực tiểu trước
+  peak; cả hai nội suy parabol dưới một mẫu.
+- PAT ngoài 80–400 ms vẫn được ghép rồi gắn nhãn `out_of_range`; `r_status` là
+  `paired`/`no_foot`/`ambiguous`/`edge` (từ `pat-validity-v1`, 2026-10-23: R sát
+  biên cửa sổ mà foot nằm ngoài khoảng PPG phát hiện được là `edge`, không tính là
+  R không ghép, như `features-sqi-v1`).
+- Dung sai so khớp với đánh dấu tay chốt trước khi đánh dấu: R 50 ms, foot 100 ms.
 
-Bộ bản nháp trong `docs/ethics/` mô tả V1-module theo đề xuất Phần A:
+### 5.6. Kịch bản bài báo (Huy)
 
-- bo cổ tay MAX30101/BMI270 gắn velcro; MAX30101 là module nhóm đã chọn, Huy xác
-  nhận 2026-10-22;
-- cáp dẹt tới bo đế ESP32-S3 + MAX30001;
-- USB tới laptop chạy pin, rút sạc;
-- điện cực dán Ag/AgCl đạo trình I (cổ tay và ngón tay);
-- cuff bắp tay phải.
+Ba kịch bản P A/P B/P C kích hoạt theo G4/R2/R3/R5 của kế hoạch 28 tuần; mỗi kịch
+bản có thông điệp chính, RQ trả lời được, bảng/hình chính và phần bỏ.
 
-**Còn chờ** (đã đánh dấu `[...]` trong phiếu):
+### 5.7. Phần cứng và firmware
 
-- số điện cực: hai, hoặc ba nếu cần bias;
-- điện cực khô dùng trên người hay chỉ bench;
-- bên tay theo phân bổ được Đức Anh xác nhận;
-- cách trả lời trong M2.
+- Pin map A.7: ECG SPI GPIO7/15/16/17, INTB GPIO21, INT2B GPIO47; PPG I²C GPIO8/9,
+  INT GPIO18; BMI270 SPI GPIO10–13, INT1 GPIO14; nút t0 GPIO4; LED GPIO5. GPIO47 chạy
+  3,3 V trên module WROOM-1 N8R8/N16R8 (chip R16V chạy 1,8 V); kiểm ký hiệu module
+  và eFuse VDD_SPI trước khi dùng (bring-up mục 1, 2).
+- Packet đi qua cổng USB Serial/JTAG gốc của ESP32-S3; log chữ đi riêng qua UART0
+  để không lẫn vào luồng byte của logger.
+- Mốc SAMP/INT2B của MAX30001 là lúc mẫu vào FIFO, không phải lúc lấy mẫu analog;
+  phân tích offline trừ độ trễ hiệu dụng `L_us` đo ở bench, không dùng thẳng bảng
+  datasheet (Packet Schema mục 5.2, 5.3). Firmware có bật `SAMP` hay không còn mở
+  (mục 15).
+- Firmware chỉ phát dữ liệu giả, nên mọi kết quả hiện có chỉ kiểm đường packet
+  MCU → USB → logger, không nói gì về chất lượng tín hiệu ECG/PPG.
 
-- Phiếu thông tin: `participant_information_sheet_v0.1.md`
-- Phiếu đồng thuận, mẫu trống: `consent_form_v0.1.md`
-- Tiêu chuẩn chọn/loại L1–L10 và phiếu sàng lọc: `eligibility_screening_v0.1.md`
-- An toàn buổi đo, quy tắc dừng, nhật ký sự cố: `session_safety_stopping_v0.1.md`
-- Quản lý và giả danh hóa dữ liệu: `data_management_plan_v0.1.md`
-- Danh mục cập nhật: `docs/ethics/README.md`
+## 6. Kết quả kiểm tra kỹ thuật
 
-Sửa mâu thuẫn trong `ethics_outline_v0.1.md`: v0.1 cấm nối máy tính khi đeo, còn
-V1-module nối USB với laptop; đã thêm ghi chú ngày 2026-10-21 (với V1: không có
-đường nào nối người tham gia với điện lưới). Con số LED "< 15 mW" trong v0.1 được
-ghi là **chưa có nguồn**. Ngưỡng BP dừng phiên (SBP > 180 / DBP > 110 trong v0.1)
-cũng **chưa có nguồn**, để chờ thầy/hội đồng.
+### 6.1. Kiểm tra toàn repo
 
-Ngày 2026-10-22, outline có thêm bảng các chỗ đã cũ hoặc mâu thuẫn với 5 file
-mới, như chạm ngón tay vào điện cực, 20–30 phút, xóa toàn bộ dữ liệu khi rút lui
-và câu tự phân loại "minimal risk". Khi khác nhau thì theo 5 file. Hồ sơ **chưa đủ
-để nộp** cho tới khi có câu trả lời ở mục 3.7, biên bản đo dòng rò trên bo thật và
-các mục còn thiếu ở `docs/ethics/README.md`.
-
-### 3.3. Phân bổ tay/điện cực và nghiệm pháp (mục 3) — **chờ Đức Anh xác nhận**
-
-`docs/protocol/protocol_outline_v0.2.md` (changelog ở đầu file; v0.1 giữ làm
-lịch sử, có dòng trỏ sang v0.2).
-
-- 5.2: bảng phân bổ phương án A và dự phòng B; bảng chi dùng cho từng nghiệm pháp.
-- 5.4: kiểm tra xung đột trên giấy. Quy tắc đổi tên thành K1–K6 ngày 2026-10-22
-  để không trùng R2/R3/R5 của kế hoạch 28 tuần.
-  - **K1** (cuff khác tay PPG): **đạt**.
-  - **K2** (không làm chuyển động tay PPG): **đạt trên giấy** cho M0–M2,
-    **chưa kiểm chứng** cho M3, **có điều kiện** cho M4.
-  - **K3** (tránh nhiễu cơ trên chi gắn điện cực): đạo trình I có điện cực ở cả
-    hai tay nên **loại M5 bóp tay**. M3 và lúc cuff bơm **chưa kiểm chứng**; M1,
-    M2, M4 **chưa đánh giá**.
-  - **K4**: tay đeo cuff luôn mang một điện cực; chưa kiểm chứng.
-  - **K5**: chưa kiểm.
-  - Kết luận 2026-10-22: **chưa thể nói** phương án A hết xung đột.
-- 5.3 và 6.4 ghi rõ hai mâu thuẫn chưa giải quyết: M2 (đo cuff khi đang làm mà
-  không được nói) và M4 (cửa sổ 60 s trước cuff rơi vào lúc đang đạp).
-- 6.4: các nghiệm pháp và nguồn về hướng thay đổi BP. Nguồn đọc ở mức abstract
-  (Europe PMC, 2026-10-21), có DOI trong file; 9/9 DOI đã đối chiếu metadata qua
-  OpenAlex/Europe PMC ngày 2026-10-22. Thời lượng/cường độ phần lớn **chưa có
-  nguồn**.
-  - **M0** nghỉ.
-  - **M1** thở chậm: giảm BP (Adler 2019).
-  - **M2** tính nhẩm: tăng (Carroll 2012, Jern 1991). Hai nguồn này chỉ **ủng hộ
-    gián tiếp**.
-  - **M3** nước lạnh ở bàn chân: tăng SBP/DBP (Korhonen 2006, Velasco 1997). Có
-    thêm yếu tố nhiễu co mạch ngoại vi.
-  - **M4** đạp xe ngồi, đo khi hồi phục: tăng khi gắng sức (Stergiou 2023, trước
-    đây ghi "ESH 2023"). Ở pha hồi phục **chưa chắc**: toàn văn Mukkamala 2021 ghi
-    BP sau gắng sức có thể thấp hơn trước gắng sức.
-  - Bỏ Fu 2002 (nguồn yếu, M5 đã loại).
-- 6.5: tiêu chí pilot P1–P4, **đề xuất, khóa trước pilot**.
-  - Ngưỡng 15 mmHg lấy từ dấu hiệu R3 của kế hoạch 28 tuần (nội bộ, không phải
-    nguồn khoa học).
-  - Định nghĩa P2 khác câu trong kịch bản bài báo: **chờ thống nhất**.
-- 5.1 khôi phục hai ý của v0.1 bị mất khi viết lại mục 5: Cohen 2025 về sai số
-  cuff, và yêu cầu chốt quy trình đo hai tay.
-
-### 3.4. Mốc R/foot thứ hai, PAT hợp lệ, so với đánh dấu tay (mục 4)
-
-Chi tiết: [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md).
-
-- R: thêm `derivative_energy` (đạo hàm bình phương, trung bình trượt, dời về cực
-  đại tín hiệu). **Không phải Pan–Tompkins.**
-- Foot: thêm `d2_max` và `valley_min`, nội suy parabol dưới một mẫu.
-- Chọn qua `SignalConfig(r_method=..., foot_method=...)`. Output mặc định
-  `features-sqi-v1` không đổi (so lại 2026-10-22 sau sửa đổi):
-  - bảng fixture Tuần 4 tạo lại giống từng byte với blob đã commit của
-    `reports/weekly/week_04/fixture_features.csv` (file working copy chỉ khác CRLF);
-  - 240 cửa sổ SYNTHETIC × 2 config cho output giống hệt HEAD.
-- PAT hợp lệ, giới hạn và outlier MAD: `software/signal_processing/pat_validity.py`.
-  - Nhịp không hợp lệ được gắn nhãn, không xóa; không dùng BP.
-  - Từ 2026-10-22, ghép R–foot trong khoảng R–R (`pair_between_r`). PAT ngoài
-    80–400 ms được ghép rồi gắn `out_of_range`, thay vì biến mất như trước.
-- So với đánh dấu tay: `software/evaluation/fiducial_agreement.py`, script
-  `scripts/week05_fiducials.py` (synth/export/plot/annotate/detect/compare), mẫu
-  CSV trống `docs/protocol/templates/manual_fiducials_template.csv`.
-  - Script **không tự sinh nhãn thủ công**; đáp án SYNTHETIC mang annotator riêng
-    và bị từ chối nếu không có cờ.
-  - Từ 2026-10-22:
-    - mọi lệnh ghi provenance;
-    - `compare` kiểm cùng config với `detect`;
-    - ghép một–một tối ưu;
-    - `annotate` không mất buổi đánh dấu khi `--out` đã tồn tại.
-- Test có đáp án: nhịp sạch, nhiễu, ngừng nhịp, mất xung PPG, HR 143 bpm, ECG
-  125 Hz, nội suy dưới mẫu, PAT ngoài giới hạn, MAD, ghép một–một, chặn split test
-  và ghi đè (`tests/test_week05_fiducials.py`, **50 test**; trước sửa đổi là 26).
-
-Hai lỗi phát hiện nhờ test, đã sửa trước khi chốt config:
-
-1. Không có sàn tuyệt đối, nên quy tắc MAD gắn outlier cho PAT gần như hằng chỉ vì
-   lượng tử hóa 1 mẫu → thêm `mad_floor_ms`.
-2. `agreement` không báo lỗi khi một loại mốc đã đánh dấu tay mà không có phương
-   pháp nào chạy → nay báo lỗi.
-
-Các lỗi do review độc lập 2026-10-22 phát hiện và việc đã sửa: mục 8.
-
-### 3.5. Đánh giá B0/B3 (mục 5) — **bị chặn**
-
-Không có `runs/b3_pulsedb/` trên máy (2026-10-21) và chưa có bàn giao trên remote.
-**Chờ Linh bàn giao** thư mục output `run_b3_pulsedb.py` (report.json,
-predictions_val.csv) cùng split v2 (inventory, manifest, config, report). Không
-dùng CSV 1.000 đoạn lịch sử thay thế. Khi có: kiểm provenance (commit, SHA-256
-raw/split/config), B0 và B3 cùng tập dòng val và cùng lượt bootstrap, rồi tóm tắt
-MAE/bias/SD và CI 95% theo người cho SBP và DBP riêng bằng `evaluate_prediction_table`.
-
-**Sai lệch cần ghi:** bản cũ của pipeline đã chạy và báo MAE trên **test**
-(`docs/testing.md`, `notebooks/metrics_all_splits.csv`,
-`notebooks/week4-train-xgboost.ipynb`, commit `acc8b8b`). Các số đó không được
-dùng để chọn mô hình, đặc trưng hay ngưỡng, và không được trích trong báo cáo.
-
-### 3.6. Kịch bản P A/P B/P C (mục 6)
-
-`docs/paper_scenarios_v0.1.md`: điều kiện kích hoạt theo G4/R2/R3/R5 của kế hoạch
-28 tuần, thông điệp chính, RQ trả lời được, bảng/hình chính, phần bỏ. Không tuyên
-bố tính mới hay hạng tạp chí.
-
-### 3.7. Câu hỏi cho thầy (chưa có câu trả lời; nhóm không tự trả lời)
-
-1. Hội đồng đạo đức nào xét đề tài này, cần mẫu biểu riêng nào, và thời gian xét
-   dự kiến bao lâu?
-2. Đo thử trên thành viên nhóm (thu 30 phút trên 3 người cho G2) có cần phê duyệt
-   của hội đồng không? Nếu có, có thủ tục rút gọn không?
-3. Nhóm có mượn được máy đo huyết áp bắp tay đã được kiểm định/validation, hoặc
-   thiết bị đo huyết áp liên tục (ví dụ dạng kẹp ngón) không?
-4. Các nghiệm pháp M1–M4 (thở chậm, tính nhẩm, ngâm chân nước lạnh, đạp xe nhẹ
-   tư thế ngồi) có được phép đưa vào hồ sơ không? Có cần nhân viên y tế có mặt
-   không?
-5. Ai quyết định ngưỡng huyết áp dừng phiên và đầu mối y tế khi số đo vượt ngưỡng;
-   có thông báo số đo cuff cho người tham gia không?
-6. Thời hạn lưu dữ liệu (đề xuất 03 năm sau công bố) và nơi lưu có phù hợp quy
-   định của trường không? Có bồi dưỡng người tham gia không?
-
-### 3.8. Câu hỏi cho Đức Anh
-
-1. Xác nhận phân bổ phương án A (protocol v0.2 mục 5.2) hay chọn B; điện cực
-   Ag/AgCl loại nào dán được lên ngón tay.
-2. Ánh xạ ECGP/ECGN của breakout MAX30001 cho đạo trình I và có cần điện cực
-   bias/RLD thứ ba không.
-3. Khi có module: thử K3–K5 (nhiễu cơ, ECG lúc cuff bơm ở tay có điện cực, dây
-   không kéo bo PPG) trên bench, chưa gắn lên người.
-4. Kế hoạch và ngày đo dòng rò trên bo V1 thật; cách đo nhiệt độ bo cổ tay.
-5. Đầu nối Qwiic trên bo MAX30101: tháo hay làm giá đỡ để không chạm da (A.3).
-6. (2026-10-22) Nhóm đã chọn MAX30101: cập nhật `Pin_Map_V1.md` và `BOM_V1.xlsx`,
-   hiện còn ghi MAX30102. Thêm MAX30101 (SEN-16474) vào `Danh sách mua.xlsx`, hiện
-   chưa có dòng PPG; dòng "PPG AFE" ghi BMI270. Ghi giá, ngày giao và trạng thái
-   duyệt.
-7. Điện cực 3M Red Dot 2228 trong danh sách mua có cỡ khoảng 4 × 3,3 cm theo trang
-   nhà bán (chưa kiểm datasheet): có dán được ở đốt gần ngón trỏ không?
-
-## 4. File đầu ra
-
-| Sản phẩm | Đường dẫn |
-| --- | --- |
-| Báo cáo này | `reports/weekly/week_05/README.md` |
-| Hồ sơ đạo đức (5 file + README, sửa outline) | `docs/ethics/` |
-| Protocol v0.2 (mục 5, 6.4, 6.5 mới) | `docs/protocol/protocol_outline_v0.2.md` |
-| Mốc ứng viên, `detect`, nội suy kiểm chiều cong | `software/signal_processing/fiducials.py` |
-| Chặn phương án không mặc định trong v1 | `software/feature_extraction/week04.py` |
-| PAT hợp lệ | `software/signal_processing/pat_validity.py` |
-| So với đánh dấu tay | `software/evaluation/fiducial_agreement.py` |
-| Script Tuần 5 | `scripts/week05_fiducials.py` |
-| Config | `configs/data/week05_huy.json` |
-| Mẫu CSV đánh dấu tay | `docs/protocol/templates/manual_fiducials_template.csv` |
-| Tài liệu phương pháp | `docs/protocol/week05_fiducials_pat_validity.md` |
-| Kết quả SYNTHETIC (records, đáp án, detections, agreement và các file provenance; biến thể `refractory_040/`) | `reports/weekly/week_05/synthetic_fiducials/` |
-| Test | `tests/test_week05_fiducials.py` |
-| Kịch bản bài báo | `docs/paper_scenarios_v0.1.md` |
-| Cập nhật danh mục | `docs/protocol/README.md`, `docs/protocol/week04_features_sqi_bootstrap.md`, `software/README.md`, `software/evaluation/README.md`, `scripts/README.md`, `tests/README.md` |
-
-## 5. Kết quả kiểm tra và môi trường
-
-Chạy lại từ Git root ngày 2026-10-22, sau các sửa đổi ở mục 8, bằng
-`.venv/Scripts/python.exe`. Ngày 2026-10-21 ra 355 passed, gồm 26 test Tuần 5.
+Chạy từ Git root bằng `.venv` (Python 3.13.12):
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `python -m ruff check .` | exit 0, không cảnh báo. `--select E501` trên 4 file .py mới: exit 0 |
-| `python -m pytest -q -p no:cacheprovider` | **379 passed**, exit 0 (gồm 50 test Tuần 5) |
-| `python scripts/check_environment.py` | **exit 1**: lệch pin đã biết (Python 3.13.12 so với `<3.12`; numpy 2.5.3, pandas 3.0.6, scipy 1.18.1, matplotlib 3.11.2, pytest 9.1.1, scikit-learn 1.9.1, PyYAML 6.0.3 khác pin). Không sửa pin |
-| `python -m pip check` | exit 0, No broken requirements found |
-| `git diff --check` | exit 0 (chỉ cảnh báo CRLF/LF của working copy); file mới kiểm riêng: không có khoảng trắng cuối dòng hay CRLF |
+| `python -m pytest -q -p no:cacheprovider` (phần Huy, 2026-10-22) | **379 passed** (gồm 50 test Tuần 5 của Huy) |
+| `python -B -m pytest -q -p no:cacheprovider` (phần Linh, 2026-10-22) | **416 passed** (gồm test `test_packet_logger.py`; test v2 không đổi) |
+| `python -m pytest -q -p no:cacheprovider` (toàn repo, 2026-10-23) | **471 passed** (gồm test known-answer và tương thích firmware–logger) |
+| `pio run -d firmware` (2026-10-23) | Build đạt, RAM 4,5 %, flash 19,8 % của phân vùng 1 MB; chưa nạp lên bo |
+| `python -m ruff check .` | Đạt |
+| `python -m ruff check --select E501` trên file `.py` mới | Đạt (≤ 88 ký tự) |
+| `python -m pip check` | Đạt |
+| `git diff --check` | Đạt |
+| `python scripts/check_environment.py` | Exit 1 do lệch pin đã biết (Python 3.13.12 so với `<3.12`, numpy/pandas/scipy khác pin) |
 
-Môi trường không phải Python 3.11 của CI, nên kết quả trên chưa thay cho CI Python
-3.11 trên PR.
+Mutation test: logger của Linh bắt 33/33 mutant; test mốc Tuần 5 của Huy bắt 33/33
+mutant nhắm vào các phần đã sửa.
 
-## 6. SYNTHETIC và dữ liệu công khai — không trộn kết quả
+### 6.2. Logger trên 13 case SYNTHETIC (Linh)
 
-**SYNTHETIC** (`reports/weekly/week_05/synthetic_fiducials/agreement_synthetic.json`,
-5 bản ghi `SYN_*`, đáp án do mã sinh; tạo lại 2026-10-22, số liệu không đổi):
+Mỗi case: `simulate_packets.py` chạy hai lần cho cùng SHA-256 `stream.bin`;
+`packet_logger.py record` cho `raw.bin` trùng hash; `replay --expect` exit 0.
 
-- **R:** `derivative_energy` 55/55 TP, 2 FP; `prominence` 55/55 TP, 29 FP (bắt
-  sóng T khi refractory 0,25 s). Ở refractory 0,4 s (`refractory_040/`):
-  `prominence` 0 FP, `derivative_energy` 1 FP. Sóng T SYNTHETIC đặt đúng
-  R + 0,25 s, trùng biên refractory, nên không kết luận phương pháp nào tốt hơn.
-- **Foot `tangent`:** 54/54. Con số gộp +27,5 ms **không phải** phép kiểm giải
-  tích. Theo từng bản ghi:
-  - sạch, ngừng nhịp, mất PPG: +27,2 ms (giải tích 27,25 ms với thời gian lên
-    150 ms);
-  - HR143 (lên 100 ms): +18,8 ms;
-  - nhiễu: +47,4 ms.
+| Tiêu chí | Kết quả |
+| --- | --- |
+| Gói hợp lệ | `valid`: 26/26 packet, 0 lỗi |
+| Mất / trùng / đảo thứ tự | `missing_packets` 1 / `duplicate` 1 / `out_of_order` 1 |
+| Timestamp bất thường | `timestamp_anomaly` 1, chỉ packet sai bị cách ly (kể cả anchor sai ở packet đầu) |
+| Lệch kênh | `channel_offset` 1: +19 862,875 µs so với 20 000 µs chèn vào, trong giới hạn jitter |
+| CRC sai, mất byte | `crc_mismatch` 1 + `skipped_bytes` 1 + `missing_packets` 1; bắt lại `SYNC` ở packet kế |
+| Index nhảy, version lạ, đổi phiên | `sample_gap_status` 1, `sample_index_reanchored` 1, `unsupported_version` 1, `session_change` 1 |
+| Không ghi đè raw | Test `FileExistsError`; manifest có SHA-256 raw và mọi output |
+| Replay offline | 13/13 case khớp hash |
 
-  Lệch thay đổi theo thời gian lên của xung.
-- **Foot `d2_max`** 50/54; **`valley_min`** 48/54, hỏng chủ yếu ở bản ghi nhiễu.
+### 6.3. Mốc R/foot trên SYNTHETIC (Huy)
 
-Chỉ kiểm chứng code; không nói gì về độ chính xác trên người hay PulseDB. Không
-có số nào ở đây là kết quả đánh dấu tay.
+5 bản ghi `SYN_*`, đáp án do mã sinh
+([agreement_synthetic.json](synthetic_fiducials/agreement_synthetic.json)):
 
-**PulseDB:** không có `data/raw/` hay file `.mat` trên máy (2026-10-21). Chưa xuất
-tập train/val, chưa đánh dấu tay, chưa có bảng sai số. **Bị chặn chờ Linh** bàn
-giao raw + split v2. B0/B3: xem 3.5.
+| Phương pháp | Kết quả |
+| --- | --- |
+| R `derivative_energy` (refractory 0,25 s) | 55/55 TP, 2 FP |
+| R `prominence` (refractory 0,25 s) | 55/55 TP, 29 FP (bắt sóng T) |
+| R ở refractory 0,4 s | `prominence` 0 FP, `derivative_energy` 1 FP |
+| Foot `tangent` | 54/54; lệch +27,2 ms ở bản ghi sạch (giải tích 27,25 ms), +18,8 ms ở HR 143, +47,4 ms ở bản ghi nhiễu |
+| Foot `d2_max` | 50/54 |
+| Foot `valley_min` | 48/54, hỏng chủ yếu ở bản ghi nhiễu |
 
-## 7. Bàn giao, hạn chế và chuyển tiếp
-
-| Đầu vào cần nhận | Người bàn giao | Dùng cho |
-| --- | --- | --- |
-| Raw PulseDB `.mat` được phép dùng + thư mục split v2 (sau khi chốt pool) | Linh | Xuất tập nhỏ train/val, Huy đánh dấu tay, bảng sai số mốc |
-| Output `runs/b3_pulsedb/<run>/` (report.json, predictions_val.csv) | Linh | Đánh giá B0/B3, CI theo người |
-| Xác nhận phân bổ tay/điện cực, câu hỏi 3.8 | Đức Anh | Đóng protocol v0.2 mục 5 |
-| Câu trả lời 3.7 | Thầy | Hoàn thiện và nộp hồ sơ đạo đức |
-| Review code mốc Tuần 5 | Linh | Trước khi dùng trong pipeline. `linh.md` mục 7.1 có 8 phát hiện; review độc lập xác nhận cả 8, đã xử lý ở mục 8. Cần Linh review lại bản đã sửa trên PR |
-
-Hạn chế:
-
-- Chưa có đánh dấu tay nên chưa có độ nhạy/PPV thật.
-- R chưa nội suy dưới mẫu; `d2_max`/`valley_min` chưa làm mượt.
-- Nhiều ngưỡng chưa có nguồn (ghi rõ trong config và tài liệu).
-- Các giới hạn và điểm chờ quyết định ở mục 8.2.
-
-Chuyển Tuần 6, cùng người xử lý:
-
-- đánh dấu tay khi có raw;
-- đánh giá B0/B3 khi có output;
-- nộp hồ sơ đạo đức khi có câu trả lời của thầy;
-- xác nhận phân bổ tay khi Đức Anh trả lời mục 3.8.
-
-Không tuyên bố thiết bị y tế, thay thế cuff hay đạt ISO/AAMI.
-
-## 8. Review độc lập 2026-10-22: đã sửa và chờ quyết định
-
-Review chỉ đọc ngày 2026-10-22 chạy lại mọi kiểm tra, tái lập SYNTHETIC từng byte,
-thử luồng biên và mutation. Sau đó Huy yêu cầu sửa những lỗi không cần quyết định
-phương pháp. Mọi số bên dưới chạy trên Python 3.13.12; **chưa thay được CI Python
-3.11**.
-
-### 8.1. Đã sửa (2026-10-22)
-
-| Lỗi | Sửa | Bằng chứng |
-| --- | --- | --- |
-| C1: PAT ngoài 80–400 ms biến mất thành "R không ghép", trái quy tắc "gắn nhãn, không xóa"; config `pat_validity` không có tác dụng | `pair_between_r`: ghép trong khoảng R–R rồi gắn nhãn; `r_status` (`paired`/`no_foot`/`ambiguous`); biên 80/400 có dung sai float; test khóa giá trị config | `test_pat_beats_labels_out_of_range_instead_of_dropping` và các test liên quan |
-| C2: `synth`/`plot`/`annotate`/`detect` không ghi provenance; `compare` có thể ghi sai config đã dùng | Mỗi lệnh ghi provenance (git, hash code/input, numpy/scipy/pandas/matplotlib, `source_type`); `detect` ghi `<out>.provenance.json`; `compare` từ chối khi config khác `detect`, thiếu provenance hoặc CSV đã đổi | `test_compare_refuses_other_config_or_missing_detect_provenance` |
-| `annotate` kiểm `--out` ở cuối buổi | Kiểm trước cửa sổ đầu, ghi từng bản ghi; toolbar không bắt buộc | `test_annotate_refuses_existing_output_before_any_window` |
-| Ghép greedy bỏ sót cặp; biên float; vùng review bất đối xứng phạt phương pháp có bias | Ghép một–một tối ưu (quy hoạch động); dung sai float; detection ở mép trong một dung sai được ghép nhưng không tính FP | `test_match_events_maximises_pairs_and_never_reuses`, `test_agreement_edge_match_is_tp_and_unmatched_margin_is_not_fp` |
-| Chặn đáp án SYNTHETIC lách được bằng chữ thường/khoảng trắng | Chặn trong chính `agreement`, không phân biệt hoa thường hay khoảng trắng; trộn với mốc tay bị từ chối | `test_agreement_refuses_synthetic_truth_however_written` |
-| Nội suy parabol dời ngược hướng khi parabol cong sai chiều | Kiểm chiều cong (`_vertex_offset(..., "min"/"max")`) | `test_vertex_offset_needs_the_right_curvature` |
-| Test yếu: 31/56 mutant sống | 50 test (trước là 26). 33/33 mutant nhắm vào các sửa đổi bị bắt, gồm tắt hoặc đảo dấu nội suy, MAD k/scale, dung sai R, `load_records` bỏ chặn test, `_new_dir` cho ghi đè, ECG 125 Hz | `tests/test_week05_fiducials.py` |
-| Tài liệu sai hoặc thiếu: nội suy ở góc nhọn, `export` đọc toàn bộ raw, ngưỡng `derivative_energy`, refractory áp cho PPG, +27,5 ms "đúng giải tích", bảng chỉ có refractory 0,25 s | Sửa `week05_fiducials_pat_validity.md` mục 2–8 và config `sources`; thêm biến thể `refractory_040/` | Mục 6 ở trên |
-| Đạo đức/protocol: xem mục 3.2, 3.3 | Đánh dấu chờ, ghi mâu thuẫn, viết lại kết luận 5.4, khôi phục ý v0.1 bị mất, sửa trích dẫn | `docs/ethics/`, protocol v0.2 changelog 2026-10-22 |
-| README danh mục chưa có file mới | Cập nhật `software/`, `software/evaluation/`, `scripts/`, `tests/` | — |
-
-Output mặc định `features-sqi-v1` vẫn không đổi sau các sửa đổi (mục 3.4).
-
-### 8.2. Chờ Huy quyết định (chưa đổi code hoặc quy trình)
-
-1. Nội suy parabol ở góc nhọn bất đối xứng: giữ, bỏ hay chỉ nội suy khi gần đối
-   xứng. Probe: `valley_min` MAE 6,28 ms có nội suy so với 3,56 ms không nội suy.
-2. Ngưỡng robust cho `derivative_energy`. Hiện một nhịp ×2,5 làm mất 8/9 nhịp.
-3. `ppg_refractory_s` riêng cho PPG và giá trị của nó; thêm ca SYNTHETIC có sóng
-   tâm trương.
-4. Dời sóng T SYNTHETIC khỏi biên refractory (R + 0,25 s). Việc này đổi đáp án và
-   bảng kết quả.
-5. Protocol:
-   - trục thời gian M2 (cách và lúc trả lời) và M4 (cửa sổ so với cuff sau khi
-     dừng đạp);
-   - một định nghĩa ngưỡng 15 mmHg dùng chung cho P2 và kịch bản bài báo;
-   - quy tắc dùng lượt đo bị dừng (mục 10);
-   - thống nhất mục 4 với L1–L10.
-6. Thiết bị trong hồ sơ: số điện cực (cùng Đức Anh); điện cực khô dùng trên người
-   hay chỉ bench.
-7. Có tạo lại artifact Tuần 4 không. `reports/weekly/week_04/fixture_checks.json`
-   còn ghi `features-sqi-v0` và hash bảng của bản CRLF (cũ từ trước `645df5d`).
-8. `hardware/kicad/v1_module/wrist/v1_wrist.kicad_pro`: khối `erc` do KiCad tự
-   ghi lúc 2026-10-20 15:05, không thuộc việc Tuần 5. Bỏ thay đổi hay giao Đức
-   Anh; **không** đưa vào commit Tuần 5.
+Sóng T SYNTHETIC đặt đúng R + 0,25 s, trùng biên refractory, nên bảng này chỉ kiểm
+chứng code, không xếp hạng phương pháp. Output mặc định `features-sqi-v1` giống
+từng byte với bảng fixture Tuần 4 và giống HEAD trên 240 cửa sổ × 2 config.

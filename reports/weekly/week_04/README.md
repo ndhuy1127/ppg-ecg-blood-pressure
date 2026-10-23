@@ -1,170 +1,149 @@
-# Báo cáo tiến độ Tuần 4 — phần Huy
+# Báo cáo tiến độ Tuần 4
 
-> **Giai đoạn:** Tuần 4 / 28 tuần
+> **Giai đoạn:** Tuần 4 / 28 tuần (2026-10-11 → 2026-10-20)
 >
-> **Người tổng hợp:** Nguyễn Đức Huy
->
-> **Ngày cập nhật:** 2026-10-13
->
-> **Nhánh/commit nền:** dev/huy @ 8472721; thay đổi Tuần 4 chưa commit
->
-> **Trạng thái:** Hoàn thiện phần mềm độc lập và kiểm tra fixture; chưa nghiệm thu
-> dữ liệu công khai, thiết bị thật, CI Python 3.11 hoặc toàn bộ G1.
+> **Thành viên:** Linh, Trương Đức Anh, Nguyễn Đức Huy
 
-## 1. Mục tiêu và phạm vi
+## 1. Tóm tắt công việc của tuần (mục tiêu)
 
-Kế thừa kế hoạch tại `docs/plans/WEEK_04.md`:
-đặc trưng v0, kiểm tra mốc R/foot/PAT, SQI v0, bootstrap theo người và bàn giao
-đánh giá baseline. Không triển khai lại B0/B1/metrics, không làm thay B3 hoặc
-schematic/PCB của thành viên khác. Git sạch trước khi bắt đầu; giữ nguyên
-reader/manifest và mọi đầu ra lịch sử. Không commit/push/merge/tạo PR.
+Theo [kế hoạch Tuần 4](../../../docs/plans/WEEK_04.md), tuần này dựng baseline đầu
+tiên và hoàn thiện thiết kế mạch:
 
-## 2. Việc đã làm
+1. Pipeline đọc dữ liệu → đặc trưng → huấn luyện → đánh giá; baseline B3 XGBoost
+   dự đoán SBP/DBP, so với B0 trên cùng split.
+2. Hoàn thiện schematic V1 và pin map.
+3. Bộ đặc trưng/SQI v0, kiểm tra mốc R/foot/PAT, bootstrap theo người.
 
-- Triển khai 8 đặc trưng PPG/HR/PAT với tên, công thức, đơn vị, điều kiện,
-  missing và provenance. Nhãn/ABP không tham gia trích đặc trưng hoặc SQI.
-- Detector R sơ bộ dùng prominence/refractory, foot tiếp tuyến maximum
-  upslope, ghép nhịp forward duy nhất; không giả nhận là Pan–Tompkins.
-- Hỗ trợ fs riêng từng kênh, timestamp s/ms/us, clock/alignment evidence,
-  độ trễ upstream; PAT thiếu không trở thành 0. Không dùng PAT suy clock offset.
-- SQI finite/phẳng/nhịp/shape/ghép PAT, trả cờ/lý do và thống kê; không tự loại
-  hoặc sửa raw. Motion/saturation/AC–DC chưa khả dụng vì thiếu IMU/ADC/DC thật.
-- Bootstrap CI percentile 95%, seed 20261013, 2000 lượt, giữ cụm người và
-  toàn bộ quan sát; người lấy lặp có cluster occurrence riêng. Cùng draws cho
-  các model. MAE/bias chính cân bằng theo người; SD chung `ddof=1`.
-- Prediction API kiểm tra inventory/manifest v2, exact sample ID/subject/split,
-  thiếu/thừa/trùng dòng, cùng tập quan sát và nhãn lấy từ manifest.
-- Test reader adapter không đọc ABP/nhãn; test B0/B1/metrics cũ qua bootstrap.
-- Sinh JSON/CSV và SVG từ fixture analytic có đáp án, lưu config/code/input/
-  figure/table hash, commit nền và dirty. Đã có tài liệu ví dụ bàn giao.
+## 2. Thành viên phụ trách và phân công công việc
 
-## 3. File đầu ra
-
-Đường dẫn tính từ thư mục gốc của repo:
-
-| Sản phẩm | Đường dẫn |
+| Thành viên | Công việc Tuần 4 |
 | --- | --- |
-| Mốc/kiểm tra thời gian | `software/signal_processing/fiducials.py` |
-| Đặc trưng/SQI/reader adapter | `software/feature_extraction/week04.py` |
-| Bootstrap/prediction evaluation | `software/evaluation/subject_bootstrap.py` |
-| Config ngưỡng sơ bộ và bootstrap | `configs/data/week04_huy.json` |
-| Định nghĩa/API/ví dụ/giới hạn | `docs/protocol/week04_features_sqi_bootstrap.md` |
-| Runner analytic fixture | `scripts/demo_week04_huy.py` |
-| Test mới | `tests/test_week04_features.py`, `tests/test_subject_bootstrap.py` |
-| JSON kiểm tra fixture | `reports/weekly/week_04/fixture_checks.json` |
-| Bảng feature fixture, không phải baseline công khai | `reports/weekly/week_04/fixture_features.csv` |
-| Hình R/foot/cặp PAT fixture | `reports/figures/week04_synthetic_fiducials.svg` |
-| Log xác minh cuối | `reports/weekly/week_04/verification.txt` |
+| Linh | Pipeline PulseDB với đặc trưng ECG/PPG đơn giản, B3 XGBoost, tài liệu kiểm thử pipeline |
+| Đức Anh | Sửa schematic V1, pin map V1 cho ESP32-S3-DevKitC-1 |
+| Huy | Đặc trưng/SQI v0, mốc R/foot và ghép PAT, bootstrap theo người, API đánh giá bảng dự đoán; đưa B3 lên split v2; tài liệu phần cứng V1-module và thiết kế KiCad; cập nhật y văn |
 
-## 4. Kết quả kiểm tra và môi trường
+## 3. Tóm tắt công việc đã hoàn thành của từng người
 
-Đã chạy từ Git root bằng `.venv/Scripts/python.exe`:
+### Linh
 
-| Lệnh / kiểm tra | Kết quả cuối |
+- Pipeline PulseDB đầu tiên: `features.py` (12 đặc trưng thống kê ECG/PPG),
+  `pipeline.py`, `train.py`, `evaluate.py`.
+- Notebook huấn luyện XGBoost (`week4-train-xgboost.ipynb`) và bảng metrics theo split.
+- Tài liệu kiểm thử pipeline (`docs/testing.md`) và cập nhật provenance PulseDB.
+
+### Đức Anh
+
+- Sửa schematic V1 (`V1.SchDoc`).
+- Viết pin map V1: MAX30001 và BMI270 chung bus SPI (SCK GPIO11, MOSI GPIO10, MISO
+  GPIO13, CS riêng GPIO14/GPIO12); PPG qua I²C (SDA GPIO8, SCL GPIO9, INT GPIO6);
+  ngắt ECG GPIO5, IMU GPIO4.
+
+### Huy
+
+- **Đặc trưng/SQI `features-sqi-v1`:** 8 đặc trưng PPG/HR/PAT có tên, công thức,
+  đơn vị, điều kiện và lý do thiếu; nhãn/ABP không tham gia trích đặc trưng hay SQI.
+- **Mốc tín hiệu:** R bằng prominence/refractory, PPG foot bằng tiếp tuyến tại
+  sườn lên cực đại, ghép nhịp R → foot duy nhất; hỗ trợ fs riêng từng kênh,
+  timestamp s/ms/µs, độ trễ upstream.
+- **SQI:** kiểm tra giá trị hữu hạn, tín hiệu phẳng, số nhịp, hình dạng và ghép PAT;
+  trả cờ và lý do, không tự loại hay sửa raw.
+- **Bootstrap theo người:** CI percentile 95%, seed 20261013, 2000 lượt, lấy lại
+  cụm người giữ toàn bộ quan sát; các model dùng chung lượt lấy mẫu.
+- **API `evaluate_prediction_table`:** kiểm tra bảng dự đoán với inventory/manifest
+  v2 (ID mẫu, người, split, thiếu/thừa/trùng dòng).
+- Runner fixture analytic sinh JSON/CSV/SVG có hash config/code/input/hình.
+- Sửa lỗi foot ở nhịp tim cao: khi RR < 0,5 s, hai nhịp có thể dùng chung một
+  valley; trên 3.000 cửa sổ giả lập (RR 0,41–1,2 s) có 7 lần dừng batch trước khi
+  sửa, 0 lần sau khi sửa.
+- **B3 trên split v2:** chuyển pipeline B3 của Linh sang runner `run_b3_pulsedb.py`:
+  đọc raw `.mat` + thư mục split v2, kiểm hash raw với inventory, fit B0/B3 trên
+  train, chấm điểm chỉ trên val, không trích đặc trưng tập test; `XGBoostBaseline`
+  một regressor cho mỗi đầu ra, seed và `n_jobs` cố định.
+- Làm chặt reader/validator PulseDB, split và hash provenance không phụ thuộc CRLF.
+- **Phần cứng V1-module:** tài liệu V1 dùng module (Phần A) và bản chip trần (Phần
+  B), bảng nguồn/giao tiếp/lấy mẫu V0, kế hoạch đo đồng bộ 10 phút trên bench,
+  thiết kế KiCad bo đế và bo cổ tay.
+- **Y văn:** bổ sung nguồn 2015–2026 cho RQ1–RQ3 (khuyến cáo validation ESH 2023,
+  AHA 2025, Mukkamala 2021; dự án Aurora; SQI và risk–coverage), cập nhật RQ và protocol.
+
+## 4. Danh mục sản phẩm đầu ra và đường dẫn
+
+| STT | Sản phẩm | Người làm | Đường dẫn |
+| --- | --- | --- | --- |
+| 1 | Notebook huấn luyện XGBoost | Linh | [week4-train-xgboost.ipynb](../../../notebooks/week4-train-xgboost.ipynb) |
+| 2 | Tài liệu kiểm thử pipeline (bản commit `acc8b8b`) | Linh | [testing.md](../../../docs/testing.md) |
+| 3 | Đặc trưng thống kê ECG/PPG | Linh (Huy chỉnh lại) | [features.py](../../../software/pulsedb/features.py) |
+| 4 | Schematic V1 (bản sửa) | Đức Anh | [V1.SchDoc](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/blob/bb6605bcadd93390fd6de3aae12c517ce7960ec1/hardware/schematics/V1.SchDoc) (Altium; nhánh `dev/ducanh`, commit `bb6605b`); bản hiện hành: [KiCad V1-module](../../../hardware/kicad/v1_module/) |
+| 5 | Pin map V1 | Đức Anh | [Pin_Map_V1.md](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/blob/9073aa81a58757f28dffd52f42fb15369ae5cd86/configs/hardware/Pin_Map_V1.md) (nhánh `dev/ducanh`, commit `9073aa8`); bản hiện hành: [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.7 |
+| 6 | Mốc R/foot, ghép PAT | Huy | [fiducials.py](../../../software/signal_processing/fiducials.py) |
+| 7 | Đặc trưng/SQI | Huy | [week04.py](../../../software/feature_extraction/week04.py) |
+| 8 | Bootstrap, đánh giá bảng dự đoán | Huy | [subject_bootstrap.py](../../../software/evaluation/subject_bootstrap.py) |
+| 9 | Config ngưỡng và bootstrap | Huy | [week04_huy.json](../../../configs/data/week04_huy.json) |
+| 10 | Định nghĩa, API, ví dụ | Huy | [week04_features_sqi_bootstrap.md](../../../docs/protocol/week04_features_sqi_bootstrap.md) |
+| 11 | Runner fixture | Huy | [demo_week04_huy.py](../../../scripts/demo_week04_huy.py) |
+| 12 | Test Tuần 4 | Huy | [test_week04_features.py](../../../tests/test_week04_features.py), [test_subject_bootstrap.py](../../../tests/test_subject_bootstrap.py) |
+| 13 | Kết quả fixture | Huy | [fixture_checks.json](fixture_checks.json), [fixture_features.csv](fixture_features.csv), [verification.txt](verification.txt) |
+| 14 | Hình R/foot/PAT fixture | Huy | [week04_synthetic_fiducials.svg](../../figures/week04_synthetic_fiducials.svg) |
+| 15 | Runner B0/B3 trên split v2 | Huy | [run_b3_pulsedb.py](../../../scripts/run_b3_pulsedb.py), [pipeline.py](../../../software/pulsedb/pipeline.py), [xgboost_baseline.py](../../../software/models/xgboost_baseline.py), [b3_pulsedb_v0.json](../../../configs/models/b3_pulsedb_v0.json), [test_b3_pipeline.py](../../../tests/test_b3_pipeline.py), [hướng dẫn](../../../docs/protocol/run_b3_pulsedb.md) |
+| 16 | Tài liệu phần cứng V1-module | Huy | [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md), [interface_power_sampling_v0.md](../../../configs/hardware/interface_power_sampling_v0.md), [sync_10min_test_plan.md](../../../hardware/test_reports/sync_10min_test_plan.md) |
+| 17 | Thiết kế KiCad V1-module | Huy | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/) |
+| 18 | Y văn bổ sung | Huy | [literature_update_2026-10-14.md](../../../docs/literature/literature_update_2026-10-14.md) |
+
+## 5. Tóm tắt các nội dung chuyên môn chính
+
+### 5.1. Đặc trưng v1 (Huy)
+
+| Đặc trưng | Định nghĩa |
 | --- | --- |
-| `python -B -m pytest -q -p no:cacheprovider` | **257 passed in 5.69s**, exit 0; gồm 58 test Tuần 4 |
-| `python -m ruff check .` | exit 0, không có cảnh báo |
-| `python scripts/check_environment.py` | exit 0 |
-| `python -m pip check` | exit 0, No broken requirements found |
-| `python scripts/demo_week04_huy.py` | exit 0, JSON/CSV/SVG đã sinh |
-| `git diff --check` | exit 0; kiểm tra whitespace file mới bổ sung riêng ở log |
+| `ppg_std` | SD `ddof=0` của PPG đã xử lý |
+| `ppg_amplitude_median` | Median (peak − valley trước peak) |
+| `ppg_rise_time_median_ms` | Median (peak − foot tiếp tuyến), ms |
+| `ppg_width50_median_ms` | Median độ rộng tại nửa biên độ, ms |
+| `ppg_hr_bpm` | 60 / median khoảng foot liên tiếp |
+| `ecg_hr_bpm` | 60 / median RR |
+| `pat_median_ms` | Median (PPG foot − ECG R) × 1000, ms |
+| `pat_iqr_ms` | P75 − P25 của PAT từng nhịp, ms |
 
-Môi trường thực: Python **3.13.12**, NumPy 2.5.3, SciPy 1.18.1, pandas 3.0.6,
-matplotlib 3.11.2, scikit-learn 1.9.1, PyYAML 6.0.3. Khác Python 3.11 và
-dependency pins của repo; **chưa thay CI hoặc xác nhận tương thích môi trường
-chính thức**. Không tìm thấy Python khác qua launcher `py -0p`; không cài/thay
-môi trường ngoài phạm vi. Log lưu cả exit code, không dựa exit status của tool
-wrapper bị lỗi capture terminal.
+- PAT là khoảng R peak → PPG foot (PAT = PEP + PTT), không gọi là PTT. PAT thiếu giữ
+  `None`, không thành 0; không dùng PAT để suy ra lệch clock.
+- Fixture SYNTHETIC: R tại 1..8 s, foot = R + 0,2 s, thời gian lên 160 ms, width50
+  200 ms, HR 60 bpm. Trên 5 đoạn: 2 đoạn có đặc trưng PPG/HR, 1 đoạn có PAT, 4 đoạn
+  gắn cờ.
 
-Trong quá trình bổ sung test shape có một assertion không đúng: median
-correlation có thể không gắn cờ minority outlier khi đa số chu kỳ giống template.
-Đã sửa fixture để kiểm tra hai chu kỳ thực sự khác nhau, **không đổi ngưỡng
-config theo test**. Suite cuối đạt. Giới hạn detector/SQI này được giữ rõ.
+### 5.2. Pipeline B3 (Linh, Huy)
 
-Test bao phủ mốc/PAT đã biết, fs 250/125 và 512/128, cực tính, delay/timestamp
-units/gaps/invalid timestamp, missing/phẳng/NaN/Inf, nhịp thiếu, ambiguous PAT,
-shape và số nhịp không đủ; bootstrap multiplicity/seed/degenerate/ít người,
-prediction mismatch và compatibility baseline/reader/manifest/metrics.
+- Đặc trưng `pulsedb-simple-stats-v0`: mean, std, min, max, range, rms cho ECG và
+  PPG (12 đặc trưng), không nhận ABP, nhãn, ID hay hash.
+- XGBoost: 300 cây, độ sâu 4, learning rate 0,05, seed 42, `n_jobs` 1.
+- Fit trên train, đánh giá trên val; tập test không được trích đặc trưng.
+- Bản pipeline đầu (`acc8b8b`) có chấm điểm trên test; các số đó không dùng để chọn
+  mô hình, đặc trưng hay ngưỡng.
 
-**Bản sửa sau review 2026-10-13:** chặn HR một nhịp thành NaN, bảo đảm mọi
-feature hữu hạn hoặc None; missing reason theo feature; validation config và
-metadata trả ValueError cho kiểu không hợp lệ/bool/edge whitespace. Bổ sung
-hash fixture waveform/metadata timing/input tổng thể, không đánh đồng với raw
-file checksum. Thêm 23 test cho các hành vi trên và timing/biên/short-window
-của lọc zero-phase. Regenerate JSON/CSV/SVG, giữ nguyên ngưỡng/config khoa học.
-Python 3.11 chưa chạy được: `py -0p` không thấy interpreter đăng ký;
-`Get-Command python,python3.11` chỉ thấy Python 3.13. Không cài môi trường mới.
+### 5.3. Phần cứng V1 (Đức Anh, Huy)
 
-**Bản sửa ngày 2026-10-14:**
+- Schematic V1 của Đức Anh: ESP32-S3 + MAX30001 + MAX30102 + BMI270; MAX30001 và
+  BMI270 chung bus SPI.
+- V1-module (Phần A): bo đế ESP32-S3-DevKitC-1 + breakout MAX30001 (SPI riêng),
+  bo cổ tay MAX30101 (I²C riêng) + BMI270, cấp nguồn qua USB từ laptop chạy pin.
+- Kế hoạch đo 10 phút trên bench: tốc độ lấy mẫu thực, drift, jitter của
+  `T_ANCHOR_US`, độ trễ và lệch ECG–PPG, tỷ lệ mất packet; không dùng PAT để suy lệch clock.
 
-- **Lỗi detector PPG foot ở HR cao:** khi RR ngắn hơn `foot_lookback_s` (0,5 s),
-  cửa sổ tìm valley có thể lùi qua peak PPG trước đó, khiến hai nhịp dùng chung
-  một valley. Hệ quả là foot bị lệch hoặc trùng; khi trùng, `pair_pat` báo lỗi
-  và `extract_windows` dừng cả batch thay vì gắn cờ một cửa sổ. Trên 3.000 cửa
-  sổ giả lập ngẫu nhiên (RR 0,41–1,2 s), có 7 lần crash trước khi sửa và 0 lần
-  sau khi sửa. Đã giới hạn valley nằm sau peak liền trước và thêm test hồi quy
-  ở RR 0,42 s (test fail khi bỏ bản sửa).
-- **Cờ thiếu:** `ppg:no_complete_half_height_pulse` trước đây chỉ có trong
-  `missing_reasons`, nay được thêm cả vào `flags`.
-- **Hash hình:** SVG trước đây chứa ngày giờ và ID ngẫu nhiên nên `figure_sha256`
-  đổi sau mỗi lần chạy; nay lưu không kèm ngày giờ và với salt cố định.
-- Kết quả sau sửa: `pytest -q -p no:cacheprovider` **258 passed**, `ruff check .`
-  đạt. Đã chạy lại `scripts/demo_week04_huy.py`: bảng fixture và tóm tắt (5 đoạn,
-  2 có đặc trưng PPG, 1 có PAT, 4 gắn cờ) không đổi; hash code và hình được cập
-  nhật trong `fixture_checks.json`. `verification.txt` là log của lần chạy
-  2026-10-13, giữ nguyên làm mốc lịch sử.
+## 6. Kết quả kiểm tra kỹ thuật
 
-## 5. Fixture và dữ liệu công khai — không trộn kết quả
+Chạy từ Git root bằng `.venv` (Python 3.13.12, NumPy 2.5.3, SciPy 1.18.1):
 
-**Fixture SYNTHETIC:** R tại 1..8 s, chân PPG R+0.2 s, rise 160 ms,
-width50 200 ms, HR 60 bpm. JSON/CSV ghi kết quả tính bằng mã; không phải
-waveform sinh lý thật hoặc chứng minh độ chính xác trên người.
-Runner xử lý 5 đoạn: 2 đoạn có feature PPG/HR, 1 đoạn có PAT, 4 đoạn gắn cờ
-(PPG missing/phẳng/nonfinite và alignment chưa xác minh). Một đoạn có thể có
-nhiều lý do; tổng số flags không phải số đoạn bị loại. Các đoạn vẫn được giữ.
+| Ngày | Lệnh | Kết quả |
+| --- | --- | --- |
+| 2026-10-13 | `python -B -m pytest -q -p no:cacheprovider` | **257 passed in 5.69s** (gồm 58 test Tuần 4) |
+| 2026-10-13 | `python -m ruff check .` | Đạt |
+| 2026-10-13 | `python scripts/check_environment.py`, `python -m pip check` | Đạt |
+| 2026-10-13 | `python scripts/demo_week04_huy.py` | Exit 0, sinh JSON/CSV/SVG |
+| 2026-10-13 | `git diff --check` | Đạt |
+| 2026-10-14 | `pytest -q -p no:cacheprovider` sau khi sửa lỗi foot | **258 passed**; bảng fixture không đổi |
 
-**Công khai:** chỉ tìm thấy CSV manifest 1.000 đoạn lịch sử ở
-`data/processed/linh_week03/pulsedb_manifest_1000.csv`
-và metrics B0 cũ trong `runs/b0_pulsedb`.
-Không có raw waveform/metadata timing hoặc inventory v2/prediction B3 hợp lệ
-trong các đầu vào cục bộ đã kiểm tra. Không mở/in dữ liệu người; không tạo
-timestamp hoặc inventory thay thế. Chưa chạy feature/PAT/SQI/CI trên PulseDB
-Tuần 4, chưa có hình công khai. Kết quả B0 công khai Tuần 3 giữ tại báo cáo cũ,
-không coi là lần chạy Tuần 4 hoặc tự nâng nghiệm thu nguồn/pool/split.
-
-| Phân tích baseline công khai Tuần 4 | Trạng thái |
-| --- | --- |
-| B0/B3 cùng validation, MAE/bias/SD và CI | Chờ prediction, inventory/manifest và provenance Linh |
-| B1 công khai | N/A: chưa có chronology/calibration hợp lệ được bàn giao |
-| Beta/r ΔBP, phân tích theo thời gian | N/A: thiếu metadata/định nghĩa phù hợp |
-| PAT công khai và tín hiệu thiết bị | N/A: chưa đủ raw/căn chỉnh/độ trễ kiểm chứng |
-
-## 6. Bàn giao và phần còn chờ
-
-**Linh có thể dùng ngay:** `extract_window`, `extract_windows`,
-`from_pulse_segment`, `SignalConfig`, `BootstrapConfig`, `bootstrap_bp`,
-`evaluate_prediction_table`; config, ví dụ và fixture output. Feature thiếu
-giữ None; fit imputer/scaler chỉ train. SQI trả cờ để pipeline chọn qua config,
-không có filtering mặc định. B0/B3 phải cùng tập/weighting/draws. Đơn vị cuff
-event phải tổng hợp trước evaluation, không coi nhiều window là nhiều nhãn.
-
-| Blocker / đầu vào cần nhận | Người bàn giao / review |
-| --- | --- |
-| Raw PulseDB được phép, version/checksum/pool/holdout, inventory v2/manifest, channel/fs/unit, upstream filter/delay/alignment đã xác minh; tập nhỏ train/val | Linh bàn giao, Huy review |
-| Prediction B0/B3 có sample/subject/split/model/pred_sbp/pred_dbp, cùng eligible observations và config/log | Linh bàn giao, Huy chạy API và review |
-| Calibration riêng trước evaluation, session/time/event/record độc lập và định nghĩa biến thiên | Linh–Huy/nhóm xác nhận trước B1/ΔBP |
-| Clock/timestamp lấy mẫu–FIFO, fs/packet chính thức, delay/gaps và bản ghi hardware an toàn | Đức Anh bàn giao; Linh/Huy review |
-| Ngưỡng/missing/SD/CI phương pháp và code review, CI Python 3.11 | Linh review code; Đức Anh review timing; nhóm review phương pháp |
-
-## 7. Hạn chế và chuyển tiếp
-
-Detector maxima v0 chưa kiểm chứng với QRS đảo cực/nhiễu/T-wave; foot phụ thuộc
-morphology và lọc. Gaps làm chặn cả kênh theo xử lý bảo thủ. Shape median có thể
-bỏ qua minority outlier. Flat threshold phụ thuộc đơn vị/scaling; ngưỡng chưa
-khóa trên pilot/validation. Hai người là điều kiện tối thiểu tính CI, không
-chứng minh đủ cỡ mẫu suy luận. API không tự xác nhận quyền dùng/clock/calibration
-chỉ từ khai báo của caller. Cần review trước thí nghiệm và khóa test.
-
-Phần độc lập có code/test/output; phần công khai và thiết bị **vẫn bị chặn**.
-Không hoàn thành schematic/PCB/bring-up thay Đức Anh, không đánh dấu toàn bộ
-Tuần 4 hoặc G1 đạt và không tuyên bố thiết bị y tế/thay cuff.
+Test bao phủ: mốc/PAT đã biết, fs 250/125 và 512/128 Hz, cực tính, độ trễ, đơn vị
+timestamp, gap, timestamp lỗi, tín hiệu thiếu/phẳng/NaN/Inf, nhịp thiếu, PAT mơ hồ,
+hình dạng, số nhịp không đủ; bootstrap với người lặp, seed, ít người; bảng dự đoán
+sai khớp; tương thích baseline/reader/manifest/metrics. Thêm test hồi quy RR 0,42 s
+(fail khi bỏ bản sửa). Runner B3 có test SYNTHETIC trong `tests/test_b3_pipeline.py`:
+đổi waveform hoặc nhãn test thì dự đoán không đổi.
