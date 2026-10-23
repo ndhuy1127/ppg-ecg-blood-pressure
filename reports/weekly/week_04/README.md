@@ -89,6 +89,15 @@ tiên và hoàn thiện thiết kế mạch:
 | 17 | Thiết kế KiCad V1-module | Huy | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/) |
 | 18 | Y văn bổ sung | Huy | [literature_update_2026-10-14.md](../../../docs/literature/literature_update_2026-10-14.md) |
 
+Ghi chú mục 13: các file kết quả fixture là lần chạy ngày 2026-10-13 bằng
+`features-sqi-v0` (commit `8472721`, working tree chưa commit) và được giữ làm bản
+ghi lịch sử, không sinh lại. Code hiện hành là `features-sqi-v1` (commit `645df5d`:
+nhịp sát biên không bị tính là PAT không ghép). Ngày 2026-10-24 chạy lại runner vào
+thư mục tạm: đặc trưng, cờ và tóm tắt trùng với bản v0. Có hai khác biệt: mỗi dòng
+có thêm `pat_edge_unpaired_r_count` và `pat_edge_unpaired_foot_count` (đều bằng 0),
+và trạng thái bootstrap là `few_subjects` (3 người, quy tắc thêm ngày 2026-10-23).
+Hành vi v1 được kiểm bằng [test_week04_features.py](../../../tests/test_week04_features.py).
+
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
 ### 5.1. Đặc trưng v1 (Huy)
