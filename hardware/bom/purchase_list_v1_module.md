@@ -28,7 +28,7 @@
   [hướng dẫn DevKitC-1 v1.1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html),
   cổng USB-to-UART là Micro-USB và cáp đi kèm hướng dẫn là USB-A – Micro-B. Flash
   8 MB đủ cho firmware (khoảng 208 KB); GPIO47 chạy 3,3 V với WROOM-1-N8R8
-  (custom_board_proposal.md A.6 mục 6).
+  (custom_board_proposal.md A.6 mục 4).
 - Tạm tính: $70,82 + phí ship $25 (đơn dưới $150) = **$95,82**, chưa gồm thuế
   nhập khẩu/VAT. DigiKey giao 1–5 ngày bằng DHL/FedEx/UPS; thuế và phí hải quan
   thu khi nhận hàng
@@ -114,7 +114,7 @@ Trình tự đầy đủ, kể cả bước cấp nguồn:
    - So từng chân với bảng A.7, đặc biệt GPIO47 (`ECG_INT2B`), 3V3 và GND.
    - Ký hiệu trên vỏ module phải là ESP32-S3-WROOM-1-N8R8; đọc loại chip và eFuse
      VDD_SPI bằng lệnh chỉ đọc của esptool, đo INT2B ở phía MCU: GPIO47 phải chạy
-     3,3 V (A.6 mục 6).
+     3,3 V (A.6 mục 4).
    - Đọc nhãn hai cổng (UART và USB) để biết cổng nào gửi packet (firmware README).
 2. **Breakout MAX30001:** kiểm revision so với `pc_max30001_brk_v1.0` và cỡ của R3,
    R7, R8. Theo file Eagle ở commit `99705eb` (2022-10-11) của repo

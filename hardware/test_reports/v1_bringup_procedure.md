@@ -26,7 +26,7 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 | Module | Kiểm | Đạt khi |
 | --- | --- | --- |
 | DevKitC | Đo khoảng cách tâm hai hàng chân bằng thước kẹp; đặt lên bản in 1:1 của bo đế | **22,86 mm**, khớp footprint U1 (bo chính hãng ESP32-S3-DevKitC-1-N8R8, danh sách mua dòng 6) |
-| DevKitC | Đọc ký hiệu trên vỏ module | ESP32-S3-WROOM-1-N8R8 (A.6 mục 6). Bản N16R16VA hoặc chip R16V thì dừng: GPIO47 chạy 1,8 V |
+| DevKitC | Đọc ký hiệu trên vỏ module | ESP32-S3-WROOM-1-N8R8 (A.6 mục 4). Bản N16R16VA hoặc chip R16V thì dừng: GPIO47 chạy 1,8 V |
 | DevKitC | Đối chiếu nhãn từng chân với bảng A.7 (đủ kích thước chưa đủ: phải đúng vị trí) | Pad U1 1–2 là 3V3, 21 là 5V, 22–24 và 44 là GND; các GPIO ở đúng pad như A.7 |
 | Breakout MAX30001 | So với `pc_max30001_brk_v1.0` | Có R3 (10 kΩ, cỡ 0805) nối sleeve của jack với VCM; R7, R8 (0 Ω, cỡ 0402); header SV1 10 chân (A.2) |
 | Cáp ECG của kit | Đếm số dây; đo thông mạch từng đầu bấm với tip/ring/sleeve của giắc 3,5 mm | Ba dây: LA ↔ ring, RA ↔ tip, RL ↔ sleeve (protocol v0.2 mục 5.2). Khác thì dán nhãn lại theo kết quả đo, không theo màu nắp. Chỉ có hai dây hoặc không có dây nối sleeve: dừng cấu hình 3 điện cực cho tới khi có cáp 3 dây (danh sách mua mục 3) |
@@ -126,7 +126,7 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
 4. Oscilloscope:
    - INTB (GPIO21): xung theo ngưỡng `EFIT`, ví dụ 32 Hz khi đọc 16 mẫu một lần;
    - INT2B (GPIO47): xung `SAMP` 512 Hz khi `SAMP_IT = 00`, biên độ khoảng 3,3 V
-     phía MCU (A.6 mục 6). Cạnh xung ứng với lúc mẫu vào FIFO, không phải lúc lấy
+     phía MCU (A.6 mục 4). Cạnh xung ứng với lúc mẫu vào FIFO, không phải lúc lấy
      mẫu analog (schema mục 5.2).
 5. Tín hiệu nhân tạo qua cáp ECG (mạch chia áp ở
    [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Trước

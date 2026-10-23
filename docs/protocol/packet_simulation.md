@@ -11,7 +11,7 @@ Tham khảo yêu cầu generator/replay và packet ở `origin/dev/ducanh@40ede4
 Ở commit đó, `configs/hardware/Packet_Schema_V0.1.md` là bản gốc của Đức Anh. Bản
 cùng tên trong nhánh này đã được viết lại (layout byte, `T_ANCHOR_US`/`T_FIRST_US`,
 `STATUS`) và khác bản gốc; mô phỏng giữ định nghĩa timestamp của bản gốc (thời
-điểm sample đầu batch). Các khác biệt chưa thống nhất nằm ở mục 15 của schema.
+điểm sample đầu batch). Schema đã chốt định nghĩa timestamp ngày 2026-10-23 (mục 3, 5); bản v2 giữ định nghĩa cũ.
 Version riêng `synthetic-packet-v2`; JSON, không phải binary wire format.
 Bảng đối chiếu trường với schema phần cứng dự kiến nằm ở
 [Packet_Schema_V0.1.md mục 14](../../configs/hardware/Packet_Schema_V0.1.md).

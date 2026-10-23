@@ -62,7 +62,7 @@ ba mảng:
 | 2 | Môi trường Python | Linh | [requirements.txt](../../../requirements.txt), [environment.yml](../../../environment.yml), [pyproject.toml](../../../pyproject.toml) |
 | 3 | Quy ước dữ liệu và tên file | Linh | [quy_uoc_du_lieu.md](../../../docs/quy_uoc_du_lieu.md), [data_convention.md](../../../docs/data_convention.md) |
 | 4 | Yêu cầu phần cứng V0 | Đức Anh | [hardware_requirements_for_V0.md](../../../configs/hardware/hardware_requirements_for_V0.md) |
-| 5 | Sơ đồ khối phần cứng | Đức Anh | [Hardware_Diagram.png](../../../configs/hardware/Hardware_Diagram.png); bản hiện hành: [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
+| 5 | Sơ đồ khối phần cứng | Đức Anh | `Hardware_Diagram.png` (xóa ngày 2026-10-24; còn ở commit `1192a47`); bản hiện hành: [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
 | 6 | BOM V0.1 | Đức Anh | [BOM_V0.1.xlsx](../../../hardware/bom/BOM_V0.1.xlsx) |
 | 7 | Hai phương án điện cực ECG | Đức Anh | [Hai_phuong_an_dien_cuc_ECG.pdf](../../../hardware/Hai_phuong_an_dien_cuc_ECG.pdf) |
 | 8 | Ma trận 12 bài báo | Huy | [week_01_literature_matrix.md](../../../docs/literature/week_01_literature_matrix.md) |

@@ -387,26 +387,11 @@ v2 ở bảng trên giữ nguyên.
 
 - Chế độ LED (V1 dự kiến multi-LED ba khe ở ≤ 200 sps), tốc độ lấy mẫu, độ rộng
   xung, có lấy trung bình hay không.
-- Tốc độ ECG: V1 chốt 512 sps (`custom_board_proposal.md` A.2, 2026-10-23); bản
-  hoàn chỉnh giữ cùng thiết lập.
 - `N` mỗi packet, `EFIT` và `FIFO_A_FULL`.
 - INT2B (xung `SAMP`): V1 nối vào GPIO47; còn mở cho bản cuối, và firmware có bật
   `SAMP` (`EN_INT2`, `SAMP_IT`) hay không.
 - Độ trễ hiệu dụng `L` của từng cấu hình (đo theo kế hoạch đo 10 phút), kể cả
   khoảng 1,0 ms trễ lấy mẫu ADC của MAX30001 ngoài bảng datasheet (mục 5.2, 5.3).
 
-Đã chốt ngày 2026-10-23:
-
-- **Timestamp:** giữ `T_ANCHOR_US` (thời điểm MCU chốt số mẫu đọc từ FIFO, mục 3,
-  5) và `T_FIRST_US` (ước lượng của firmware, mục 5.3). Bản nháp đầu định nghĩa
-  timestamp là "thời điểm lấy mẫu của sample đầu tiên"; đại lượng đó không đo
-  trực tiếp được, nên được tính offline bằng `t_sample_us[i]` ở mục 5.3, đúng ý
-  bản nháp.
-- **`STATUS`:** giữ cách đánh số ở mục 9. Bản nháp đầu chỉ quy hoạch bit 0–2 và
-  ghi "chi tiết bit chưa chốt", nên không có quy ước cũ cần giữ.
-- **Version:** giữ V0.1, `VERSION = 0x01` (mục 2).
-- **Tên `FS_NOMINAL_MHZ`:** giữ nguyên; đơn vị là mHz (mục 6), firmware và logger
-  đều dùng đúng đơn vị này.
 - Câu hỏi D8 (`d_ptr_us`/`d_word_us`) và D10 (tốc độ mẫu thật lệch bao nhiêu so
-  với danh định) trong `docs/protocol/packet_logger.md`: chờ phép đo bench. D1–D7
-  và D9 đã chốt cùng firmware khung (2026-10-23, `firmware/README.md`).
+  với danh định) trong `docs/protocol/packet_logger.md`: chờ phép đo bench.

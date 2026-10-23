@@ -137,7 +137,7 @@ Không đo trên người trong tuần này.
 | 22 | Phân bổ điện cực | Phần cứng | [protocol_outline_v0.2.md](../../../docs/protocol/protocol_outline_v0.2.md) mục 5.2 |
 | 23 | Firmware khung V1-module | Firmware | [firmware/](../../../firmware/README.md) |
 | 24 | Test firmware–logger | Firmware | [test_firmware_packet_kat.py](../../../tests/test_firmware_packet_kat.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py), [test_firmware_stream_compat.py](../../../tests/test_firmware_stream_compat.py) |
-| 25 | Chốt packet schema V0.1, review logger | Firmware | [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) mục 15, [packet_logger.md](../../../docs/protocol/packet_logger.md) |
+| 25 | Chốt packet schema V0.1, review logger | Firmware | [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) mục 2, 5, 6, 9, [packet_logger.md](../../../docs/protocol/packet_logger.md) |
 | 26 | Trình tự bring-up V1-module | Phần cứng | [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
 | 27 | Sơ đồ khối V1 | Phần cứng | [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
 
