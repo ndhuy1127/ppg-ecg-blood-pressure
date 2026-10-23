@@ -129,6 +129,17 @@ cần ít nhất hai chu kỳ không phẳng. Không có template học từ tes
 `flagged` là có bất kỳ cờ, **không phải quyết định loại tự động**; cờ PAT có thể
 không chặn PPG-only. Motion/ADC saturation/AC–DC đều N/A do thiếu bằng chứng đầu vào.
 
+**`features-sqi-v2` (2026-10-24):** chọn bằng `extract_window(..., version=
+"features-sqi-v2")`; mặc định vẫn là v1, giữ đúng từng byte. Khác v1 đúng một điểm:
+khi không ghép PAT vì timing chưa kiểm (`alignment_unverified`, `clock_unverified`,
+`upstream_delay_unknown`, mặc định với PulseDB), v1 ghi `pat_pair_count` = 0,
+`pat_pair_fraction` = 0.0 và đếm mọi nhịp là không ghép, nên dễ bị đọc nhầm là tín
+hiệu xấu. v2 ghi `None` cho sáu trường đó (`pat_pair_count`,
+`pat_unmatched_r_count`, `pat_unmatched_foot_count`, `pat_edge_unpaired_r_count`,
+`pat_edge_unpaired_foot_count`, `pat_pair_fraction`) và lý do ở
+`quality["pat_quality_unavailable"]` (`None` khi đã ghép). Đặc trưng và cờ giống v1.
+Dùng v2 cho mọi nơi đọc các trường chất lượng PAT.
+
 ## 5. Bootstrap và prediction
 
 `bootstrap_bp(reference, {model: predictions}, subject_ids, BootstrapConfig)`

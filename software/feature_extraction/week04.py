@@ -10,6 +10,15 @@ from software.signal_processing.fiducials import (
 )
 
 VERSION = "features-sqi-v1"
+# v2 (2026-10-24): when PAT pairing is not attempted (timing unverified), the
+# pairing quality fields are None with a reason instead of 0 pairs and every
+# beat unmatched. Everything else is v1.
+VERSION_V2 = "features-sqi-v2"
+VERSIONS = (VERSION, VERSION_V2)
+PAIRING_QUALITY = (
+    "pat_pair_count", "pat_unmatched_r_count", "pat_unmatched_foot_count",
+    "pat_edge_unpaired_r_count", "pat_edge_unpaired_foot_count", "pat_pair_fraction",
+)
 FEATURE_NAMES = (
     "ppg_std", "ppg_amplitude_median", "ppg_rise_time_median_ms",
     "ppg_width50_median_ms", "ppg_hr_bpm", "ecg_hr_bpm",
@@ -86,8 +95,14 @@ def _unmatched(r_times, foot_times, pairs, ecg_times, ppg_times, config):
             int(foot_inside.sum()), int(len(lone_foot) - foot_inside.sum()))
 
 
-def extract_window(window: SignalWindow, config: SignalConfig) -> dict:
-    """Only read ECG/PPG; never read ABP, BP labels, demographics or future data."""
+def extract_window(window: SignalWindow, config: SignalConfig,
+                   version: str = VERSION) -> dict:
+    """Only read ECG/PPG; never read ABP, BP labels, demographics or future data.
+
+    ``version`` is features-sqi-v1 (default, unchanged) or features-sqi-v2.
+    """
+    if version not in VERSIONS:
+        raise ValueError(f"version must be one of {VERSIONS}")
     if (config.r_method, config.foot_method) != DEFAULT_METHODS:
         # Output would be labelled features-sqi-v1 without being v1. Using a
         # candidate method in features needs a new version once it is chosen.
@@ -180,6 +195,11 @@ def extract_window(window: SignalWindow, config: SignalConfig) -> dict:
     quality["pat_edge_unpaired_r_count"] = edge_r
     quality["pat_edge_unpaired_foot_count"] = edge_foot
     quality["pat_pair_fraction"] = len(pairs) / len(r_times) if len(r_times) else None
+    if version == VERSION_V2:
+        # Not computed is not "0 pairs": say why instead of counting every beat.
+        quality["pat_quality_unavailable"] = ";".join(timing_reasons) or None
+        if timing_reasons:
+            quality.update(dict.fromkeys(PAIRING_QUALITY))
     if not timing_reasons and (lone_r or lone_foot):
         flags.append("pat:unmatched_beats")
     if len(pairs) < config.min_beats:
@@ -211,7 +231,7 @@ def extract_window(window: SignalWindow, config: SignalConfig) -> dict:
                 related = ["ppg:no_complete_half_height_pulse"]
             missing_reasons[name] = ";".join(sorted(set(related))) or "insufficient_valid_input"
     return {
-        "version": VERSION, "metadata": metadata, "features": features,
+        "version": version, "metadata": metadata, "features": features,
         "missing_reasons": missing_reasons,
         "quality": quality, "flags": sorted(set(flags)), "flagged": bool(flags),
         "unavailable": {"motion": "No IMU", "saturation": "No ADC rails",
@@ -223,8 +243,8 @@ def extract_window(window: SignalWindow, config: SignalConfig) -> dict:
     }
 
 
-def extract_windows(windows, config):
-    rows = [extract_window(window, config) for window in windows]
+def extract_windows(windows, config, version=VERSION):
+    rows = [extract_window(window, config, version) for window in windows]
     ids = [row["metadata"]["sample_id"] for row in rows]
     if len(set(ids)) != len(ids):
         raise ValueError("Duplicate sample_id in feature batch")
