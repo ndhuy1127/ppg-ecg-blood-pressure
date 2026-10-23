@@ -4,7 +4,7 @@
 > **Người biên soạn:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu
 > **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.1: đồng bộ với RQ v0.2, yêu cầu phần cứng V0 và nguồn bổ sung), 2026-10-21 (v0.2), 2026-10-22 (sửa theo review).
-> **Lưu ý:** chưa thu dữ liệu trên người; chỉ thu sau khi có phê duyệt đạo đức. Mục 5 và 6.4–6.5 **chờ Đức Anh xác nhận**.
+> **Lưu ý:** chưa thu dữ liệu trên người; chỉ thu sau khi có phê duyệt đạo đức. Phân bổ tay và điện cực ở mục 5.1–5.2 đã xác nhận về phần cứng ngày 2026-10-23; nghiệm pháp ở 6.4–6.5 chưa được hội đồng đạo đức duyệt.
 
 **Changelog v0.2 (2026-10-21, Huy):**
 
@@ -65,7 +65,8 @@
 >
 > - 4.2 ghi "nhịp tim xoang bình thường", điều không xác nhận được bằng tự khai;
 >   bản sàng lọc chỉ ghi "tự khai không có bệnh tim mạch đã được chẩn đoán".
-> - 4.3 chưa có L5 (ngón tay, bắp tay), L7 (không đo được BP tay phải), L8 và L9.
+> - 4.3 chưa có L5 (cổ tay, cẳng tay trái, bắp tay phải), L7 (không đo được BP tay
+>   phải), L8 và L9.
 >
 > Cần thống nhất trước khi nộp hồ sơ (**chờ quyết định**, cần chuyên môn y tế).
 > Độ tuổi 18–35 là đề xuất của nhóm, chưa có nguồn.
@@ -102,7 +103,7 @@ Theo [custom_board_proposal.md, Phần A](../../configs/hardware/custom_board_pr
   dẹt 16 dây dài dự kiến 20–30 cm. Pin map chuẩn: KiCad V1-module
   (`configs/hardware/custom_board_proposal.md` A.7, chốt 2026-10-23); danh sách
   mua: `hardware/bom/purchase_list_v1_module.md`.
-- **Bo đế đặt trên bàn:** ESP32-S3-DevKitC-1 N16R8, breakout ProtoCentral
+- **Bo đế đặt trên bàn:** ESP32-S3-DevKitC-1-N8R8 chính hãng, breakout ProtoCentral
   MAX30001 (ECG), nút `t0` đánh dấu bắt đầu bơm cuff trên cùng đồng hồ
   `esp_timer`.
 - **Nguồn và dữ liệu:** DevKitC nối USB với laptop **chạy pin, rút sạc**; không
@@ -300,7 +301,31 @@ Các tiêu chí và con số dưới đây là **đề xuất chưa khóa**, kh�
 2. **Chỉ số Skewness SQI ($s\text{SQI}$):** Ứng viên $s\text{SQI} < 0$; dấu phụ thuộc cực tính và xử lý tín hiệu, không mặc định mọi PPG hợp lệ đều có độ lệch dương.
 3. **Mất tín hiệu ECG:** Không phát hiện được phức bộ QRS rõ ràng hoặc biên độ đỉnh R nhỏ hơn $3\times$ độ lệch chuẩn đường nền.
 4. **Biến thiên nhịp tim bất thường:** Khoảng cách giữa các đỉnh R liên tiếp biến động $> 30\%$ trong cửa sổ tĩnh (ngoại trừ hiện tượng loạn nhịp sinh lý khi hô hấp đã kiểm soát).
-5. **Cử động mạnh:** Cảm biến gia tốc IMU (nếu tích hợp) phát hiện gia tốc biến thiên $> 0.15\text{g}$ trong thời gian ghi tín hiệu nền.
+5. **Cử động mạnh (`motion-sqi-v0`, định nghĩa chốt 2026-10-24, ngưỡng chưa khóa):**
+   IMU BMI270 ở cổ tay đeo PPG, gia tốc và gyro 100 Hz (Packet Schema V0.2). Mã:
+   [motion_sqi.py](../../software/feature_extraction/motion_sqi.py).
+   - Gia tốc: lọc từng trục thông cao 0,5 Hz rồi thông thấp 10 Hz (Butterworth bậc 2,
+     pha không đổi), lấy độ lớn vector $d(t)$. Gyro: trừ bias rồi thông thấp 10 Hz,
+     lấy độ lớn $s(t)$. Đoạn lọc rộng hơn cửa sổ nhưng không vượt qua $t_0$ (bơm cuff).
+   - Bias gyro lấy từ 30 s nghỉ **đã xác nhận yên** ở M0; đoạn này có mất mẫu, bão
+     hòa hay chuyển động thì không có bias (ghi lý do), không tìm đoạn "yên nhất".
+   - Chỉ số burst: phân vị 95 trên cửa sổ trượt 1 s, bước 0,1 s, lấy giá trị lớn
+     nhất trong cửa sổ phân tích (P95 trên cả 10 s bỏ sót cú giật < 0,5 s). Xuất kèm
+     P95 toàn cửa sổ, tỉ lệ mẫu vượt ngưỡng và giá trị lớn nhất.
+   - `motion` khi một nhánh hợp lệ vượt ngưỡng (gia tốc 0,15 g hoặc gyro 20 °/s);
+     `no_motion_detected` chỉ khi **cả hai** nhánh hợp lệ và dưới ngưỡng; còn lại
+     `not_evaluable` (mất mẫu, không nội suy; bão hòa; thiếu bias; cửa sổ ngắn hơn
+     1 s). Gia tốc dưới ngưỡng không đủ để coi cửa sổ là yên.
+   - Hai ngưỡng là `ENGINEERING_DRAFT_NOT_TEST_TUNED`, **không có nguồn**; khóa trên
+     bản ghi G2 của thành viên nhóm (nghỉ so với cử động theo hướng dẫn, có nhãn
+     chuyển động độc lập), ghi ngày và commit, trước khi thu chính.
+   - Giới hạn: không chứng nhận tín hiệu sạch. Bóp hay gồng tay có thể làm hỏng PPG
+     mà gần như không tạo gia tốc hay xoay; cử động chậm (nâng tay, lắc thân khi đạp
+     M4) bị lọc 0,5 Hz làm yếu; IMU tay trái không phản ánh nhiễu cơ ở tay phải (RA).
+   - Chính sách loại hoặc giảm trọng số ở cấp cuff event **chưa định nghĩa**; phải
+     khóa riêng trước thu chính. Với RQ3, so mọi chiến lược trên cùng tập cuff event,
+     báo coverage trên toàn bộ event, không coi phần còn lại sau lọc chuyển động là
+     coverage 100 %.
 
 ---
 
@@ -359,7 +384,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 
 | Rủi ro kỹ thuật | Khả năng | Mức độ | Biện pháp phòng ngừa và xử lý |
 |---|---|---|---|
-| ECG cổ tay–ngón tay nhiễu, SNR thấp | Cao | Cao | Điện cực dán Ag/AgCl đạo trình I qua hai tay (cổ tay trái – ngón tay phải, mục 5.2); thiết kế lọc dải thông khoảng $0.5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn); so sánh điện cực khô với Ag/AgCl dùng gel theo [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md). |
+| ECG đạo trình I nhiễu, SNR thấp | Cao | Cao | Điện cực dán Ag/AgCl đạo trình I qua hai tay (LA mặt lòng cổ tay trái, RA mặt lòng cổ tay phải, RL cẳng tay trái; mục 5.2); thiết kế lọc dải thông khoảng $0.5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn); so sánh điện cực khô với Ag/AgCl dùng gel theo [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md). |
 | Nhiễu trôi đường nền PPG do lỏng dây đeo | Trung bình | Trung bình | Bổ sung cơ chế hiển thị SQI trực quan trên giao diện thu thập; hướng dẫn kỹ thuật viên siết chặt vòng vừa đủ trước khi bắt đầu đếm ngược 60 giây. |
 | Biên độ biến thiên huyết áp tự nhiên giữa các phiên quá nhỏ ($< 5\text{ mmHg}$) | Trung bình | Cao | Nghiệm pháp ở mục 6.4 và tiêu chí kiểm ở pilot (6.5), chỉ khi đã được duyệt đạo đức. |
 | Người tham gia cử động tay trong khi đo | Cao | Trung bình | Tích hợp thuật toán tự động hủy lượt đo và yêu cầu đo lại nếu SQI tụt dưới ngưỡng cho phép. |

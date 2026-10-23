@@ -46,7 +46,7 @@ L1  Bệnh tim mạch / tăng HA / hạ HA tư thế / loạn nhịp đã chẩn
 L2  Thuốc tim mạch / thần kinh giao cảm                              ☐ có ☐ không
 L3  Máy tạo nhịp / thiết bị cấy ghép                                 ☐ có ☐ không
 L4  Mang thai / nghi có thai                                         ☐ có ☐ không ☐ không áp dụng
-L5  Tổn thương da tại cổ tay trái / ngón tay / bắp tay phải           ☐ có ☐ không
+L5  Tổn thương da tại cổ tay, cẳng tay trái / cổ tay phải / bắp tay phải ☐ có ☐ không
 L6  Dị ứng băng dán / gel / kim loại                                 ☐ có ☐ không
 L7  Lý do không đo HA tay phải                                       ☐ có ☐ không
 L8  Ngất / động kinh / khó thở khi gắng sức                          ☐ có ☐ không

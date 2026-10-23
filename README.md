@@ -88,7 +88,8 @@ conda activate ppg-ecg-env
 ~~~
 
 `requirements.txt`, `pyproject.toml` và `environment.yml` cố định phiên bản
-`mat73==0.65` (reader PulseDB) và `xgboost==3.2.0` (baseline B3). PyTorch chưa có
+`mat73==0.65` (reader PulseDB), `h5py==3.16.0` (đọc từng phần file `.mat` v7.3, thêm
+2026-10-24) và `xgboost==3.2.0` (baseline B3). PyTorch chưa có
 trong dependency; thành viên cần dùng sẽ bổ sung kèm phiên bản cố định.
 
 ## Chạy kiểm tra
@@ -124,13 +125,14 @@ lượng lớn, bí mật, token hay tệp môi trường. Chỉ dữ liệu m�
 
 ## Trạng thái dự án
 
-Dự án đang ở tuần 4 trong lộ trình 28 tuần. Tóm tắt theo mức bằng chứng:
+Dự án đang ở tuần 5 trong lộ trình 28 tuần. Tóm tắt theo mức bằng chứng:
 
 | Mức | Nội dung |
 | --- | --- |
-| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; generator/replay packet giả lập; đặc trưng PPG/HR/PAT, SQI `features-sqi-v1` và bootstrap theo người (Tuần 4); pipeline B0/B3 (XGBoost, đặc trưng `pulsedb-simple-stats-v0`) trên split v2, fit trên train và chỉ chấm val, chưa chạy trên raw PulseDB ([hướng dẫn](docs/protocol/run_b3_pulsedb.md)) |
+| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; đặc trưng PPG/HR/PAT, SQI `features-sqi-v1` và bootstrap theo người (Tuần 4); pipeline B0/B3 (XGBoost, đặc trưng `pulsedb-simple-stats-v0`) trên split v2, fit trên train và chỉ chấm val, chưa chạy trên raw PulseDB ([hướng dẫn](docs/protocol/run_b3_pulsedb.md)); logger packet V0.1, mô phỏng `synthetic-packet-v3`, mốc R/foot thứ hai và quy tắc PAT hợp lệ (Tuần 5) |
+| Build được, chưa chạy trên bo | Firmware khung ESP32-S3 gửi packet V0.1 từ nguồn AFE giả ([firmware/](firmware/README.md)) |
 | Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3); nguồn raw và pool chưa nghiệm thu |
-| Bản thảo | Câu hỏi nghiên cứu, protocol, ethics, tổng quan tài liệu, BOM và thiết kế mạch |
+| Bản thảo | Câu hỏi nghiên cứu, protocol v0.2, hồ sơ đạo đức v0.1, tổng quan tài liệu, danh sách mua, thiết kế KiCad V1-module (chưa đặt gia công) |
 | Chưa có | Phần cứng lắp ráp, bản ghi ECG/PPG của nhóm, dữ liệu cuff, mô hình ΔBP và mọi kết quả trả lời RQ1–RQ3 |
 
 Kết quả trên dữ liệu giả lập chỉ kiểm tra code, không phải hiệu năng ước lượng

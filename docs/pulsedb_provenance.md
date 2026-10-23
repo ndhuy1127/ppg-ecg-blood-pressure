@@ -84,9 +84,29 @@ với CalBased Test), của CalFree Test có 144 người.
 - Mọi người trong pool này cũng có mặt trong `VitalDB_AAMI_Test_Subset`. Nếu sau
   này dùng AAMI Test hoặc gộp thêm subset khác, có nguy cơ trùng người với tập
   dùng để huấn luyện hoặc chọn mô hình.
-- Vai trò của từng subset (pool để chia, held-out, không dùng) **chưa
-  chốt**. Phải ghi quyết định này vào trường `pool_decision` của config split
-  trước khi chạy lại.
+- Vai trò của từng subset được chốt ngày 2026-10-24 (mục dưới). Ghi lại đúng nội
+  dung đó vào trường `pool_decision` của config split trước khi chạy.
+
+**Quyết định pool (Huy, 2026-10-24; chưa có file raw nào trên máy, chưa đọc nhãn
+hay tín hiệu của subset nào):**
+
+| Subset | Vai trò |
+| --- | --- |
+| `VitalDB_Train_Subset.mat` (1.293 người) | Pool để chia train/val/test, **lấy mẫu con 400 người** |
+| `VitalDB_CalFree_Test_Subset.mat` (144 người) | Tập kiểm tra ngoài, không trùng người với Train |
+| `VitalDB_CalBased_Test_Subset.mat` | Không dùng: cùng người với Train |
+| `VitalDB_AAMI_Cal_Subset.mat`, `VitalDB_AAMI_Test_Subset.mat` | Không dùng cho split mới: notebook Tuần 3–4 đã chấm điểm test trên 100 trong 116 người của AAMI Cal |
+
+- **Lấy mẫu con:** chỉ dựa vào trường `Subject` (không đọc SBP/DBP, nhân khẩu hay
+  tín hiệu). Danh sách ID duy nhất được sắp xếp, hoán vị bằng seed **20261024**,
+  lấy 400 ID đầu. Seed này tách khỏi seed 72 của bước chia train/val/test. Ghi N,
+  seed, hash danh sách ID đã chọn và hash file raw vào config và report của split.
+- **Lý do:** pool AAMI Cal đã bị lộ ở vai trò test; Train chưa bị chạm; 400 người
+  cho khoảng 320/40/40 người theo tỉ lệ 0,8/0,1/0,1 và khoảng 4,3 GB float64, vừa
+  RAM 15,7 GB của máy làm việc khi đọc từng phần.
+- **Cần làm trước khi chạy:** reader đọc từng phần bằng `h5py` (file `.mat` v7.3 là
+  HDF5; `h5py==3.16.0` đã pin ngày 2026-10-24), vì `mat73` nạp cả file
+  (khoảng 14 GB với pool Train). Kiểm cấu trúc file thật trước khi tin reader mới.
 
 ## 6. Cấu trúc tín hiệu, nhãn và đơn vị
 
@@ -124,11 +144,16 @@ với CalBased Test), của CalFree Test có 144 người.
 
 ## 7. Định danh và giới hạn truy vết
 
-- `Subject` có dạng `p<6 chữ số>_<hậu tố>`, ví dụ `p000238_1`. Ý nghĩa hậu tố
-  không được nêu trong bài báo hay README. Trong pool 1.000 dòng, mọi ID đều có
-  hậu tố `_1`. **Chưa kiểm tra** toàn file 70.212 dòng: nếu cùng một tiền tố có
-  nhiều hậu tố, split theo nguyên chuỗi có thể đặt cùng một người vào hai tập.
-  Khi chạy lại trên raw, cần đếm số tiền tố khác nhau so với số ID khác nhau.
+- `Subject` có dạng `p<6 chữ số>_<hậu tố>`, ví dụ `p000238_1`. Bài báo và README
+  không nêu ý nghĩa hậu tố, nhưng code tạo subset chính thức
+  ([`Generate_Subsets.m`](https://github.com/pulselabteam/PulseDB/blob/main/Generate_Subsets.m),
+  nhánh `main`, đọc ngày 2026-10-23) dùng 7 ký tự đầu làm mã người và ký tự cuối
+  làm **nguồn**: `0` là MIMIC-III, `1` là VitalDB. Hậu tố không phải chỉ số bản
+  ghi, nên **không cắt hậu tố** khi chia split. Trong một pool VitalDB, mọi ID phải
+  có hậu tố `_1`, và split theo nguyên chuỗi tương đương split theo mã người. Không
+  suy ra cùng tiền tố ở hai nguồn là cùng người. Trong pool 1.000 dòng, mọi ID đều
+  có hậu tố `_1`. **Chưa kiểm tra** toàn file 70.212 dòng: khi chạy lại trên raw,
+  kiểm mọi ID đúng dạng và đúng hậu tố của nguồn.
 - File Subset không có timestamp, phiên đo hay chỉ số đoạn gốc. Đơn vị truy vết
   tốt nhất hiện có là **(SHA-256 file, chỉ số dòng trong file)**, chính là
   `sample_id = source_sha256:raw_index` của split v2. Không suy ra thứ tự thời

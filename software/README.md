@@ -28,6 +28,7 @@ chứa `__init__.py`.
 | [signal_processing/pat_validity.py](signal_processing/pat_validity.py) | PAT hợp lệ Tuần 5: ghép R–foot trong khoảng R–R, gắn nhãn `out_of_range`/`outlier` (MAD), không xóa nhịp | Thời điểm R và foot → trạng thái từng nhịp; không đọc BP |
 | [evaluation/fiducial_agreement.py](evaluation/fiducial_agreement.py) | So mốc tự động với đánh dấu tay: ghép một–một tối ưu, TP/FP/FN, bias/MAE/SD; chỉ train/val; từ chối đáp án SYNTHETIC nếu không có cờ | Bảng đánh dấu tay + bảng detections → summary và per_record |
 | [feature_extraction/week04.py](feature_extraction/week04.py) | Đặc trưng và cờ SQI theo cửa sổ `features-sqi-v1` | Cửa sổ ECG/PPG có metadata → đặc trưng, quality, flags |
+| [feature_extraction/motion_sqi.py](feature_extraction/motion_sqi.py) | Cờ chuyển động mạnh từ IMU `motion-sqi-v0` (ngưỡng nháp, chưa khóa) | Gia tốc (g) và gyro (°/s) (n, 3), cửa sổ, bias gyro → `motion` / `no_motion_detected` / `not_evaluable` |
 | [models/constant_baselines.py](models/constant_baselines.py) | Tính dự đoán hằng số B0/B1 | Nhãn train hoặc calibration → cặp dự đoán `[SBP, DBP]` |
 | [models/xgboost_baseline.py](models/xgboost_baseline.py) | B3: XGBoost riêng SBP/DBP | Đặc trưng + nhãn train → model; đặc trưng val → `[SBP, DBP]` |
 | [pulsedb/features.py](pulsedb/features.py), [pulsedb/pipeline.py](pulsedb/pipeline.py) | 12 đặc trưng ECG/PPG đơn giản; fit B0/B3 trên train, đánh giá val | Đoạn PulseDB + manifest/inventory split v2 → dự đoán và metrics |
@@ -35,7 +36,7 @@ chứa `__init__.py`.
 | [evaluation/subject_bootstrap.py](evaluation/subject_bootstrap.py) | CI bootstrap percentile lấy mẫu theo người; đánh giá bảng dự đoán theo manifest | Dự đoán + manifest/inventory → metrics và CI |
 | [data_io/packet_simulation.py](data_io/packet_simulation.py) | Sinh/replay packet ECG/PPG SYNTHETIC `synthetic-packet-v2` với 6 case lỗi | Config/seed → packet → timeline, gap, offset |
 | [data_io/packet_wire.py](data_io/packet_wire.py) | Codec byte Packet Schema V0.1: CRC-16/CCITT-FALSE, đóng gói, decoder dò `SYNC` theo luồng | Byte (từng đoạn bất kỳ) → packet đã kiểm CRC/header + log lỗi, byte bị bỏ |
-| [data_io/packet_receiver.py](data_io/packet_receiver.py) | Kiểm tra mục 12 của schema theo từng phiên/kênh (`packet-logger-v0`), metadata phiên | Packet theo thứ tự đến → issue, gap, bảng packet/mẫu có `chain_id` |
+| [data_io/packet_receiver.py](data_io/packet_receiver.py) | Kiểm tra mục 12 của schema theo từng phiên/kênh (`packet-logger-v1`), metadata phiên | Packet theo thứ tự đến → issue, gap, bảng packet/mẫu có `chain_id` |
 | [data_io/packet_simulation_v3.py](data_io/packet_simulation_v3.py) | Sinh luồng byte SYNTHETIC `synthetic-packet-v3` đúng layout V0.1, 13 case lỗi | Config/seed → `stream.bin` + metadata phiên |
 
 Chi tiết đầu vào/đầu ra nằm trong [README models](models/README.md) và
