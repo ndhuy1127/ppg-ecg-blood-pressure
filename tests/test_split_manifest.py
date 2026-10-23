@@ -12,9 +12,11 @@ import pandas as pd
 import pytest
 
 from scripts.build_pulsedb_split import run
+from software.pulsedb.validator import channel_order_check
 from software.data_io.split_manifest import (
     VERSION, build_inventory, file_sha256, make_manifest, manifest_bytes,
-    read_manifest_bytes, sample_hash, summarize_manifest, validate_manifest, waveform_hash,
+    predictor_overlap, read_manifest_bytes, sample_hash, summarize_manifest,
+    validate_manifest, waveform_hash,
 )
 
 
@@ -128,6 +130,97 @@ def test_too_few_subjects_rejected(inventory):
         make_manifest(inventory.iloc[:4])
 
 
+def raw_segments(seed=0):
+    """Rows whose ABP max/min follow SBP/DBP (as in PulseDB) and whose ECG/PPG are
+    seeded noise, so the channel order check can tell the channels apart."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for i in range(20):
+        sbp, dbp = 100.0 + 3 * i, 60.0 + 2 * i
+        rows.append(SimpleNamespace(
+            subject_id=f"SYN_{i // 2}", sbp=sbp, dbp=dbp,
+            ecg=rng.normal(0, 1, 4), ppg=rng.normal(0, 1, 4),
+            abp=np.array([dbp, (sbp + dbp) / 2, sbp, dbp + 1]),
+        ))
+    return rows
+
+
+def fake_mat(data):
+    return {
+        "Signals": np.stack([np.stack([s.ecg, s.ppg, s.abp]) for s in data]),
+        "Subject": np.array([s.subject_id for s in data]),
+        "SBP": np.array([s.sbp for s in data]),
+        "DBP": np.array([s.dbp for s in data]),
+        "Age": np.full(len(data), 30.0), "Gender": np.full(len(data), "M"),
+    }
+
+
+def runner_config(tmp_path):
+    raw = tmp_path / "synthetic.mat"
+    raw.write_bytes(b"SYNTHETIC reader input; no real waveform")
+    config = {
+        "schema_version": VERSION, "input_path": raw.name,
+        "input_sha256": file_sha256(raw), "source": "SYNTHETIC",
+        "source_version": "synthetic-v1", "license": "synthetic-test",
+        "permission_basis": "synthetic-only", "pool_decision": "all synthetic rows",
+        "subject_identity_review": "known synthetic IDs", "unit": "mmHg",
+        "seed": 72, "ratios": [0.8, 0.1, 0.1],
+    }
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(config), encoding="utf-8")
+    return path
+
+
+def test_channel_order_check_passes_abp_and_catches_a_swap():
+    data = raw_segments()
+    sbp, dbp = [s.sbp for s in data], [s.dbp for s in data]
+    result = channel_order_check(data, sbp, dbp)
+    assert result["pass"]
+    assert result["channels"]["abp"]["r_max_sbp"] == pytest.approx(1.0)
+    swapped = [SimpleNamespace(**{**vars(s), "ppg": s.abp, "abp": s.ppg}) for s in data]
+    assert not channel_order_check(swapped, sbp, dbp)["pass"]
+    # Constant labels: correlation undefined, so the check cannot pass.
+    assert not channel_order_check(data, [120.0] * 20, [80.0] * 20)["pass"]
+
+
+def test_runner_refuses_swapped_channels(tmp_path, monkeypatch):
+    path = runner_config(tmp_path)
+    swapped = [SimpleNamespace(**{**vars(s), "ppg": s.abp, "abp": s.ppg})
+               for s in raw_segments()]
+    monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat",
+                        lambda _: fake_mat(swapped))
+    with pytest.raises(ValueError, match="Channel order"):
+        run(path, tmp_path / "out")
+    assert not (tmp_path / "out").exists()
+
+
+def test_runner_refuses_identical_ecg_ppg_across_splits(tmp_path, monkeypatch):
+    path = runner_config(tmp_path)
+    data = raw_segments()
+    manifest = make_manifest(build_inventory(data, "SYNTHETIC", "a" * 64))
+    other = int(manifest.index[manifest.split != manifest.loc[0, "split"]][0])
+    # Same ECG/PPG, different ABP and labels: waveform_hash differs, the
+    # predictors do not.
+    data[other] = SimpleNamespace(**{**vars(data[other]), "ecg": data[0].ecg.copy(),
+                                     "ppg": data[0].ppg.copy()})
+    assert predictor_overlap(manifest, data)["across_splits"] == 1
+    monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat",
+                        lambda _: fake_mat(data))
+    with pytest.raises(ValueError, match="identical ECG/PPG"):
+        run(path, tmp_path / "out")
+    assert not (tmp_path / "out").exists()
+
+
+def test_predictor_overlap_counts_within_split_copies():
+    data = raw_segments()
+    manifest = make_manifest(build_inventory(data, "SYNTHETIC", "a" * 64))
+    same = int(manifest.index[(manifest.split == manifest.loc[0, "split"])
+                              & (manifest.index != 0)][0])
+    data[same] = SimpleNamespace(**{**vars(data[same]), "ecg": data[0].ecg.copy(),
+                                    "ppg": data[0].ppg.copy()})
+    assert predictor_overlap(manifest, data) == {"across_splits": 0, "within_split": 1}
+
+
 def test_runner_reproducible_checksum_and_no_overwrite(tmp_path, monkeypatch):
     raw = tmp_path / "synthetic.mat"
     raw.write_bytes(b"SYNTHETIC reader input; no real waveform")
@@ -142,18 +235,13 @@ def test_runner_reproducible_checksum_and_no_overwrite(tmp_path, monkeypatch):
     path = tmp_path / "config.json"
     path.write_text(json.dumps(config), encoding="utf-8")
     # Exercise the actual repository reader; mock only the external MAT loader.
-    data = segments()
-    fake_mat = {
-        "Signals": np.stack([np.stack([s.ecg, s.ppg, s.abp]) for s in data]),
-        "Subject": np.array([s.subject_id for s in data]),
-        "SBP": np.array([s.sbp for s in data]),
-        "DBP": np.array([s.dbp for s in data]),
-        "Age": np.full(len(data), 30.0), "Gender": np.full(len(data), "M"),
-    }
-    monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat", lambda _: fake_mat)
+    mat = fake_mat(raw_segments())
+    monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat", lambda _: mat)
     first, second = tmp_path / "first", tmp_path / "second"
     report = run(path, first)
     again = run(path, second)
+    assert report["channel_order_check"]["pass"]
+    assert report["predictor_duplicates"] == {"across_splits": 0, "within_split": 0}
     assert report["manifest_sha256"] == again["manifest_sha256"]
     assert report["manifest_sha256"] == hashlib.sha256(
         (first / "manifest.csv").read_bytes()

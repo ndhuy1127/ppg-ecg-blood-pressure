@@ -28,6 +28,49 @@ def _waveform_key(seg) -> str:
     return h.hexdigest()
 
 
+CHANNEL_ORDER_VERSION = "channel-order-check-v0"
+
+
+def _pearson(x, y):
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    if len(x) < 3 or np.ptp(x) == 0 or np.ptp(y) == 0:
+        return None
+    return float(np.corrcoef(x, y)[0, 1])
+
+
+def channel_order_check(segments, sbp, dbp, threshold=0.8):
+    """Gross check that channel 2 is ABP, on TRAIN rows only (labels allowed).
+
+    PulseDB labels come from the ABP, so per segment the ABP maximum should
+    follow SBP and its minimum DBP across segments; ECG_F/PPG_F should not.
+    Passes when channel 2 reaches ``threshold`` for both correlations and is
+    the highest of the three channels for each. The loose threshold only
+    catches a swapped channel (correlation near 0), not subtle problems.
+    """
+    sbp, dbp = np.asarray(sbp, dtype=float), np.asarray(dbp, dtype=float)
+    if len(segments) != len(sbp) or len(sbp) != len(dbp):
+        raise ValueError("segments, sbp and dbp must have the same length")
+    channels = {}
+    for name in ("ecg", "ppg", "abp"):
+        values = [np.asarray(getattr(seg, name), dtype=float) for seg in segments]
+        channels[name] = {
+            "r_max_sbp": _pearson([v.max() for v in values], sbp),
+            "r_min_dbp": _pearson([v.min() for v in values], dbp),
+        }
+
+    def score(name, key):
+        value = channels[name][key]
+        return -2.0 if value is None else value
+
+    passed = all(
+        channels["abp"][key] is not None and channels["abp"][key] >= threshold
+        and score("abp", key) > max(score("ecg", key), score("ppg", key))
+        for key in ("r_max_sbp", "r_min_dbp")
+    )
+    return {"version": CHANNEL_ORDER_VERSION, "threshold": threshold,
+            "rows": len(sbp), "channels": channels, "pass": passed}
+
+
 class PulseValidator:
     """Lớp chuyên kiểm tra tính hợp lệ và thống kê lỗi của dữ liệu PulseDB segments
 

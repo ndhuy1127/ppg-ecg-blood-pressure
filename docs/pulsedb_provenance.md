@@ -112,9 +112,12 @@ hay tín hiệu của subset nào):**
 
 - `Signals` có 3 kênh theo thứ tự reader đang dùng: 0 = ECG, 1 = PPG, 2 = ABP.
   Trước đây tài liệu ghi tên kênh là `ECG_F`, `PPG_F`, `ABP_Raw`. **Chưa xác
-  minh** tên và thứ tự kênh với code tạo subset của PulseDB hay bằng kiểm tra
-  định lượng trên raw. Cách kiểm tra đề xuất: trên một số đoạn, so cực đại/cực
-  tiểu của kênh 2 với nhãn SBP/DBP; kênh ABP phải nằm trong cùng thang mmHg.
+  minh** tên và thứ tự kênh với code tạo subset của PulseDB. Từ 2026-10-24,
+  `build_pulsedb_split.py` tự kiểm trên các dòng **train** (`channel_order_check`,
+  `channel-order-check-v0`): tương quan Pearson giữa cực đại từng kênh với SBP và
+  cực tiểu với DBP; kênh 2 phải đạt ≥ 0,8 cả hai và cao nhất trong ba kênh, nếu không
+  thì không tạo split. Giá trị ghi vào `report.json`. Ngưỡng lỏng: chỉ bắt kênh bị
+  đảo, không chứng minh kênh đúng về đơn vị hay lọc.
 - Mỗi đoạn dài 10 giây (bài báo) và có 1250 mẫu/kênh, nên tần số lấy mẫu suy ra
   là **125 Hz**. Bài báo (mục 2.2 "Record selection") ghi tín hiệu VitalDB được
   hạ tần số lấy mẫu từ 500 Hz xuống 125 Hz để khớp với MIMIC-III, đúng với giá

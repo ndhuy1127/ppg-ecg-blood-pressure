@@ -99,6 +99,17 @@ channel/shape và version, độc lập ID/nhãn/nguồn. Waveform giống hệt
 làm pipeline dừng để kiểm tra thủ công, không tự xóa mẫu hoặc suy ra hai ID là cùng người.
 Hash này không phát hiện cửa sổ chồng lấn một phần, gần giống hoặc thay cách lọc.
 
+Từ 2026-10-24 `build_pulsedb_split.py` còn từ chối tạo split (không ghi output) khi:
+
+- **ECG/PPG giống hệt ở hai split** (`predictor_hash`: chỉ ECG và PPG, không ABP,
+  nhãn hay ID; `waveform_hash` gồm cả ABP nên không bắt được trường hợp này). Bản sao
+  trong cùng một split chỉ được đếm. Cả hai số ghi ở `report.json`
+  (`predictor_duplicates`); `predictor_hash` không nằm trong manifest, schema
+  `pulsedb-split-v2` không đổi.
+- **Kiểm thứ tự kênh trên train không đạt** (`channel_order_check`, xem
+  [provenance](../pulsedb_provenance.md) mục 6); kết quả ghi ở `channel_order_check`
+  của report.
+
 ## Hợp đồng validation
 
 `validate_manifest(manifest, inventory)` trả `True` khi đạt, còn lỗi thì raise

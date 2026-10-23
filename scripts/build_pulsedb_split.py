@@ -14,9 +14,10 @@ def run(config_path, output):
     from software._provenance import text_file_sha256
     from software.data_io.split_manifest import (
         VERSION, build_inventory, canonical_json, file_sha256, make_manifest,
-        manifest_bytes, summarize_manifest,
+        manifest_bytes, predictor_overlap, summarize_manifest,
     )
     from software.pulsedb.reader import PulseDBReader
+    from software.pulsedb.validator import channel_order_check
 
     output = Path(output)
     if output.exists():
@@ -46,6 +47,17 @@ def run(config_path, output):
     segments = PulseDBReader(str(path)).read()
     inventory = build_inventory(segments, config["source"], checksum)
     manifest = make_manifest(inventory, config["seed"], config["ratios"])
+    # Identical ECG/PPG in two splits would leak through any model input.
+    overlap = predictor_overlap(manifest, segments)
+    if overlap["across_splits"]:
+        raise ValueError(f"{overlap['across_splits']} identical ECG/PPG inputs span "
+                         "splits; no output written")
+    # Channel 2 must be ABP before any feature is computed: train labels only.
+    train = manifest[manifest.split == "train"]
+    channel_check = channel_order_check(
+        [segments[int(i)] for i in train.raw_index], train.sbp, train.dbp)
+    if not channel_check["pass"]:
+        raise ValueError(f"Channel order check failed on train rows: {channel_check}")
     # Detect input replacement/modification while the reader was running.
     if file_sha256(path) != checksum:
         raise ValueError("Raw file changed during reading")
@@ -63,7 +75,8 @@ def run(config_path, output):
         commit, dirty = None, None
     files = (
         "scripts/build_pulsedb_split.py", "software/data_io/split_manifest.py",
-        "software/pulsedb/reader.py", "software/_provenance.py",
+        "software/pulsedb/reader.py", "software/pulsedb/validator.py",
+        "software/_provenance.py",
     )
     report = {
         "schema_version": VERSION, "source_type": "PUBLIC_ABP",
@@ -77,6 +90,8 @@ def run(config_path, output):
         "python": platform.python_version(),
         "dependencies": {name: version(name) for name in ("numpy", "pandas", "mat73")},
         "split_summary": summarize_manifest(manifest, inventory),
+        "predictor_duplicates": overlap,
+        "channel_order_check": channel_check,
         "validation": "PASS: exact inventory conservation and split isolation",
         "excluded_segments": 0,
         "limitations": [
