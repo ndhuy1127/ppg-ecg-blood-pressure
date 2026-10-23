@@ -1,4 +1,4 @@
-"""Receiver checks of Packet Schema V0.1 section 12, per session and channel.
+"""Receiver checks of Packet Schema V0.1/V0.2 section 12, per session and channel.
 
 Pure code: the input is decoded packets in arrival order plus the decoder log,
 the output is JSON/CSV bytes. Nothing here reads a port or file or prints.
@@ -15,14 +15,16 @@ from collections import Counter
 from fractions import Fraction
 
 from software.data_io.packet_wire import (
-    CHANNELS, ECG_CHANNEL, EVENT_CHANNEL, MAX_SAMPLE_COUNT, PPG_CHANNELS,
-    STATUS_BITS, STATUS_RESERVED_MASK, WIRE_VERSION,
+    CHANNELS, DEVICE_INFO_CHANNEL, DEVICE_INFO_COUNT, DEVICE_INFO_LAYOUT, ECG_CHANNEL,
+    EVENT_CHANNEL, IMU_CHANNELS, MAX_SAMPLE_COUNT, PPG_CHANNELS, STATUS_BITS,
+    STATUS_RESERVED_MASKS, WIRE_VERSION, WIRE_VERSION_V02,
 )
 
 # v1 (2026-10-23): channel_missing, event ordinal check, FS 0 never an index
-# reference, rate (not period) tolerance. v0 was committed in 250139d.
+# reference, rate (not period) tolerance; Packet Schema V0.2 (2026-10-24). v0 was
+# committed in 250139d.
 LOGGER_VERSION = "packet-logger-v1"
-PACKET_SCHEMA = "packet-v0.1"
+PACKET_SCHEMAS = {WIRE_VERSION: "packet-v0.1", WIRE_VERSION_V02: "packet-v0.2"}
 METADATA_VERSION = "packet-session-metadata-v0"
 SOURCE_TYPES = ("SYNTHETIC", "DEVICE")
 UINT32 = 1 << 32
@@ -35,10 +37,19 @@ AFE_OVERFLOW_BIT = 1 << 0
 MCU_BUFFER_BIT = 1 << 1
 KNOWN_GAP_BITS = AFE_OVERFLOW_BIT | MCU_BUFFER_BIT
 REANCHOR_BIT = 1 << 5
-DATA_LIMITS = {ECG_CHANNEL: 1 << 24, **{channel: 1 << 18 for channel in PPG_CHANNELS}}
+BACKLOG_BIT = 1 << 7  # V0.2: backlog chunk, the anchor belongs to a later chunk
+# Accepted DATA range [low, high) per channel; IMU words are signed int16.
+DATA_LIMITS = {ECG_CHANNEL: (0, 1 << 24),
+               **{channel: (0, 1 << 18) for channel in PPG_CHANNELS},
+               **{channel: (-(1 << 15), 1 << 15) for channel in IMU_CHANNELS}}
 EVENT_CODES = (1, 2, 3, 4)
+ORDINAL_CHANNELS = {
+    EVENT_CHANNEL: ("events_lost_before_send", "event_ordinal_inconsistent"),
+    DEVICE_INFO_CHANNEL: ("device_info_lost_before_send",
+                          "device_info_ordinal_inconsistent"),
+}
 CONFIG_FIELDS = {
-    "schema_version", "packet_schema", "status", "wire_versions",
+    "schema_version", "packet_schemas", "status", "wire_versions",
     "anchor_tolerance_samples", "anchor_tolerance_extra_us",
     "anchor_rate_tolerance_ppm", "channel_offset_tolerance_us", "read_chunk_bytes",
 }
@@ -52,12 +63,14 @@ CHANNEL_FIELDS = (
 )
 SIMULATION_FIELDS = {"generator", "case", "config_sha256", "common_index_epoch"}
 PACKET_COLUMNS = (
-    "arrival", "stream_offset", "session_id", "channel_id", "seq", "seq_ext",
+    "arrival", "stream_offset", "session_id", "version", "channel_id", "seq", "seq_ext",
     "first_sample_index", "sample_index_ext", "chain_id", "t_anchor_us",
     "t_first_us", "fs_nominal_mhz", "sample_count", "status", "disposition",
 )
+# version last: a session that mixes versions has two (channel, chain, index) sets.
 SAMPLE_COLUMNS = (
     "session_id", "channel_id", "chain_id", "seq_ext", "sample_index_ext", "value",
+    "version",
 )
 LIMITATIONS = [
     "Tolerances and STATUS rules are provisional and not verified on hardware",
@@ -74,6 +87,11 @@ LIMITATIONS = [
     "nor used as references: the FIFO held older samples, so the anchor is late. "
     "Their samples are kept (disposition accepted_anchor_unreliable); a bit 0 "
     "carried from a lost packet also skips the check",
+    "V0.2 backlog chunks (STATUS bit 7) are handled like bit 0: samples kept, "
+    "anchor neither checked nor a reference; if the newest chunk is lost, the "
+    "earlier chunks have no usable anchor",
+    "A V0.2 re-anchor (STATUS bit 5) always starts a new chain; several lost "
+    "re-anchors merged into one gap are seen as one",
 ]
 
 
@@ -96,14 +114,18 @@ def _integer(value, name, minimum=0, maximum=None):
 def validate_config(config):
     if not isinstance(config, dict) or set(config) != CONFIG_FIELDS:
         raise ValueError("Logger config has missing or unsupported fields")
-    if (config["schema_version"], config["packet_schema"]) != (
-        LOGGER_VERSION, PACKET_SCHEMA
-    ):
-        raise ValueError("Unsupported logger config or packet schema version")
+    if config["schema_version"] != LOGGER_VERSION:
+        raise ValueError("Unsupported logger config version")
     if not isinstance(config["status"], str) or not config["status"]:
         raise ValueError("status must be nonempty text")
-    if config["wire_versions"] != [WIRE_VERSION]:
-        raise ValueError("Only wire VERSION 0x01 (schema V0.1) is supported")
+    versions = config["wire_versions"]
+    if (not isinstance(versions, list) or not versions
+            or any(v not in PACKET_SCHEMAS for v in versions)
+            or versions != sorted(set(versions))):
+        raise ValueError("wire_versions must be a sorted list of 1 (V0.1) and/or 2 "
+                         "(V0.2)")
+    if config["packet_schemas"] != [PACKET_SCHEMAS[v] for v in versions]:
+        raise ValueError("packet_schemas must name the schema of each wire version")
     _integer(config["anchor_tolerance_samples"], "anchor_tolerance_samples", 0, 32)
     _integer(config["anchor_tolerance_extra_us"], "anchor_tolerance_extra_us", 0,
              10 ** 6)
@@ -172,11 +194,13 @@ def _unwrap(value, reference):
     return reference + (value - reference + half) % UINT32 - half
 
 
-def _status_counts(packets):
+def _status_counts(packets, version):
+    """Named bits of the packet's version; reserved bits are reported apart."""
+    reserved = STATUS_RESERVED_MASKS[version]
     counts = Counter()
     for packet in packets:
         for bit, name in STATUS_BITS.items():
-            if packet.status >> bit & 1:
+            if not reserved >> bit & 1 and packet.status >> bit & 1:
                 counts[name] += 1
     return dict(sorted(counts.items()))
 
@@ -195,21 +219,30 @@ def analyze_stream(decoded, decoder, config, metadata):
     for offset, length in decoder.skipped:
         issue("skipped_bytes", offset=offset, length=length)
 
-    rows, sessions, previous = [], {}, None
+    # State per (SESSION_ID, VERSION): a session must not mix versions, and if it
+    # does, SEQ and timing of the two are never joined (V0.2 section 1).
+    rows, sessions, previous, first_version = [], {}, None, {}
     for arrival, item in enumerate(decoded):
         packet = item.packet
         if previous is not None and packet.session_id != previous:
             issue("session_change", offset=item.offset, session_id=packet.session_id,
                   previous_session_id=previous)
         previous = packet.session_id
-        state = sessions.setdefault(packet.session_id, {}).setdefault(
+        known_version = first_version.setdefault(packet.session_id, packet.version)
+        if packet.version != known_version and (
+            (packet.session_id, packet.version) not in sessions
+        ):
+            issue("version_mixed_in_session", offset=item.offset,
+                  session_id=packet.session_id, version=packet.version,
+                  first_version=known_version)
+        state = sessions.setdefault((packet.session_id, packet.version), {}).setdefault(
             packet.channel_id, {"received": {}, "rows": {}, "conflicts": set(),
                                 "max": None},
         )
         seq = packet.seq if state["max"] is None else _unwrap(packet.seq, state["max"])
         row = {
             "arrival": arrival, "stream_offset": item.offset,
-            "session_id": packet.session_id,
+            "session_id": packet.session_id, "version": packet.version,
             "channel_id": channel_key(packet.channel_id), "seq": packet.seq,
             "seq_ext": seq, "first_sample_index": packet.first_sample_index,
             "sample_index_ext": None, "chain_id": None,
@@ -239,31 +272,39 @@ def analyze_stream(decoded, decoder, config, metadata):
         state["rows"][seq] = row
 
     result_sessions, samples = [], []
-    for session_id, channels in sessions.items():
-        summaries, events, firsts = {}, [], {}
+    for (session_id, version), channels in sessions.items():
+        summaries, events, firsts, identities = {}, [], {}, []
         for channel_id in sorted(channels):
-            summary, channel_events, channel_samples, first = _check_channel(
-                session_id, channel_id, channels[channel_id], config, metadata, issue,
+            summary, channel_events, channel_samples, first, info = _check_channel(
+                session_id, version, channel_id, channels[channel_id], config,
+                metadata, issue,
             )
             summaries[channel_key(channel_id)] = summary
             events += channel_events
             samples += channel_samples
+            identities += info
             if first is not None:
                 firsts[channel_id] = first
         # A declared data channel with no decoded packet at all in this session
-        # (a dead AFE, say) would otherwise leave no trace. Events may be absent.
+        # (a dead AFE, say) would otherwise leave no trace. Events may be absent;
+        # device info has its own check below.
         missing = [key for key in sorted(metadata["channels"])
-                   if int(key, 16) != EVENT_CHANNEL and int(key, 16) not in channels]
+                   if int(key, 16) not in (EVENT_CHANNEL, DEVICE_INFO_CHANNEL)
+                   and int(key, 16) not in channels]
         for key in missing:
-            issue("channel_missing", session_id=session_id, channel=key)
+            issue("channel_missing", session_id=session_id, version=version,
+                  channel=key)
         result_sessions.append({
-            "session_id": session_id, "channels": summaries,
-            "channels_missing": missing, "events": events,
+            "session_id": session_id, "packet_schema": PACKET_SCHEMAS[version],
+            "channels": summaries, "channels_missing": missing, "events": events,
+            "device_info": _session_device_info(session_id, version, identities,
+                                                metadata, issue),
             "channel_offset": _channel_offset(session_id, firsts, config, metadata,
                                               issue),
         })
     result = {
-        "logger_version": LOGGER_VERSION, "packet_schema": PACKET_SCHEMA,
+        "logger_version": LOGGER_VERSION,
+        "packet_schemas": sorted({s["packet_schema"] for s in result_sessions}),
         "source_type": metadata["source_type"],
         "time_encoding": "integer-us; deviation/offset as rational-string-us",
         "decode": {
@@ -282,10 +323,12 @@ def analyze_stream(decoded, decoder, config, metadata):
     return result, rows, samples
 
 
-def _check_channel(session_id, channel_id, state, config, metadata, issue):
+def _check_channel(session_id, version, channel_id, state, config, metadata, issue):
+    """Checks of one (session, version, channel); returns ``(summary, events,
+    samples, first, device_info)``."""
     received, conflicts, rows = state["received"], state["conflicts"], state["rows"]
     key = channel_key(channel_id)
-    where = {"session_id": session_id, "channel": key}
+    where = {"session_id": session_id, "version": version, "channel": key}
     seqs = sorted(received)
     missing = 0
     for before, after in zip(seqs, seqs[1:]):
@@ -293,9 +336,10 @@ def _check_channel(session_id, channel_id, state, config, metadata, issue):
             missing += after - before - 1
             issue("missing_packets", **where, after_seq=before,
                   count=after - before - 1)
+    reserved = STATUS_RESERVED_MASKS[version]
     for seq in seqs:
         packet = received[seq].packet
-        if packet.status & STATUS_RESERVED_MASK:
+        if packet.status & reserved:
             issue("status_reserved_bits", **where, seq=seq, status=packet.status)
         if seq in conflicts:
             rows[seq]["disposition"] = "conflicting_duplicate"
@@ -307,31 +351,39 @@ def _check_channel(session_id, channel_id, state, config, metadata, issue):
         "name": CHANNELS[channel_id], "packets_received": len(seqs),
         "conflicting_duplicates": len(conflicts), "missing_packets": missing,
         "first_seq": seqs[0], "last_seq": seqs[-1],
-        "status_bit_counts": _status_counts(received[s].packet for s in seqs),
+        "status_bit_counts": _status_counts((received[s].packet for s in seqs),
+                                            version),
         "fs_nominal_mhz": sorted({received[s].packet.fs_nominal_mhz for s in seqs}),
     }
     if channel_id == EVENT_CHANNEL:
         events = _check_events(session_id, present, received, rows, where, issue)
         summary["events"] = len(events)
-        return summary, events, [], None
+        return summary, events, [], None, []
+    if channel_id == DEVICE_INFO_CHANNEL:
+        identities = _check_device_info(present, received, rows, where, issue)
+        summary["device_info_valid_packets"] = len(identities)
+        return summary, [], [], None, identities
 
     if spec is not None and spec["fs_nominal_mhz"] is not None and (
         summary["fs_nominal_mhz"] != [spec["fs_nominal_mhz"]]
     ):
         issue("fs_metadata_mismatch", **where)
-    index, quarantine, jumps = _index_pass(present, received, where, issue)
+    index, quarantine, jumps = _index_pass(present, received, where, issue, version)
     chain_of, chains = _chains(present, received, quarantine, jumps, where, issue)
-    # Bit 0: the FIFO was full, so the samples are older than the anchor. Keep
-    # the samples; leave the anchor out of the timing check and the references.
+    # Bit 0: the FIFO was full, so the samples are older than the anchor. V0.2
+    # bit 7: a backlog chunk, whose anchor is that of a later chunk. Keep the
+    # samples; leave the anchor out of the timing check and the references.
+    untimed_bits = AFE_OVERFLOW_BIT | (BACKLOG_BIT if version >= WIRE_VERSION_V02
+                                       else 0)
     untimed = {seq for seq in present
-               if received[seq].packet.status & AFE_OVERFLOW_BIT}
+               if received[seq].packet.status & untimed_bits}
     for chain in chains:
         _timing_pass([seq for seq in chain if seq not in untimed], received, index,
                      quarantine, config, where, issue)
     accepted = [seq for seq in present if seq not in quarantine]
     gaps = _gaps(seqs, accepted, received, index, quarantine, conflicts, jumps)
     samples = []
-    limit = DATA_LIMITS[channel_id]
+    low, high = DATA_LIMITS[channel_id]
     for seq in present:
         rows[seq]["sample_index_ext"] = index[seq]
         rows[seq]["chain_id"] = chain_of[seq]
@@ -339,10 +391,10 @@ def _check_channel(session_id, channel_id, state, config, metadata, issue):
             seq, "accepted_anchor_unreliable" if seq in untimed else "accepted")
     for seq in accepted:
         packet = received[seq].packet
-        if any(not 0 <= value < limit for value in packet.data):
+        if any(not low <= value < high for value in packet.data):
             issue("data_out_of_range", **where, seq=seq)
-        samples += [(session_id, key, chain_of[seq], seq, index[seq] + i, value)
-                    for i, value in enumerate(packet.data)]
+        samples += [(session_id, key, chain_of[seq], seq, index[seq] + i, value,
+                     version) for i, value in enumerate(packet.data)]
     timed = [seq for seq in accepted if seq not in untimed]
     summary.update({
         "packets_accepted": len(accepted),
@@ -356,23 +408,46 @@ def _check_channel(session_id, channel_id, state, config, metadata, issue):
     if timed:
         packet = received[timed[0]].packet
         first = (index[timed[0]] + len(packet.data) - 1, packet)
-    return summary, [], samples, first
+    return summary, [], samples, first, []
+
+
+def _ordinals(channel_id, present, received, where, issue):
+    """Ordinal (FIRST_SAMPLE_INDEX) against SEQ for 0xC1 and 0xD1; ``{seq: ordinal}``.
+
+    SEQ is assigned at send time, so between two received packets the ordinal
+    moves by the SEQ gap (lost on USB, already ``missing_packets``) plus the
+    packets dropped before a SEQ was given. More is ``*_lost_before_send``; less
+    is ``*_ordinal_inconsistent``, after which the check restarts from that
+    packet, so one bad ordinal does not flag every later one (the loss count next
+    to a bad ordinal is then unreliable). STATUS bit 1 with no counted gap (the
+    first packet, or, for t0, an edge the firmware dropped before it became an
+    event) gives a loss of unknown count.
+    """
+    lost_code, inconsistent_code = ORDINAL_CHANNELS[channel_id]
+    ordinals, previous = {}, None
+    for seq in present:
+        packet = received[seq].packet
+        if previous is None:
+            ordinal, lost = packet.first_sample_index, 0
+        else:
+            ordinal = _unwrap(packet.first_sample_index, previous[1])
+            lost = (ordinal - previous[1]) - (seq - previous[0])
+        detail = {**where, "seq": seq, "ordinal": ordinal}
+        if lost < 0:
+            issue(inconsistent_code, **detail, previous_seq=previous[0],
+                  previous_ordinal=previous[1])
+        elif lost > 0:
+            issue(lost_code, **detail, lost=lost)
+        elif packet.status & MCU_BUFFER_BIT:
+            issue(lost_code, **detail, lost=None)
+        previous = ordinals[seq] = (seq, ordinal)
+    return {seq: ordinal for seq, (_, ordinal) in ordinals.items()}
 
 
 def _check_events(session_id, present, received, rows, where, issue):
-    """Event packets: code checks, and the event ordinal against SEQ.
-
-    FIRST_SAMPLE_INDEX of 0xC1 is the event ordinal (schema section 10). SEQ is
-    assigned at send time, so between two received events the ordinal moves by
-    the SEQ gap (events lost on USB, already ``missing_packets``) plus the events
-    dropped before a SEQ was given. More is ``events_lost_before_send``; less is
-    ``event_ordinal_inconsistent``, after which the check restarts from that
-    event, so one bad ordinal does not flag every later event (the loss count
-    next to a bad ordinal is then unreliable). STATUS bit 1 with no counted gap
-    (the first event, or an edge the firmware dropped before it became an
-    event) gives a loss of unknown count.
-    """
-    events, previous = [], None
+    """Event packets: code checks, and the event ordinal against SEQ (R1)."""
+    ordinals = _ordinals(EVENT_CHANNEL, present, received, where, issue)
+    events = []
     for seq in present:
         packet = received[seq].packet
         rows[seq]["disposition"] = "event"
@@ -380,40 +455,109 @@ def _check_events(session_id, present, received, rows, where, issue):
             issue("event_sample_count", **where, seq=seq)
         elif packet.data[0] not in EVENT_CODES:
             issue("unknown_event_code", **where, seq=seq, event_code=packet.data[0])
-        if previous is None:
-            ordinal, lost = packet.first_sample_index, 0
-        else:
-            ordinal = _unwrap(packet.first_sample_index, previous[1])
-            lost = (ordinal - previous[1]) - (seq - previous[0])
-        detail = {**where, "seq": seq, "event_ordinal": ordinal}
-        if lost < 0:
-            issue("event_ordinal_inconsistent", **detail, previous_seq=previous[0],
-                  previous_ordinal=previous[1])
-        elif lost > 0:
-            issue("events_lost_before_send", **detail, lost_events=lost)
-        elif packet.status & MCU_BUFFER_BIT:
-            issue("events_lost_before_send", **detail, lost_events=None)
-        previous = (seq, ordinal)
         events.append({"session_id": session_id, "seq_ext": seq,
-                       "event_ordinal": ordinal, "t_anchor_us": packet.t_anchor_us,
-                       "data": list(packet.data)})
+                       "event_ordinal": ordinals[seq],
+                       "t_anchor_us": packet.t_anchor_us, "data": list(packet.data)})
     return events
 
 
-def _index_pass(present, received, where, issue):
+def _ascii_field(raw):
+    """A NUL-terminated, NUL-padded ASCII field (V0.2 section 6); None if not."""
+    end = raw.find(b"\0")
+    if end < 0 or any(raw[end:]) or any(b >= 0x80 for b in raw[:end]):
+        return None
+    return raw[:end].decode("ascii")
+
+
+def decode_device_info(packet):
+    """Payload of a V0.2 0xD1 packet as ``(identity, problem)``.
+
+    Words are int32 holding the bit pattern of 4 bytes joined big-endian (V0.2
+    section 6): DATA[1..8] the ELF SHA-256, DATA[9..16] the app version and
+    DATA[17..24] the ESP-IDF version, 32 bytes of ASCII each.
+    """
+    data = packet.data
+    if len(data) != DEVICE_INFO_COUNT:
+        return None, "sample_count"
+    if data[0] != DEVICE_INFO_LAYOUT:
+        return None, "layout"
+    if packet.fs_nominal_mhz != 0 or packet.t_first_us != packet.t_anchor_us:
+        return None, "header"
+    if packet.status & ~MCU_BUFFER_BIT:
+        return None, "status"
+    raw = b"".join((word & 0xFFFFFFFF).to_bytes(4, "big") for word in data[1:])
+    app, idf = _ascii_field(raw[32:64]), _ascii_field(raw[64:96])
+    if app is None or idf is None:
+        return None, "text"
+    return {"elf_sha256": raw[:32].hex(), "app_version": app, "idf_version": idf}, None
+
+
+def _check_device_info(present, received, rows, where, issue):
+    """V0.2 device info: payload checks and ordinal against SEQ; valid identities
+    as ``(seq, identity)`` in SEQ order."""
+    _ordinals(DEVICE_INFO_CHANNEL, present, received, where, issue)
+    identities = []
+    for seq in present:
+        identity, problem = decode_device_info(received[seq].packet)
+        rows[seq]["disposition"] = "device_info" if problem is None else (
+            "device_info_invalid")
+        if problem is not None:
+            issue("device_info_invalid", **where, seq=seq, problem=problem)
+        else:
+            identities.append((seq, identity))
+    return identities
+
+
+def _session_device_info(session_id, version, identities, metadata, issue):
+    """Session ``device_info``: distinct identities in SEQ order, with the checks
+    of V0.2 section 6 (changed within the session, missing, metadata mismatch)."""
+    distinct = []
+    for seq, identity in identities:
+        if not distinct or distinct[-1]["identity"] != identity:
+            if distinct:
+                issue("device_info_changed", session_id=session_id, seq=seq)
+            distinct.append({"first_seq": seq, "identity": identity, "packets": 0})
+        distinct[-1]["packets"] += 1
+    if version >= WIRE_VERSION_V02 and not identities and (
+        metadata["source_type"] == "DEVICE"
+    ):
+        issue("device_info_missing", session_id=session_id)
+    declared = metadata["firmware_version"]
+    if declared is not None and any(d["identity"]["app_version"] != declared
+                                    for d in distinct):
+        issue("firmware_metadata_mismatch", session_id=session_id,
+              metadata_firmware_version=declared)
+    if version < WIRE_VERSION_V02:
+        return None
+    return {"valid_packets": len(identities),
+            "identities": [{**d["identity"], "first_seq": d["first_seq"],
+                            "packets": d["packets"]} for d in distinct]}
+
+
+def _index_pass(present, received, where, issue, version=WIRE_VERSION):
     """Schema step 4: FIRST_SAMPLE_INDEX continuity, cross-checked with STATUS.
 
     A packet with FS 0 is quarantined as ``fs_invalid`` later; its header is not
     trusted, so it gets an index for its row but never becomes the reference.
+    V0.1 (R2): bit 5 on either packet next to an index jump marks a re-anchor.
+    V0.2 (section 5): bit 5 is only on the first packet after the gap; that
+    packet always re-anchors, even with a continuous index, before any overlap
+    or continuity check.
     """
     index, quarantine, jumps, previous = {}, {}, {}, None
+    # STATUS of skipped FS-0 packets: their gap bits and a V0.2 re-anchor still
+    # apply to the next trusted packet (its index is checked against the last
+    # trusted packet before them).
+    pending = 0
     for seq in present:
         packet = received[seq].packet
         if packet.fs_nominal_mhz == 0:
             index[seq] = packet.first_sample_index if previous is None else _unwrap(
                 packet.first_sample_index,
                 index[previous] + len(received[previous].packet.data))
+            pending |= packet.status
             continue
+        own, pending = packet.status | pending, 0
         if previous is None:
             index[seq] = packet.first_sample_index
             previous = seq
@@ -422,9 +566,13 @@ def _index_pass(present, received, where, issue):
         expected = index[previous] + len(before.data)
         index[seq] = value = _unwrap(packet.first_sample_index, expected)
         absent, lost = seq - previous - 1, value - expected
-        bits = packet.status | before.status
+        bits = own | before.status
         detail = {**where, "seq": seq, "expected_index": expected, "index": value}
-        if lost != 0 and bits & REANCHOR_BIT:
+        if version >= WIRE_VERSION_V02:
+            reanchored = own & REANCHOR_BIT
+        else:
+            reanchored = lost != 0 and bits & REANCHOR_BIT
+        if reanchored:
             issue("sample_index_reanchored", **detail)
             jumps[seq] = "reanchored"
         elif lost < 0:
@@ -599,7 +747,7 @@ def _csv(columns, rows):
 def render_outputs(result, rows, samples):
     """Deterministic bytes of decode.json, packets.csv and samples.csv."""
     # (session, channel, chain, sample index): an index may repeat across chains.
-    ordered = sorted(samples, key=lambda s: (s[0], s[1], s[2], s[4]))
+    ordered = sorted(samples, key=lambda s: (s[0], s[6], s[1], s[2], s[4]))
     return {
         "decode.json": json_bytes(result),
         "packets.csv": _csv(PACKET_COLUMNS,

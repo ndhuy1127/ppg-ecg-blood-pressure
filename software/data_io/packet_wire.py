@@ -11,7 +11,8 @@ import struct
 from dataclasses import dataclass
 
 SYNC = b"\xa5\x5a"
-WIRE_VERSION = 0x01
+WIRE_VERSION = 0x01  # Packet Schema V0.1; the default of the decoder.
+WIRE_VERSION_V02 = 0x02  # Packet Schema V0.2 (configs/hardware/Packet_Schema_V0.2.md)
 # Offsets 0..39 of schema section 6: SYNC, VERSION, CHANNEL_ID, SESSION_ID, SEQ,
 # FIRST_SAMPLE_INDEX, T_ANCHOR_US, T_FIRST_US, FS_NOMINAL_MHZ, SAMPLE_COUNT, STATUS.
 HEADER = struct.Struct("<2sBBIIIQQIHH")
@@ -21,17 +22,33 @@ MAX_SAMPLE_COUNT = 32
 ECG_CHANNEL = 0xE1
 PPG_CHANNELS = (0xF1, 0xF2, 0xF3, 0xF4)
 EVENT_CHANNEL = 0xC1
+# V0.2: BMI270 accelerometer X/Y/Z then gyroscope X/Y/Z, and device info.
+IMU_CHANNELS = (0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6)
+DEVICE_INFO_CHANNEL = 0xD1
 CHANNELS = {
     ECG_CHANNEL: "ECG", 0xF1: "PPG_SLOT1", 0xF2: "PPG_SLOT2",
     0xF3: "PPG_SLOT3", 0xF4: "PPG_SLOT4", EVENT_CHANNEL: "EVENT",
+    0xA1: "ACC_X", 0xA2: "ACC_Y", 0xA3: "ACC_Z",
+    0xA4: "GYRO_X", 0xA5: "GYRO_Y", 0xA6: "GYRO_Z",
+    DEVICE_INFO_CHANNEL: "DEVICE_INFO",
 }
-# Schema section 9; bits 7..15 are reserved and must be sent as 0.
+# CHANNEL_ID registry per wire VERSION; the decoder drops other channels.
+VERSION_CHANNELS = {
+    WIRE_VERSION: frozenset((ECG_CHANNEL, *PPG_CHANNELS, EVENT_CHANNEL)),
+    WIRE_VERSION_V02: frozenset((ECG_CHANNEL, *PPG_CHANNELS, EVENT_CHANNEL,
+                                 *IMU_CHANNELS, DEVICE_INFO_CHANNEL)),
+}
+# Schema section 9; bit 7 exists from V0.2 on. Reserved bits must be sent as 0.
 STATUS_BITS = {
     0: "afe_fifo_overflow", 1: "mcu_buffer_overflow", 2: "ecg_lead_off",
     3: "afe_error", 4: "latency_unmeasured", 5: "index_reanchored",
-    6: "ppg_alc_overflow",
+    6: "ppg_alc_overflow", 7: "backlog_chunk",
 }
-STATUS_RESERVED_MASK = 0xFF80
+STATUS_RESERVED_MASK = 0xFF80  # V0.1
+STATUS_RESERVED_MASKS = {WIRE_VERSION: 0xFF80, WIRE_VERSION_V02: 0xFF00}
+# V0.2 device info payload (section 6): layout 1, 25 words.
+DEVICE_INFO_LAYOUT = 1
+DEVICE_INFO_COUNT = 25
 DECODE_ERRORS = (
     "unsupported_version", "bad_sample_count", "crc_mismatch", "unknown_channel",
     "truncated_packet",
@@ -87,6 +104,32 @@ class DecodedPacket:
 class DecodeError:
     offset: int
     code: str
+
+
+def device_info_data(elf_sha256, app_version, idf_version) -> tuple:
+    """DATA of a V0.2 ``0xD1`` packet (Packet Schema V0.2 section 6).
+
+    Layout word, then the 32-byte ELF SHA-256 and two 32-byte NUL-padded ASCII
+    strings, each 4 bytes joined big-endian into a word kept as the int32 bit
+    pattern (a word >= 2**31 becomes negative).
+    """
+    digest = bytes.fromhex(elf_sha256)
+    if len(digest) != 32:
+        raise ValueError("elf_sha256 must be 64 hex digits")
+
+    def field(text):
+        try:
+            raw = text.encode("ascii")
+        except (AttributeError, UnicodeEncodeError) as exc:
+            raise ValueError("Version strings must be ASCII text") from exc
+        if len(raw) > 31 or b"\0" in raw:
+            raise ValueError("Version strings: at most 31 ASCII bytes, no NUL")
+        return raw.ljust(32, b"\0")
+
+    raw = digest + field(app_version) + field(idf_version)
+    words = (int.from_bytes(raw[i:i + 4], "big") for i in range(0, len(raw), 4))
+    return (DEVICE_INFO_LAYOUT,
+            *(word - (1 << 32) if word >= 1 << 31 else word for word in words))
 
 
 def encode_packet(packet: Packet) -> bytes:
@@ -214,7 +257,7 @@ class StreamDecoder:
                     CRC.unpack_from(buffer, start + size - 2)[0]
                 ):
                     problem = "crc_mismatch"
-                elif channel not in CHANNELS:
+                elif channel not in VERSION_CHANNELS.get(version, ()):
                     problem = "unknown_channel"
                 else:
                     problem = None

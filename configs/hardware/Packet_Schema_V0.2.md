@@ -1,6 +1,7 @@
 # Packet Schema V0.2 – thêm IMU và packet thông tin thiết bị
 
-> **Bản nháp chờ duyệt (2026-10-24), chưa triển khai, chưa kiểm chứng trên thiết bị.**
+> **Duyệt 2026-10-24. Đã triển khai bước 1 (codec, receiver, logger, simulator; mục 8);
+> firmware chưa. Chưa kiểm chứng trên thiết bị.**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.

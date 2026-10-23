@@ -176,7 +176,7 @@ Lỗi chèn vào kênh `0xF1`, packet thứ tự 2 (đếm từ 0), trừ `sessi
 | `byte_loss` | Mất 5 byte giữa DATA của packet | `crc_mismatch` 1, `skipped_bytes` 1 (53 byte), `missing_packets` 1; packet sau được bắt lại nhờ dò `SYNC` |
 | `index_jump` | `FIRST_SAMPLE_INDEX` +5 từ packet 3, bit 0 ở packet 2, `SEQ` liên tục | `sample_gap_status` 1; mất 5 mẫu |
 | `reanchor` | `FIRST_SAMPLE_INDEX` +40 từ packet 3, bit 0 và 5 ở packet 3 | `sample_index_reanchored` 1; số mẫu mất `null` |
-| `version` | `VERSION` = 2 (CRC tính lại) | `unsupported_version` 1, `skipped_bytes` 1, `missing_packets` 1 |
+| `version` | `VERSION` = 3 (CRC tính lại; trước 2026-10-24 là 2, nay 2 là V0.2 hợp lệ) | `unsupported_version` 1, `skipped_bytes` 1, `missing_packets` 1 |
 | `session_restart` | Sau packet 2 của mọi kênh: `SESSION_ID` mới, `SEQ`/index/clock bắt đầu lại | `session_change` 1; phiên 1 có 3 packet/kênh và 2 sự kiện, phiên 2 có 5 packet/kênh |
 
 Đáp án được suy ra bằng tay từ định nghĩa case, không sinh bằng code đang
@@ -188,6 +188,25 @@ quyết là luồng không có `SYNC` giả, nên số lỗi decode khớp chín
 ```powershell
 .\.venv\Scripts\python.exe scripts/simulate_packets.py --config configs/hardware/packet_simulation_v3.json --case byte_loss --output runs/packet_simulation_v3/byte_loss_01
 ```
+
+**V0.2 (từ 2026-10-24):** config có `wire_version: 2`
+([packet_simulation_v3_v02.json](../../configs/hardware/packet_simulation_v3_v02.json))
+sinh luồng [Packet Schema V0.2](../../configs/hardware/Packet_Schema_V0.2.md): mọi
+packet mang `VERSION = 2`, thêm sáu trục IMU `0xA1`–`0xA6` (một lần đọc FIFO chung,
+chung anchor và jitter, payload int16 có dấu) và packet thông tin thiết bị `0xD1`
+theo `device_info.interval_us` (phát lại ở phiên mới sau `session_restart`). Các
+case V0.1 chạy được trên config V0.2. Bốn case chỉ có ở V0.2:
+
+| Case | Lỗi cài vào | Đáp án |
+| --- | --- | --- |
+| `imu_backlog` | Lần đọc IMU 2–5 thành một lần đọc trễ 40 frame: phần 32 frame (bit 7) và phần 8 frame | Không issue; mỗi trục 6 packet, 1 anchor không dùng, không khoảng trống |
+| `imu_fifo_full` | Lần đọc 2 gặp FIFO đầy (bit 0, đọc trễ 2 lần), lần 3–4 mất, lần 5 neo lại theo công thức V0.2 mục 5 (bit 5) | `sample_index_reanchored` 6 (mỗi trục 1); 2 chuỗi mỗi trục, số mẫu mất `null` |
+| `mixed_version` | Packet PPG khe 1 thứ 3 mang `VERSION = 1` | `version_mixed_in_session` 1, `missing_packets` 1, `channel_missing` 8 (ở phần V0.1) |
+| `device_info_changed` | Packet `0xD1` thứ 2 có phiên bản ứng dụng khác | `device_info_changed` 2 (đổi rồi đổi lại) |
+
+Config V0.1 sinh đúng từng byte như code trước khi có V0.2 (đã so SHA-256 của 13
+case cùng config ngày 2026-10-24); IMU và `0xD1` được rút số ngẫu nhiên sau các kênh
+V0.1. Test: `tests/test_packet_v02.py`.
 
 Output là thư mục mới: `config.json`, `stream.bin`, `session_metadata.json`,
 `report.json` (seed, hash config/stream/metadata, commit/dirty, hash code,

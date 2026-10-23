@@ -24,10 +24,11 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
   - dung sai ±3 % áp lên tốc độ mẫu, không phải lên chu kỳ (dung sai mặc định);
   - packet có bit 0 giữ mẫu nhưng anchor không được kiểm, không làm mốc
     (`accepted_anchor_unreliable`, bước 6);
-  - `record` ghi bản sao config/metadata trước byte đầu tiên.
+  - `record` ghi bản sao config/metadata trước byte đầu tiên;
+  - đọc thêm Packet Schema V0.2 (2026-10-24, mục "Packet Schema V0.2" dưới).
 
-  Wire format (`packet-v0.1`) và metadata phiên (`packet-session-metadata-v0`)
-  không đổi. Phiên ghi bằng v0 vẫn đọc được manifest; replay bằng v1 so với
+  Metadata phiên (`packet-session-metadata-v0`) không đổi tên version; nhận thêm khóa
+  kênh của V0.2. Config đổi trường `packet_schema` thành `packet_schemas`. Phiên ghi bằng v0 vẫn đọc được manifest; replay bằng v1 so với
   manifest v0 có thể lệch hash và manifest ghi rõ `logger_version` của mỗi bên.
 - **Chờ:** đọc cổng serial trực tiếp, vì cần `pyserial`, mà gói này chưa có trong
   `requirements.txt` và chưa được nhóm duyệt (mục 7). Cũng chờ chạy 10 phút với
@@ -137,11 +138,11 @@ R5 vẫn là giá trị tạm, chờ số đo bench (D8, D10).
   `FIRST_SAMPLE_INDEX` là số thứ tự sự kiện (`event_ordinal` trong `decode.json`).
   `SEQ` gán lúc gửi, nên giữa hai sự kiện nhận được, số thứ tự tăng bằng khoảng
   `SEQ` (sự kiện mất trên USB, đã có `missing_packets`) cộng số sự kiện bị bỏ trước
-  khi có `SEQ`. Tăng nhiều hơn: `events_lost_before_send` kèm `lost_events`. Tăng ít
+  khi có `SEQ`. Tăng nhiều hơn: `events_lost_before_send` kèm `lost`. Tăng ít
   hơn hoặc lùi: `event_ordinal_inconsistent`, rồi kiểm tiếp từ sự kiện đó (số mất
   cạnh một số thứ tự sai không tin được). Bit 1 mà không có khoảng đếm được (sự
   kiện đầu, hoặc firmware bỏ một cạnh t0 trước khi thành sự kiện):
-  `events_lost_before_send` với `lost_events` = null. Không suy ra `SEQ` bắt đầu
+  `events_lost_before_send` với `lost` = null. Không suy ra `SEQ` bắt đầu
   từ 0; mất sự kiện cuối phiên không phát hiện được. Trước 2026-10-23 logger bỏ cả
   bước 4, nên t0 (mốc bơm cuff) bị bỏ trong hàng đợi MCU không để lại issue nào.
 - **R2:** bit 0/1/5 ở packet **trước hoặc sau** chỗ nhảy đều được chấp nhận làm
@@ -160,6 +161,33 @@ R5 vẫn là giá trị tạm, chờ số đo bench (D8, D10).
   số tình cờ trùng giá trị kỳ vọng không được coi là chuỗi mới. Phiên mới luôn bắt
   đầu chuỗi 0 của phiên đó. Packet `FS_NOMINAL_MHZ = 0` bị cách ly (`fs_invalid`)
   và không cắt chuỗi.
+
+## Packet Schema V0.2 (từ 2026-10-24)
+
+Logger đọc cả V0.1 và V0.2 ([spec V0.2](../../configs/hardware/Packet_Schema_V0.2.md)).
+Config `wire_versions` = `[1, 2]`, `packet_schemas` = `["packet-v0.1", "packet-v0.2"]`.
+
+- **Bảng mã kênh theo version** (decoder, sau CRC): `0xA1`–`0xA6` (IMU) và `0xD1`
+  (thông tin thiết bị) chỉ hợp lệ ở V0.2; ở V0.1 là `unknown_channel`. Bit `STATUS`
+  dự trữ: 7–15 ở V0.1, 8–15 ở V0.2.
+- **Một phiên trộn version:** `version_mixed_in_session`; mọi packet được giữ và kiểm
+  riêng theo (phiên, version), nên `decode.json` có một mục phiên cho mỗi version
+  (`packet_schema`), issue theo kênh mang trường `version`, và kênh khai báo mà
+  version đó không có sẽ thành `channel_missing`.
+- **IMU:** dữ liệu có dấu, nhận −32 768 … 32 767. Packet bit 7 (phần tồn đọng) giữ
+  mẫu, không kiểm anchor, không làm mốc (`accepted_anchor_unreliable`), như bit 0.
+- **Bit 5 ở V0.2:** chỉ xét bit của chính packet; packet bit 5 luôn bắt đầu chuỗi mới,
+  kể cả khi chỉ số liên tục (`sample_index_reanchored`, `lost_samples` = null). Bit
+  của packet `FS_NOMINAL_MHZ = 0` (bị cách ly) được áp cho packet tin cậy kế tiếp,
+  nên ranh giới neo lại không mất. V0.1 giữ R2/R6.
+- **Thông tin thiết bị `0xD1`:** kiểm payload (`device_info_invalid` kèm `problem`:
+  `sample_count`, `layout`, `header`, `status`, `text`); số thứ tự so với `SEQ`
+  (`device_info_lost_before_send`, `device_info_ordinal_inconsistent`, cùng khóa
+  `ordinal`/`lost` như sự kiện); mỗi phiên có `device_info` (`valid_packets`, các
+  định danh khác nhau theo thứ tự `SEQ`). Báo `device_info_changed`,
+  `device_info_missing` (phiên V0.2 nguồn `DEVICE` không có `0xD1` hợp lệ) và
+  `firmware_metadata_mismatch`. `0xD1` không vào `samples.csv` và không thuộc kiểm
+  `channel_missing`.
 
 ## Lệch kênh: chỉ có nghĩa trong mô phỏng
 
@@ -233,10 +261,10 @@ kiểm tra, không xóa. Bản sao đầu vào chỉ giúp khi tiến trình b�
 | `rx_chunks.csv` | Mỗi lần đọc: offset trong luồng, số byte, `t_rx_monotonic_ns` của PC |
 | `t_rx_packets.csv` | `t_rx` của từng packet (theo lần đọc chứa byte cuối). Chỉ dùng chẩn đoán đường truyền, **không bao giờ** là thời gian mẫu |
 | `decode.json` | Lỗi decode, `sync_candidates_rejected`, issue, `issue_counts`, tóm tắt từng phiên/kênh (kể cả số chuỗi `chains`), `gaps`, sự kiện, offset (chỉ SYNTHETIC), giới hạn |
-| `packets.csv` | Mỗi packet đã giải mã theo thứ tự đến: trường header, `seq_ext`, `sample_index_ext`, `chain_id`, `disposition`. `chain_id` để trống với bản trùng, xung đột và packet `0xC1` |
-| `samples.csv` | Mẫu của packet được nhận: phiên, kênh, `chain_id`, `seq_ext`, `sample_index_ext`, giá trị. Sắp theo (phiên, kênh, `chain_id`, `sample_index_ext`); khóa này là duy nhất, còn `sample_index_ext` có thể lặp giữa hai chuỗi khi neo lại lùi. Không có cột thời gian |
+| `packets.csv` | Mỗi packet đã giải mã theo thứ tự đến: trường header (kể cả `version`), `seq_ext`, `sample_index_ext`, `chain_id`, `disposition`. `chain_id` để trống với bản trùng, xung đột và packet `0xC1`/`0xD1` |
+| `samples.csv` | Mẫu của packet được nhận: phiên, kênh, `chain_id`, `seq_ext`, `sample_index_ext`, giá trị, `version` (cột cuối, từ 2026-10-24). Sắp theo (phiên, version, kênh, `chain_id`, `sample_index_ext`); khóa này là duy nhất, kể cả khi một phiên trộn hai version, còn `sample_index_ext` có thể lặp giữa hai chuỗi khi neo lại lùi. Không có cột thời gian |
 | `logger_config.json`, `session_metadata.json` | Bản sao đầu vào, ghi trước khi đọc nguồn |
-| `session_manifest.json` | Trường mục 11 (`schema_version` `packet-v0.1`, `session_id`/`session_ids`, `clock_id`, firmware, thiết bị, giờ PC lúc bắt đầu/kết thúc, metadata kênh, `null_reasons`); SHA-256 raw và mọi output; `issue_counts`; hash config/metadata; git commit/dirty, hash code (LF), Python; `source_type` |
+| `session_manifest.json` | Trường mục 11 (`packet_schemas` của luồng, `sessions` với `packet_schema` và `device_info` của từng phiên, `session_id`/`session_ids`, `clock_id`, firmware, thiết bị, giờ PC lúc bắt đầu/kết thúc, metadata kênh, `null_reasons`); SHA-256 raw và mọi output; `issue_counts`; hash config/metadata; git commit/dirty, hash code (LF), Python; `source_type` |
 
 Trong `record`, decode chạy trực tiếp theo từng đoạn đọc. Sau đó `raw.bin` được
 đọc lại từ đĩa và decode lần nữa. Hai kết quả phải giống từng byte, nếu không thì
@@ -351,6 +379,6 @@ giải thích được khoảng trống nhờ bit 1 được chuyển sang packe
 thì báo `sample_index_inconsistent`. Tương tự với bit 0: một packet ECG báo tràn
 FIFO AFE 40 mẫu rồi gửi thất bại chỉ được giải thích khi bit 0 được chuyển sang
 packet kế. Hai test khác kiểm sự kiện t0: packet sự kiện bị bỏ ở hàng đợi MCU cho
-`events_lost_before_send` với `lost_events` = 1; cạnh bị hàng đợi ISR bỏ cho issue
-đó với `lost_events` = null ở sự kiện kế tiếp. Đây là luồng SYNTHETIC dựng bằng
+`events_lost_before_send` với `lost` = 1; cạnh bị hàng đợi ISR bỏ cho issue
+đó với `lost` = null ở sự kiện kế tiếp. Đây là luồng SYNTHETIC dựng bằng
 `encode_packet` trong Python theo quy ước của firmware, không phải byte từ MCU.

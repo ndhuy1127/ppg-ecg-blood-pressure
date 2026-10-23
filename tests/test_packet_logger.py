@@ -425,7 +425,8 @@ def test_backward_reanchor_keeps_chains_apart(sim, logger):
     chain_ids = [r["chain_id"] for r in rows if r["channel_id"] == "0xE1"]
     assert chain_ids == [0] * 4 + [1] * 4
     lines = render_outputs(result, rows, samples)["samples.csv"].decode().splitlines()
-    assert lines[0] == "session_id,channel_id,chain_id,seq_ext,sample_index_ext,value"
+    assert lines[0] == ("session_id,channel_id,chain_id,seq_ext,sample_index_ext,"
+                        "value,version")
     ecg = [line.split(",") for line in lines[1:] if line.split(",")[1] == "0xE1"]
     keys = [(s[0], s[1], s[2], s[4]) for s in ecg]
     assert len(set(keys)) == len(keys) == 128
@@ -547,7 +548,7 @@ def test_event_ordinal_gap_is_a_lost_event(sim, logger, pairs, expected, lost):
     result, _, _ = analyze(restream([event(s, o) for s, o in pairs]), sim, logger,
                            metadata=only(device(sim), "0xC1"))
     assert result["issue_counts"] == expected
-    assert [i["lost_events"] for i in result["issues"]
+    assert [i["lost"] for i in result["issues"]
             if i["code"] == "events_lost_before_send"] == lost
 
 
@@ -556,12 +557,12 @@ def test_event_status_bit1_and_bad_ordinal(sim, logger):
     # Bit 1 on the first event: something was dropped, count unknown.
     result, _, _ = analyze(restream([event(0, 0, status=2), event(1, 1)]), sim,
                            logger, metadata=metadata)
-    assert [(i["code"], i["lost_events"]) for i in result["issues"]] == [
+    assert [(i["code"], i["lost"]) for i in result["issues"]] == [
         ("events_lost_before_send", None)]
     # Bit 1 together with a counted gap is one issue, not two.
     result, _, _ = analyze(restream([event(0, 0), event(1, 2, status=2)]), sim,
                            logger, metadata=metadata)
-    assert [(i["code"], i["lost_events"]) for i in result["issues"]] == [
+    assert [(i["code"], i["lost"]) for i in result["issues"]] == [
         ("events_lost_before_send", 1)]
     # An ordinal going back is flagged once; the next events are checked from it.
     result, _, _ = analyze(restream([event(0, 5), event(1, 3), event(2, 4),

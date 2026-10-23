@@ -168,7 +168,7 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
     assert [g["lost_samples"] for g in channels["0xF2"]["gaps"]] == [4]
     assert channels["0xC1"]["events"] == 7
     assert all(not c.get("packets_quarantined") for c in channels.values())
-    for _, key, _, _, index, value in samples:
+    for _, key, _, _, index, value, _ in samples:
         slot = int(key[-1]) - 1
         assert value == (ecg_word(index) if key == "0xE1" else ppg_count(index, slot))
 
@@ -213,7 +213,7 @@ def test_t0_edge_dropped_by_isr_is_reported_on_the_next_event():
     assert result["issue_counts"] == {"events_lost_before_send": 1,
                                       "skipped_bytes": 1}
     lost = [i for i in result["issues"] if i["code"] == "events_lost_before_send"]
-    assert lost[0]["lost_events"] is None and lost[0]["event_ordinal"] == 2
+    assert lost[0]["lost"] is None and lost[0]["ordinal"] == 2
     events = result["sessions"][0]["events"]
     assert [e["event_ordinal"] for e in events] == list(range(6))
 
@@ -225,4 +225,4 @@ def test_t0_event_dropped_in_mcu_queue_is_counted():
     assert result["issue_counts"] == {"events_lost_before_send": 1,
                                       "skipped_bytes": 1}
     lost = [i for i in result["issues"] if i["code"] == "events_lost_before_send"]
-    assert lost[0]["lost_events"] == 1 and lost[0]["event_ordinal"] == 4
+    assert lost[0]["lost"] == 1 and lost[0]["ordinal"] == 4

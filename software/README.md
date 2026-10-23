@@ -36,7 +36,7 @@ chứa `__init__.py`.
 | [evaluation/subject_bootstrap.py](evaluation/subject_bootstrap.py) | CI bootstrap percentile lấy mẫu theo người; đánh giá bảng dự đoán theo manifest | Dự đoán + manifest/inventory → metrics và CI |
 | [data_io/packet_simulation.py](data_io/packet_simulation.py) | Sinh/replay packet ECG/PPG SYNTHETIC `synthetic-packet-v2` với 6 case lỗi | Config/seed → packet → timeline, gap, offset |
 | [data_io/packet_wire.py](data_io/packet_wire.py) | Codec byte Packet Schema V0.1: CRC-16/CCITT-FALSE, đóng gói, decoder dò `SYNC` theo luồng | Byte (từng đoạn bất kỳ) → packet đã kiểm CRC/header + log lỗi, byte bị bỏ |
-| [data_io/packet_receiver.py](data_io/packet_receiver.py) | Kiểm tra mục 12 của schema theo từng phiên/kênh (`packet-logger-v1`), metadata phiên | Packet theo thứ tự đến → issue, gap, bảng packet/mẫu có `chain_id` |
+| [data_io/packet_receiver.py](data_io/packet_receiver.py) | Kiểm tra mục 12 của schema V0.1/V0.2 theo từng phiên/kênh (`packet-logger-v1`), metadata phiên | Packet theo thứ tự đến → issue, gap, bảng packet/mẫu có `chain_id` |
 | [data_io/packet_simulation_v3.py](data_io/packet_simulation_v3.py) | Sinh luồng byte SYNTHETIC `synthetic-packet-v3` đúng layout V0.1, 13 case lỗi | Config/seed → `stream.bin` + metadata phiên |
 
 Chi tiết đầu vào/đầu ra nằm trong [README models](models/README.md) và

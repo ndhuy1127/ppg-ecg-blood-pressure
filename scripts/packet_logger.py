@@ -93,7 +93,7 @@ def record(source, output, config_path, metadata_path, repo, source_name):
     serial port once pyserial is approved (it then needs a stop condition).
     """
     from software.data_io.packet_receiver import (
-        LOGGER_VERSION, PACKET_SCHEMA, analyze_stream, render_outputs,
+        LOGGER_VERSION, analyze_stream, render_outputs,
     )
     from software.data_io.packet_wire import StreamDecoder
 
@@ -152,7 +152,8 @@ def record(source, output, config_path, metadata_path, repo, source_name):
         _write(output, name, payload)
     files.update(inputs)
 
-    session_ids = [session["session_id"] for session in result["sessions"]]
+    # A session that mixes versions appears once per version in the result.
+    session_ids = list(dict.fromkeys(s["session_id"] for s in result["sessions"]))
     null_reasons = dict(metadata["null_reasons"])
     if len(session_ids) != 1:
         null_reasons["session_id"] = (
@@ -162,11 +163,15 @@ def record(source, output, config_path, metadata_path, repo, source_name):
     outputs_sha256 = {"raw.bin": _sha256(raw_bytes)}
     outputs_sha256.update({name: _sha256(payload) for name, payload in files.items()})
     manifest = {
-        "schema_version": PACKET_SCHEMA, "logger_version": LOGGER_VERSION,
+        "packet_schemas": result["packet_schemas"], "logger_version": LOGGER_VERSION,
         "mode": "record", "source_type": metadata["source_type"],
         "source": {"kind": "file", "name": source_name},
         "session_id": session_ids[0] if len(session_ids) == 1 else None,
         "session_ids": session_ids,
+        # Schema and device info as decoded from the stream, per session.
+        "sessions": [{"session_id": s["session_id"],
+                      "packet_schema": s["packet_schema"],
+                      "device_info": s["device_info"]} for s in result["sessions"]],
         **{name: metadata[name] for name in (
             "clock_id", "firmware_version", "firmware_commit", "device_id",
             "operator", "electrode_type", "electrode_placement", "channels",

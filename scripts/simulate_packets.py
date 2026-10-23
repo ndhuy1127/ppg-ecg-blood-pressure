@@ -123,11 +123,12 @@ def main():
         sys.path.insert(0, str(repo))
     from software.data_io.packet_simulation import CASES
     from software.data_io.packet_simulation_v3 import CASES as V3_CASES
+    from software.data_io.packet_simulation_v3 import V02_CASES
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=repo / "configs/hardware/packet_simulation.json")
     # Each config version accepts only its own cases; the generator checks this.
-    extra_cases = tuple(case for case in V3_CASES if case not in CASES)
+    extra_cases = tuple(case for case in (*V3_CASES, *V02_CASES) if case not in CASES)
     parser.add_argument("--case", choices=CASES + extra_cases, default=None)
     parser.add_argument("--packets", type=Path, help="Replay JSON list in the synthetic schema")
     parser.add_argument("--output", required=True, type=Path, help="New output directory")

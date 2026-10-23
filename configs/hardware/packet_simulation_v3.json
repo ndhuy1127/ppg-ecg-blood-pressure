@@ -27,5 +27,5 @@
   "index_jump_samples": 5,
   "reanchor_jump_samples": 40,
   "byte_loss_count": 5,
-  "unsupported_version": 2
+  "unsupported_version": 3
 }
