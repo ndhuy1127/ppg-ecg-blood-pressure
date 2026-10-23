@@ -105,7 +105,8 @@ Linux; raw, inventory, manifest, config split và output vẫn hash theo byte.
 ## Ghi nhận và việc còn mở
 
 - Bản cũ đã chạy và công bố MAE trên test (`docs/testing.md`,
-  `notebooks/metrics_all_splits.csv`, notebook `week4-train-xgboost.ipynb`).
+  `notebooks/metrics_all_splits.csv`, gỡ khỏi Git ngày 2026-10-24, còn trong lịch
+  sử ở commit `acc8b8b`; notebook `week4-train-xgboost.ipynb`).
   Không được dùng các số đó để chọn model; cần ghi sai lệch này vào báo cáo.
 - CSV 1.000 đoạn lịch sử không chạy được với runner này vì không có inventory.
 - Pool đã chốt ngày 2026-10-24: `VitalDB_Train_Subset`, mẫu con 400 người (seed

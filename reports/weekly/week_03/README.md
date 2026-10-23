@@ -63,7 +63,7 @@ Theo [kế hoạch Tuần 3](../../../docs/plans/WEEK_03.md):
 | STT | Sản phẩm | Người làm | Đường dẫn |
 | --- | --- | --- | --- |
 | 1 | Notebook split + hash | Linh | [week3-split-hash.ipynb](../../../notebooks/week3-split-hash.ipynb) |
-| 2 | Manifest 1.000 đoạn | Linh | [pulsedb_manifest_1000.csv](../../../notebooks/pulsedb_manifest_1000.csv) |
+| 2 | Manifest 1.000 đoạn | Linh | `notebooks/pulsedb_manifest_1000.csv` (gỡ khỏi Git ngày 2026-10-24; còn ở commit `1f218eb`) |
 | 3 | Bảng metadata packet schema | Đức Anh | [Packet_Schema_V0.1_Metadata_Table.docx](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/blob/4d4380f4328be23ab1ff391e475fec7570cdbed3/configs/hardware/Packet_Schema_V0.1_Metadata_Table.docx) (nhánh `dev/ducanh`, commit `4d4380f`); bản hiện hành: [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) mục 6, 11 |
 | 4 | Đặc tả generator/replay | Đức Anh | [packet_generator_replay.md](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/blob/bbd2d3c5ece7603615f5c9faa3dff290c5b4117d/configs/hardware/packet_generator_replay.md) (nhánh `dev/ducanh`, commit `bbd2d3c`); phần cài đặt ở dòng 15 |
 | 5 | Schematic V1 | Đức Anh | [V1.SchDoc](https://github.com/ndhuy1127/ppg-ecg-blood-pressure/blob/ac9d21b52aa1d822723a52234c74103b8ff27d3b/hardware/schematics/V1.SchDoc) (Altium; nhánh `dev/ducanh`, commit `ac9d21b`); bản hiện hành: [KiCad V1-module](../../../hardware/kicad/v1_module/) |

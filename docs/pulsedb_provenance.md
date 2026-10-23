@@ -228,9 +228,13 @@ phục vụ việc này.
 ## 10. Chính sách dữ liệu
 
 Không commit toàn bộ PulseDB hoặc file `.mat`. Git chỉ chứa code, tài liệu, test,
-notebook và thông tin checksum/provenance. Việc có giữ CSV nhãn kèm ID người
-(`notebooks/pulsedb_manifest_1000.csv`) trong Git hay không **chưa quyết
-định**; chưa xóa file này.
+notebook và thông tin checksum/provenance. Ngày 2026-10-24 (Huy) gỡ khỏi Git hai
+CSV của pool AAMI Cal: `notebooks/pulsedb_manifest_1000.csv` (nhãn SBP/DBP kèm ID
+người, cả dòng test) và `notebooks/metrics_all_splits.csv` (MAE trên test). Pool này
+không còn dùng cho split mới (mục 5). Lịch sử Git vẫn giữ hai file (commit `1f218eb`
+và `acc8b8b`); lấy lại bằng
+`git show 1f218eb:notebooks/pulsedb_manifest_1000.csv` khi cần chạy runner B0 lịch
+sử. Hai notebook Tuần 3–4 vẫn tham chiếu các đường dẫn này và là tài liệu lịch sử.
 
 ## 11. Việc còn mở
 

@@ -10,9 +10,11 @@ CSV UTF-8 có các cột `sample_id,subject_id,source,split,sbp,dbp,sample_hash`
 Giữ nguyên giá trị split `train`, `val`, `test` của Linh. Xác nhận đơn vị mmHg
 từ tài liệu nguồn. Lưu CSV ngoài Git, ví dụ `data/processed/linh_week03/`.
 
-CSV không được kèm trong commit runner. Để chạy trên máy khác, lấy đúng file
-`notebooks/pulsedb_manifest_1000.csv` từ commit `1f218eb` của nhánh
-`dev/ngoclinh` (GitHub: mở file, chọn Raw/Download raw file), rồi lưu tại
+CSV không được kèm trong commit runner, và từ 2026-10-24 không còn trong cây Git
+hiện tại. Để chạy trên máy khác, lấy đúng file
+`notebooks/pulsedb_manifest_1000.csv` từ commit `1f218eb` (nhánh `dev/ngoclinh`:
+`git show 1f218eb:notebooks/pulsedb_manifest_1000.csv`, hoặc Raw trên GitHub), rồi
+lưu tại
 `data/processed/linh_week03/pulsedb_manifest_1000.csv`. Giữ nguyên bytes của
 file, không mở và lưu lại bằng Excel. So SHA256 với `manifest_sha256` trong
 `configs/data/b0_pulsedb_validation.json`:
