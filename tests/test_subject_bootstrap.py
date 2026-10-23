@@ -112,6 +112,28 @@ def test_bad_contrasts_are_rejected(contrasts):
                      contrasts=contrasts)
 
 
+@pytest.mark.parametrize("n,status", [(1, "insufficient_subjects"),
+                                      (2, "few_subjects"), (9, "few_subjects"),
+                                      (10, "ok")])
+def test_status_flags_few_subjects(n, status):
+    ids = [f"S{i}" for i in range(n)]
+    ref = np.tile([120.0, 80.0], (n, 1))
+    pred = ref + np.arange(n)[:, None]
+    result = bootstrap_bp(ref, {"M": pred}, ids, BootstrapConfig(repetitions=20))
+    assert result["status"] == status
+    # The CI is computed from 2 subjects on, flagged or not.
+    assert (result["models"]["M"]["ci"] is None) == (n < 2)
+    with pytest.raises(ValueError):
+        BootstrapConfig(min_subjects=5, few_subjects=4)
+
+
+def test_test_split_is_refused():
+    manifest, inventory, predictions = table_fixture()
+    with pytest.raises(ValueError, match="val"):
+        evaluate_prediction_table(manifest, inventory, predictions.assign(split="test"),
+                                  split="test", config=BootstrapConfig(repetitions=10))
+
+
 def test_insufficient_subjects_and_degenerate_results():
     ref = [[120, 80]]
     one = bootstrap_bp(ref, {"B0": ref}, ["A"], BootstrapConfig(repetitions=10))

@@ -142,8 +142,10 @@ Mỗi lượt lấy N người có hoàn lại và giữ toàn bộ dòng của 
 không gộp A sau lấy mẫu. RNG seed 20261013, 2000 lượt, percentile 2.5/97.5.
 Mọi model dùng cùng draws. Không fit lại model; CI chỉ mô tả uncertainty theo
 người của predictions đã có, không chứng minh CI nominal coverage.
-Ít hơn 2 người: giữ point metric, CI N/A và `insufficient_subjects`; quá ít người
-dù >=2 vẫn cần cảnh báo diễn giải. Replicates thiếu SD được đếm, phân phối hằng
+Ít hơn 2 người: giữ point metric, CI N/A và `insufficient_subjects`. Từ 2 tới dưới
+`few_subjects` người (mặc định 10, quy ước ngày 2026-10-24, không phải ngưỡng suy
+ra): vẫn tính CI nhưng `status` = `few_subjects`, vì bootstrap theo cụm với ít cụm
+thường cho CI hẹp hơn độ phủ danh nghĩa; diễn giải các CI này là mô tả. Replicates thiếu SD được đếm, phân phối hằng
 gắn `degenerate`; không coi CI hằng là bằng chứng chắc chắn trên quần thể.
 
 **So sánh ghép cặp (thêm 2026-10-23):** `bootstrap_bp(..., contrasts=[(A, B)])`
@@ -161,8 +163,10 @@ gọi validator v2 rồi join theo sample_id, kiểm tra đúng subject/split, s
 không trùng/mất/thêm ID và cùng tập cho các model. Prediction table có đúng:
 `sample_id, subject_id, split, model, pred_sbp, pred_dbp`. Không nhận nhãn từ
 prediction table; reference lấy từ manifest được inventory kiểm tra.
-Nguồn/quyền dùng/pool, raw hash, chronology/calibration và khóa test vẫn là
-trách nhiệm caller; API không đủ metadata để xác nhận B1 hợp lệ.
+Từ 2026-10-24 API chỉ nhận `split='val'`: đánh giá test bị từ chối ở đây và phải đi
+qua một script riêng đòi file khóa (model, config, phiên bản đặc trưng, ngưỡng, ngày)
+đã commit trước khi chạy. Nguồn/quyền dùng/pool, raw hash và chronology/calibration
+vẫn là trách nhiệm caller; API không đủ metadata để xác nhận B1 hợp lệ.
 Beta/r ΔBP không triển khai khi chưa có định nghĩa/metadata phù hợp.
 
 ## 6. Ví dụ tích hợp và tái chạy

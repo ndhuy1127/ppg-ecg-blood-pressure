@@ -17,12 +17,20 @@ class BootstrapConfig:
     repetitions: int = 2000
     confidence: float = 0.95
     min_subjects: int = 2
+    # Below this many subjects the CI is still computed but the status is
+    # "few_subjects": a percentile cluster bootstrap with few clusters tends to
+    # give intervals narrower than their nominal coverage. 10 is a convention
+    # (2026-10-24), not a derived threshold.
+    few_subjects: int = 10
 
     def __post_init__(self):
-        for name, minimum in (("seed", 0), ("repetitions", 2), ("min_subjects", 2)):
+        for name, minimum in (("seed", 0), ("repetitions", 2), ("min_subjects", 2),
+                              ("few_subjects", 2)):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
                 raise ValueError(f"Invalid bootstrap {name}")
+        if self.few_subjects < self.min_subjects:
+            raise ValueError("few_subjects must be at least min_subjects")
         if not 0 < finite_number(self.confidence, "confidence") < 1:
             raise ValueError("confidence must be in (0, 1)")
 
@@ -105,7 +113,8 @@ def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig
     result = {"n_rows": len(ids), "n_subjects": n_subjects, "seed": config.seed,
               "repetitions": config.repetitions, "confidence": config.confidence,
               "method": "subject cluster percentile; shared draws across models",
-              "models": {}, "status": "ok"}
+              "models": {},
+              "status": "ok" if n_subjects >= config.few_subjects else "few_subjects"}
     contrast_point = [
         {target: {metric: _difference(point[a][target][metric],
                                       point[b][target][metric])
@@ -163,12 +172,14 @@ def evaluate_prediction_table(manifest, inventory, predictions, *, split="val",
 
     Table columns: sample_id, subject_id, split, model, pred_sbp, pred_dbp.
     Caller still owns raw/pool permissions and observation/calibration checks.
-    Test evaluation requires caller's prior model/threshold lock; not enforced here.
+    Validation only (2026-10-24): test evaluation is refused here; it needs a
+    separate script that requires a lock file committed before the run.
     ``contrasts`` is passed to ``bootstrap_bp``.
     """
     validate_manifest(manifest, inventory)
-    if split not in ("val", "test"):
-        raise ValueError("Evaluation split must be val/test")
+    if split != "val":
+        raise ValueError("Only split='val' is evaluated here; test evaluation needs "
+                         "a separate locked script")
     columns = {"sample_id", "subject_id", "split", "model", "pred_sbp", "pred_dbp"}
     if not isinstance(predictions, pd.DataFrame) or predictions.empty or not predictions.columns.is_unique or set(predictions.columns) != columns:
         raise ValueError("Prediction table needs exactly the documented columns")
