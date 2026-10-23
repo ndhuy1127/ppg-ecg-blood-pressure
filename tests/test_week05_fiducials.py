@@ -3,6 +3,7 @@
 Known-answer SYNTHETIC checks only; not evidence of accuracy on people or PulseDB.
 """
 
+import hashlib
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -13,8 +14,8 @@ import pytest
 
 from scripts.demo_week04_huy import fixture
 from scripts.week05_fiducials import (
-    SYNTHETIC_CASES, clicks_to_rows, detection_rows, load_records, main,
-    run_annotate, run_compare, select_review_rows, synthetic_record,
+    SYNTHETIC_CASES, clicks_to_rows, detection_rows, export_record_id, load_records,
+    main, run_annotate, run_compare, select_review_rows, synthetic_record,
 )
 from software.evaluation.fiducial_agreement import (
     ANNOTATION_COLUMNS, DETECTION_COLUMNS, agreement, match_events,
@@ -24,7 +25,7 @@ from software.signal_processing.fiducials import (
     Channel, SignalConfig, _vertex_offset, detect,
 )
 from software.signal_processing.pat_validity import (
-    PatRules, classify_pat, pair_between_r, pat_beats,
+    PatRules, classify_pat, detectable_foot_span, pair_between_r, pat_beats,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +40,11 @@ def _case(name, **override):
     ecg, ppg, ecg_fs, ppg_fs, r, feet = synthetic_record(
         **{**SYNTHETIC_CASES[name], **override})
     return Channel(ecg, ecg_fs, "u", None), Channel(ppg, ppg_fs, "u", None), r, feet
+
+
+def _span(ppg):
+    times = ppg.start_s + np.arange(len(ppg.values)) / ppg.fs_hz
+    return detectable_foot_span(times, BASE.edge_s, BASE.foot_lookback_s)
 
 
 def _inside(times, low=0.5, high=9.5):
@@ -188,7 +194,7 @@ def test_pause_creates_no_beat_and_no_pat(method):
     gap = (found > r[3] + 0.1) & (found < r[4] - 0.1)
     assert not gap.any()
     feet, _ = detect(ppg, config, "ppg")
-    result = pat_beats(found, feet, RULES)
+    result = pat_beats(found, feet, RULES, foot_span=_span(ppg))
     assert result["n_pairs"] == len(found) and result["n_unpaired_r"] == 0
 
 
@@ -196,7 +202,7 @@ def test_ppg_dropout_leaves_r_unpaired_not_mispaired():
     ecg, ppg, r, _ = _case("SYN_PPG_DROPOUT_HR60")
     found, _ = detect(ecg, replace(BASE, r_method="derivative_energy"), "ecg")
     feet, _ = detect(ppg, BASE, "ppg")
-    result = pat_beats(found, feet, RULES)
+    result = pat_beats(found, feet, RULES, foot_span=_span(ppg))
     assert result["n_unpaired_r"] == result["n_no_foot"] == 1
     assert result["n_valid"] == result["n_pairs"] == len(found) - 1
     pats = np.array([p[2] for p in result["pairs"]])
@@ -219,14 +225,14 @@ def test_high_heart_rate_every_beat_once(r_method, foot_method):
     assert (len(match_events(_inside(onsets), _inside(feet), 0.05)[0])
             == len(_inside(onsets)))
     assert (np.diff(feet) > 0).all()
-    assert pat_beats(found, feet, RULES)["n_unpaired_r"] == 0
+    assert pat_beats(found, feet, RULES, foot_span=_span(ppg))["n_unpaired_r"] == 0
 
 
 def test_pat_beats_labels_out_of_range_instead_of_dropping():
     r = np.arange(1.0, 9.0)
     pat = np.full(8, 0.2)
     pat[2], pat[5] = 0.45, 0.06
-    result = pat_beats(r, r + pat, RULES)
+    result = pat_beats(r, r + pat, RULES, foot_span=None)
     assert (result["n_pairs"], result["n_unpaired_r"]) == (8, 0)
     assert result["n_out_of_range"] == 2
     assert [result["status"][i] for i in (2, 5)] == ["out_of_range"] * 2
@@ -238,20 +244,71 @@ def test_pair_between_r_no_foot_and_ambiguous_are_labelled():
     # R2: two feet, only 2.2 s in range -> paired. R3: 3.05 and 3.5 s are both
     # out of range -> ambiguous. R4 (last): nothing within one RR -> no_foot.
     feet = [1.2, 2.2, 2.6, 3.05, 3.5]
-    pairs, status = pair_between_r(r, feet, RULES)
+    pairs, status = pair_between_r(r, feet, RULES, foot_span=None)
     assert status == ["paired", "paired", "ambiguous", "no_foot"]
     assert [(i, j) for i, j, _ in pairs] == [(0, 0), (1, 1)]
     assert [p[2] for p in pairs] == pytest.approx([200, 200])
     # The last R only looks one RR ahead: a foot 1.5 s later is not its own.
-    assert pair_between_r([1.0, 2.0, 3.0], [1.2, 2.2, 4.5], RULES)[1][-1] == "no_foot"
+    assert pair_between_r([1.0, 2.0, 3.0], [1.2, 2.2, 4.5], RULES,
+                          foot_span=None)[1][-1] == "no_foot"
     with pytest.raises(ValueError):
-        pair_between_r([1.0, 1.0], [1.2], RULES)
+        pair_between_r([1.0, 1.0], [1.2], RULES, foot_span=None)
+
+
+def test_detectable_foot_span_trims_edges_and_lookback():
+    times = np.arange(1000) / 100  # 0 .. 9.99 s
+    assert detectable_foot_span(times, 0.1, 0.5) == pytest.approx((0.1, 9.39))
+    with pytest.raises(ValueError):
+        detectable_foot_span(np.arange(50) / 100, 0.1, 0.5)  # 0.49 s window
+    with pytest.raises(ValueError):
+        detectable_foot_span([0.0, 0.0, 1.0], 0.1, 0.5)
+
+
+def test_missing_foot_near_window_edge_is_edge_not_no_foot():
+    # Span (0.1, 9.4). R 0.01 s: its PAT window starts at 0.09 s, before the span.
+    # R 9.1 s: the window ends at 9.5 s, after it. R 2.0 s misses a foot inside.
+    r, feet, span = [0.01, 1.0, 2.0, 3.0, 9.1], [1.2, 3.2], (0.1, 9.4)
+    result = pat_beats(r, feet, RULES, foot_span=span)
+    assert result["r_status"] == ["edge", "paired", "no_foot", "paired", "edge"]
+    assert (result["n_pairs"], result["n_unpaired_r"], result["n_edge"]) == (2, 1, 2)
+    assert result["n_pairs"] + result["n_unpaired_r"] + result["n_edge"] == len(r)
+    # Without span information nothing is exempted (the earlier behaviour).
+    old = pat_beats(r, feet, RULES, foot_span=None)
+    assert old["r_status"] == ["no_foot", "paired", "no_foot", "paired", "no_foot"]
+    assert (old["n_unpaired_r"], old["n_edge"]) == (3, 0)
+    # Shifting the span with the times gives the same labels.
+    moved = pat_beats(np.add(r, 100), np.add(feet, 100), RULES,
+                      foot_span=(100.1, 109.4))
+    assert moved["r_status"] == result["r_status"]
+
+
+def test_edge_bound_is_inclusive_and_only_changes_no_foot():
+    span = (0.1, 9.4)
+    # R + 400 ms exactly at the span end: the whole window is inside -> no_foot.
+    assert pair_between_r([8.0, 9.0], [8.2], RULES, foot_span=span)[1] == [
+        "paired", "no_foot"]
+    assert pair_between_r([8.0, 9.001], [8.2], RULES, foot_span=span)[1] == [
+        "paired", "edge"]
+    # Near the end (windows reach past 9.4 s): a single foot 50 ms after R is
+    # still paired (then out_of_range), and two out-of-range feet stay ambiguous.
+    pairs, status = pair_between_r([8.0, 9.15], [8.2, 9.2], RULES, foot_span=span)
+    assert status == ["paired", "paired"] and pairs[1][2] == pytest.approx(50)
+    status = pair_between_r([8.0, 9.2], [8.2, 9.22, 9.25], RULES, foot_span=span)[1]
+    assert status == ["paired", "ambiguous"]
+
+
+@pytest.mark.parametrize("span", [(5.0, 1.0), (1.0, 1.0), (float("nan"), 2.0),
+                                  (1.0, 2.0, 3.0), "0-9"])
+def test_bad_foot_span_is_rejected(span):
+    with pytest.raises(ValueError):
+        pat_beats([1.0, 2.0], [1.2], RULES, foot_span=span)
 
 
 def test_pat_limits_are_inclusive_despite_float_rounding():
     # (0.18 - 0.1) * 1000 = 79.99999999999999 and (1.1 - 0.7) * 1000 =
     # 400.0000000000001 in binary floating point; both are on the limits.
-    result = pat_beats([0.1, 0.7, 1.7, 2.7], [0.18, 1.1, 1.9, 2.9], RULES)
+    result = pat_beats([0.1, 0.7, 1.7, 2.7], [0.18, 1.1, 1.9, 2.9], RULES,
+                       foot_span=None)
     assert result["n_out_of_range"] == 0 and result["n_pairs"] == 4
     outside = classify_pat([79.9, 400.1, 200, 200, 200], RULES)
     assert outside["status"][:2] == ["out_of_range"] * 2
@@ -487,6 +544,67 @@ def test_compare_refuses_other_config_or_missing_detect_provenance(tmp_path):
     (tmp_path / "det.provenance.json").unlink()
     with pytest.raises(ValueError, match="missing"):
         run_compare(truth, det, CONFIG_PATH, tmp_path / "b.json",
+                    allow_synthetic_truth=True)
+
+
+def test_export_record_ids_keep_two_raw_files_apart():
+    first = export_record_id("a" * 64, "val", 7)
+    assert first == "PDB_aaaaaaaaaaaa_val_7"
+    assert export_record_id("b" * 64, "val", 7) != first
+
+
+def _synth_and_detect(tmp_path):
+    records, det = tmp_path / "records", tmp_path / "det.csv"
+    main(["synth", "--out", str(records)])
+    main(["detect", "--records", str(records), "--out", str(det)])
+    detect_info = json.loads((tmp_path / "det.provenance.json").read_text("utf-8"))
+    return records, det, detect_info["provenance"]["inputs_sha256"]["records_csv"]
+
+
+def test_compare_ties_annotations_to_the_detected_records(tmp_path):
+    records, det, records_sha = _synth_and_detect(tmp_path)
+    truth = records / "truth_synthetic.csv"
+    result = run_compare(truth, det, CONFIG_PATH, tmp_path / "ok.json",
+                         allow_synthetic_truth=True)
+    assert result["annotation_provenance"]["kind"] == "synth"
+    assert result["annotation_provenance"]["records_csv"] == records_sha
+    # A hand-filled CSV (here a copy) has no provenance: refused unless allowed,
+    # and the bypass is recorded.
+    manual = tmp_path / "manual.csv"
+    manual.write_bytes(truth.read_bytes())
+    with pytest.raises(ValueError, match="no provenance"):
+        run_compare(manual, det, CONFIG_PATH, tmp_path / "a.json",
+                    allow_synthetic_truth=True)
+    assert not (tmp_path / "a.json").exists()
+    bypass = run_compare(manual, det, CONFIG_PATH, tmp_path / "b.json",
+                         allow_synthetic_truth=True,
+                         allow_annotations_without_provenance=True)
+    assert bypass["annotation_provenance"] == {
+        "kind": "none", "file": None, "sha256": None, "records_csv": None}
+    assert bypass["provenance"]["inputs_sha256"]["annotations_provenance"] is None
+    # A sidecar that exists must match, flag or not.
+    sidecar = tmp_path / "manual.provenance.json"
+    good = {"output_sha256": hashlib.sha256(manual.read_bytes()).hexdigest(),
+            "provenance": {"inputs_sha256": {"records_csv": records_sha}}}
+    for broken, message in (
+        ({**good, "output_sha256": "0" * 64}, "differ from the file"),
+        ({**good, "provenance": {"inputs_sha256": {"records_csv": "0" * 64}}},
+         "other records"),
+        ({"output_sha256": good["output_sha256"]}, "Unreadable"),
+    ):
+        sidecar.write_text(json.dumps(broken), encoding="utf-8")
+        with pytest.raises(ValueError, match=message):
+            run_compare(manual, det, CONFIG_PATH, tmp_path / "c.json",
+                        allow_synthetic_truth=True,
+                        allow_annotations_without_provenance=True)
+    sidecar.write_text(json.dumps(good), encoding="utf-8")
+    tied = run_compare(manual, det, CONFIG_PATH, tmp_path / "d.json",
+                       allow_synthetic_truth=True)
+    assert tied["annotation_provenance"]["kind"] == "annotate"
+    # Edited truth no longer matches synth.provenance.json.
+    truth.write_bytes(truth.read_bytes() + b"\n")
+    with pytest.raises(ValueError, match="differ from the file"):
+        run_compare(truth, det, CONFIG_PATH, tmp_path / "e.json",
                     allow_synthetic_truth=True)
 
 

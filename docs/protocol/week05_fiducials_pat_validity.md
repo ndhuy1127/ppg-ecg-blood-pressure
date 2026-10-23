@@ -1,6 +1,6 @@
 # Tuần 5 — mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay
 
-Huy, 2026-10-21; sửa ngày 2026-10-22 theo review độc lập (mục 8). Version
+Huy, 2026-10-21; sửa ngày 2026-10-22 theo review độc lập. Version
 config: `fiducials-week05-v0`, trạng thái `NOT_TEST_TUNED`. Kiểm tra mới chỉ trên
 SYNTHETIC; **chưa chạy trên PulseDB** (không có raw trên máy, xem mục 6). Không
 phải phương pháp đã khóa.
@@ -46,7 +46,7 @@ tìm). **Giới hạn đã biết:** một góc nhọn bất đối xứng (sư�
 thoải, như điểm bắt đầu xung SYNTHETIC) vẫn là cực tiểu chặt nên vẫn bị nội
 suy, và nội suy làm sai số **tăng**: probe review 2026-10-22 (quét pha onset, PPG
 125 Hz) cho `valley_min` MAE 6,28 ms có nội suy so với 3,56 ms không nội suy. Giữ,
-bỏ hay giới hạn nội suy là **quyết định chờ Huy** (mục 8).
+bỏ hay giới hạn nội suy là **quyết định chờ Huy**.
 
 `d2_max` và `valley_min` chưa có làm mượt; trên dữ liệu nhiễu kết quả kém hơn
 `tangent` (mục 5). Nếu dùng thật cần lọc trước, và lựa chọn đó phải khóa trên
@@ -77,7 +77,17 @@ Một nhịp PAT hợp lệ khi đủ **tất cả**:
      nên một foot thuộc tối đa một R.
    - Một foot thì ghép, **bất kể PAT**. Nhiều foot thì chỉ ghép khi đúng một foot
      nằm trong giới hạn; ngược lại R được gắn `ambiguous`.
-   - Không có foot: `no_foot`. Nhịp mất không ghép sang nhịp sau.
+   - Không có foot: `no_foot`. Nhịp mất không ghép sang nhịp sau. Ngoại lệ
+     (`pat-validity-v1`, 2026-10-23): nếu cửa sổ `[R + min_ms, R + max_ms]` không
+     nằm trọn trong khoảng PPG phát hiện được foot (`foot_span`), R được gắn `edge`
+     và không tính vào `n_unpaired_r`, như quy tắc nhịp sát biên của
+     `features-sqi-v1`. `foot_span` là tham số bắt buộc, tính bằng
+     `detectable_foot_span(ppg_times, edge_s, foot_lookback_s)` từ thời gian của
+     PPG đã xử lý: bỏ `edge_s` ở đầu và `edge_s + foot_lookback_s` ở cuối, vì foot
+     chỉ được tìm từ một đỉnh nằm sau nó tối đa `foot_lookback_s`. Không lấy
+     khoảng này từ các foot đã tìm thấy. Truyền `None` thì không miễn trừ nhịp nào
+     (hành vi của v0, khi đó R sát biên vẫn là `no_foot`). Nhịp `paired` và
+     `ambiguous` không đổi nhãn.
    - Giới hạn 80–400 ms **không** dùng để loại khi ghép, nên PAT 450 ms hay 60 ms
      vẫn được ghép rồi gắn `out_of_range`. Trước 2026-10-22, `pat_beats` ghép bằng
      `pair_pat` với cùng giới hạn, nên các nhịp này biến mất thành "R không ghép"
@@ -90,8 +100,8 @@ Một nhịp PAT hợp lệ khi đủ **tất cả**:
 
 Nhịp không hợp lệ được **gắn nhãn, không xóa**:
 
-- `pat_beats` trả `r_status` cho từng R (`paired`, `no_foot`, `ambiguous`) cùng
-  các số đếm.
+- `pat_beats` trả `r_status` cho từng R (`paired`, `no_foot`, `ambiguous`,
+  `edge`) cùng các số đếm; số R = `n_pairs` + `n_unpaired_r` + `n_edge`.
 - `classify_pat` trả trạng thái từng cặp, số `out_of_range`/`outlier`, và
   `median_all_ms` (mọi cặp) cạnh `median_valid_ms`, để thấy quy tắc ảnh hưởng tới
   đâu.
@@ -143,6 +153,15 @@ Quy trình (chỉ train/val; script từ chối split khác):
    - **Kiểm config:** `compare` từ chối khi thiếu provenance của `detect`, khi CSV
      detections đã đổi sau `detect`, hoặc khi config khác config `detect` đã dùng.
      Output chép provenance của `detect`.
+   - **Kiểm nguồn đánh dấu (2026-10-23):** mốc tay phải được đánh trên đúng
+     `records.csv` mà `detect` đã dùng. `compare` đọc `<annotations>.provenance.json`
+     của `annotate`, hoặc với đáp án SYNTHETIC là `synth.provenance.json` cạnh
+     `truth_synthetic.csv`, rồi kiểm hash của chính file đánh dấu và hash
+     `records.csv`. File provenance có mà không khớp hoặc hỏng thì luôn bị từ
+     chối. CSV điền tay theo mẫu (không có provenance) chỉ được so khi thêm
+     `--annotations-without-provenance`; output ghi `annotation_provenance.kind =
+     "none"`. Trước đó `compare` không kiểm điều này, nên mốc tay của bản ghi này có
+     thể bị so với detection của bản ghi khác cùng `record_id`.
    - Kết quả gộp kèm bảng theo từng bản ghi, vì các nhịp trong một bản ghi không
      độc lập.
 
@@ -183,8 +202,12 @@ ghi provenance:
 | `synth` | `synth.provenance.json`: version generator, case, hash output |
 | `plot` | `plot.provenance.json` |
 | `annotate`, `detect` | `<out>.provenance.json` |
-| `export` | `export.json` |
-| `compare` | Trong JSON output |
+| `export` | `export.json` (hash raw đầy đủ; từ 2026-10-23 hash thêm `reader.py`, `split_manifest.py`, `pipeline.py` và ghi phiên bản `mat73`, `h5py`) |
+| `compare` | Trong JSON output (`annotation_provenance`, `detect_provenance`) |
+
+`export` đặt `record_id = PDB_<12 ký tự đầu SHA-256 raw>_<split>_<raw_index>`
+(từ 2026-10-23; trước đó không có phần hash), để bản ghi của hai file raw (hai
+pool) không trùng ID.
 
 ## 5. Kết quả SYNTHETIC (chỉ kiểm chứng code)
 
@@ -275,13 +298,15 @@ Chỉ xuất ECG/PPG; ABP và nhãn ở lại file raw. `--fs-hz` do người ch
   - một spike 1 mẫu biên độ 0,8 × R: 0/9.
 
   Trong cả ba trường hợp `prominence` vẫn 9/9, tới nhịp ×5,5. Đổi sang ngưỡng
-  robust là **quyết định chờ Huy** (mục 8).
+  robust là **quyết định chờ Huy**.
 - **Refractory 0,25 s áp cho cả đỉnh PPG** (`detect` dùng chung
   `config.refractory_s`). PPG có sóng tâm trương thì sinh foot giả: probe HR 75,
   sóng tâm trương biên độ 0,5, cách ≥ 0,30 s cho 21 foot, trong khi chỉ có 11 foot
-  thật; với 0,4 s ra đúng 11. Ghép PAT không bị ảnh hưởng (foot giả làm R thành
-  `ambiguous` hoặc nằm ngoài giới hạn), nhưng PPV foot so với đánh dấu tay sẽ
-  giảm. SYNTHETIC hiện không có sóng tâm trương. Tách `ppg_refractory_s` là
+  thật; với 0,4 s ra đúng 11. Foot giả ảnh hưởng ghép PAT theo ba cách: làm R
+  thành `ambiguous` (mất cặp, nên số nhịp có PAT giảm và median tính trên tập nhịp
+  khác); nằm ngoài giới hạn; hoặc, nếu là ứng viên duy nhất trong giới hạn của
+  khoảng R–R, được ghép thành một PAT sai mà quy tắc không phát hiện. PPV foot so
+  với đánh dấu tay cũng giảm. SYNTHETIC hiện không có sóng tâm trương. Tách `ppg_refractory_s` là
   **quyết định chờ Huy**.
 - ECG đảo cực mà không đặt `ecg_polarity` vẫn được tính TP: theo probe review
   2026-10-22, cả hai phương pháp bắt sóng S SYNTHETIC (R + 0,03 s), lệch +30 ms,
@@ -293,29 +318,3 @@ Chỉ xuất ECG/PPG; ABP và nhãn ở lại file raw. `--fs-hz` do người ch
   sinh lý nhanh trong cửa sổ.
 - Các giới hạn và dung sai chưa có nguồn (mục 3); phải khóa trước pilot/validation,
   không chỉnh theo test.
-
-## 8. Sửa đổi sau review (2026-10-22) và điểm chờ quyết định
-
-**Đã sửa** (test kèm theo trong `tests/test_week05_fiducials.py`, 50 test):
-
-1. PAT ngoài giới hạn được ghép rồi gắn nhãn, không biến mất (mục 3).
-2. Mọi lệnh ghi provenance. `compare` từ chối config khác config `detect` đã dùng
-   (mục 4).
-3. `annotate` kiểm output trước và ghi theo từng bản ghi. Toolbar không bắt buộc.
-4. Ghép một–một tối ưu; so biên có dung sai float; vùng review đối xứng theo
-   dung sai.
-5. Chặn đáp án SYNTHETIC không phân biệt hoa thường hay khoảng trắng, nằm ngay
-   trong `agreement`.
-6. Nội suy parabol kiểm chiều cong.
-7. Tài liệu sửa cho đúng: nội suy ở góc nhọn, `export` đọc toàn bộ raw, ngưỡng
-   `derivative_energy`.
-8. 33 mutant nhắm vào các sửa đổi trên đều bị test bắt.
-
-**Chờ Huy quyết định** (chưa đổi code, chỉ ghi giới hạn):
-
-- Nội suy parabol ở góc nhọn bất đối xứng: giữ, bỏ, hay chỉ nội suy khi hai lân
-  cận gần đối xứng (cần thêm một ngưỡng).
-- Ngưỡng robust cho `derivative_energy` (percentile, thích nghi hay ngưỡng cục bộ).
-- Tách `ppg_refractory_s` và giá trị của nó; thêm ca SYNTHETIC có sóng tâm trương.
-- Dời sóng T SYNTHETIC khỏi biên refractory (ví dụ R + 0,30 s) để so sánh R không
-  phụ thuộc biên. Việc này đổi đáp án và bảng mục 5.

@@ -47,8 +47,11 @@ RECORD_COLUMNS = ("record_id", "subject_id", "split", "source_type", "origin",
                   "ecg_fs_hz", "ppg_fs_hz", "file", "file_sha256")
 CODE_FILES = ("scripts/week05_fiducials.py", "software/signal_processing/fiducials.py",
               "software/signal_processing/pat_validity.py",
-              "software/evaluation/fiducial_agreement.py", "software/_provenance.py")
-LIBRARIES = ("numpy", "scipy", "pandas", "matplotlib")
+              "software/evaluation/fiducial_agreement.py", "software/_provenance.py",
+              # Used by export to read raw PulseDB and check the split handover.
+              "software/pulsedb/reader.py", "software/data_io/split_manifest.py",
+              "software/pulsedb/pipeline.py")
+LIBRARIES = ("numpy", "scipy", "pandas", "matplotlib", "mat73", "h5py")
 
 
 def _git(*args):
@@ -206,6 +209,15 @@ def run_synth(out):
 
 # --- PulseDB train/val export ------------------------------------------------
 
+def export_record_id(raw_sha256, split, raw_index):
+    """``PDB_<first 12 hex of the raw SHA-256>_<split>_<raw_index>``.
+
+    The prefix keeps rows of two raw files (two pools) apart; it is a label
+    only, and export.json keeps the full SHA-256.
+    """
+    return f"PDB_{raw_sha256[:12]}_{split}_{raw_index}"
+
+
 def select_review_rows(manifest, n_subjects, per_subject, seed):
     """Pick subjects of train/val by a seeded permutation, then their first rows.
 
@@ -251,7 +263,7 @@ def run_export(raw, split_dir, fs_hz, n_subjects, per_subject, seed, out):
     records = []
     for row in picked.itertuples():
         segment = segments[int(row.raw_index)]
-        record_id = f"PDB_{row.split}_{int(row.raw_index)}"
+        record_id = export_record_id(raw_sha256, row.split, int(row.raw_index))
         path = out / f"{record_id}.npz"
         # Only ECG and PPG are exported; ABP and labels stay in the raw file.
         np.savez(path, ecg=np.asarray(segment.ecg, float),
@@ -491,10 +503,53 @@ def run_detect(records, config_path, out):
     return out
 
 
+def _annotation_provenance(annotations_csv, records_sha256, allow_missing):
+    """Tie the annotations to the records.csv that ``detect`` used.
+
+    Sources, in order: the ``annotate`` sidecar (<name>.provenance.json), or for
+    generated truth the ``synth.provenance.json`` next to truth_synthetic.csv.
+    A sidecar that exists but does not match (other file, other records, broken
+    structure) is always refused. Only a missing provenance (a hand-filled
+    template CSV) can be allowed, and that is recorded in the output.
+    """
+    annotations_csv = Path(annotations_csv)
+    sidecar = _sidecar(annotations_csv)
+    synth = annotations_csv.with_name("synth.provenance.json")
+    try:
+        if sidecar.exists():
+            info = json.loads(sidecar.read_text(encoding="utf-8"))
+            kind, source = "annotate", sidecar
+            output = info["output_sha256"]
+            records = info["provenance"]["inputs_sha256"]["records_csv"]
+        elif annotations_csv.name == "truth_synthetic.csv" and synth.exists():
+            info = json.loads(synth.read_text(encoding="utf-8"))
+            kind, source = "synth", synth
+            output = info["outputs_sha256"]["truth_synthetic.csv"]
+            records = info["outputs_sha256"]["records.csv"]
+        elif allow_missing:
+            return {"kind": "none", "file": None, "sha256": None, "records_csv": None}
+        else:
+            raise ValueError(
+                "Annotations have no provenance (annotate sidecar or "
+                "synth.provenance.json); pass --annotations-without-provenance "
+                "to compare a hand-filled CSV")
+    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Unreadable annotation provenance: {exc}") from exc
+    if output != _sha256(annotations_csv):
+        raise ValueError("Annotations differ from the file recorded by their "
+                         "provenance")
+    if records != records_sha256:
+        raise ValueError("Annotations were made on other records than the detections")
+    return {"kind": kind, "file": source.name, "sha256": _sha256(source),
+            "records_csv": records}
+
+
 def run_compare(annotations_csv, detections_csv, config_path, out,
-                allow_synthetic_truth=False):
+                allow_synthetic_truth=False,
+                allow_annotations_without_provenance=False):
     """The config must be the one ``detect`` used: its tolerances are read here
-    and its signal settings produced the detections."""
+    and its signal settings produced the detections. The annotations must come
+    from the same records as the detections (``_annotation_provenance``)."""
     import pandas as pd
 
     _refuse_existing(out)
@@ -510,6 +565,9 @@ def run_compare(annotations_csv, detections_csv, config_path, out,
     if detect_config != text_sha256(config_bytes):
         raise ValueError("Config differs from the one detect used; compare with the "
                          "same config so tolerances and detections match")
+    annotation_source = _annotation_provenance(
+        annotations_csv, detect_info["provenance"]["inputs_sha256"]["records_csv"],
+        allow_annotations_without_provenance)
     read = {"dtype": {"record_id": str, "split": str, "fiducial": str},
             "keep_default_na": False, "na_values": [""]}
     annotations = pd.read_csv(annotations_csv, **read)
@@ -519,10 +577,12 @@ def run_compare(annotations_csv, detections_csv, config_path, out,
                        allow_synthetic_truth=allow_synthetic_truth)
     result["provenance"] = provenance("compare", {
         "annotations": _sha256(annotations_csv),
+        "annotations_provenance": annotation_source["sha256"],
         "detections": _sha256(detections_csv),
         "detections_provenance": _sha256(detect_sidecar),
         "config": text_sha256(config_bytes)},
         detect_info["provenance"]["source_types"])
+    result["annotation_provenance"] = annotation_source
     result["detect_provenance"] = detect_info["provenance"]
     _write_json(out, result)
     return result
@@ -562,6 +622,9 @@ def main(argv=None):
     p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--allow-synthetic-truth", action="store_true")
+    p.add_argument("--annotations-without-provenance", action="store_true",
+                   help="allow a hand-filled annotation CSV with no provenance "
+                        "file; recorded in the output")
     args = parser.parse_args(argv)
     if args.command == "synth":
         print(run_synth(args.out))
@@ -577,7 +640,8 @@ def main(argv=None):
         print(run_detect(args.records, args.config, args.out))
     else:
         result = run_compare(args.annotations, args.detections, args.config, args.out,
-                             args.allow_synthetic_truth)
+                             args.allow_synthetic_truth,
+                             args.annotations_without_provenance)
         print(json.dumps(result["summary"], indent=2))
 
 
