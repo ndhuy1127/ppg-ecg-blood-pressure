@@ -1,8 +1,9 @@
 # Packet Schema V0.2 – thêm IMU và packet thông tin thiết bị
 
 > **Duyệt 2026-10-24. Đã triển khai bước 1 (codec, receiver, logger, simulator; mục 9),
-> kể cả sửa đổi cùng ngày về mốc `SAMP` cho ECG và bit 8 (mục 7); firmware chưa. Chưa
-> kiểm chứng trên thiết bị.**
+> kể cả sửa đổi cùng ngày về mốc `SAMP` cho ECG và bit 8 (mục 7). Firmware: xong bước
+> 2a (encoder V0.2, `0xD1`, chuyển bit 5); IMU giả, `SAMP` và cách đọc PPG mới chưa
+> làm. Chưa kiểm chứng trên thiết bị.**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -376,17 +377,18 @@ sau.
      một mẫu giữa phiên). Mất xung, thừa xung, ghi đè được firmware phát hiện nên
      với logger giống `samp_remap`; phần phát hiện trong firmware thử ở bước 2.
      Logger không hồi quy tốc độ; hồi quy offline tách theo nguồn theo mục 7.5.
-2. **Firmware:**
-   - `PKT_VERSION = 0x02`; known-answer V0.2 mới cho tự kiểm lúc khởi động (giữ
-     known-answer V0.1 trong fixture làm bản cũ);
-   - nguồn IMU giả 6 khe có dấu, có chế độ cố ý dừng đọc để tạo tồn đọng và FIFO đầy
-     (thuật toán mục 5 chạy thật, số mất thật chỉ dùng làm đáp án);
-   - task thông tin thiết bị; chuyển bit 5; chia phần trước khi ghi `p.data[]`
-     (không nâng `PKT_MAX_SAMPLES` quá 32).
-   - Test C trên máy tính mở rộng cho VERSION 2, cực trị IMU và word hash có bit 31.
-   - Mục 7: MCPWM capture cho `SAMP` (nguồn giả phát số thứ tự xung), trạng thái ánh
-     xạ, chờ đúng xung của mẫu cuối, bit 8, bộ đếm in UART0; PPG xóa ngắt mỗi mẫu và
-     đọc hết FIFO (nguồn giả có chế độ trễ để `N` lớn hơn 8).
+2. **Firmware** (chia thành 2a–2d, mỗi phần một commit):
+   - **2a (làm 2026-10-24):** `PKT_VERSION = 0x02` (encoder đổi tên thành
+     `packet_wire.c`); known-answer V0.2 mới cho tự kiểm lúc khởi động (packet ECG có
+     bit 8 và packet `0xD1`; known-answer V0.1 giữ trong fixture làm bản cũ); task
+     thông tin thiết bị; chuyển bit 5; test C trên máy tính cho VERSION 2, cực trị
+     IMU và word hash có bit 31.
+   - **2b:** nguồn IMU giả 6 khe có dấu, có chế độ cố ý dừng đọc để tạo tồn đọng và
+     FIFO đầy (thuật toán mục 5 chạy thật, số mất thật chỉ dùng làm đáp án); chia phần
+     trước khi ghi `p.data[]` (không nâng `PKT_MAX_SAMPLES` quá 32).
+   - **2c, 2d (mục 7):** MCPWM capture cho `SAMP` (nguồn giả phát số thứ tự xung),
+     trạng thái ánh xạ, chờ đúng xung của mẫu cuối, bit 8, bộ đếm in UART0; PPG xóa
+     ngắt mỗi mẫu và đọc hết FIFO (nguồn giả có chế độ trễ để `N` lớn hơn 8).
 3. **Tích hợp record/replay:** manifest theo phiên và `device_info`, nhiều lần khởi
    động lại, hash output xác định.
 4. **Sau khi có bo:** driver BMI270 thật (nạp microcode, cấu hình mục 3), đo `L` và

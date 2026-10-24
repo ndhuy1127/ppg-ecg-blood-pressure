@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "esp_timer.h"
-#include "packet_v01.h"
+#include "packet_wire.h"
 
 struct fake_afe {
     fake_afe_config_t cfg;

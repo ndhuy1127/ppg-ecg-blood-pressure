@@ -1,25 +1,34 @@
 # Firmware
 
-> **Trạng thái:** firmware khung V1-module, build được (2026-10-23, RAM 4,5 %, flash
-> 19,8 % của phân vùng 1 MB) nhưng **chưa chạy trên bo**
-> (chưa có phần cứng). Chưa có driver AFE: mọi giá trị ECG/PPG là dữ liệu **giả**,
-> chỉ để kiểm đường packet MCU → USB → logger, không phải tín hiệu sinh lý.
+> **Trạng thái:** firmware khung V1-module gửi
+> [Packet Schema V0.2](../configs/hardware/Packet_Schema_V0.2.md) từ 2026-10-24
+> (bước 2a của mục 9: encoder V0.2, packet thông tin thiết bị `0xD1`, chuyển tiếp
+> bit 5). Build được (2026-10-24, RAM 4,5 %, flash 19,9 % của phân vùng 1 MB) nhưng
+> **chưa chạy trên bo** (chưa có phần cứng). Chưa có driver AFE: mọi giá trị ECG/PPG
+> là dữ liệu **giả**, chỉ để kiểm đường packet MCU → USB → logger, không phải tín
+> hiệu sinh lý. Chưa có IMU giả, mốc `SAMP` (bit 8) và cách đọc FIFO PPG mới (bước
+> 2b–2d).
 
-- **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0), `packet_v01.c` (encoder
-  Packet Schema V0.1, C thuần, không phụ thuộc ESP-IDF).
+- **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị),
+  `packet_wire.c` (encoder Packet Schema V0.2, đóng gói payload `0xD1` và phép tự
+  kiểm lúc khởi động; C thuần, không phụ thuộc ESP-IDF; tên giống codec Python
+  `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`).
 - **drivers/**: `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101.
 - **boards/**: `board_v1_module.h`, GPIO theo bảng A.7 của
   [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md).
-- **include/**: `packet_v01.h`, `fake_afe.h`, `packet_kat.h` (known-answer của
-  encoder).
-- **tests/**: chưa có test chạy trên bo. Known-answer của encoder được đối chiếu
-  với codec Python bằng
+- **include/**: `packet_wire.h`, `fake_afe.h`, `packet_kat.h` (known-answer V0.2
+  của encoder).
+- **tests/**: chưa có test chạy trên bo. Known-answer của encoder được dựng lại
+  độc lập (Python `struct` và `binascii.crc_hqx`) và đối chiếu với codec Python bằng
   [tests/test_firmware_packet_kat.py](../tests/test_firmware_packet_kat.py) (không
   biên dịch C). [tests/test_firmware_c_encoder.py](../tests/test_firmware_c_encoder.py)
-  biên dịch `app/packet_v01.c` bằng trình biên dịch C của máy (`$CC`, `cc`, `gcc`
-  hoặc `clang`; không có thì bỏ qua, CI Ubuntu có `gcc`) rồi chạy lại phép tự kiểm
-  lúc khởi động và so packet ngẫu nhiên (seed cố định) với `packet_wire.py`. Test
-  này chỉ kiểm encoder, không kiểm ISR, task, USB hay phần cứng.
+  biên dịch `app/packet_wire.c` bằng trình biên dịch C của máy (`$CC`, `cc`, `gcc`
+  hoặc `clang`; không có thì bỏ qua, CI Ubuntu có `gcc`), chạy chính hàm tự kiểm
+  lúc khởi động (`pkt_self_test`), so packet V0.2 ngẫu nhiên (seed cố định, mọi mã
+  kênh, IMU ở biên int16) với `packet_wire.py`, và so payload `0xD1` (hash có word
+  bit 31, chuỗi ASCII 0–31 byte, từ chối chuỗi 32 byte hoặc không phải ASCII) với
+  `device_info_data`. Test này chỉ kiểm encoder, không kiểm ISR, task, USB hay phần
+  cứng.
 
 Không commit khóa hoặc thông tin kết nối thật.
 
@@ -49,7 +58,7 @@ pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0
 
 | Cổng | Nội dung |
 | --- | --- |
-| USB native (USB Serial/JTAG của ESP32-S3) | Packet nhị phân V0.1. Lúc khởi động, trước packet đầu tiên có thể có chữ của ROM và bootloader; decoder bỏ qua và báo là byte bị bỏ. Khi đã chạy, firmware không ghi chữ ra cổng này |
+| USB native (USB Serial/JTAG của ESP32-S3) | Packet nhị phân V0.2. Lúc khởi động, trước packet đầu tiên có thể có chữ của ROM và bootloader; decoder bỏ qua và báo là byte bị bỏ. Khi đã chạy, firmware không ghi chữ ra cổng này |
 | UART0 (cổng COM qua chip cầu USB–UART), 115 200 baud | Log chữ: tên và phiên bản firmware, ESP-IDF, ELF SHA-256, kết quả tự kiểm encoder, `SESSION_ID`, thống kê mỗi 10 s |
 
 Bo chính hãng có hai cổng Micro-USB: theo
@@ -58,9 +67,11 @@ cổng USB-to-UART (nhãn UART) đi qua chip cầu, cổng còn lại (nhãn USB
 của ESP32-S3. **Chưa kiểm trên bo**: đọc nhãn in cạnh cổng khi nhận hàng. Ghi ELF
 SHA-256 và `SESSION_ID` từ log UART0 vào metadata phiên (schema mục 11).
 
-Khi khởi động, firmware kiểm encoder với `packet_kat.h` (CRC `"123456789"` =
-`0x29B1`, packet mẫu 50 byte của `tests/fixtures/packet_v3_expected.json`). Sai
-thì không gửi packet nào và LED trạng thái nháy nhanh.
+Khi khởi động, firmware kiểm encoder với `packet_kat.h` (`pkt_self_test`): CRC
+`"123456789"` = `0x29B1`, `T_FIRST_US`, packet ECG mẫu 50 byte (packet mẫu V0.1 của
+`tests/fixtures/packet_v3_expected.json` với `VERSION = 2` và `STATUS` bit 4, 8) và
+packet thông tin thiết bị mẫu 142 byte. Sai thì không gửi packet nào và LED trạng
+thái nháy nhanh. Known-answer V0.1 vẫn nằm trong fixture làm bản cũ.
 
 ## Luồng dữ liệu giả
 
@@ -69,6 +80,7 @@ thì không gửi packet nào và LED trạng thái nháy nhanh.
 | `0xE1` | ECG giả, giống MAX30001 | 512 000 | 1 953 µs (≈ 512,03 Hz, lệch +64 ppm so với danh định) | 16 | Word 24 bit: mẫu 18 bit bù hai `(k mod 2048) − 1024` ở bit 23…6, ETAG = PTAG = 0 |
 | `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe ở tốc độ V1 (200 sps) | 200 000 | 5 000 µs | 8 | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
 | `0xC1` | Nút t0 | 0 | — | 1 | Mã sự kiện `1` |
+| `0xD1` | Thông tin thiết bị (V0.2 mục 6) | 0 | Một lần ngay sau khi driver USB khởi động, rồi mỗi 10 s | 25 | Layout 1, ELF SHA-256, `esp_app_desc_t.version`, `esp_app_desc_t.idf_ver` |
 
 `DATA` là hàm của chỉ số mẫu, nên receiver kiểm được từng mẫu. Độ lệch +64 ppm của
 ECG giả là cố ý: hồi quy tốc độ thực ở phép đo 10 phút phải thấy nó.
@@ -84,10 +96,10 @@ Trả lời các câu hỏi D trong [hướng dẫn logger](../docs/protocol/pac
 | Câu | Quy ước |
 | --- | --- |
 | D1 | `CRC16` little-endian như các trường khác |
-| D2 | `VERSION` luôn `0x01`. Đổi layout hoặc ý nghĩa trường thì tăng `VERSION` cùng bản firmware mới; không trộn hai version trong một phiên |
-| D3 | `SEQ` gán **lúc gửi**, khi lấy packet ra khỏi hàng đợi MCU. Thiếu `SEQ`: packet mất sau hàng đợi (USB không nhận trong 20 ms). Hàng đợi MCU đầy: packet bị bỏ trước khi có `SEQ`; packet kế của kênh đó bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy, `SEQ` vẫn liên tục. FIFO AFE tràn: bit 0 bật ở packet đọc lúc phát hiện, khoảng mất nằm sau mẫu cuối của packet đó, packet kế có `FIRST_SAMPLE_INDEX` nhảy. Nếu packet mang bit 0 hoặc 1 bị bỏ ở hàng đợi, hoặc firmware gửi thất bại (driver USB không nhận đủ packet trong 20 ms), các bit đó chuyển sang packet gửi được kế tiếp của kênh (sửa 2026-10-23; trước đó chỉ chuyển bit 1 và chỉ khi gửi thất bại), để bước nhảy index vẫn có lời giải thích theo R2. Packet đã vào bộ đệm driver mà sau đó mất trên đường USB thì firmware không biết, nên không chuyển bit; logger vẫn thấy khoảng `SEQ`. Firmware khung chưa sinh bit 5 |
+| D2 | `VERSION` luôn `0x02` từ 2026-10-24 (Packet Schema V0.2; bản firmware trước gửi `0x01`). Đổi layout hoặc ý nghĩa trường thì tăng `VERSION` cùng bản firmware mới; không trộn hai version trong một phiên |
+| D3 | `SEQ` gán **lúc gửi**, khi lấy packet ra khỏi hàng đợi MCU. Thiếu `SEQ`: packet mất sau hàng đợi (USB không nhận trong 20 ms). Hàng đợi MCU đầy: packet bị bỏ trước khi có `SEQ`; packet kế của kênh đó bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy, `SEQ` vẫn liên tục. FIFO AFE tràn: bit 0 bật ở packet đọc lúc phát hiện, khoảng mất nằm sau mẫu cuối của packet đó, packet kế có `FIRST_SAMPLE_INDEX` nhảy. Nếu packet mang bit 0, 1 hoặc 5 bị bỏ ở hàng đợi, hoặc firmware gửi thất bại (driver USB không nhận đủ packet trong 20 ms), các bit đó chuyển sang packet gửi được kế tiếp của kênh (sửa 2026-10-23; trước đó chỉ chuyển bit 1 và chỉ khi gửi thất bại; bit 5 thêm 2026-10-24 theo V0.2 mục 5), để bước nhảy index vẫn có lời giải thích theo R2 và packet kế vẫn mở chuỗi mới. Packet đã vào bộ đệm driver mà sau đó mất trên đường USB thì firmware không biết, nên không chuyển bit; logger vẫn thấy khoảng `SEQ`. Firmware khung chưa sinh bit 5 |
 | D4 | Bit 4 bật trên mọi packet ECG/PPG cho tới khi đo xong độ trễ hiệu dụng `L` của cấu hình; không bật trên `0xC1` |
-| D5 | `SEQ` (riêng từng kênh) và `FIRST_SAMPLE_INDEX` bắt đầu từ 0 ở mỗi phiên. `SESSION_ID` là số ngẫu nhiên 32 bit lấy lúc khởi động |
+| D5 | `SEQ` (riêng từng kênh) và `FIRST_SAMPLE_INDEX` bắt đầu từ 0 ở mỗi phiên. `SESSION_ID` là số ngẫu nhiên 32 bit lấy lúc khởi động. `0xD1`: `FIRST_SAMPLE_INDEX` là số thứ tự packet thông tin, đếm cả packet bị bỏ ở hàng đợi; `STATUS` = 0, có thể có bit 1 |
 | D6 | `0xC1`: `SEQ` đếm riêng; `FIRST_SAMPLE_INDEX` = số thứ tự sự kiện trong phiên (0, 1, …); `FS_NOMINAL_MHZ` = 0; `T_ANCHOR_US` = `T_FIRST_US` = thời điểm cạnh xuống đầu tiên của nút |
 | D7 | Không bao giờ gửi `SAMPLE_COUNT = 0` |
 | D8 | Chờ bench |
@@ -118,12 +130,14 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
    không kích hoạt; kiểm rằng mở cổng không làm chip khởi động lại (`SESSION_ID`
    trên UART0 không đổi).
 3. Trong kết quả: `SEQ` và `T_ANCHOR_US` tăng đơn điệu, không lỗi CRC, `DATA` khớp
-   công thức ở trên.
+   công thức ở trên; `device_info` của phiên có ELF SHA-256 trùng log UART0 và
+   khoảng 60 packet hợp lệ.
 4. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 
 ## Chưa có
 
 - Driver MAX30001, MAX30101, BMI270.
-- Xung `SAMP` của MAX30001 trên GPIO47 (INT2B).
+- IMU giả (V0.2 bước 2b), xung `SAMP` của MAX30001 trên GPIO47 (INT2B) với MCPWM
+  capture và bit 8 (bước 2c), PPG xóa ngắt mỗi mẫu và đọc hết FIFO (bước 2d).
 - Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.
 - Lệnh từ PC (bắt đầu/dừng, đổi cấu hình).

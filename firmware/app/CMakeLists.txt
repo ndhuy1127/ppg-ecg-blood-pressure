@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "packet_v01.c" "../drivers/fake_afe.c"
+    SRCS "main.c" "packet_wire.c" "../drivers/fake_afe.c"
     INCLUDE_DIRS "../include" "../boards"
     PRIV_REQUIRES
         bootloader_support

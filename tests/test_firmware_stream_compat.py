@@ -1,11 +1,13 @@
 """The logger accepts a byte stream built with the firmware skeleton's conventions.
 
 SYNTHETIC only. The stream mirrors firmware/app/main.c and
-firmware/drivers/fake_afe.c (change both together): fake ECG every 1953 us read
-16 at a time, fake PPG with three slots every 5000 us read 8 at a time and
-sharing one anchor, t0 event packets, SEQ assigned at send per channel, STATUS
-bit 4 on data packets, bit 1 after an MCU queue drop, bits 0 and 1 of a dropped
-or USB-lost packet moved to the next packet of the channel, bit 1 on the next
+firmware/drivers/fake_afe.c (change both together): Packet Schema V0.2 (VERSION
+2 on every packet), fake ECG every 1953 us read 16 at a time, fake PPG with
+three slots every 5000 us read 8 at a time and sharing one anchor, t0 event
+packets, device info packets 0xD1 at start and every 10 s with an ordinal that
+counts dropped ones, SEQ assigned at send per channel, STATUS bit 4 on data
+packets, bit 1 after an MCU queue drop, bits 0, 1 and 5 of a dropped or
+USB-lost packet moved to the next packet of the channel, bit 1 on the next
 event after a t0 edge the ISR queue dropped (no ordinal for it), ROM text
 before the first packet. It checks the conventions, not the C code (see
 test_firmware_c_encoder.py for the encoder), and no MCU is involved.
@@ -17,15 +19,20 @@ from collections import Counter
 from pathlib import Path
 
 from software.data_io.packet_receiver import analyze_stream
-from software.data_io.packet_wire import Packet, StreamDecoder, encode_packet
+from software.data_io.packet_wire import (
+    Packet, StreamDecoder, device_info_data, encode_packet,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = json.loads((ROOT / "configs/hardware/packet_logger.json").read_bytes())
 ROM_TEXT = b"ESP-ROM:esp32s3-20210327\r\nrst:0x1 (POWERON),boot:0x8\r\n"
-BIT0, BIT1, BIT4 = 1 << 0, 1 << 1, 1 << 4
-GAP_BITS = BIT0 | BIT1
-ECG, PPG, EVENT = 0xE1, (0xF1, 0xF2, 0xF3), 0xC1
+BIT0, BIT1, BIT4, BIT5 = 1 << 0, 1 << 1, 1 << 4, 1 << 5
+CARRY_BITS = BIT0 | BIT1 | BIT5
+ECG, PPG, EVENT, INFO = 0xE1, (0xF1, 0xF2, 0xF3), 0xC1, 0xD1
 SOURCES = ((ECG,), 1953, 16, 512000), (PPG, 5000, 8, 200000)
+APP_VERSION = "SYN_emulation"
+INFO_DATA = device_info_data("ab" * 32, APP_VERSION, "v5.5.3")
+INFO_PERIOD_US = 10_000_000
 
 
 def ecg_word(index):
@@ -60,6 +67,11 @@ def produced(duration_us, seed=7, isr_losses=()):
                     t_first_us=anchor - offset, fs_nominal_mhz=fs, status=BIT4,
                     data=tuple(data))))
             first += count
+    for ordinal, t in enumerate(range(0, duration_us, INFO_PERIOD_US)):
+        # t = 0 sorts before every data packet: sent right after USB starts.
+        items.append((t - 1, dict(channel_id=INFO, first_sample_index=ordinal,
+                                  t_anchor_us=t, t_first_us=t, fs_nominal_mhz=0,
+                                  status=0, data=INFO_DATA)))
     ordinal, edges_lost = 0, False
     for edge, t in enumerate(range(5_000_000, duration_us, 97_000_000)):
         if edge in isr_losses:
@@ -72,15 +84,12 @@ def produced(duration_us, seed=7, isr_losses=()):
     return [fields for _, fields in sorted(items, key=lambda item: item[0])]
 
 
-def afe_overflow(items, position, lost):
-    """The AFE FIFO overflowed after ``items[position]`` and lost ``lost`` samples:
-    that packet sets bit 0 and the later packets of its channel move on."""
-    channel, period = items[position]["channel_id"], 1953
-    assert channel == ECG
+def _shift_ecg(items, start, lost):
+    """ECG packets from ``items[start]`` on come ``lost`` samples later."""
+    period = 1953
     out = list(items)
-    out[position] = dict(items[position], status=items[position]["status"] | BIT0)
-    for i in range(position + 1, len(items)):
-        if items[i]["channel_id"] == channel:
+    for i in range(start, len(items)):
+        if items[i]["channel_id"] == ECG:
             first = items[i]["first_sample_index"] + lost
             out[i] = dict(items[i], first_sample_index=first,
                           t_anchor_us=items[i]["t_anchor_us"] + lost * period,
@@ -90,14 +99,32 @@ def afe_overflow(items, position, lost):
     return out
 
 
-def stream(items, queue_drops=(), usb_losses=(), carry_bits=GAP_BITS):
+def afe_overflow(items, position, lost):
+    """The AFE FIFO overflowed after ``items[position]`` and lost ``lost`` samples:
+    that packet sets bit 0 and the later packets of its channel move on."""
+    assert items[position]["channel_id"] == ECG
+    out = _shift_ecg(items, position + 1, lost)
+    out[position] = dict(out[position], status=out[position]["status"] | BIT0)
+    return out
+
+
+def reanchor(items, position, lost):
+    """``lost`` ECG samples, a count the firmware does not know, were lost before
+    ``items[position]``: that packet re-anchors and sets bit 5 (V0.2 section 5)."""
+    assert items[position]["channel_id"] == ECG
+    out = _shift_ecg(items, position, lost)
+    out[position] = dict(out[position], status=out[position]["status"] | BIT5)
+    return out
+
+
+def stream(items, queue_drops=(), usb_losses=(), carry_bits=CARRY_BITS):
     """Bytes as the TX task sends them; drops are positions in ``items``.
 
     A queue drop sets bit 1 on the next packet of the channel; the bits in
     ``carry_bits`` of a packet dropped in the queue or not taken by the USB driver
     (``usb_losses``: send failures the firmware sees) move on too,
     as in firmware enqueue() and tx_task(). The firmware before 2026-10-23
-    carried bit 1 only (``carry_bits=BIT1``).
+    carried bit 1 only (``carry_bits=BIT1``), before 2026-10-24 bits 0 and 1.
     """
     seq, pending, carried = Counter(), Counter(), Counter()
     out = bytearray(ROM_TEXT)
@@ -109,7 +136,7 @@ def stream(items, queue_drops=(), usb_losses=(), carry_bits=GAP_BITS):
             continue
         pending[channel] = 0
         status |= carried[channel]
-        packet = Packet(version=1, session_id=0x5EED1234, seq=seq[channel],
+        packet = Packet(version=2, session_id=0x5EED1234, seq=seq[channel],
                         **dict(fields, status=status))
         seq[channel] += 1
         if position in usb_losses:
@@ -122,7 +149,8 @@ def stream(items, queue_drops=(), usb_losses=(), carry_bits=GAP_BITS):
 
 def metadata():
     channels, reasons = {}, {}
-    for channel, fs in ((ECG, 512000), *((c, 200000) for c in PPG), (EVENT, None)):
+    for channel, fs in ((ECG, 512000), *((c, 200000) for c in PPG), (EVENT, None),
+                        (INFO, None)):
         key = f"0x{channel:02X}"
         channels[key] = {"sensor": "SYN_fake_afe", "fs_nominal_mhz": fs,
                          "latency_l_us": None, "latency_source": None,
@@ -134,13 +162,13 @@ def metadata():
             "electrode_placement")
     reasons.update({name: "SYNTHETIC firmware emulation" for name in text})
     return {"schema_version": "packet-session-metadata-v0", "source_type": "SYNTHETIC",
-            "clock_id": "ESP32_ESP_TIMER_US", "firmware_version": "SYN_emulation",
+            "clock_id": "ESP32_ESP_TIMER_US", "firmware_version": APP_VERSION,
             **dict.fromkeys(text), "channels": channels, "simulation": None,
             "null_reasons": reasons}
 
 
 def analyze(payload):
-    decoder = StreamDecoder()
+    decoder = StreamDecoder(CONFIG["wire_versions"])
     decoded = []
     for start in range(0, len(payload), 4096):
         decoded += decoder.feed(payload[start:start + 4096])
@@ -159,6 +187,10 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
                      usb_losses={ecg[5001], ppg2[3000]})
     result, _, samples = analyze(payload)
     assert result["issue_counts"] == {"missing_packets": 2, "skipped_bytes": 1}
+    # docs/protocol/packet_logger.md: 64 266 packets (60 of them 0xD1), 667 192
+    # samples.
+    assert result["decode"]["packets_decoded"] == 64_266
+    assert len(samples) == 667_192
     skipped = [i for i in result["issues"] if i["code"] == "skipped_bytes"]
     assert skipped == [{"code": "skipped_bytes", "offset": 0,
                         "length": len(ROM_TEXT)}]
@@ -168,6 +200,9 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
     assert [g["lost_samples"] for g in channels["0xF2"]["gaps"]] == [8]
     assert channels["0xC1"]["events"] == 7
     assert all(not c.get("packets_quarantined") for c in channels.values())
+    info = result["sessions"][0]["device_info"]
+    assert info["valid_packets"] == 60  # at 0, 10, ..., 590 s
+    assert [i["app_version"] for i in info["identities"]] == [APP_VERSION]
     for _, key, _, _, index, value, _ in samples:
         slot = int(key[-1]) - 1
         assert value == (ecg_word(index) if key == "0xE1" else ppg_count(index, slot))
@@ -226,3 +261,34 @@ def test_t0_event_dropped_in_mcu_queue_is_counted():
                                       "skipped_bytes": 1}
     lost = [i for i in result["issues"] if i["code"] == "events_lost_before_send"]
     assert lost[0]["lost"] == 1 and lost[0]["ordinal"] == 4
+
+
+def test_carried_bit5_keeps_a_reanchor_dropped_in_the_queue():
+    # ECG packet 80 re-anchors after an unknown loss (bit 5) and is dropped in
+    # the MCU queue: the next packet carries bits 1 and 5, so the logger starts
+    # a new chain with an unknown loss instead of a known count.
+    items = produced(20_000_000)
+    ecg = positions(items, ECG)
+    items = reanchor(items, ecg[80], 300)
+    carried, _, _ = analyze(stream(items, queue_drops={ecg[80]}))
+    assert carried["issue_counts"] == {"sample_index_reanchored": 1,
+                                       "skipped_bytes": 1}
+    channel = carried["sessions"][0]["channels"]["0xE1"]
+    assert channel["chains"] == 2
+    assert [g["lost_samples"] for g in channel["gaps"]] == [None]
+    old, _, _ = analyze(stream(items, queue_drops={ecg[80]},
+                               carry_bits=BIT0 | BIT1))
+    assert old["issue_counts"] == {"sample_gap_status": 1, "skipped_bytes": 1}
+    gap = old["sessions"][0]["channels"]["0xE1"]["gaps"]
+    assert [g["lost_samples"] for g in gap] == [16 + 300]  # a count claimed known
+
+
+def test_device_info_dropped_in_mcu_queue_is_counted():
+    items = produced(60_000_000)
+    info = positions(items, INFO)
+    result, _, _ = analyze(stream(items, queue_drops={info[2]}))
+    assert result["issue_counts"] == {"device_info_lost_before_send": 1,
+                                      "skipped_bytes": 1}
+    lost = [i for i in result["issues"] if i["code"] == "device_info_lost_before_send"]
+    assert lost[0]["lost"] == 1 and lost[0]["ordinal"] == 3
+    assert result["sessions"][0]["device_info"]["valid_packets"] == 5

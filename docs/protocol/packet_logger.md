@@ -399,17 +399,20 @@ firmware"); D8 và D10 chờ bench.
 Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
 
 - [x] `HEADER = struct.Struct("<2sBBIIIQQIHH")` và vị trí DATA/CRC khớp struct
-      firmware: encoder C (`firmware/app/packet_v01.c`) ghi đúng thứ tự, độ rộng,
+      firmware: encoder C (`firmware/app/packet_v01.c`, từ 2026-10-24 là
+      `firmware/app/packet_wire.c` gửi V0.2) ghi đúng thứ tự, độ rộng,
       little-endian, CRC trên byte 2 … 39 + 4N.
 - [x] CRC: known answer `0x29B1` cho `"123456789"`; packet ví dụ 50 byte trong
       `tests/fixtures/packet_v3_expected.json` giống từng byte với known-answer của
-      firmware (`tests/test_firmware_packet_kat.py`). Encoder C chạy thật trên máy
+      firmware lúc đó (`tests/test_firmware_packet_kat.py`; từ 2026-10-24 firmware
+      tự kiểm bằng known-answer V0.2, packet V0.1 vẫn nằm trong fixture). Encoder C chạy thật trên máy
       tính trong `tests/test_firmware_c_encoder.py` (cần trình biên dịch C, xem
       `firmware/README.md`), cho cùng byte với `packet_wire.py` trên packet ngẫu
       nhiên. Firmware tự kiểm lại trên bo lúc khởi động; phần này chưa chạy vì chưa
       có bo.
 - [x] Mã kênh (mục 7) và tên bit STATUS (mục 9) trong `packet_wire.py` khớp
-      `firmware/include/packet_v01.h`.
+      `firmware/include/packet_v01.h` (nay là `packet_wire.h`, thêm mã kênh và bit
+      `STATUS` của V0.2).
 - [x] Quy tắc R1–R6: R1–R4 và R6 giữ nguyên; R5 giữ giá trị tạm tới khi có số đo
       bench.
 - [x] Dung sai mặc định phù hợp cấu hình dự kiến (ECG 512 sps, N = 16): dung sai
@@ -425,12 +428,13 @@ Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
 ### Đối chiếu với firmware khung
 
 [`tests/test_firmware_stream_compat.py`](../../tests/test_firmware_stream_compat.py)
-dựng luồng byte theo đúng quy ước của firmware khung trong 10 phút: chữ ROM ở đầu,
-ECG giả 1 953 µs × 16 mẫu, PPG giả ba khe 5 000 µs × 8 mẫu dùng chung mốc neo,
-task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, một lần tràn hàng đợi MCU kèm USB
-timeout của chính packet mang bit 1, một USB timeout ở PPG khe 2. Với config mặc
-định, logger nhận 64 206 packet, 667 192 mẫu, tất cả đúng công thức `DATA` của
-firmware. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
+dựng luồng byte theo đúng quy ước của firmware khung trong 10 phút (V0.2 từ
+2026-10-24): chữ ROM ở đầu, ECG giả 1 953 µs × 16 mẫu, PPG giả ba khe 5 000 µs × 8
+mẫu dùng chung mốc neo, task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, packet
+thông tin thiết bị `0xD1` mỗi 10 s, một lần tràn hàng đợi MCU kèm USB timeout của
+chính packet mang bit 1, một USB timeout ở PPG khe 2. Với config mặc định, logger
+nhận 64 266 packet (gồm 60 packet `0xD1`; trước khi có `0xD1` là 64 206), 667 192
+mẫu, tất cả đúng công thức `DATA` của firmware. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
 `missing_packets`, cùng hai khoảng trống: ECG mất 32 mẫu (bit 1 đã chuyển sang
 packet kế), PPG khe 2 mất 8 mẫu. Không có `timestamp_anomaly`. Test thứ hai cho
 thấy khi mất 48 mẫu ECG (hai lần tràn hàng đợi cộng một USB timeout), logger chỉ

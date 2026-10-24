@@ -1,13 +1,13 @@
 /*
- * Firmware skeleton for the V1-module: fake ECG/PPG sources and t0 event
- * packets in Packet Schema V0.1 (configs/hardware/Packet_Schema_V0.1.md),
- * sent as binary on the native USB Serial/JTAG port. Text logs go to UART0
- * only, so the packet port carries packets alone (schema section 13).
- * No AFE driver yet: every ECG/PPG value comes from fake_afe.
+ * Firmware skeleton for the V1-module: fake ECG/PPG sources, t0 event packets
+ * and device info packets in Packet Schema V0.2
+ * (configs/hardware/Packet_Schema_V0.2.md), sent as binary on the native USB
+ * Serial/JTAG port. Text logs go to UART0 only, so the packet port carries
+ * packets alone (schema section 13). No AFE driver yet: every ECG/PPG value
+ * comes from fake_afe.
  */
 #include <inttypes.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "board_v1_module.h"
 #include "bootloader_random.h"
@@ -21,8 +21,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-#include "packet_kat.h"
-#include "packet_v01.h"
+#include "packet_wire.h"
 
 static const char *TAG = "fw";
 
@@ -35,6 +34,7 @@ static const char *TAG = "fw";
 #define T0_CONFIRM_MS 20
 #define LED_PERIOD_MS 500
 #define STATS_PERIOD_MS 10000
+#define DEVICE_INFO_PERIOD_MS 10000
 
 /*
  * Fake sources, not hardware settings. ECG like MAX30001 at 512 sps with
@@ -61,10 +61,10 @@ static const fake_afe_config_t PPG_FAKE = {
     .batch = 8,
 };
 
-enum { CH_ECG, CH_PPG1, CH_PPG2, CH_PPG3, CH_PPG4, CH_EVENT, CH_COUNT };
+enum { CH_ECG, CH_PPG1, CH_PPG2, CH_PPG3, CH_PPG4, CH_EVENT, CH_DEVICE_INFO, CH_COUNT };
 static const uint8_t CHANNEL_IDS[CH_COUNT] = {
-    PKT_CH_ECG, PKT_CH_PPG_SLOT1, PKT_CH_PPG_SLOT2,
-    PKT_CH_PPG_SLOT3, PKT_CH_PPG_SLOT4, PKT_CH_EVENT,
+    PKT_CH_ECG, PKT_CH_PPG_SLOT1, PKT_CH_PPG_SLOT2, PKT_CH_PPG_SLOT3,
+    PKT_CH_PPG_SLOT4, PKT_CH_EVENT, PKT_CH_DEVICE_INFO,
 };
 
 typedef struct {
@@ -73,8 +73,10 @@ typedef struct {
     uint32_t queue_drop; /* MCU queue full: dropped before SEQ was assigned */
 } channel_stats_t;
 
-/* STATUS bits that explain a FIRST_SAMPLE_INDEX jump (logger rules R2, R3). */
-#define GAP_BITS (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_MCU_BUFFER_OVERFLOW)
+/* STATUS bits of a packet dropped before USB that move on to the next packet of
+ * the channel: 0 and 1 explain a FIRST_SAMPLE_INDEX jump (logger rules R2, R3),
+ * 5 marks the re-anchor that the next packet continues (V0.2 section 5). */
+#define CARRY_BITS (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_MCU_BUFFER_OVERFLOW                     | PKT_STATUS_INDEX_REANCHORED)
 
 /* One t0 edge from the ISR, with the edges its queue dropped just before it. */
 typedef struct {
@@ -104,7 +106,8 @@ static int channel_index(uint8_t channel_id)
  * gets a SEQ, so the next packet of that channel carries STATUS bit 1 and a
  * FIRST_SAMPLE_INDEX jump while SEQ stays continuous (logger rule R3). If the
  * dropped packet carried bit 0 (AFE FIFO overflow), bit 0 moves on as well:
- * the jump then also holds the samples lost in the AFE.
+ * the jump then also holds the samples lost in the AFE. So does bit 5: the
+ * next packet still starts the new chain (V0.2 section 5).
  */
 static void enqueue(pkt_t *p)
 {
@@ -113,7 +116,7 @@ static void enqueue(pkt_t *p)
     if (xQueueSend(s_tx_queue, p, 0) == pdTRUE) {
         s_drop_bits[k] = 0;
     } else {
-        s_drop_bits[k] = (p->status & GAP_BITS) | PKT_STATUS_MCU_BUFFER_OVERFLOW;
+        s_drop_bits[k] = (p->status & CARRY_BITS) | PKT_STATUS_MCU_BUFFER_OVERFLOW;
         s_stats[k].queue_drop++;
     }
 }
@@ -127,10 +130,10 @@ static void tx_task(void *arg)
 {
     static uint8_t buf[PKT_MAX_SIZE];
     uint32_t seq[CH_COUNT] = {0};
-    /* Bits 0 and 1 of a packet the USB driver did not take (a send failure the
-     * firmware sees; a loss after the driver took it is not seen) move to the next
-     * packet of the channel; otherwise the index jump it explained would be
-     * left unexplained. */
+    /* Bits 0, 1 and 5 of a packet the USB driver did not take (a send failure
+     * the firmware sees; a loss after the driver took it is not seen) move to the
+     * next packet of the channel; otherwise the index jump or re-anchor it
+     * explained would be left unexplained. */
     uint16_t carry[CH_COUNT] = {0};
     pkt_t p;
     for (;;) {
@@ -147,7 +150,7 @@ static void tx_task(void *arg)
                 ESP_LOGE(TAG, "cannot encode packet on channel 0x%02X", p.channel_id);
             }
             s_stats[k].tx_timeout++;
-            carry[k] = p.status & GAP_BITS;
+            carry[k] = p.status & CARRY_BITS;
         }
     }
 }
@@ -251,30 +254,36 @@ static void event_task(void *arg)
     }
 }
 
-static bool packet_self_test(void)
+/*
+ * Device info packets 0xD1 (V0.2 section 6): one right after the USB driver
+ * starts, then every 10 s, so a logger that starts mid-session gets one within
+ * 10 s. FIRST_SAMPLE_INDEX counts the packets made in the session, dropped ones
+ * included, so the logger can count the ones lost before a SEQ.
+ */
+static void device_info_task(void *arg)
 {
-    const char *crc_input = KAT_CRC_INPUT;
-    if (pkt_crc16_ccitt_false((const uint8_t *)crc_input, strlen(crc_input)) != KAT_CRC_EXPECTED) {
-        return false;
-    }
-    if (pkt_t_first_us(KAT_T_ANCHOR_US, 2, KAT_FS_NOMINAL_MHZ) != KAT_T_FIRST_US) {
-        return false;
-    }
-    const pkt_t p = {
-        .channel_id = KAT_CHANNEL_ID,
-        .session_id = KAT_SESSION_ID,
-        .seq = KAT_SEQ,
-        .first_sample_index = KAT_FIRST_SAMPLE_INDEX,
-        .t_anchor_us = KAT_T_ANCHOR_US,
-        .t_first_us = KAT_T_FIRST_US,
-        .fs_nominal_mhz = KAT_FS_NOMINAL_MHZ,
-        .sample_count = 2,
-        .status = KAT_STATUS,
-        .data = {KAT_DATA_0, KAT_DATA_1},
+    const esp_app_desc_t *app = esp_app_get_description();
+    pkt_t p = {
+        .channel_id = PKT_CH_DEVICE_INFO,
+        .session_id = s_session_id,
+        .fs_nominal_mhz = 0,
+        .sample_count = PKT_DEVICE_INFO_COUNT,
     };
-    uint8_t buf[PKT_MAX_SIZE];
-    size_t n = pkt_encode(&p, buf, sizeof(buf));
-    return KAT_VERSION == PKT_VERSION && n == sizeof(KAT_PACKET) && memcmp(buf, KAT_PACKET, n) == 0;
+    if (!pkt_device_info_data(app->app_elf_sha256, app->version, app->idf_ver, p.data)) {
+        /* The logger then reports device_info_missing for the session. */
+        ESP_LOGE(TAG, "app or ESP-IDF version is not ASCII of at most 31 bytes: "
+                      "no device info packets");
+        vTaskDelete(NULL);
+    }
+    TickType_t wake = xTaskGetTickCount();
+    for (uint32_t ordinal = 0;; ordinal++) {
+        p.first_sample_index = ordinal;
+        p.t_anchor_us = (uint64_t)esp_timer_get_time();
+        p.t_first_us = p.t_anchor_us;
+        p.status = 0; /* enqueue may add bit 1 */
+        enqueue(&p);
+        vTaskDelayUntil(&wake, pdMS_TO_TICKS(DEVICE_INFO_PERIOD_MS));
+    }
 }
 
 static void log_stats(void)
@@ -305,7 +314,7 @@ void app_main(void)
     ESP_LOGI(TAG, "%s %s, ESP-IDF %s, ELF SHA-256 %s", app->project_name, app->version,
              app->idf_ver, elf_sha);
 
-    if (!packet_self_test()) {
+    if (!pkt_self_test()) {
         ESP_LOGE(TAG, "packet self-test FAILED: not streaming");
         for (int level = 0;; level ^= 1) {
             gpio_set_level(BOARD_LED_STAT_GPIO, level);
@@ -333,6 +342,7 @@ void app_main(void)
         abort();
     }
     if (xTaskCreate(tx_task, "pkt_tx", 4096, NULL, 5, NULL) != pdPASS
+        || xTaskCreate(device_info_task, "dev_info", 3072, NULL, 4, NULL) != pdPASS
         || xTaskCreate(event_task, "t0_event", 3072, NULL, 6, NULL) != pdPASS) {
         ESP_LOGE(TAG, "cannot create tasks");
         abort();
