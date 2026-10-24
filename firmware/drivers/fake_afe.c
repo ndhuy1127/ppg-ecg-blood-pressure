@@ -21,9 +21,10 @@ static void on_sample(void *arg)
     fake_afe_t *afe = arg;
     bool notify = false;
     portENTER_CRITICAL(&afe->lock);
-    /* Like MAX3010x with FIFO_ROLLOVER_EN = 0: a full FIFO keeps its contents
-     * and new samples are lost, so the gap lies after the last stored sample. */
-    if (afe->fill < FAKE_AFE_FIFO_DEPTH) {
+    /* Like MAX3010x with FIFO_ROLLOVER_EN = 0 or BMI270 with stop_on_full: a
+     * full FIFO keeps its contents and new samples are lost, so the gap lies
+     * after the last stored sample. */
+    if (afe->fill < afe->cfg.depth) {
         afe->fill++;
         /* Notify once, when the threshold is crossed: a later notification
          * could wake the reader right after a latch and yield a tiny batch. */
@@ -40,7 +41,7 @@ static void on_sample(void *arg)
 esp_err_t fake_afe_start(const fake_afe_config_t *cfg, TaskHandle_t reader, fake_afe_t **out)
 {
     if (cfg->n_slots == 0 || cfg->n_slots > FAKE_AFE_MAX_SLOTS || cfg->batch == 0
-        || cfg->batch > FAKE_AFE_FIFO_DEPTH || cfg->period_us == 0) {
+        || cfg->batch > cfg->depth || cfg->depth > FAKE_AFE_MAX_DEPTH || cfg->period_us == 0) {
         return ESP_ERR_INVALID_ARG;
     }
     fake_afe_t *afe = calloc(1, sizeof(*afe));
@@ -85,7 +86,13 @@ fake_afe_batch_t fake_afe_latch(fake_afe_t *afe)
 
 int32_t fake_afe_sample(const fake_afe_t *afe, uint8_t slot, uint64_t index)
 {
-    if (afe->cfg.channel_ids[0] == PKT_CH_ECG) {
+    uint8_t channel = afe->cfg.channel_ids[0];
+    if (channel >= PKT_CH_ACC_X && channel <= PKT_CH_GYR_Z) {
+        /* BMI270 word: int16, sign-extended (V0.2 section 2). Steps of 257 per
+         * sample and 8191 per axis reach both ends, -32768 and 32767. */
+        return (int32_t)((index * 257u + slot * 8191u) % 65536u) - 32768;
+    }
+    if (channel == PKT_CH_ECG) {
         /* MAX30001 FIFO word (schema section 8): 18-bit two's-complement sample
          * in bits 23..6, ETAG = PTAG = 0. Sawtooth -1024 .. 1023. */
         int32_t value = (int32_t)(index % 2048u) - 1024;

@@ -3,7 +3,9 @@
 SYNTHETIC only. The stream mirrors firmware/app/main.c and
 firmware/drivers/fake_afe.c (change both together): Packet Schema V0.2 (VERSION
 2 on every packet), fake ECG every 1953 us read 16 at a time, fake PPG with
-three slots every 5000 us read 8 at a time and sharing one anchor, t0 event
+three slots every 5000 us read 8 at a time and sharing one anchor, fake IMU
+with six axes every 10 000 us read 10 at a time and sharing one anchor (no
+read stalls: those are in test_firmware_imu_plan.py), t0 event
 packets, device info packets 0xD1 at start and every 10 s with an ordinal that
 counts dropped ones, SEQ assigned at send per channel, STATUS bit 4 on data
 packets, bit 1 after an MCU queue drop, bits 0, 1 and 5 of a dropped or
@@ -29,7 +31,9 @@ ROM_TEXT = b"ESP-ROM:esp32s3-20210327\r\nrst:0x1 (POWERON),boot:0x8\r\n"
 BIT0, BIT1, BIT4, BIT5 = 1 << 0, 1 << 1, 1 << 4, 1 << 5
 CARRY_BITS = BIT0 | BIT1 | BIT5
 ECG, PPG, EVENT, INFO = 0xE1, (0xF1, 0xF2, 0xF3), 0xC1, 0xD1
-SOURCES = ((ECG,), 1953, 16, 512000), (PPG, 5000, 8, 200000)
+IMU = (0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6)
+SOURCES = (((ECG,), 1953, 16, 512000), (PPG, 5000, 8, 200000),
+           (IMU, 10000, 10, 100000))
 APP_VERSION = "SYN_emulation"
 INFO_DATA = device_info_data("ab" * 32, APP_VERSION, "v5.5.3")
 INFO_PERIOD_US = 10_000_000
@@ -37,6 +41,18 @@ INFO_PERIOD_US = 10_000_000
 
 def ecg_word(index):
     return (((index % 2048) - 1024) & 0x3FFFF) << 6
+
+
+def imu_value(index, slot):
+    return (index * 257 + slot * 8191) % 65536 - 32768
+
+
+def value_of(channel, index):
+    if channel == ECG:
+        return ecg_word(index)
+    if channel in IMU:
+        return imu_value(index, IMU.index(channel))
+    return ppg_count(index, PPG.index(channel))
 
 
 def ppg_count(index, slot):
@@ -60,8 +76,7 @@ def produced(duration_us, seed=7, isr_losses=()):
             anchor = t + latency
             offset = ((count - 1) * 10**9 + fs // 2) // fs
             for slot, channel in enumerate(channels):
-                data = [ecg_word(first + i) if channel == ECG
-                        else ppg_count(first + i, slot) for i in range(count)]
+                data = [value_of(channel, first + i) for i in range(count)]
                 items.append((anchor + slot, dict(
                     channel_id=channel, first_sample_index=first, t_anchor_us=anchor,
                     t_first_us=anchor - offset, fs_nominal_mhz=fs, status=BIT4,
@@ -149,8 +164,8 @@ def stream(items, queue_drops=(), usb_losses=(), carry_bits=CARRY_BITS):
 
 def metadata():
     channels, reasons = {}, {}
-    for channel, fs in ((ECG, 512000), *((c, 200000) for c in PPG), (EVENT, None),
-                        (INFO, None)):
+    for channel, fs in ((ECG, 512000), *((c, 200000) for c in PPG),
+                        *((c, 100000) for c in IMU), (EVENT, None), (INFO, None)):
         key = f"0x{channel:02X}"
         channels[key] = {"sensor": "SYN_fake_afe", "fs_nominal_mhz": fs,
                          "latency_l_us": None, "latency_source": None,
@@ -187,10 +202,10 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
                      usb_losses={ecg[5001], ppg2[3000]})
     result, _, samples = analyze(payload)
     assert result["issue_counts"] == {"missing_packets": 2, "skipped_bytes": 1}
-    # docs/protocol/packet_logger.md: 64 266 packets (60 of them 0xD1), 667 192
-    # samples.
-    assert result["decode"]["packets_decoded"] == 64_266
-    assert len(samples) == 667_192
+    # docs/protocol/packet_logger.md: 100 266 packets (60 of them 0xD1, 36 000
+    # IMU), 1 027 192 samples.
+    assert result["decode"]["packets_decoded"] == 100_266
+    assert len(samples) == 1_027_192
     skipped = [i for i in result["issues"] if i["code"] == "skipped_bytes"]
     assert skipped == [{"code": "skipped_bytes", "offset": 0,
                         "length": len(ROM_TEXT)}]
@@ -199,13 +214,14 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
     assert channels["0xE1"]["status_bit_counts"]["mcu_buffer_overflow"] == 1
     assert [g["lost_samples"] for g in channels["0xF2"]["gaps"]] == [8]
     assert channels["0xC1"]["events"] == 7
+    for key in ("0xA1", "0xA6"):
+        assert channels[key]["packets_accepted"] == 6000 and not channels[key]["gaps"]
     assert all(not c.get("packets_quarantined") for c in channels.values())
     info = result["sessions"][0]["device_info"]
     assert info["valid_packets"] == 60  # at 0, 10, ..., 590 s
     assert [i["app_version"] for i in info["identities"]] == [APP_VERSION]
     for _, key, _, _, index, value, _ in samples:
-        slot = int(key[-1]) - 1
-        assert value == (ecg_word(index) if key == "0xE1" else ppg_count(index, slot))
+        assert value == value_of(int(key, 16), index)
 
 
 def test_carried_bit1_explains_a_gap_longer_than_one_packet():

@@ -430,11 +430,13 @@ Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
 [`tests/test_firmware_stream_compat.py`](../../tests/test_firmware_stream_compat.py)
 dựng luồng byte theo đúng quy ước của firmware khung trong 10 phút (V0.2 từ
 2026-10-24): chữ ROM ở đầu, ECG giả 1 953 µs × 16 mẫu, PPG giả ba khe 5 000 µs × 8
-mẫu dùng chung mốc neo, task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, packet
-thông tin thiết bị `0xD1` mỗi 10 s, một lần tràn hàng đợi MCU kèm USB timeout của
-chính packet mang bit 1, một USB timeout ở PPG khe 2. Với config mặc định, logger
-nhận 64 266 packet (gồm 60 packet `0xD1`; trước khi có `0xD1` là 64 206), 667 192
-mẫu, tất cả đúng công thức `DATA` của firmware. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
+mẫu dùng chung mốc neo, IMU giả sáu trục 10 000 µs × 10 mẫu dùng chung mốc neo,
+task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, packet thông tin thiết bị `0xD1`
+mỗi 10 s, một lần tràn hàng đợi MCU kèm USB timeout của chính packet mang bit 1,
+một USB timeout ở PPG khe 2. Với config mặc định, logger nhận 100 266 packet (gồm
+60 packet `0xD1` và 36 000 packet IMU; trước khi có `0xD1` và IMU là 64 206), 1 027 192
+mẫu, tất cả đúng công thức `DATA` của firmware. Phần tồn đọng và FIFO IMU đầy được
+kiểm riêng trong `tests/test_firmware_imu_plan.py`. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
 `missing_packets`, cùng hai khoảng trống: ECG mất 32 mẫu (bit 1 đã chuyển sang
 packet kế), PPG khe 2 mất 8 mẫu. Không có `timestamp_anomaly`. Test thứ hai cho
 thấy khi mất 48 mẫu ECG (hai lần tràn hàng đợi cộng một USB timeout), logger chỉ

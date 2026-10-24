@@ -3,21 +3,25 @@
 > **Trạng thái:** firmware khung V1-module gửi
 > [Packet Schema V0.2](../configs/hardware/Packet_Schema_V0.2.md) từ 2026-10-24
 > (bước 2a của mục 9: encoder V0.2, packet thông tin thiết bị `0xD1`, chuyển tiếp
-> bit 5). Build được (2026-10-24, RAM 4,5 %, flash 19,9 % của phân vùng 1 MB) nhưng
-> **chưa chạy trên bo** (chưa có phần cứng). Chưa có driver AFE: mọi giá trị ECG/PPG
-> là dữ liệu **giả**, chỉ để kiểm đường packet MCU → USB → logger, không phải tín
-> hiệu sinh lý. Chưa có IMU giả, mốc `SAMP` (bit 8) và cách đọc FIFO PPG mới (bước
-> 2b–2d).
+> bit 5; bước 2b: IMU giả sáu trục, chia phần tồn đọng, neo lại sau FIFO đầy). Build
+> được (2026-10-24, RAM 4,5 %, flash 20,1 % của phân vùng 1 MB) nhưng **chưa chạy
+> trên bo** (chưa có phần cứng). Chưa có driver AFE hay BMI270: mọi giá trị
+> ECG/PPG/IMU là dữ liệu **giả**, chỉ để kiểm đường packet MCU → USB → logger, không
+> phải tín hiệu sinh lý. Chưa có mốc `SAMP` (bit 8) và cách đọc FIFO PPG mới (bước
+> 2c–2d).
 
-- **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị),
+- **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị, đọc
+  IMU), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet của một lần đọc FIFO
+  BMI270 theo V0.2 mục 3–5; C thuần),
   `packet_wire.c` (encoder Packet Schema V0.2, đóng gói payload `0xD1` và phép tự
   kiểm lúc khởi động; C thuần, không phụ thuộc ESP-IDF; tên giống codec Python
   `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`).
-- **drivers/**: `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101.
+- **drivers/**: `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101/BMI270
+  (FIFO có độ sâu cấu hình được, đầy thì giữ nội dung và bỏ mẫu mới).
 - **boards/**: `board_v1_module.h`, GPIO theo bảng A.7 của
   [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md).
-- **include/**: `packet_wire.h`, `fake_afe.h`, `packet_kat.h` (known-answer V0.2
-  của encoder).
+- **include/**: `packet_wire.h`, `imu_plan.h`, `fake_afe.h`, `packet_kat.h`
+  (known-answer V0.2 của encoder).
 - **tests/**: chưa có test chạy trên bo. Known-answer của encoder được dựng lại
   độc lập (Python `struct` và `binascii.crc_hqx`) và đối chiếu với codec Python bằng
   [tests/test_firmware_packet_kat.py](../tests/test_firmware_packet_kat.py) (không
@@ -28,7 +32,9 @@
   kênh, IMU ở biên int16) với `packet_wire.py`, và so payload `0xD1` (hash có word
   bit 31, chuỗi ASCII 0–31 byte, từ chối chuỗi 32 byte hoặc không phải ASCII) với
   `device_info_data`. Test này chỉ kiểm encoder, không kiểm ISR, task, USB hay phần
-  cứng.
+  cứng. [tests/test_firmware_imu_plan.py](../tests/test_firmware_imu_plan.py) biên
+  dịch `app/imu_plan.c` theo cùng cách và so với spec V0.2 mục 3–5 (xem mục "IMU
+  giả").
 
 Không commit khóa hoặc thông tin kết nối thật.
 
@@ -41,7 +47,10 @@ Không commit khóa hoặc thông tin kết nối thật.
 | Toolchain | PlatformIO Core 6.1.19, platform `espressif32@6.13.0`, ESP-IDF 5.5.3 (`framework-espidf` 3.50503.0), GCC xtensa 14.2.0 |
 | Cấu hình | [platformio.ini](platformio.ini), [sdkconfig.defaults](sdkconfig.defaults) |
 
-`sdkconfig.<env>`, `.pio/` do build sinh ra và được Git bỏ qua.
+`sdkconfig.<env>`, `.pio/` do build sinh ra và được Git bỏ qua. Trên máy còn ít
+RAM trống, GCC có thể lỗi "internal compiler error: Segmentation fault" khi build
+song song các file của ESP-IDF (gặp 2026-10-24 với `esp_lcd_panel_rgb.c`, còn 2,5 GB
+trống); build tuần tự bằng `pio run -d firmware -j 1` thì qua.
 
 ## Lệnh
 
@@ -50,6 +59,7 @@ Chạy từ Git root. Nếu `pio` chưa có trong PATH, dùng
 
 ```powershell
 pio run -d firmware                                   # build
+pio run -d firmware -e esp32s3_devkitc_imu_stall      # build có dừng đọc IMU (mục "IMU giả")
 pio run -d firmware -t upload --upload-port COM5      # nạp (COM5 là ví dụ)
 pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0
 ```
@@ -79,15 +89,41 @@ thái nháy nhanh. Known-answer V0.1 vẫn nằm trong fixture làm bản cũ.
 | --- | --- | ---: | --- | ---: | --- |
 | `0xE1` | ECG giả, giống MAX30001 | 512 000 | 1 953 µs (≈ 512,03 Hz, lệch +64 ppm so với danh định) | 16 | Word 24 bit: mẫu 18 bit bù hai `(k mod 2048) − 1024` ở bit 23…6, ETAG = PTAG = 0 |
 | `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe ở tốc độ V1 (200 sps) | 200 000 | 5 000 µs | 8 | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
+| `0xA1`–`0xA6` | IMU giả, giống BMI270 cấu hình V1 (V0.2 mục 3): gia tốc X/Y/Z, con quay X/Y/Z | 100 000 | 10 000 µs; FIFO 170 frame, watermark 10 | 10 (tới 32 mỗi packet khi tồn đọng) | Int16 có dấu `((k · 257 + s · 8191) mod 65 536) − 32 768`, `s` = 0…5 theo trục; chạm cả hai biên −32 768 và 32 767 |
 | `0xC1` | Nút t0 | 0 | — | 1 | Mã sự kiện `1` |
 | `0xD1` | Thông tin thiết bị (V0.2 mục 6) | 0 | Một lần ngay sau khi driver USB khởi động, rồi mỗi 10 s | 25 | Layout 1, ELF SHA-256, `esp_app_desc_t.version`, `esp_app_desc_t.idf_ver` |
 
 `DATA` là hàm của chỉ số mẫu, nên receiver kiểm được từng mẫu. Độ lệch +64 ppm của
 ECG giả là cố ý: hồi quy tốc độ thực ở phép đo 10 phút phải thấy nó.
 
-Nguồn giả có FIFO 32 mẫu. Task đọc **chốt** số mẫu đang chờ, lấy `T_ANCHOR_US`
-ngay sau đó rồi đọc đúng số mẫu đã chốt (schema mục 5). FIFO đầy thì mẫu mới bị
-mất như MAX3010x với `FIFO_ROLLOVER_EN = 0`.
+Nguồn giả ECG/PPG có FIFO 32 mẫu, IMU 170 frame. Task đọc **chốt** số mẫu đang
+chờ, lấy `T_ANCHOR_US` ngay sau đó rồi đọc đúng số mẫu đã chốt (schema mục 5). FIFO
+đầy thì mẫu mới bị mất như MAX3010x với `FIFO_ROLLOVER_EN = 0` hay BMI270 với
+`fifo_stop_on_full = 1`.
+
+## IMU giả (V0.2 bước 2b)
+
+Sáu trục của một lần đọc dùng chung `FIRST_SAMPLE_INDEX`, `T_ANCHOR_US` và `STATUS`
+(`imu_plan.c`):
+
+- Lần đọc hơn 32 frame được chia thành các packet tối đa 32 frame; mọi phần dùng
+  anchor của lần đọc, phần nào không chứa frame mới nhất thì bật bit 7 (V0.2 mục 4).
+- Lần đọc gặp FIFO đầy (170 frame, không còn chỗ cho một frame nữa) bật bit 0 trên
+  mọi packet. Lần đọc kế tiếp neo lại chỉ số bằng công thức V0.2 mục 5 từ lần đọc
+  tin cậy gần nhất và bật bit 5 ở packet đầu tiên mỗi trục. Nếu lần đọc kế tiếp
+  cũng đầy, hoặc chưa có lần đọc tin cậy, thì chỉ số chỉ tiếp tục (`+1`) và vẫn bật
+  bit 5. Lần đọc lỗi (hàm `imu_index_read_failed`, dành cho driver thật) không gửi
+  gì; lần sau bật bit 3 và bit 5.
+- `DATA` theo chỉ số **thật**, nên neo lại sai sẽ lộ ra thành `DATA` không khớp
+  `FIRST_SAMPLE_INDEX`. Số frame mất thật in ra UART0 làm đáp án (BMI270 không báo
+  số này), cùng chỉ số đã neo lại và chỉ số thật.
+
+Env `esp32s3_devkitc_imu_stall` (cờ `FAKE_IMU_STALLS=1`) cố ý dừng đọc IMU mỗi 30 s:
+500 ms ở giây thứ 10 (khoảng 60 frame: hai packet mỗi trục, packet đầu có bit 7) và
+2 500 ms ở giây thứ 20 (FIFO đầy, mất khoảng 90 frame: bit 0, lần sau neo lại với
+bit 5). Bản mặc định không dừng đọc. Lần đọc đầy tạo 36 packet liền (6 phần × 6 trục),
+vẫn dưới hàng đợi MCU 64 packet nhưng có thể đẩy packet ECG/PPG vào tràn hàng đợi nếu
+USB chậm; khi đó bit 1 báo như thường.
 
 ## Quy ước packet của firmware
 
@@ -132,12 +168,16 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
 3. Trong kết quả: `SEQ` và `T_ANCHOR_US` tăng đơn điệu, không lỗi CRC, `DATA` khớp
    công thức ở trên; `device_info` của phiên có ELF SHA-256 trùng log UART0 và
    khoảng 60 packet hợp lệ.
-4. Bấm t0 vài lần: có packet `0xC1` tương ứng.
+4. Nạp bản `esp32s3_devkitc_imu_stall`, ghi vài phút: mỗi 30 s logger thấy một lần
+   đọc IMU có bit 7 và một lần đầy (bit 0) rồi neo lại (`sample_index_reanchored`
+   mỗi trục), `DATA` vẫn khớp chỉ số; chỉ số neo lại trùng chỉ số thật in trên UART0.
+5. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 
 ## Chưa có
 
-- Driver MAX30001, MAX30101, BMI270.
-- IMU giả (V0.2 bước 2b), xung `SAMP` của MAX30001 trên GPIO47 (INT2B) với MCPWM
-  capture và bit 8 (bước 2c), PPG xóa ngắt mỗi mẫu và đọc hết FIFO (bước 2d).
+- Driver MAX30001, MAX30101, BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và
+  gọi `imu_index_read_failed` khi đọc lỗi).
+- Xung `SAMP` của MAX30001 trên GPIO47 (INT2B) với MCPWM capture và bit 8 (V0.2
+  bước 2c), PPG xóa ngắt mỗi mẫu và đọc hết FIFO (bước 2d).
 - Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.
 - Lệnh từ PC (bắt đầu/dừng, đổi cấu hình).

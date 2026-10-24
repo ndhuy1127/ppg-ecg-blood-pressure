@@ -1,10 +1,12 @@
 /*
- * Stand-in for an AFE FIFO while no MAX30001/MAX30101 is connected. An
- * esp_timer callback "samples" at a fixed period into a 32-deep FIFO; the
- * reader latches how many samples are waiting, takes T_ANCHOR_US right after
- * (schema section 5), then reads exactly that many. DATA is a deterministic
- * function of the cumulative sample index, so a receiver can check every
- * sample. Nothing here is a physiological signal.
+ * Stand-in for a sensor FIFO while no MAX30001/MAX30101/BMI270 is connected. An
+ * esp_timer callback "samples" at a fixed period into a FIFO of `depth`
+ * samples (frames for the IMU); the reader latches how many samples are
+ * waiting, takes T_ANCHOR_US right after (schema section 5), then reads
+ * exactly that many. A full FIFO keeps its contents and loses new samples
+ * (MAX3010x FIFO_ROLLOVER_EN = 0, BMI270 fifo_stop_on_full = 1). DATA is a
+ * deterministic function of the cumulative sample index, so a receiver can
+ * check every sample. Nothing here is a physiological signal.
  */
 #pragma once
 
@@ -14,8 +16,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define FAKE_AFE_FIFO_DEPTH 32u
-#define FAKE_AFE_MAX_SLOTS 4u
+#define FAKE_AFE_MAX_DEPTH 256u
+#define FAKE_AFE_MAX_SLOTS 6u
 
 typedef struct {
     const char *name;
@@ -24,12 +26,14 @@ typedef struct {
     uint32_t fs_nominal_mhz;
     uint32_t period_us; /* real period of the fake source */
     uint16_t batch;     /* notify the reader once this many samples wait */
+    uint16_t depth;     /* FIFO capacity in samples, batch .. FAKE_AFE_MAX_DEPTH */
 } fake_afe_config_t;
 
 typedef struct {
     uint64_t first_index;   /* cumulative index of the first latched sample */
-    uint16_t count;         /* N latched samples, 0 .. FAKE_AFE_FIFO_DEPTH */
-    uint32_t lost_after;    /* samples dropped after the last one (FIFO full) */
+    uint16_t count;         /* N latched samples, 0 .. depth */
+    uint32_t lost_after;    /* samples dropped after the last one (FIFO full); a
+                             * real BMI270 does not report this: answer key only */
     uint64_t t_anchor_us;   /* esp_timer right after the latch */
 } fake_afe_batch_t;
 
