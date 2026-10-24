@@ -53,7 +53,7 @@
 | Áp lực | Không dùng FSR ở V1 (nhóm chốt 2026-10-23) | Dây cáp 15–16 chuyển thành GND |
 | Cơ khí | Hai khe 3 × 22 mm trên PCB cho dây velcro 20 mm; tấm kính hoặc acrylic che | Bo 40,4 × 31,5 mm theo Edge.Cuts (bản V1-draft3 bỏ tab giữ cáp). Thân nhựa của J1 (box header cong) nằm hoàn toàn ngoài mép trên: theo footprint KiCad, thân bắt đầu cách mép 0,42 mm và sâu khoảng 9,1 mm, chỉ được giữ bằng 16 chân hàn; nhóm chốt giữ nguyên, không nới PCB (2026-10-23): khi cắm/rút luôn giữ thân header và buộc cáp vào dây đeo để lực kéo không dồn vào mối hàn; nếu chân cong hoặc mối hàn nứt khi thử thì xét nới PCB dưới thân header (khoảng 28 × 9,5 mm). Ba lỗ 3,2 mm tại (30,36; 8,14), (10,04; 28,46), (30,36; 28,46) trùng lỗ standoff của M1 và M3, dùng spacer nylon M3; góc thứ tư (10,04; 8,14) nằm trên đường đi dây chính nên dùng miếng đệm dán. Theo ảnh sản phẩm, hai đầu nối Qwiic cao hơn chip cảm biến nên da cổ tay chạm đầu nối trước: tháo đầu nối Qwiic hoặc làm giá đỡ |
 | Lắp ráp | Hàn J1 và cả hai header module vào bo cổ tay trước, cắt sát đuôi chân, dán kapton, sau đó mới lắp M1 và M3 lên header. J1 đặt ở mặt dưới nên mối hàn nằm ở mặt trên, là mặt áp vào da | Chân M3 nằm dưới thân M1 và ngược lại (18 cảnh báo `pth_inside_courtyard` là dự kiến). Trên M1 cắt JP1 để tắt LED nguồn đỏ, vì LED này nằm cùng mặt với cảm biến |
-| Phụ | C2 10 µF + C3 100 nF trên 3V3–GND ở mặt trên, sát chân cáp J1.1 (đầu vào nguồn; nhìn từ mặt trên là đầu phải hàng chân), dùng chung cho M1 (MAX30101) và M3 (BMI270) | Không có test point trên bo cổ tay. Bảng chân cáp chỉ in ở mặt dưới bo đế; bo cổ tay chỉ có số 1 cạnh J1.1 |
+| Phụ | C2 10 µF + C3 100 nF trên 3V3–GND ở mặt trên, sát chân cáp J1.1 (đầu vào nguồn; nhìn từ mặt trên là đầu phải hàng chân), dùng chung cho M1 (MAX30101) và M3 (BMI270); giữ nguyên (chốt 2026-10-24): bring-up mục 8 đo 3V3 tại M1 khi LED chạy xung, sụt thì hàn thêm tụ | Không có test point trên bo cổ tay. Bảng chân cáp chỉ in ở mặt dưới bo đế; bo cổ tay chỉ có số 1 cạnh J1.1 |
 
 **Cáp nối hai bo (theo KiCad):**
 
@@ -76,6 +76,23 @@
   `BMI_INT`). Chân 1–2 là 3V3 và GND đặt kề nhau.
 - Tín hiệu: 3V3, GND, PPG SDA/SCL/INT, BMI270 SCK/MOSI/MISO/CS/INT. Không cần dây
   5 V vì bo MAX30101 tự tạo 5 V.
+
+**Thứ tự chân cáp mới (chốt 2026-10-24, chưa vẽ trên KiCad).** Giữ 3V3–GND kề nhau ở
+chân 1–2 để vòng dòng nguồn nhỏ; mỗi tín hiệu có GND hai bên, trừ cặp `BMI_MOSI`–
+`BMI_MISO` ở chân 15–16 (cùng bus SPI, đổi trạng thái đồng bộ theo SCK). Hai đường INT
+có GND hai bên vì dễ nhận xung giả nhất (`PPG_INT` open-drain, kéo lên 4,7 kΩ). Các
+số chân ở trên và bảng A.7 giữ theo bản đang vẽ cho tới khi sửa KiCad.
+
+| Chân | Net | Chân | Net |
+| ---: | --- | ---: | --- |
+| 1 | `/+3V3` | 2 | `/GND` |
+| 3 | `/PPG_SDA` | 4 | `/GND` |
+| 5 | `/PPG_SCL` | 6 | `/GND` |
+| 7 | `/PPG_INT` | 8 | `/GND` |
+| 9 | `/BMI_INT` | 10 | `/GND` |
+| 11 | `/BMI_SCK` | 12 | `/GND` |
+| 13 | `/BMI_CS` | 14 | `/GND` |
+| 15 | `/BMI_MOSI` | 16 | `/BMI_MISO` |
 
 Bảng chân từng dây: A.7. Schematic và PCB (đã đi dây) của hai bo:
 `hardware/kicad/v1_module/base/` và `hardware/kicad/v1_module/wrist/`. Sơ đồ khối:
@@ -199,7 +216,7 @@ không nối INT2B) không dùng nữa.
 
 Không nối: EN và GPIO0, 1, 2, 3, 6 (trước là FSR; sẽ nối J3, chưa vẽ), 19, 20, 35–42, 43, 44, 45, 46, 48.
 
-**Cáp 16 dây (J2 bo đế ↔ J1 bo cổ tay, cùng số chân):**
+**Cáp 16 dây (J2 bo đế ↔ J1 bo cổ tay, cùng số chân).** Bản đang vẽ; thứ tự mới ở A.3 thay bảng này khi sửa KiCad.
 
 | Chân | Net | Chân | Net |
 | ---: | --- | ---: | --- |
@@ -374,8 +391,3 @@ vẫn truyền qua USB tới laptop.
    XTAL_32K_P/N của ESP32-S3 (mục 5). V1 không có thạch anh 32 kHz nên không bị
    ảnh hưởng. Nếu bản hoàn chỉnh giữ pin map này thì phải bỏ thạch anh 32 kHz hoặc
    đổi chân SPI ECG.
-8. Thứ tự dây cáp: mô tả ban đầu là GND xen giữa các dây tín hiệu, nhưng chân
-   10–13 (`BMI_MOSI`, `BMI_MISO`, `BMI_CS`, `BMI_INT`) và 5–6 kề nhau không có GND
-   (A.3); 15–16 nay là GND. Đổi thứ tự chân hay giữ nguyên.
-9. Tụ: mô tả ban đầu là 100 nF + 10 µF cho mỗi module; bo cổ tay chỉ có một cặp
-   C2/C3 dùng chung cho M1 và M3 (A.3). Có bổ sung không.
