@@ -34,7 +34,9 @@ dùng PAT hay mốc sinh lý để suy ra lệch clock.
 Cần một sự kiện vật lý mà **cả hai kênh cùng thấy**, với thời điểm do chính MCU
 ghi lại:
 
-- Một GPIO rảnh của ESP32-S3 phát xung vuông, chu kỳ 1 s, độ rộng khoảng 50 ms.
+- GPIO6 của ESP32-S3, đưa ra header J3 (GPIO6, GND) trên bo đế (chốt 2026-10-24,
+  `custom_board_proposal.md` A.2), phát xung vuông, chu kỳ 1 s, độ rộng khoảng
+  50 ms.
   MCU gửi packet sự kiện mã `3` với `T_ANCHOR_US` tại cạnh lên.
 - **Kênh ECG:** đưa xung qua mạch chia áp vào đầu vào điện cực của breakout
   MAX30001, để biên độ ở mức vài mV (đúng dải ECG). Nếu có ECG simulator có

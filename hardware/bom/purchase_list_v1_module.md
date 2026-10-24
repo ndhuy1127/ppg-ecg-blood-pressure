@@ -84,7 +84,10 @@ Kiểm đồ có sẵn ở lab trước, chỉ mua phần thiếu; chưa tra gi�
 
 ## 2. Đợt 2: mua cùng PCB V1 (chưa mua)
 
-Chỉ đặt sau khi đối chiếu module thật với footprint (A.6 mục 2). Danh sách lấy từ schematic KiCad V1-module
+Đặt gia công PCB ngay sau khi sửa bo đế (header J3, test point INT;
+`custom_board_proposal.md` A.2) và ERC/DRC sạch, song song với đợt 1, không chờ
+module (chốt 2026-10-24); lệch footprint thì làm lại PCB (A.6 mục 2). Danh sách
+lấy từ schematic KiCad V1-module
 (`hardware/kicad/v1_module/`).
 
 | Bo | Ký hiệu | Linh kiện | SL |
@@ -92,6 +95,7 @@ Chỉ đặt sau khi đối chiếu module thật với footprint (A.6 mục 2).
 | Đế | U1 | Socket cái 1×22, 2,54 mm, cho DevKitC | 2 |
 | Đế | J1 | Socket cái 1×10, 2,54 mm, cho header SV1 của breakout MAX30001 | 1 |
 | Đế | J2 | Box header IDC 2×8, 2,54 mm, đứng | 1 |
+| Đế | J3 | Header đực 1×2, 2,54 mm (GPIO6, GND), cắt từ header 1×40 ở dòng 9 | 1 |
 | Cổ tay | J1 | Box header IDC 2×8, 2,54 mm, cong 90°, có khóa | 1 |
 | Cáp | — | Cáp dẹt 16 dây + 2 socket IDC 2×8 có gờ khóa, dài 20–30 cm | 1 |
 | Đế | SW1 | Nút nhấn 6 × 6 mm chân cắm | 1 |

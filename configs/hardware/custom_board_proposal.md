@@ -42,7 +42,7 @@
 | Sửa trên breakout | R3 (VCM → sleeve của jack) 10 kΩ thay bằng 220 kΩ ±1% (datasheet yêu cầu ≥ 200 kΩ, tr. 22, 31, 35, 84); gỡ R7, R8 (0 Ω nối điện cực vào BIP/BIN) | Làm trước khi đo trên người, sau khi đối chiếu bo thật với `pc_max30001_brk_v1.0`. BioZ không dùng (`EN_BIOZ = 0`). Firmware đặt `INTB_TYPE = 01` (CMOS) ở `EN_INT` (0x02) và `EN_INT2` (0x03) vì INTB/INT2B đi qua TXB0108 (mặc định là open-drain, Table 14, tr. 43) |
 | Sự kiện | Nút bấm `t0` (SW1) vào GPIO4, kéo lên 10 kΩ (R2) và tụ 100 nF (C2); LED trạng thái D1 qua 1 kΩ (R3) ở GPIO5 | Đánh dấu bắt đầu bơm cuff trên cùng đồng hồ `esp_timer` |
 | SPI BMI270 qua cáp | R9, R10, R11 33 Ω ở mặt dưới bo đế, nối tiếp `BMI_SCK`, `BMI_MOSI`, `BMI_CS` (net phía MCU mang hậu tố `_MCU`) | Giảm chấn ở đầu phát cho cáp 20–30 cm; giá trị chỉnh theo đo scope. `BMI_MISO` không có điện trở ở bo cổ tay vì không còn chỗ ngoài courtyard của M1/M3 |
-| Phụ | Socket cho DevKitC (2 hàng 1×22) và breakout MAX30001 (header 10 chân SV1); R8 100 kΩ kéo `ECG_CS` lên 3V3; lỗ NPTH 3,2 mm tại (23,87; 2,97) trùng lỗ bắt vít của breakout | Tụ 3V3–GND trên bo đế: C3, C5, C7 (10 µF), C4, C6, C8 (100 nF) và C9 100 nF ở mặt dưới, sát J2.1/J2.2 (đầu vào nguồn của cáp). Mặt dưới bo đế có R9–R11 và C9 nên phải kê chân cao su. Test point (pad 1,0 mm, có nhãn silkscreen): TP1 `3V3`, TP2 `GND`, TP4 `PPG_SCL`, TP5 `BMI_SCK` (phía cáp), TP6 `T0_BTN`; không có test point cho bus SPI ECG, `PPG_SDA`, `BMI_MOSI/MISO/CS` và các đường INT (mục 7 Việc còn mở). Silkscreen có viền DevKitC/breakout, dấu đầu USB và đầu anten (cắm ngược 180° sẽ chập 3V3–GND), bảng chân cáp ở mặt dưới. Vùng anten (30–49,5 × 0–5 mm) cấm cả đổ đồng, track và via. GPIO6 bỏ trống |
+| Phụ | Socket cho DevKitC (2 hàng 1×22) và breakout MAX30001 (header 10 chân SV1); R8 100 kΩ kéo `ECG_CS` lên 3V3; lỗ NPTH 3,2 mm tại (23,87; 2,97) trùng lỗ bắt vít của breakout | Tụ 3V3–GND trên bo đế: C3, C5, C7 (10 µF), C4, C6, C8 (100 nF) và C9 100 nF ở mặt dưới, sát J2.1/J2.2 (đầu vào nguồn của cáp). Mặt dưới bo đế có R9–R11 và C9 nên phải kê chân cao su. Test point (pad 1,0 mm, có nhãn silkscreen): TP1 `3V3`, TP2 `GND`, TP4 `PPG_SCL`, TP5 `BMI_SCK` (phía cáp), TP6 `T0_BTN`. Chốt thêm ngày 2026-10-24, **chưa vẽ trên KiCad**: test point cho bốn đường INT (`ECG_INTB`, `ECG_INT2B`, `PPG_INT`, `BMI_INT`) để kẹp đầu dò suốt phép đo timing, và header J3 1×2 (GPIO6, GND) phát xung kích thích cho phép đo đồng bộ 10 phút. Bus SPI ECG, `PPG_SDA`, `BMI_MOSI/MISO/CS` không có test point: đo tạm ở mối hàn chân header mặt trên DevKitC hoặc breakout. Silkscreen có viền DevKitC/breakout, dấu đầu USB và đầu anten (cắm ngược 180° sẽ chập 3V3–GND), bảng chân cáp ở mặt dưới. Vùng anten (30–49,5 × 0–5 mm) cấm cả đổ đồng, track và via. GPIO6 dành cho J3 (chưa vẽ) |
 
 ### A.3. Bo cảm biến cổ tay (gắn trên dây đeo)
 
@@ -102,7 +102,7 @@ ngày 2026-10-16.
 | Nguồn vào | Chỉ 3,3 V (chân 3.3V và Qwiic) | Cấp 3V3 từ DevKitC |
 | VDD 1,8 V của MAX30101 | LDO SP6214 1,8 V/100 mA từ 3,3 V | **Chân header "1.8V" là đầu ra LDO**; không nối nguồn vào |
 | VDD_LED (VLED+) | Boost PAM2401 từ 3,3 V lên net 5V | LED xanh có nguồn 5 V ngay trên bo |
-| I²C | Chuyển mức bằng 2 MOSFET kênh N; kéo lên 2,2 kΩ ở cả phía 1,8 V và phía 3,3 V (phía 3,3 V qua jumper `I2C PU`) | Bus 1 không cần thêm kéo lên. KiCad hiện **không có** footprint kéo lên I²C trên cả hai bo (mục 7 Việc còn mở) |
+| I²C | Chuyển mức bằng 2 MOSFET kênh N; kéo lên 2,2 kΩ ở cả phía 1,8 V và phía 3,3 V (phía 3,3 V qua jumper `I2C PU`) | Bus 1 không cần thêm kéo lên. Không thêm footprint kéo lên I²C trên bo nào (chốt 2026-10-24): với 2,2 kΩ và tổng điện dung ước khoảng 50 pF (cáp 20–30 cm, chân, bộ chuyển mức), thời gian lên 30–70% ≈ 0,85 × 2,2 kΩ × 50 pF ≈ 0,1 µs, dưới 0,3 µs của chế độ 400 kHz. Chưa đo; nếu sườn lên chậm thì chạy 100 kHz (A.2) |
 | INT | Kéo lên 4,7 kΩ lên 3,3 V (jumper `INT`) | Nối thẳng GPIO |
 
 ### A.5. Không dùng ở V1
@@ -121,7 +121,8 @@ nhận hàng ở
    (`pc_max30001_brk_v1.0.brd`); KiCad V1-module nối vào GPIO47 (net
    `/ECG_INT2B`, U1 pad 28). **Khi nhận hàng:** kiểm revision breakout thật.
 2. **Khi nhận hàng:** đối chiếu module thật với footprint (khoảng cách hai hàng
-   chân DevKitC 22,86 mm, pinout, lỗ bắt vít).
+   chân DevKitC 22,86 mm, pinout, lỗ bắt vít). PCB được đặt gia công trước khi có
+   module (chốt 2026-10-24), nên nếu lệch footprint thì phải làm lại PCB.
 3. **LED MAX30101.**
    - Tổ hợp tốc độ × độ rộng xung: datasheet Rev 2 (19-8453, 10/18, bản SparkFun
      lưu) chỉ có bảng tổ hợp được phép cho chế độ SpO2 và HR (Bảng 11–12, tr. 24),
@@ -196,7 +197,7 @@ không nối INT2B) không dùng nữa.
 | `/+3V3` | — | 1, 2 | Nguồn 3V3 của DevKitC | Chân 5V (pad 21) không nối |
 | `/GND` | — | 22, 23, 24, 44 | | |
 
-Không nối: EN và GPIO0, 1, 2, 3, 6 (trước là FSR), 19, 20, 35–42, 43, 44, 45, 46, 48.
+Không nối: EN và GPIO0, 1, 2, 3, 6 (trước là FSR; sẽ nối J3, chưa vẽ), 19, 20, 35–42, 43, 44, 45, 46, 48.
 
 **Cáp 16 dây (J2 bo đế ↔ J1 bo cổ tay, cùng số chân):**
 
@@ -376,10 +377,5 @@ vẫn truyền qua USB tới laptop.
 8. Thứ tự dây cáp: mô tả ban đầu là GND xen giữa các dây tín hiệu, nhưng chân
    10–13 (`BMI_MOSI`, `BMI_MISO`, `BMI_CS`, `BMI_INT`) và 5–6 kề nhau không có GND
    (A.3); 15–16 nay là GND. Đổi thứ tự chân hay giữ nguyên.
-9. Footprint kéo lên I²C (chừa sẵn, không hàn) chưa có trên bo nào (A.4). Có
-   thêm không.
-10. Tụ và test point: mô tả ban đầu là tụ 100 nF + 10 µF cho mỗi module và test
-    point cho mọi rail và bus. Bản vẽ hiện có: bo cổ tay một cặp C2/C3 dùng chung
-    cho M1 và M3, không có test point; bo đế có test point ở 3V3, GND,
-    `PPG_SCL`, `BMI_SCK`, `T0_BTN` (A.2), thiếu bus SPI ECG, `PPG_SDA`,
-    `BMI_MOSI/MISO/CS` và các đường INT. Có bổ sung không.
+9. Tụ: mô tả ban đầu là 100 nF + 10 µF cho mỗi module; bo cổ tay chỉ có một cặp
+   C2/C3 dùng chung cho M1 và M3 (A.3). Có bổ sung không.
