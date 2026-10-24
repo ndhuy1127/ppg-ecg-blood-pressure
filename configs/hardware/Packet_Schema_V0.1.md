@@ -80,8 +80,9 @@ I²C (cỡ 0,1–0,2 ms ở 400 kHz; phải đo).
 
 V1 (chốt 2026-10-24; chi tiết Packet Schema V0.2 mục 7.6): `PPG_RDY` giữ chân INT ở
 mức thấp tới khi đọc `Interrupt Status 1` (0x00), nên firmware đọc 0x00 sau mỗi ngắt
-để xóa cờ và đếm; tới mẫu thứ 8 thì chốt con trỏ và đọc **hết** số mẫu có trong FIFO
-lúc chốt (thường 8, tức 25 packet/s mỗi khe ở 200 sps), không cố định 8. Vì đọc ngay
+để xóa cờ rồi đọc con trỏ FIFO; khi có 8 mẫu đang chờ thì chốt con trỏ và đọc **hết**
+số mẫu có trong FIFO lúc chốt (thường 8, tức 25 packet/s mỗi khe ở 200 sps), không cố
+định 8. Vì đọc ngay
 sau mẫu thứ 8, `δ` thực tế chỉ còn cỡ độ trễ ngắt cộng `d_ptr_us`. `FIFO_A_FULL`
 không dùng để kích đọc (chỉ ngắt được khi có 17–32 mẫu chưa đọc). `PPG_RDY` ở chế độ
 ba khe phải kiểm khi bring-up; không chạy thì đọc theo timer.

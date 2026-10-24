@@ -35,6 +35,13 @@
 #define BOARD_SAMP_RISING_EDGE 0
 #endif
 
+/* PPG read (Packet Schema V0.2 section 7.6): 0 counts PPG_RDY interrupts and
+ * drains the FIFO at the 8th sample; a period in ms reads on a timer instead,
+ * if bring-up shows that PPG_RDY does not work in the three-slot mode. */
+#ifndef BOARD_PPG_READ_PERIOD_MS
+#define BOARD_PPG_READ_PERIOD_MS 0
+#endif
+
 /* MAX30101 on I2C bus 1. */
 #define BOARD_PPG_SDA_GPIO 8
 #define BOARD_PPG_SCL_GPIO 9

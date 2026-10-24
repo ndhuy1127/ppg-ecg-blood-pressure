@@ -135,9 +135,9 @@ Lưu ý khi chốt:
     ≤ 215 µs, thêm khoảng 1,25 ms trễ, và chưa có bằng chứng SNR tốt hơn.
 - **Hệ quả cho firmware:** FIFO PPG 32 mẫu chứa 160 ms ở 200 sps. `FIFO_A_FULL` chỉ
   đặt được để ngắt khi có 17–32 mẫu chưa đọc (MAX30102 tr. 17), nên muốn đọc lô nhỏ
-  hơn thì đếm ngắt `PPG_RDY` hoặc đọc theo timer. Chốt 2026-10-24: xóa ngắt
-  `PPG_RDY` sau mỗi mẫu (đọc 0x00), tới mẫu thứ 8 đọc hết FIFO (thường 8 mẫu, 25
-  packet/s mỗi khe; Packet Schema V0.2 mục 7.6); ECG `EFIT = 15`, đọc tới EOF
+  hơn thì dùng ngắt `PPG_RDY` hoặc đọc theo timer. Chốt 2026-10-24: xóa ngắt
+  `PPG_RDY` sau mỗi mẫu (đọc 0x00) và đọc con trỏ FIFO, khi có 8 mẫu thì đọc hết FIFO
+  (thường 8 mẫu, 25 packet/s mỗi khe; Packet Schema V0.2 mục 7.6); ECG `EFIT = 15`, đọc tới EOF
   (thường 16 mẫu, tối đa 32).
   Thời gian LED sáng của ba khe chiếm 24,7% ở 411 µs và 12,9% ở 215 µs (tính từ giá
   trị danh định): dòng xung LED ảnh hưởng VLED+ và 3V3 (A.6 mục 3).

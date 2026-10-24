@@ -59,19 +59,24 @@ def ppg_count(index, slot):
     return index % 4096 + 32768 * (slot + 1)
 
 
-def produced(duration_us, seed=7, isr_losses=()):
+def produced(duration_us, seed=7, isr_losses=(), ppg_delay=False):
     """Packets in send order as header fields without SEQ (firmware producers).
 
     ``isr_losses``: indices of t0 edges the ISR queue drops; they get no ordinal
-    and the next event packet sets bit 1 (firmware event_task).
+    and the next event packet sets bit 1 (firmware event_task). ``ppg_delay``:
+    firmware FAKE_PPG_DELAY, the PPG reader latches 12 ms late every 10 s and
+    drains every sample there (V0.2 section 7.6).
     """
     rng = random.Random(seed)
     items = []
     for channels, period, batch, fs in SOURCES:
-        first, t = 0, 0
+        first, t, delay_at = 0, 0, 10_000_000
         while t < duration_us:
             t = (first + batch) * period  # the sample that crosses the threshold
             latency = rng.randint(20, 400)
+            if ppg_delay and channels == PPG and t + latency >= delay_at:
+                delay_at += 10_000_000
+                latency += 12_000
             count = batch + latency // period
             anchor = t + latency
             offset = ((count - 1) * 10**9 + fs // 2) // fs
@@ -308,3 +313,17 @@ def test_device_info_dropped_in_mcu_queue_is_counted():
     lost = [i for i in result["issues"] if i["code"] == "device_info_lost_before_send"]
     assert lost[0]["lost"] == 1 and lost[0]["ordinal"] == 3
     assert result["sessions"][0]["device_info"]["valid_packets"] == 5
+
+
+def test_late_ppg_reader_drains_more_than_eight():
+    # Every 10 s the reader latches 12 ms after the 8th sample: 2 more samples
+    # wait, and it reads all 10 (never a fixed 8, V0.2 section 7.6).
+    items = produced(55_000_000, ppg_delay=True)  # late at 10, 20, 30, 40, 50 s
+    counts = Counter(len(i["data"]) for i in items if i["channel_id"] == 0xF1)
+    assert counts[10] == 5 and set(counts) == {8, 10}
+    result, _, samples = analyze(stream(items))
+    assert result["issue_counts"] == {"skipped_bytes": 1}
+    ppg1 = result["sessions"][0]["channels"]["0xF1"]
+    assert not ppg1["gaps"] and not ppg1.get("packets_quarantined")
+    for _, key, _, _, index, value, _ in samples:
+        assert value == value_of(int(key, 16), index)

@@ -4,11 +4,12 @@
 > [Packet Schema V0.2](../configs/hardware/Packet_Schema_V0.2.md) từ 2026-10-24
 > (bước 2a của mục 9: encoder V0.2, packet thông tin thiết bị `0xD1`, chuyển tiếp
 > bit 5; bước 2b: IMU giả sáu trục, chia phần tồn đọng, neo lại sau FIFO đầy; bước
-> 2c: mốc `SAMP` của ECG với bit 8, xung lấy từ nguồn ECG giả). Build được
-> (2026-10-24) nhưng **chưa chạy trên bo** (chưa có phần cứng). Chưa có driver AFE
-> hay BMI270: mọi giá trị ECG/PPG/IMU và mọi xung `SAMP` là dữ liệu **giả**, chỉ để
-> kiểm đường packet MCU → USB → logger, không phải tín hiệu sinh lý. MCPWM capture
-> thật đã viết nhưng tắt và chưa chạy. Chưa có cách đọc FIFO PPG mới (bước 2d).
+> 2c: mốc `SAMP` của ECG với bit 8, xung lấy từ nguồn ECG giả; bước 2d: PPG thức
+> theo ngắt `PPG_RDY`, đọc hết FIFO khi có 8 mẫu). Build được (2026-10-24, RAM 4,9 %,
+> flash 20,4 % của phân vùng 1 MB) nhưng **chưa chạy trên bo** (chưa có phần cứng).
+> Chưa có driver AFE hay BMI270: mọi giá trị ECG/PPG/IMU và mọi xung `SAMP` là dữ
+> liệu **giả**, chỉ để kiểm đường packet MCU → USB → logger, không phải tín hiệu sinh
+> lý. MCPWM capture thật đã viết nhưng tắt và chưa chạy.
 
 - **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị, đọc
   IMU, đọc ECG có mốc `SAMP`), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet
@@ -66,6 +67,7 @@ Chạy từ Git root. Nếu `pio` chưa có trong PATH, dùng
 pio run -d firmware                                   # build
 pio run -d firmware -e esp32s3_devkitc_imu_stall      # build có dừng đọc IMU (mục "IMU giả")
 pio run -d firmware -e esp32s3_devkitc_samp_faults    # build có lỗi xung SAMP giả (mục "Mốc SAMP")
+pio run -d firmware -e esp32s3_devkitc_ppg_delay      # build có đọc PPG trễ (mục "Đọc PPG")
 pio run -d firmware -t upload --upload-port COM5      # nạp (COM5 là ví dụ)
 pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0
 ```
@@ -94,7 +96,7 @@ thái nháy nhanh. Known-answer V0.1 vẫn nằm trong fixture làm bản cũ.
 | `CHANNEL_ID` | Nguồn | `FS_NOMINAL_MHZ` | Chu kỳ thật | N mỗi packet | `DATA[i]` với `k = FIRST_SAMPLE_INDEX + i` |
 | --- | --- | ---: | --- | ---: | --- |
 | `0xE1` | ECG giả, giống MAX30001, kèm một xung `SAMP` mỗi mẫu | 512 000 | 1 953 µs (≈ 512,03 Hz, lệch +64 ppm so với danh định) | 16 | Word 24 bit: mẫu 18 bit bù hai `(k mod 2048) − 1024` ở bit 23…6, ETAG = PTAG = 0 |
-| `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe ở tốc độ V1 (200 sps) | 200 000 | 5 000 µs | 8 | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
+| `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe ở tốc độ V1 (200 sps), báo ngắt mỗi mẫu như `PPG_RDY` | 200 000 | 5 000 µs | 8 (nhiều hơn khi đọc trễ) | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
 | `0xA1`–`0xA6` | IMU giả, giống BMI270 cấu hình V1 (V0.2 mục 3): gia tốc X/Y/Z, con quay X/Y/Z | 100 000 | 10 000 µs; FIFO 170 frame, watermark 10 | 10 (tới 32 mỗi packet khi tồn đọng) | Int16 có dấu `((k · 257 + s · 8191) mod 65 536) − 32 768`, `s` = 0…5 theo trục; chạm cả hai biên −32 768 và 32 767 |
 | `0xC1` | Nút t0 | 0 | — | 1 | Mã sự kiện `1` |
 | `0xD1` | Thông tin thiết bị (V0.2 mục 6) | 0 | Một lần ngay sau khi driver USB khởi động, rồi mỗi 10 s | 25 | Layout 1, ELF SHA-256, `esp_app_desc_t.version`, `esp_app_desc_t.idf_ver` |
@@ -130,6 +132,23 @@ Env `esp32s3_devkitc_imu_stall` (cờ `FAKE_IMU_STALLS=1`) cố ý dừng đọc
 bit 5). Bản mặc định không dừng đọc. Lần đọc đầy tạo 36 packet liền (6 phần × 6 trục),
 vẫn dưới hàng đợi MCU 64 packet nhưng có thể đẩy packet ECG/PPG vào tràn hàng đợi nếu
 USB chậm; khi đó bit 1 báo như thường.
+
+## Đọc PPG (V0.2 bước 2d)
+
+`PPG_RDY` giữ chân INT ở mức thấp tới khi đọc `Interrupt Status 1` (0x00), và mẫu
+đến khi cờ chưa xóa không tạo cạnh mới, nên driver phải đọc 0x00 sau **mỗi** ngắt
+(spec mục 7.6; việc của driver MAX30101 thật, chưa viết: nguồn giả chỉ báo đúng một
+lần cho mỗi mẫu được lưu, không mô phỏng chân INT giữ mức thấp). Ngắt chỉ đánh thức
+task; số mẫu đang chờ lấy từ con trỏ FIFO (`fake_afe_waiting`), không từ số ngắt
+đã đếm, nên ngắt bị nuốt hay ngắt còn tồn sau một lần đọc trễ không làm lệch các lần
+đọc sau. Khi có 8 mẫu thì chốt con trỏ, lấy `T_ANCHOR_US` và đọc **hết** số mẫu có
+trong FIFO lúc chốt (thường 8, nhiều hơn nếu đọc trễ), không cố định 8.
+
+Nếu bring-up cho thấy `PPG_RDY` không chạy ở chế độ ba khe, đặt
+`BOARD_PPG_READ_PERIOD_MS` (trong `board_v1_module.h`, ví dụ 40) để đọc theo timer:
+vẫn đọc hết FIFO, nhưng mốc có thể muộn tới một chu kỳ PPG (5 ms) và cần hồi quy
+offline. Env `esp32s3_devkitc_ppg_delay` (cờ `FAKE_PPG_DELAY=1`) cứ mỗi 10 s cho task
+PPG chờ 12 ms trước khi chốt, nên lần đọc đó có khoảng 10 mẫu.
 
 ## Mốc `SAMP` của ECG (V0.2 bước 2c)
 
@@ -226,7 +245,8 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
    Bản mặc định: mọi packet ECG có bit 8, logger không báo gì về `SAMP`. Bản
    `esp32s3_devkitc_samp_faults`: mỗi lỗi giả cho khoảng 32 packet ECG không bit 8 rồi
    một lần neo lại (bit 5), không có `timestamp_anomaly` hay
-   `samp_resumed_without_reanchor`.
+   `samp_resumed_without_reanchor`. Bản `esp32s3_devkitc_ppg_delay`: mỗi 10 s một
+   packet PPG mỗi khe có khoảng 10 mẫu, logger không báo gì.
 5. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 
 ## Chưa có
@@ -234,6 +254,6 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
 - Driver MAX30001, MAX30101, BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và
   gọi `imu_index_read_failed` khi đọc lỗi).
 - Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
-  INT2B của MAX30001), PPG xóa ngắt mỗi mẫu và đọc hết FIFO (V0.2 bước 2d).
+  INT2B của MAX30001); kiểm `PPG_RDY` ở chế độ ba khe của MAX30101 thật.
 - Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.
 - Lệnh từ PC (bắt đầu/dừng, đổi cấu hình).

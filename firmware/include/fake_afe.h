@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "esp_err.h"
@@ -26,6 +27,7 @@ typedef struct {
     uint32_t fs_nominal_mhz;
     uint32_t period_us; /* real period of the fake source */
     uint16_t batch;     /* notify the reader once this many samples wait */
+    bool notify_each;   /* notify on every stored sample instead (PPG_RDY) */
     uint16_t depth;     /* FIFO capacity in samples, batch .. FAKE_AFE_MAX_DEPTH */
     /* Optional, from the esp_timer task for every converted sample (stored or
      * lost): its index since the (re)start and its alarm time, the ideal time
@@ -55,6 +57,9 @@ void fake_afe_stop(fake_afe_t *afe);
 /* Start again with an empty FIFO and the index at 0, as SYNCH restarts the
  * conversions; the time goes on. */
 esp_err_t fake_afe_resume(fake_afe_t *afe);
+
+/* Samples waiting in the FIFO now, like reading the FIFO pointers. */
+uint16_t fake_afe_waiting(fake_afe_t *afe);
 
 /* Latch the waiting samples and take the anchor time. */
 fake_afe_batch_t fake_afe_latch(fake_afe_t *afe);

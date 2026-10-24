@@ -2,9 +2,10 @@
 
 > **Duyệt 2026-10-24. Đã triển khai bước 1 (codec, receiver, logger, simulator; mục 9),
 > kể cả sửa đổi cùng ngày về mốc `SAMP` cho ECG và bit 8 (mục 7). Firmware: xong bước
-> 2a (encoder V0.2, `0xD1`, chuyển bit 5), 2b (IMU giả, chia phần, neo lại) và 2c
-> (ánh xạ `SAMP`, bit 8, với xung từ nguồn ECG giả; MCPWM capture thật chỉ mới build);
-> cách đọc PPG mới chưa làm. Chưa kiểm chứng trên thiết bị.**
+> 2a (encoder V0.2, `0xD1`, chuyển bit 5), 2b (IMU giả, chia phần, neo lại), 2c
+> (ánh xạ `SAMP`, bit 8, với xung từ nguồn ECG giả; MCPWM capture thật chỉ mới build)
+> và 2d (PPG đọc theo `PPG_RDY` và con trỏ FIFO, đọc hết FIFO). Chưa kiểm chứng trên
+> thiết bị.**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -330,10 +331,13 @@ trên chip thật ở bring-up.
 
 - `PPG_RDY` giữ chân INT ở mức thấp tới khi đọc `Interrupt Status 1` (0x00) hoặc
   `FIFO_DATA`; mẫu mới đến khi cờ chưa xóa thì không tạo cạnh mới. Firmware đọc 0x00
-  sau **mỗi** ngắt để xóa và đếm; tới mẫu thứ 8 thì chốt con trỏ FIFO và đọc **hết**
-  số mẫu có trong FIFO lúc chốt (thường 8; nhiều hơn nếu xử lý trễ), không cố định 8:
-  đọc 8 khi FIFO có 9 làm mốc lệch khoảng 5 ms. `N` của packet PPG là số mẫu đọc
-  được (tối đa 32).
+  sau **mỗi** ngắt để xóa cờ, rồi đọc con trỏ FIFO để biết số mẫu đang chờ; khi có 8
+  mẫu thì chốt con trỏ và đọc **hết** số mẫu có trong FIFO lúc chốt (thường 8; nhiều
+  hơn nếu xử lý trễ), không cố định 8: đọc 8 khi FIFO có 9 làm mốc lệch khoảng 5 ms.
+  `N` của packet PPG là số mẫu đọc được (tối đa 32). Ngắt chỉ để đánh thức, không
+  đếm ngắt để quyết định lúc đọc (sửa 2026-10-24 khi review bước 2d): ngắt bị nuốt,
+  hoặc ngắt của mẫu đến trong lúc đọc trễ còn tồn lại, sẽ làm số đếm lệch mãi so với
+  FIFO (ví dụ sau một lần trễ 12 ms, mọi packet sau chỉ còn 6 mẫu).
 - Datasheet chỉ mô tả `PPG_RDY` cho chế độ SpO2 và HR. Ở chế độ ba khe phải kiểm khi
   bring-up; không chạy thì đọc theo timer định kỳ (ví dụ 40 ms), vẫn đọc hết FIFO, và
   mốc có thể lệch tới một chu kỳ PPG (5 ms), dựa vào hồi quy offline.
@@ -411,8 +415,11 @@ sau.
      bộ đếm in UART0; nguồn ECG giả phát xung (env `esp32s3_devkitc_samp_faults` cố ý
      bỏ và thêm xung). MCPWM capture thật và cặp đọc kẹp viết sẵn trong
      `samp_capture.c` (bật bằng `BOARD_SAMP_CAPTURE=1`), mới build, chưa chạy.
-   - **2d (mục 7.6):** PPG xóa ngắt mỗi mẫu và đọc hết FIFO (nguồn giả có chế độ trễ
-     để `N` lớn hơn 8).
+   - **2d (làm 2026-10-24, mục 7.6):** PPG xóa ngắt mỗi mẫu và đọc hết FIFO (nguồn
+     giả báo ngắt mỗi mẫu; env `esp32s3_devkitc_ppg_delay` trễ 12 ms mỗi 10 s để `N`
+     lớn hơn 8); lúc đọc do số mẫu trong FIFO quyết định, ngắt chỉ để đánh thức; chế
+     độ đọc theo timer `BOARD_PPG_READ_PERIOD_MS` dành cho trường hợp `PPG_RDY` không
+     chạy. Việc đọc 0x00 để nhả chân INT thuộc driver MAX30101 thật (chưa viết).
 3. **Tích hợp record/replay:** manifest theo phiên và `device_info`, nhiều lần khởi
    động lại, hash output xác định.
 4. **Sau khi có bo:** driver BMI270 thật (nạp microcode, cấu hình mục 3), đo `L` và

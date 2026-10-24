@@ -40,8 +40,9 @@ static void on_sample(void *arg)
     if (afe->fill < afe->cfg.depth) {
         afe->fill++;
         /* Notify once, when the threshold is crossed: a later notification
-         * could wake the reader right after a latch and yield a tiny batch. */
-        notify = afe->fill == afe->cfg.batch;
+         * could wake the reader right after a latch and yield a tiny batch.
+         * Or on every sample, like the MAX3010x PPG_RDY interrupt. */
+        notify = afe->cfg.notify_each || afe->fill == afe->cfg.batch;
     } else {
         afe->lost++;
     }
@@ -135,6 +136,14 @@ void fake_afe_stop(fake_afe_t *afe)
 esp_err_t fake_afe_resume(fake_afe_t *afe)
 {
     return start_timer(afe);
+}
+
+uint16_t fake_afe_waiting(fake_afe_t *afe)
+{
+    portENTER_CRITICAL(&afe->lock);
+    uint16_t fill = afe->fill;
+    portEXIT_CRITICAL(&afe->lock);
+    return fill;
 }
 
 fake_afe_batch_t fake_afe_latch(fake_afe_t *afe)

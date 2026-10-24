@@ -70,6 +70,7 @@ static const fake_afe_config_t PPG_FAKE = {
     .fs_nominal_mhz = 200000,
     .period_us = 5000,
     .batch = 8,
+    .notify_each = true, /* PPG_RDY */
     .depth = 32,
 };
 static const fake_afe_config_t IMU_FAKE = {
@@ -117,6 +118,17 @@ static const fake_afe_config_t IMU_FAKE = {
 #define FAKE_SAMP_FAULTS 0
 #endif
 #define SAMP_FAULT_PERIOD_US 20000000LL
+
+/*
+ * FAKE_PPG_DELAY=1 (PlatformIO env esp32s3_devkitc_ppg_delay): every 10 s the
+ * PPG reader waits 12 ms before it latches, so the drain finds about 10
+ * samples instead of 8 (V0.2 section 7.6, section 9 step 2d).
+ */
+#ifndef FAKE_PPG_DELAY
+#define FAKE_PPG_DELAY 0
+#endif
+#define PPG_DELAY_PERIOD_US 10000000LL
+#define PPG_DELAY_MS 12
 
 enum {
     CH_ECG, CH_PPG1, CH_PPG2, CH_PPG3, CH_PPG4, CH_EVENT, CH_DEVICE_INFO,
@@ -217,13 +229,40 @@ static void tx_task(void *arg)
     }
 }
 
-static void afe_reader_task(void *arg)
+/*
+ * PPG reads (V0.2 section 7.6). PPG_RDY holds INT low until Interrupt Status 1
+ * (0x00) is read, and a sample that comes while the flag is set makes no new
+ * edge, so the driver clears it after every interrupt (the MAX30101 driver's
+ * job; the fake source just notifies once per stored sample). Each interrupt
+ * only wakes the reader: the FIFO pointers, not a count of interrupts, say
+ * how many samples wait, so a swallowed interrupt or one left over from a
+ * late drain cannot shift later reads. At 8 waiting samples it latches the
+ * pointers, takes T_ANCHOR_US and reads every sample there (usually 8, more if
+ * it was late), never a fixed 8. BOARD_PPG_READ_PERIOD_MS > 0 reads on a timer
+ * instead (if PPG_RDY does not work in the three-slot mode); the anchor may then
+ * be late by up to one PPG period.
+ */
+static void ppg_reader_task(void *arg)
 {
-    const fake_afe_config_t *cfg = arg;
+    const fake_afe_config_t *cfg = &PPG_FAKE;
     fake_afe_t *afe;
     ESP_ERROR_CHECK(fake_afe_start(cfg, xTaskGetCurrentTaskHandle(), &afe));
+    int64_t delay_at = PPG_DELAY_PERIOD_US;
+    TickType_t wake = xTaskGetTickCount();
     for (;;) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        if (BOARD_PPG_READ_PERIOD_MS > 0) {
+            vTaskDelayUntil(&wake, pdMS_TO_TICKS(BOARD_PPG_READ_PERIOD_MS));
+            ulTaskNotifyTake(pdTRUE, 0); /* the interrupts are not used */
+        } else {
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            if (fake_afe_waiting(afe) < cfg->batch) {
+                continue;
+            }
+        }
+        if (FAKE_PPG_DELAY && esp_timer_get_time() >= delay_at) {
+            delay_at += PPG_DELAY_PERIOD_US;
+            vTaskDelay(pdMS_TO_TICKS(PPG_DELAY_MS));
+        }
         fake_afe_batch_t b = fake_afe_latch(afe);
         if (b.count == 0) {
             continue; /* SAMPLE_COUNT = 0 is never sent */
@@ -599,7 +638,7 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_isr_handler_add(BOARD_T0_GPIO, t0_isr, NULL));
 
     if (xTaskCreate(ecg_reader_task, "ecg_reader", 4096, NULL, 6, NULL) != pdPASS
-        || xTaskCreate(afe_reader_task, "ppg_reader", 4096, (void *)&PPG_FAKE, 6, NULL) != pdPASS
+        || xTaskCreate(ppg_reader_task, "ppg_reader", 4096, NULL, 6, NULL) != pdPASS
         || xTaskCreate(imu_reader_task, "imu_reader", 4096, NULL, 6, NULL) != pdPASS) {
         ESP_LOGE(TAG, "cannot create reader tasks");
         abort();
@@ -609,6 +648,9 @@ void app_main(void)
              (unsigned)ECG_FAKE.period_us, (unsigned)ECG_FAKE.batch, (unsigned)PPG_FAKE.period_us,
              (unsigned)PPG_FAKE.batch, (unsigned)IMU_FAKE.period_us, (unsigned)IMU_FAKE.batch,
              FAKE_IMU_STALLS ? " with read stalls" : "", BOARD_T0_GPIO);
+    if (BOARD_PPG_READ_PERIOD_MS > 0) {
+        ESP_LOGW(TAG, "PPG read every %d ms (timer), not on PPG_RDY", BOARD_PPG_READ_PERIOD_MS);
+    }
 
     int level = 0;
     for (int64_t next_stats = esp_timer_get_time() + STATS_PERIOD_MS * 1000LL;;) {
