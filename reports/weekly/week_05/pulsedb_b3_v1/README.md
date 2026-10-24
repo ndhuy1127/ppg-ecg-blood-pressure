@@ -53,3 +53,23 @@ hơn B0**. Đơn vị mmHg; sai số = dự đoán − tham chiếu.
   của train (116,1); 40 người val là một mẫu nhỏ.
 - Chưa tuning siêu tham số và chưa chọn model. Theo quyết định B3/B4 (2026-10-25),
   B3 giữ đơn giản để đóng baseline G1; PAT/HR/SQI để cho B4.
+
+## Bối cảnh từ tài liệu (đọc ngày 2026-10-25)
+
+Bài báo PulseDB ([PMC9944565](https://pmc.ncbi.nlm.nih.gov/articles/PMC9944565/),
+mục 3.3) **không công bố số** cho ResNet-18 1D của họ trên CalFree; chỉ có đường cong
+ở Hình 5. Bài báo ghi rằng tập CalFree có dấu hiệu quá khớp ngay trong 20 epoch
+đầu, và lúc đầu mô hình dự đoán mọi giá trị bằng BP trung bình của train. Bảng 5
+của bài tóm tắt bốn nghiên cứu khác, ở chế độ không hiệu chuẩn:
+
+| Nghiên cứu (số tham chiếu trong bài PulseDB) | SBP: r / MAE (mmHg) | DBP: r / MAE (mmHg) |
+| --- | --- | --- |
+| [9] RNN, PPG | 0,44 / 14,39 | 0,44 / 6,57 |
+| [10] CNN, PPG + ECG | 0,22 / 12,49 | 0,31 / 8,03 |
+| [20] CNN, PPG + ECG | — / 9,30 | — / 5,12 |
+| [12] CNN + RNN, PPG | — / 15,41 | — / 12,38 |
+
+Bài kết luận rằng các mô hình này tổng quát hóa kém sang người chưa thấy. B3 ở đây
+(SBP r 0,24, MAE 14,6; DBP r 0,23, MAE 10,1 trên val) nằm trong khoảng đó. Tuy vậy
+**không so sánh trực tiếp được**: khác dataset, cách chia, nhãn và cách chọn đoạn.
+Các số trên là nguồn thứ cấp (bảng tóm tắt của PulseDB), chưa đối chiếu với bài gốc.
