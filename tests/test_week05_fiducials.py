@@ -16,7 +16,7 @@ from scripts.demo_week04_huy import fixture
 from scripts.build_pulsedb_split import run as build_split
 from scripts.week05_fiducials import (
     SYNTHETIC_CASES, clicks_to_rows, detection_rows, export_record_id, load_records,
-    main, run_annotate, run_compare, run_export, select_review_rows, synthetic_record,
+    main, run_annotate, run_compare, run_export, select_review_plan, synthetic_record,
     t_apex_s,
 )
 from software.evaluation.fiducial_agreement import (
@@ -73,11 +73,26 @@ def test_config_matches_documented_values():
     assert CONFIG["status"] == "NOT_TEST_TUNED"
     assert CONFIG["pat_validity"] == {"min_ms": 80.0, "max_ms": 400.0, "mad_k": 3.0,
                                       "mad_floor_ms": 10.0, "min_pairs": 3}
-    assert TOLERANCE == {"ecg_r": 0.05, "ppg_foot": 0.1}
     assert (BASE.r_method, BASE.foot_method) == ("prominence", "tangent")
     assert (BASE.pat_min_s, BASE.pat_max_s) == (0.08, 0.4)
     # Decided 2026-10-25 (docs section 8).
-    assert CONFIG["version"] == "fiducials-week05-v1"
+    assert CONFIG["version"] == "fiducials-week05-v2"
+    # Decided 2026-10-25 before any PulseDB marking (docs section 9).
+    assert TOLERANCE == {"ecg_r": 0.024, "ppg_foot": 0.048}
+    plan = CONFIG["review_plan"]
+    assert (plan["split"], plan["n_subjects"], plan["per_subject"],
+            plan["selection_subjects"], plan["repeat_segments"]) == (
+        "train", 40, 2, 20, 16)
+    acceptance = CONFIG["acceptance"]
+    assert acceptance["limits"] == {
+        "ecg_r": {"min_sensitivity": 0.99, "min_ppv": 0.99, "max_abs_bias_ms": 4.0,
+                  "max_mae_ms": 8.0, "max_sd_ms": 8.0},
+        "ppg_foot": {"min_sensitivity": 0.98, "min_ppv": 0.98, "max_abs_bias_ms": 8.0,
+                     "max_mae_ms": 16.0, "max_sd_ms": 16.0}}
+    assert acceptance["segment_floor"] == {"min_sensitivity": 0.9, "min_ppv": 0.9,
+                                           "min_fraction_of_segments": 0.95}
+    assert acceptance["repeatability_max_mae_ms"] == {"ecg_r": 8.0, "ppg_foot": 16.0}
+    assert acceptance["repeat_min_days"] == 2
     assert (BASE.refractory_s, BASE.ppg_refractory_s) == (0.25, 0.35)
     assert BASE.foot_interpolation is False
     assert BASE.r_energy_threshold == "quantile"
@@ -496,18 +511,42 @@ def test_agreement_refuses_synthetic_truth_however_written(name):
         agreement(mixed, detections, TOLERANCE, allow_synthetic_truth=True)
 
 
-def test_select_review_rows_never_test_and_ignores_bp():
+def _plan(**override):
+    return {**CONFIG["review_plan"], "n_subjects": 6, "per_subject": 2,
+            "selection_subjects": 3, "repeat_segments": 2, "seed": 1, **override}
+
+
+def test_review_plan_uses_train_only_halves_and_ignores_bp():
+    split = {**{f"S{i}": "train" for i in range(8)}, "S8": "val", "S9": "val",
+             "S10": "test", "S11": "test"}
+    subjects = [f"S{i % 12}" for i in range(120)]
     manifest = pd.DataFrame({
-        "subject_id": [f"S{i % 6}" for i in range(30)],
-        "split": ["train", "val", "test"] * 10,
-        "raw_index": range(30), "sbp": np.arange(30.0),
-        "sample_id": [f"x:{i}" for i in range(30)],
+        "subject_id": subjects, "split": [split[s] for s in subjects],
+        "raw_index": range(120), "sbp": np.arange(120.0),
+        "sample_id": [f"x:{i}" for i in range(120)],
     })
-    picked = select_review_rows(manifest, 3, 2, seed=1)
-    assert set(picked.split) <= {"train", "val"} and len(picked) <= 6
+    plan = select_review_plan(manifest, _plan())
+    groups = plan["groups"]
+    assert len(groups["selection"]) == 3 and len(groups["confirmation"]) == 3
+    assert not set(groups["selection"]) & set(groups["confirmation"])
+    assert set(groups["selection"]) | set(groups["confirmation"]) <= {
+        f"S{i}" for i in range(8)}
+    subject_of = dict(zip(manifest.raw_index, manifest.subject_id))
+    for subject in groups["selection"] + groups["confirmation"]:
+        rows = sorted(manifest.raw_index[manifest.subject_id == subject])
+        picks = sorted(i for i in plan["main"] if subject_of[i] == subject)
+        # One segment from each half of the subject's sorted rows.
+        assert picks[0] in rows[:5] and picks[1] in rows[5:]
+    assert len(plan["main"]) == 12 and set(plan["repeat"]) <= set(plan["main"])
+    assert sorted(subject_of[i] in groups["selection"] for i in plan["repeat"]) == [
+        False, True]
     shuffled = manifest.assign(sbp=np.random.default_rng(0).permutation(manifest.sbp))
-    assert (picked.raw_index.tolist()
-            == select_review_rows(shuffled, 3, 2, seed=1).raw_index.tolist())
+    assert select_review_plan(shuffled, _plan()) == plan
+    assert select_review_plan(manifest, _plan(seed=2)) != plan
+    for bad in ({"split": "val"}, {"repeat_segments": 3}, {"n_subjects": 9},
+                {"selection_subjects": 6}, {"repeat_segments": 8}):
+        with pytest.raises(ValueError):
+            select_review_plan(manifest, _plan(**bad))
 
 
 def test_clicks_to_rows_keeps_empty_reviewed_region():
@@ -765,13 +804,26 @@ def test_export_reads_a_subsampled_split_and_writes_only_train_val(tmp_path, mon
         raise AssertionError("export must not load the whole file with mat73")
 
     monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat", whole_file)
-    out = run_export(raw, tmp_path / "split", 125, 3, 2, 7, tmp_path / "export")
-    records = pd.read_csv(out / "records.csv", dtype=str)
-    assert len(records) == 6 and set(records.split) <= {"train", "val"}
+    config = tmp_path / "w5.json"
+    config.write_text(json.dumps({**CONFIG, "review_plan": _plan(seed=7)}),
+                      encoding="utf-8")
+    out = run_export(raw, tmp_path / "split", 125, config, tmp_path / "export")
+    info = json.loads((out / "export.json").read_text(encoding="utf-8"))
+    main_records = pd.read_csv(out / "main" / "records.csv", dtype=str)
+    repeat_records = pd.read_csv(out / "repeat" / "records.csv", dtype=str)
+    assert len(main_records) == 12 and set(main_records.split) == {"train"}
+    assert len(repeat_records) == 2
+    assert set(repeat_records.record_id) <= set(main_records.record_id)
+    assert set(main_records.subject_id) == set(
+        info["groups"]["selection"] + info["groups"]["confirmation"])
+    for name in ("main", "repeat"):
+        assert info["records_csv_sha256"][name] == hashlib.sha256(
+            (out / name / "records.csv").read_bytes()).hexdigest()
     pool = synthetic_rows(n_subjects=30, per_subject=3)
-    for record in records.itertuples():
-        row = pool[int(record.origin.rsplit(":", 1)[1])]
-        saved = np.load(out / record.file)
-        assert np.array_equal(saved["ecg"], row.ecg)
-        assert np.array_equal(saved["ppg"], row.ppg)
-        assert record.subject_id == row.subject_id
+    for name, records in (("main", main_records), ("repeat", repeat_records)):
+        for record in records.itertuples():
+            row = pool[int(record.origin.rsplit(":", 1)[1])]
+            saved = np.load(out / name / record.file)
+            assert np.array_equal(saved["ecg"], row.ecg)
+            assert np.array_equal(saved["ppg"], row.ppg)
+            assert record.subject_id == row.subject_id

@@ -1,5 +1,5 @@
 {
-  "version": "fiducials-week05-v1",
+  "version": "fiducials-week05-v2",
   "status": "NOT_TEST_TUNED",
   "note": "Engineering proposals for comparing candidate methods on SYNTHETIC and train/val only. Not chosen on test or BP. features-sqi-v1 output is unchanged.",
   "signal": {
@@ -36,7 +36,32 @@
     "min_pairs": 3
   },
   "agreement": {
-    "tolerance_s": {"ecg_r": 0.05, "ppg_foot": 0.1}
+    "tolerance_s": {"ecg_r": 0.024, "ppg_foot": 0.048}
+  },
+  "review_plan": {
+    "split": "train",
+    "n_subjects": 40,
+    "per_subject": 2,
+    "selection_subjects": 20,
+    "seed": 20261025,
+    "repeat_segments": 16,
+    "foot_definition": "local minimum just before the systolic upstroke",
+    "r_definition": "apex of the R wave"
+  },
+  "acceptance": {
+    "version": "fiducial-acceptance-v1",
+    "limits": {
+      "ecg_r": {"min_sensitivity": 0.99, "min_ppv": 0.99, "max_abs_bias_ms": 4.0, "max_mae_ms": 8.0, "max_sd_ms": 8.0},
+      "ppg_foot": {"min_sensitivity": 0.98, "min_ppv": 0.98, "max_abs_bias_ms": 8.0, "max_mae_ms": 16.0, "max_sd_ms": 16.0}
+    },
+    "segment_floor": {"min_sensitivity": 0.9, "min_ppv": 0.9, "min_fraction_of_segments": 0.95},
+    "tie_order": {
+      "ecg_r": ["prominence", "derivative_energy"],
+      "ppg_foot": ["valley_min", "tangent", "d2_max"]
+    },
+    "repeatability_max_mae_ms": {"ecg_r": 8.0, "ppg_foot": 16.0},
+    "repeat_min_days": 2,
+    "bootstrap": {"seed": 20261025, "repetitions": 2000, "confidence": 0.95}
   },
   "sources": {
     "refractory_s": "0.25 s for ECG R peaks (week04 used 0.4 s, which at ECG 512 Hz drops R peaks when RR is 0.4 s, HR 150 bpm); engineering choice, no source.",
@@ -46,7 +71,9 @@
     "pat_validity.min_ms/max_ms": "Same 80-400 ms window as features-sqi-v1 pairing, but in pat_beats it is a label, not a pairing gate (pair_between_r pairs within the R-R interval, then out-of-range beats are labelled). No source for these bounds (chua co nguon). Context only: Mukkamala 2015 (10.1109/TBME.2015.2441951, docs/literature/week_01_literature_matrix.md #1) reports finger PAT at rest about 180-260 ms; wrist PAT is not given there.",
     "pat_validity.mad_k": "MAD outlier rule: Leys et al. 2013 (10.1016/j.jesp.2013.03.013), metadata verified, full text not read; k = 3 is an engineering choice (chua co nguon for the value).",
     "pat_validity.mad_floor_ms": "Absolute floor so that a near-constant PAT does not turn sample quantization (8 ms at 125 Hz) into outliers; found by a SYNTHETIC test on 2026-10-21; engineering choice, no source.",
-    "agreement.tolerance_s": "Matching windows for manual-vs-automatic comparison; no source (chua co nguon). Report results at the chosen tolerance only, decided before marking.",
+    "agreement.tolerance_s": "Matching windows for manual-vs-automatic comparison: 24 ms for R and 48 ms for the foot (3 and 6 samples at 125 Hz), decided by Huy 2026-10-25 before marking; v1 used 50/100 ms, which let an S wave 30 ms late count as an R. No source (chua co nguon).",
+    "review_plan": "Decided by Huy 2026-10-25 before marking: 40 train subjects x 2 segments (val never used to select fiducial methods), 20 subjects for selection and 20 for a one-time confirmation, one random segment from each half of the subject's sorted raw_index, 16 segments (8 per group, one per subject) marked again at least 2 days later. Foot = local minimum just before the systolic upstroke. Engineering choices, no source.",
+    "acceptance": "Gates decided by Huy 2026-10-25 before marking, from Codex's proposal; engineering choices, no source (chua co nguon). Point estimates decide: subject-averaged sensitivity/PPV/MAE, pooled bias/SD; at least 95% of segments with sensitivity and PPV >= 0.9. Lowest subject-averaged MAE among passing methods wins on the selection group; the winner is confirmed once on the other group; no B4 if it fails.",
     "r_energy_window_s": "Moving-average width for the derivative-energy envelope; engineering choice, no source."
   }
 }

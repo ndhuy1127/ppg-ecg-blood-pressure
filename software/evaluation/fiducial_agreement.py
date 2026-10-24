@@ -14,13 +14,15 @@ outside the region may still match a mark near the edge, but an unmatched one
 there is not a false positive, so methods with a timing bias are not penalised
 at the region edges. Splits other than train/val are rejected: test is never
 opened for method selection. Beats of one record are not independent;
-per-record rows are returned alongside the pooled summary.
+per-record rows are returned alongside the pooled summary, each with its
+matched errors (``errors_ms``) so subject-level gates can pool them.
 """
 
 import numpy as np
 import pandas as pd
 
-VERSION = "fiducial-agreement-v0"
+# v1 (2026-10-25): per-record rows carry their matched errors, errors_ms.
+VERSION = "fiducial-agreement-v1"
 FIDUCIALS = ("ecg_r", "ppg_foot")
 ALLOWED_SPLITS = ("train", "val")
 ANNOTATION_COLUMNS = (
@@ -190,7 +192,8 @@ def agreement(annotations, detections, tolerance_s, allow_synthetic_truth=False)
             n_det = len(matched) + fp
             row = {"record_id": record, "split": split, "fiducial": fiducial,
                    "method": method,
-                   **_summary(errors, len(marks), n_det, len(matched))}
+                   **_summary(errors, len(marks), n_det, len(matched)),
+                   "errors_ms": (errors * 1000).tolist()}
             per_record.append(row)
             total = pooled.setdefault((fiducial, method), {
                 "errors": [], "n_ref": 0, "n_det": 0, "records": 0})

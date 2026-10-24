@@ -4,11 +4,14 @@ agreement.
 Subcommands (each refuses to overwrite its output and writes provenance):
 
   synth     SYNTHETIC records with known R/foot times (code check only)
-  export    small train/val subset of a raw PulseDB file + split v2 (never test)
+  export    review segments of a raw PulseDB file + split v2 (train only, by the
+            config's review_plan): main/ for marking, repeat/ for a second session
   plot      PNG per record for manual review; detections hidden by default
   annotate  interactive window: Huy clicks R (ECG axis) and foot (PPG axis)
   detect    run every candidate R/foot method; CSV with one row per fiducial
   compare   sensitivity/PPV/bias/MAE of each method against manual marks
+  repeat    annotator repeatability: second vs first marking of repeat/ segments
+  gate      pre-registered acceptance: select on one subject group, confirm once
 
 Manual marks are made by a person with ``annotate``. This script never
 generates them; the SYNTHETIC truth file is labelled as such and ``compare``
@@ -37,11 +40,16 @@ from software.evaluation.fiducial_agreement import (  # noqa: E402
     ANNOTATION_COLUMNS, DETECTION_COLUMNS, SYNTHETIC_ANNOTATOR, agreement,
     is_synthetic_annotator,
 )
+from software.evaluation.fiducial_gate import (  # noqa: E402
+    GROUPS, check_acceptance, gate, repeatability,
+)
 from software.signal_processing.fiducials import (  # noqa: E402
     FOOT_METHODS, R_METHODS, Channel, SignalConfig, detect,
 )
 
-SCRIPT_VERSION = "week05-fiducials-v2"
+# v3 (2026-10-25): export follows review_plan (train only, two subject groups,
+# repeat segments); new repeat and gate commands.
+SCRIPT_VERSION = "week05-fiducials-v3"
 # v1 (2026-10-25): T apex at 0.28 * sqrt(RR) s after R instead of a fixed 0.25 s,
 # which sat on the 0.25 s refractory boundary; SYN_T_EDGE_HR60 keeps the old
 # position as a boundary case. v0 results stay as history.
@@ -50,7 +58,8 @@ RECORD_COLUMNS = ("record_id", "subject_id", "split", "source_type", "origin",
                   "ecg_fs_hz", "ppg_fs_hz", "file", "file_sha256")
 CODE_FILES = ("scripts/week05_fiducials.py", "software/signal_processing/fiducials.py",
               "software/signal_processing/pat_validity.py",
-              "software/evaluation/fiducial_agreement.py", "software/_provenance.py",
+              "software/evaluation/fiducial_agreement.py",
+              "software/evaluation/fiducial_gate.py", "software/_provenance.py",
               # Used by export to read raw PulseDB and check the split handover.
               "software/pulsedb/reader.py", "software/pulsedb/h5_reader.py",
               "software/data_io/split_manifest.py", "software/pulsedb/pipeline.py")
@@ -233,30 +242,100 @@ def export_record_id(raw_sha256, split, raw_index):
     return f"PDB_{raw_sha256[:12]}_{split}_{raw_index}"
 
 
-def select_review_rows(manifest, n_subjects, per_subject, seed):
-    """Pick subjects of train/val by a seeded permutation, then their first rows.
+PLAN_FIELDS = {"split", "n_subjects", "per_subject", "selection_subjects", "seed",
+               "repeat_segments", "foot_definition", "r_definition"}
 
-    Uses only subject_id, split and raw_index: no BP column, no signal value.
-    Test rows are dropped before the selection.
+
+def _check_plan(plan):
+    if set(plan) != PLAN_FIELDS:
+        raise ValueError(f"review_plan needs exactly {sorted(PLAN_FIELDS)}")
+    numbers = ("n_subjects", "per_subject", "selection_subjects", "seed",
+               "repeat_segments")
+    if any(isinstance(plan[k], bool) or not isinstance(plan[k], int) for k in numbers):
+        raise ValueError("review_plan counts and seed must be integers")
+    if plan["split"] != "train":
+        raise ValueError("Fiducial methods are selected on train subjects only")
+    if not 1 <= plan["selection_subjects"] < plan["n_subjects"]:
+        raise ValueError("Both subject groups must be nonempty")
+    smallest = min(plan["selection_subjects"],
+                   plan["n_subjects"] - plan["selection_subjects"])
+    if plan["per_subject"] < 1 or plan["repeat_segments"] % 2 or not (
+            0 <= plan["repeat_segments"] // 2 <= smallest):
+        raise ValueError("per_subject >= 1; repeat_segments even, one per subject "
+                         "and at most the smaller group per group")
+
+
+def select_review_plan(manifest, plan):
+    """Subjects, groups, segments and repeat subset for manual review.
+
+    Uses only subject_id, split and raw_index of the plan's split (train): no
+    BP column and no signal value; val and test rows are never candidates.
+    Subjects come from a seeded permutation (the first ``selection_subjects``
+    form the selection group); each subject's sorted raw_index is cut into
+    ``per_subject`` parts and one row is drawn from each part (raw_index is a
+    file row, not time). ``repeat_segments`` segments, half per group and one
+    per subject, are marked again later. Both lists are in a shuffled order.
+    Returns {"groups": {group: subjects}, "main": [raw_index], "repeat": [...]}.
     """
-    rows = manifest[manifest.split.isin(["train", "val"])]
+    _check_plan(plan)
+    rng = np.random.default_rng(plan["seed"])
+    rows = manifest[manifest.split == plan["split"]]
     subjects = sorted(rows.subject_id.unique())
-    order = np.random.default_rng(seed).permutation(len(subjects))
-    chosen = [subjects[i] for i in order[:n_subjects]]
-    picked = (rows[rows.subject_id.isin(chosen)].sort_values("raw_index")
-              .groupby("subject_id", sort=True).head(per_subject))
-    return picked.sort_values("raw_index")
+    if plan["n_subjects"] > len(subjects):
+        raise ValueError("review_plan asks for more subjects than the split has")
+    chosen = [subjects[i] for i in rng.permutation(len(subjects))[:plan["n_subjects"]]]
+    k = plan["selection_subjects"]
+    groups = {"selection": sorted(chosen[:k]), "confirmation": sorted(chosen[k:])}
+    picks = {}
+    for subject in chosen:
+        indices = np.sort(rows.raw_index[rows.subject_id == subject].to_numpy())
+        parts = np.array_split(indices, plan["per_subject"])
+        if any(len(part) == 0 for part in parts):
+            raise ValueError("A subject has fewer segments than per_subject")
+        picks[subject] = [int(part[rng.integers(len(part))]) for part in parts]
+    repeat = []
+    for name in GROUPS:
+        members = rng.choice(groups[name], plan["repeat_segments"] // 2,
+                             replace=False)
+        repeat += [picks[s][rng.integers(len(picks[s]))] for s in sorted(members)]
+    main = sorted(i for indices in picks.values() for i in indices)
+    return {"groups": groups,
+            "main": [int(i) for i in rng.permutation(main)],
+            "repeat": [int(i) for i in rng.permutation(sorted(repeat))]}
 
 
-def run_export(raw, split_dir, fs_hz, n_subjects, per_subject, seed, out):
+def _write_records(directory, rows, raw_sha256, fs_hz, segments):
+    directory = _new_dir(directory)
+    records = []
+    for row in rows:
+        segment = segments[int(row.raw_index)]
+        record_id = export_record_id(raw_sha256, row.split, int(row.raw_index))
+        path = directory / f"{record_id}.npz"
+        # Only ECG and PPG are exported; ABP and labels stay in the raw file.
+        np.savez(path, ecg=np.asarray(segment.ecg, float),
+                 ppg=np.asarray(segment.ppg, float))
+        records.append({"record_id": record_id, "subject_id": row.subject_id,
+                        "split": row.split, "source_type": "PUBLIC_PULSEDB",
+                        "origin": row.sample_id, "ecg_fs_hz": fs_hz,
+                        "ppg_fs_hz": fs_hz, "file": path.name,
+                        "file_sha256": _sha256(path)})
+    _write_csv(directory / "records.csv", RECORD_COLUMNS, records)
+    return _sha256(directory / "records.csv")
+
+
+def run_export(raw, split_dir, fs_hz, config_path, out):
     """Every inventory row (test included) is read block by block with the h5py
-    reader and re-hashed against the inventory, as in b3-pipeline-v1; only
-    selected train/val rows are written, ECG/PPG only."""
+    reader and re-hashed against the inventory, as in b3-pipeline-v1; only the
+    review_plan's train rows are written, ECG/PPG only, to ``out/main`` (first
+    marking session) and ``out/repeat`` (second session). ``out/export.json``
+    keeps the subject groups and both records.csv hashes."""
     from software.data_io.split_manifest import file_sha256, read_manifest_bytes
     from software.pulsedb.h5_reader import PulseDBH5Reader
     from software.pulsedb.pipeline import verify_inputs
 
     _refuse_existing(out)
+    config_bytes = Path(config_path).read_bytes()
+    plan = json.loads(config_bytes)["review_plan"]
     split_dir = Path(split_dir)
     payloads = {n: (split_dir / n).read_bytes()
                 for n in ("inventory.csv", "manifest.csv", "report.json")}
@@ -271,32 +350,24 @@ def run_export(raw, split_dir, fs_hz, n_subjects, per_subject, seed, out):
             raise ValueError(f"{field} differs from the split handover report")
     inventory = read_manifest_bytes(payloads["inventory.csv"])
     manifest = read_manifest_bytes(payloads["manifest.csv"])
-    picked = select_review_rows(manifest, n_subjects, per_subject, seed)
+    selected = select_review_plan(manifest, plan)
+    by_index = manifest.set_index("raw_index", drop=False)
     with PulseDBH5Reader(str(raw)).lazy(inventory.raw_index.tolist()) as segments:
         verify_inputs(manifest, inventory, segments)
         out = _new_dir(out)
-        records = []
-        for row in picked.itertuples():
-            segment = segments[int(row.raw_index)]
-            record_id = export_record_id(raw_sha256, row.split, int(row.raw_index))
-            path = out / f"{record_id}.npz"
-            # Only ECG and PPG are exported; ABP and labels stay in the raw file.
-            np.savez(path, ecg=np.asarray(segment.ecg, float),
-                     ppg=np.asarray(segment.ppg, float))
-            records.append({"record_id": record_id, "subject_id": row.subject_id,
-                            "split": row.split, "source_type": "PUBLIC_PULSEDB",
-                            "origin": row.sample_id, "ecg_fs_hz": fs_hz,
-                            "ppg_fs_hz": fs_hz, "file": path.name,
-                            "file_sha256": _sha256(path)})
+        hashes = {name: _write_records(
+            out / name, [by_index.loc[i] for i in selected[name]], raw_sha256,
+            fs_hz, segments) for name in ("main", "repeat")}
     if file_sha256(raw) != raw_sha256:
         raise ValueError("Raw file changed during reading")
-    _write_csv(out / "records.csv", RECORD_COLUMNS, records)
     _write_json(out / "export.json", {
-        "selection": {"n_subjects": n_subjects, "per_subject": per_subject,
-                      "seed": seed, "splits": ["train", "val"],
-                      "fs_hz_declared_by_caller": fs_hz},
-        "provenance": provenance("export", {"raw": raw_sha256, **{
-            k: report[k] for k in ("inventory_sha256", "manifest_sha256")}},
+        "review_plan": plan, "fs_hz_declared_by_caller": fs_hz,
+        # Subject IDs: export.json stays next to the records, outside Git.
+        "groups": selected["groups"],
+        "records_csv_sha256": hashes,
+        "provenance": provenance("export", {
+            "raw": raw_sha256, "config": text_sha256(config_bytes),
+            **{k: report[k] for k in ("inventory_sha256", "manifest_sha256")}},
             ["PUBLIC_PULSEDB"]),
     })
     return out
@@ -408,28 +479,93 @@ def clicks_to_rows(record, clicks, region, annotator, annotated_on):
     return rows
 
 
-def run_annotate(records, out, annotator, annotated_on, edge_s):
+def _progress_path(out):
+    """``manual.csv`` -> ``manual.progress.json``: state of an unfinished session."""
+    out = Path(out)
+    return out.with_name(out.stem + ".progress.json")
+
+
+def _write_progress(path, progress):
+    temporary = Path(str(path) + ".tmp")
+    temporary.write_text(json.dumps(progress, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
+def _checkpoint(out):
+    """Byte length and SHA-256 of the CSV as committed so far."""
+    data = Path(out).read_bytes()
+    return {"csv_bytes": len(data), "csv_sha256": hashlib.sha256(data).hexdigest()}
+
+
+def _resume_state(out, records_sha, annotator, edge_s):
+    """Check a partial session against its last checkpoint.
+
+    The CSV must start with exactly the committed bytes (any edit is refused).
+    Bytes after the checkpoint are a record written before a crash and not yet
+    committed: they are cut off and that record is marked again; the cut is
+    recorded in the sittings.
+    """
+    try:
+        progress = json.loads(_progress_path(out).read_text(encoding="utf-8"))
+        committed = (progress["records_csv"], progress["annotator"],
+                     progress["edge_s"])
+        size, digest = progress["csv_bytes"], progress["csv_sha256"]
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Unreadable progress file: {exc}") from exc
+    if committed != (records_sha, annotator, edge_s):
+        raise ValueError("--resume needs the same records, annotator and edge_s")
+    data = Path(out).read_bytes()
+    if len(data) < size or hashlib.sha256(data[:size]).hexdigest() != digest:
+        raise ValueError(f"{out} differs from its last checkpoint; mark again into "
+                         "a new file")
+    progress["discarded_uncommitted_bytes"] = len(data) - size
+    if len(data) > size:
+        with Path(out).open("r+b") as stream:
+            stream.truncate(size)
+    return progress
+
+
+def run_annotate(records, out, annotator, annotated_on, edge_s, resume=False):
     """Left click adds a mark at the clicked time (ECG axis = R, PPG axis = foot);
     right click removes the nearest mark on that axis. Close the window to go on.
 
-    The output is created before the first window and each record is written
-    as soon as its window closes, so a crash or an existing ``--out`` never
-    costs a finished marking session.
+    Each record is written as soon as its window closes, and
+    ``<out>.progress.json`` records which are done, so an interrupted session
+    goes on with ``resume=True`` (the same records, annotator and edge_s; the
+    date may differ). The provenance sidecar is written once every record is
+    marked; an existing sidecar is never appended to.
     """
     import matplotlib.pyplot as plt
 
     if not annotator.strip() or is_synthetic_annotator(annotator):
         raise ValueError("annotator must be the person who marks")
-    sidecar = _sidecar(out)
-    _refuse_existing(out, sidecar)
+    sidecar, progress_path = _sidecar(out), _progress_path(out)
     inputs, source_types = _records_inputs(records)
-    outside = {}
-    with _new_file(out) as stream:
+    if resume:
+        _refuse_existing(sidecar)
+        progress = _resume_state(out, inputs["records_csv"], annotator, edge_s)
+        stream = Path(out).open("a", encoding="utf-8", newline="")
+    else:
+        _refuse_existing(out, sidecar, progress_path)
+        progress = {"records_csv": inputs["records_csv"], "annotator": annotator,
+                    "edge_s": edge_s, "records_done": [], "sittings": [],
+                    "clicks_outside_region_dropped": {},
+                    "discarded_uncommitted_bytes": 0}
+        stream = _new_file(out)
+    progress["sittings"].append({
+        "date": annotated_on, "first_record": len(progress["records_done"]),
+        "discarded_uncommitted_bytes": progress.pop("discarded_uncommitted_bytes")})
+    done = set(progress["records_done"])
+    with stream:
         writer = csv.DictWriter(stream, fieldnames=ANNOTATION_COLUMNS,
                                 lineterminator="\n")
-        writer.writeheader()
+        if not resume:
+            writer.writeheader()
         stream.flush()
+        _write_progress(progress_path, {**progress, **_checkpoint(out)})
         for row, ecg, ppg in load_records(records):
+            if row.record_id in done:
+                continue
             fig, axes = _figure(row, ecg, ppg)
             clicks, artists = [], []
 
@@ -456,13 +592,20 @@ def run_annotate(records, out, annotator, annotated_on, edge_s):
             end = len(ecg) / row.ecg_fs_hz
             region = (edge_s, end - edge_s)
             inside = [(f, t) for f, t in clicks if region[0] <= t <= region[1]]
-            outside[row.record_id] = len(clicks) - len(inside)
             writer.writerows(clicks_to_rows(row, inside, region, annotator,
                                             annotated_on))
             stream.flush()
+            progress["records_done"].append(row.record_id)
+            progress["clicks_outside_region_dropped"][row.record_id] = (
+                len(clicks) - len(inside))
+            # The record counts as committed only once this checkpoint is written.
+            _write_progress(progress_path, {**progress, **_checkpoint(out)})
+    if len(progress["records_done"]) < len(_record_index(records)):
+        return None  # Unfinished: continue later with resume.
     _write_json(sidecar, {
         "annotator": annotator, "annotated_on": annotated_on, "edge_s": edge_s,
-        "clicks_outside_region_dropped": outside,
+        "sittings": progress["sittings"],
+        "clicks_outside_region_dropped": progress["clicks_outside_region_dropped"],
         "output_sha256": _sha256(out),
         "provenance": provenance("annotate", inputs, source_types),
     })
@@ -606,6 +749,136 @@ def run_compare(annotations_csv, detections_csv, config_path, out,
     return result
 
 
+def _export_info(export_json, config_bytes):
+    """export.json, the subject of each main/ record and the repeat/ record IDs,
+    after checking both records.csv hashes and that the export used this config
+    (so the plan, groups and gates belong together)."""
+    import pandas as pd
+
+    export_json = Path(export_json)
+    info = json.loads(export_json.read_text(encoding="utf-8"))
+    if info["provenance"]["inputs_sha256"].get("config") != text_sha256(config_bytes):
+        raise ValueError("export.json was made with another config")
+    if info["review_plan"] != json.loads(config_bytes)["review_plan"]:
+        raise ValueError("export.json review_plan differs from the config")
+    index = {}
+    for name in ("main", "repeat"):
+        path = export_json.parent / name / "records.csv"
+        if _sha256(path) != info["records_csv_sha256"][name]:
+            raise ValueError(f"{name}/records.csv differs from export.json")
+        index[name] = pd.read_csv(path, dtype=str)
+    plan, groups = info["review_plan"], info["groups"]
+    main, repeat = index["main"], index["repeat"]
+    per_subject = main.groupby("subject_id").size()
+    selection = set(groups["selection"])
+    repeat_groups = [s in selection for s in repeat.subject_id]
+    if (main.record_id.duplicated().any() or repeat.record_id.duplicated().any()
+            or len(per_subject) != plan["n_subjects"]
+            or set(per_subject) != {plan["per_subject"]}
+            or len(groups["selection"]) != plan["selection_subjects"]
+            or set(groups["selection"]) | set(groups["confirmation"])
+            != set(per_subject.index)
+            or len(repeat) != plan["repeat_segments"]
+            or repeat.subject_id.duplicated().any()
+            or not set(repeat.record_id) <= set(main.record_id)
+            or sum(repeat_groups) != plan["repeat_segments"] // 2):
+        raise ValueError("export.json records do not match its review_plan")
+    return (info, dict(zip(index["main"].record_id, index["main"].subject_id)),
+            list(index["repeat"].record_id))
+
+
+def run_repeat(first_csv, second_csv, export_json, config_path, out):
+    """Annotator repeatability on the repeat/ segments: the first session must be
+    marked on main/ and the second on repeat/ (checked through their provenance),
+    at least ``repeat_min_days`` apart."""
+    import pandas as pd
+
+    _refuse_existing(out)
+    config_bytes = Path(config_path).read_bytes()
+    config = json.loads(config_bytes)
+    acceptance = config["acceptance"]
+    check_acceptance(acceptance)
+    info, _, repeat_records = _export_info(export_json, config_bytes)
+    sources = {
+        "first": _annotation_provenance(first_csv, info["records_csv_sha256"]["main"],
+                                        False),
+        "second": _annotation_provenance(second_csv,
+                                         info["records_csv_sha256"]["repeat"], False),
+    }
+    read = {"dtype": {"record_id": str, "split": str, "fiducial": str,
+                      "annotated_on": str},
+            "keep_default_na": False, "na_values": [""]}
+    result = repeatability(pd.read_csv(first_csv, **read),
+                           pd.read_csv(second_csv, **read),
+                           config["agreement"]["tolerance_s"],
+                           acceptance["repeatability_max_mae_ms"],
+                           acceptance["repeat_min_days"], repeat_records)
+    result["annotation_provenance"] = sources
+    result["provenance"] = provenance("repeat", {
+        "first": _sha256(first_csv), "second": _sha256(second_csv),
+        "export": _sha256(export_json), "config": text_sha256(config_bytes)},
+        ["PUBLIC_PULSEDB"])
+    _write_json(out, result)
+    return result
+
+
+def run_gate(agreement_json, export_json, config_path, out, repeatability_json=None,
+             allow_synthetic_truth=False):
+    """Apply the config's acceptance block to a ``compare`` output made with
+    verified marks of every main/ record of ``export_json``. B4 is allowed only
+    when both winners are confirmed and a repeatability result made from the same
+    first-session marks, config and export has ``passed`` true."""
+    from software.evaluation.fiducial_gate import VERSION as GATE_VERSION
+
+    _refuse_existing(out)
+    config_bytes = Path(config_path).read_bytes()
+    config = json.loads(config_bytes)
+    compared = json.loads(Path(agreement_json).read_text(encoding="utf-8"))
+    if compared.get("version") != "fiducial-agreement-v1":
+        raise ValueError("gate needs a compare output with per-record errors (v1)")
+    if compared["provenance"]["inputs_sha256"]["config"] != text_sha256(config_bytes):
+        raise ValueError("compare used another config")
+    if compared["reference_type"] != "MANUAL" and not allow_synthetic_truth:
+        raise ValueError("gate needs manual marks; SYNTHETIC truth is a code check")
+    info, record_subject, _ = _export_info(export_json, config_bytes)
+    main_sha = info["records_csv_sha256"]["main"]
+    if compared["detect_provenance"]["inputs_sha256"]["records_csv"] != main_sha:
+        raise ValueError("compare was not run on main/ of this export")
+    source = compared["annotation_provenance"]
+    kinds = {"annotate", "synth"} if allow_synthetic_truth else {"annotate"}
+    if source["kind"] not in kinds or source["records_csv"] != main_sha:
+        raise ValueError("gate needs marks with verified provenance on main/")
+    result = gate(compared["per_record"], record_subject, info["groups"],
+                  config["acceptance"])
+    inputs = {"agreement": _sha256(agreement_json), "export": _sha256(export_json),
+              "config": text_sha256(config_bytes)}
+    repeat = None
+    if repeatability_json is not None:
+        repeat = json.loads(Path(repeatability_json).read_text(encoding="utf-8"))
+        used = repeat["provenance"]["inputs_sha256"]
+        if (repeat.get("version") != GATE_VERSION
+                or repeat["provenance"]["command"] != "repeat"):
+            raise ValueError("--repeatability must be an output of repeat")
+        if used["config"] != inputs["config"] or used["export"] != inputs["export"]:
+            raise ValueError("repeatability used another config or export")
+        if used["first"] != compared["provenance"]["inputs_sha256"]["annotations"]:
+            raise ValueError("repeatability used other first-session marks")
+        inputs["repeatability"] = _sha256(repeatability_json)
+    result["repeatability_passed"] = (None if repeat is None
+                                      else repeat["passed"] is True)
+    if not result["detectors_confirmed"] or result["repeatability_passed"] is False:
+        result["verdict"] = "B4_NOT_ALLOWED"
+    elif repeat is None:
+        result["verdict"] = "PENDING_REPEATABILITY"
+    else:
+        result["verdict"] = "B4_ALLOWED"
+    result["reference_type"] = compared["reference_type"]
+    result["provenance"] = provenance("gate", inputs,
+                                      compared["provenance"]["source_types"])
+    _write_json(out, result)
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -616,9 +889,7 @@ def main(argv=None):
     p.add_argument("--raw", type=Path, required=True)
     p.add_argument("--split-dir", type=Path, required=True)
     p.add_argument("--fs-hz", type=float, required=True)
-    p.add_argument("--subjects", type=int, default=5)
-    p.add_argument("--per-subject", type=int, default=2)
-    p.add_argument("--seed", type=int, default=20261021)
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
     p.add_argument("--out", type=Path, required=True)
     p = sub.add_parser("plot")
     p.add_argument("--records", type=Path, required=True)
@@ -630,6 +901,8 @@ def main(argv=None):
     p.add_argument("--annotator", required=True)
     p.add_argument("--date", required=True, help="YYYY-MM-DD of the marking session")
     p.add_argument("--edge-s", type=float, default=0.5)
+    p.add_argument("--resume", action="store_true",
+                   help="go on with an unfinished --out (see <out>.progress.json)")
     p = sub.add_parser("detect")
     p.add_argument("--records", type=Path, required=True)
     p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
@@ -643,19 +916,44 @@ def main(argv=None):
     p.add_argument("--annotations-without-provenance", action="store_true",
                    help="allow a hand-filled annotation CSV with no provenance "
                         "file; recorded in the output")
+    p = sub.add_parser("repeat")
+    p.add_argument("--first", type=Path, required=True, help="marks on main/")
+    p.add_argument("--second", type=Path, required=True, help="marks on repeat/")
+    p.add_argument("--export", type=Path, required=True, help="export.json")
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
+    p.add_argument("--out", type=Path, required=True)
+    p = sub.add_parser("gate")
+    p.add_argument("--agreement", type=Path, required=True, help="compare output")
+    p.add_argument("--export", type=Path, required=True, help="export.json")
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--repeatability", type=Path, help="repeat output")
+    p.add_argument("--allow-synthetic-truth", action="store_true")
     args = parser.parse_args(argv)
     if args.command == "synth":
         print(run_synth(args.out))
     elif args.command == "export":
-        print(run_export(args.raw, args.split_dir, args.fs_hz, args.subjects,
-                         args.per_subject, args.seed, args.out))
+        print(run_export(args.raw, args.split_dir, args.fs_hz, args.config, args.out))
     elif args.command == "plot":
         print(run_plot(args.records, args.out, args.detections))
     elif args.command == "annotate":
-        print(run_annotate(args.records, args.out, args.annotator, args.date,
-                           args.edge_s))
+        out = run_annotate(args.records, args.out, args.annotator, args.date,
+                           args.edge_s, args.resume)
+        print(out if out is not None else "Unfinished: run again with --resume")
     elif args.command == "detect":
         print(run_detect(args.records, args.config, args.out))
+    elif args.command == "repeat":
+        result = run_repeat(args.first, args.second, args.export, args.config,
+                            args.out)
+        print(json.dumps({"passed": result["passed"], **{
+            f: {k: v[k] for k in ("matched", "mae_ms", "passed")}
+            for f, v in result["fiducials"].items()}}, indent=2))
+    elif args.command == "gate":
+        result = run_gate(args.agreement, args.export, args.config, args.out,
+                          args.repeatability, args.allow_synthetic_truth)
+        print(json.dumps({"verdict": result["verdict"], **{
+            f: {"winner": v["winner"], "confirmed": v["confirmed"]}
+            for f, v in result["fiducials"].items()}}, indent=2))
     else:
         result = run_compare(args.annotations, args.detections, args.config, args.out,
                              args.allow_synthetic_truth,
