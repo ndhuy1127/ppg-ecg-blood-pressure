@@ -2,9 +2,9 @@
 
 > **Trạng thái:** chờ duyệt, chưa đặt hàng.
 >
-> **Phạm vi:** một bộ module cho bench nối dây, sau đó cắm vào bo đế và bo cổ tay
-> V1 ([custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md)
-> Phần A). Giá, tồn kho và điều kiện giao tra ngày 2026-10-23 trên trang của từng
+> **Phạm vi:** một bộ module cắm thẳng vào bo đế và bo cổ tay V1
+> ([custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md)
+> Phần A); không làm bench nối dây (chốt 2026-10-24). Giá, tồn kho và điều kiện giao tra ngày 2026-10-23 trên trang của từng
 > nơi bán; giá có thể đổi khi đặt. Giá DigiKey, ProtoCentral bằng USD, chưa gồm
 > thuế nhập khẩu/VAT.
 
@@ -16,7 +16,6 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | PPG | SparkFun Photodetector Breakout MAX30101 (Qwiic) | SEN-16474 | 1568-16474-ND | 1 | $35,03 | 141 | Mouser 474-SEN-16474, $36,49 |
 | 2 | IMU | SparkFun 6DoF IMU Breakout BMI270 (Qwiic), bản 1" × 1" | SEN-22397 | 1568-22397-ND | 1 | $18,50 | 491 | Mouser 474-SEN-22397, $18,50 |
-| 3 | Bench | SparkFun Flexible Qwiic Cable – Breadboard Jumper (nối MAX30101 ra breadboard) | 17912 | 1568-17912-ND | 1 | $1,95 | 1 579 | Hàn header đực rồi dùng dây Dupont |
 | 4 | Sửa breakout ECG | Điện trở 220 kΩ ±1% 0805 (thay R3) | Yageo RC0805FR-07220KL | 311-220KCRCT-ND | 10 | $0,034 | 2 171 | Yageo AC0805FR-07220KL |
 | 6 | MCU | Espressif ESP32-S3-DevKitC-1-N8R8 (chính hãng, module ESP32-S3-WROOM-1-N8R8, hai cổng Micro-USB) | ESP32-S3-DEVKITC-1-N8R8 | 1965-ESP32-S3-DEVKITC-1-N8R8-ND | 1 | $15,00 | Kiểm khi đặt | Cùng mã ở nhà phân phối khác (chưa tra) |
 
@@ -29,7 +28,7 @@
   cổng USB-to-UART là Micro-USB và cáp đi kèm hướng dẫn là USB-A – Micro-B. Flash
   8 MB đủ cho firmware (khoảng 208 KB); GPIO47 chạy 3,3 V với WROOM-1-N8R8
   (custom_board_proposal.md A.6 mục 4).
-- Tạm tính: $70,82 + phí ship $25 (đơn dưới $150) = **$95,82**, chưa gồm thuế
+- Tạm tính: $68,87 + phí ship $25 (đơn dưới $150) = **$93,87**, chưa gồm thuế
   nhập khẩu/VAT. DigiKey giao 1–5 ngày bằng DHL/FedEx/UPS; thuế và phí hải quan
   thu khi nhận hàng
   ([biểu phí ship](https://www.digikey.com/en/help-support/delivery-information/international-shipping-rates?country=VN)).
@@ -54,12 +53,13 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 7 | Điện cực | [3M Red Dot 2228](https://minhtrimedical.com/dien-cuc-do-tim-3m-2228-red-dot-4cm-x-33cm), 4 × 3,3 cm, hộp 50 miếng | Minh Trí Medical | 1 hộp | 150.000 đ | Còn hàng | 10 điện cực kèm kit MAX30001 |
 | 8 | Kết nối | Cáp USB-A – Micro-USB (Micro-B), có dây dữ liệu, khoảng 1 m | Chưa chọn nơi bán | 2 | Chưa tra | — | Cáp Micro-USB có dữ liệu bất kỳ (không dùng cáp chỉ sạc) |
-| 9 | Bench | [Header đực 1×40, 2,54 mm](https://hshop.vn/rao-duc-don-chon-thang-40chon) | hshop | 2 | 2.000 đ | Còn hàng | — |
-| 10 | Bench | [Dây Dupont cái–cái 20 cm, 40 sợi](https://hshop.vn/day-cam-breadboard-cai-cai-20cm-cap-det-40-soi-f-f-jumper-wire) | hshop | 1 | 30.000 đ | Còn hàng | — |
-| 11 | Bench | [Dây Dupont đực–cái 20 cm, 40 sợi](https://hshop.vn/day-cam-breadboard-duc-cai-20cm-cap-det-40-soi-m-f-jumper-wire) | hshop | 1 | 30.000 đ | Còn hàng | — |
+| 9 | Lắp bo cổ tay | [Header đực 1×40, 2,54 mm](https://hshop.vn/rao-duc-don-chon-thang-40chon) | hshop | 2 | 2.000 đ | Còn hàng | — |
 
-Tạm tính mua trong nước: **214.000 đ** cộng 2 cáp Micro-USB (chưa tra giá), chưa
+Tạm tính mua trong nước: **154.000 đ** cộng 2 cáp Micro-USB (chưa tra giá), chưa
 gồm phí ship.
+
+- Header đực (dòng 9) để hàn M1 (MAX30101) và M3 (BMI270) lên bo cổ tay
+  ([custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) A.3).
 
 - MCU mua qua DigiKey (dòng 6, mục 1.1). Bo OEM "ESP32-S3-DevKitC N16R8" (thegioiic,
   mã IC42459) trong bản trước của danh sách không mua nữa (2026-10-24): trang bán
@@ -75,7 +75,8 @@ Kiểm đồ có sẵn ở lab trước, chỉ mua phần thiếu; chưa tra gi�
 
 | Linh kiện | SL | Dùng cho |
 | --- | --- | --- |
-| Breadboard 830 lỗ | 1 | Bench nối dây |
+| Breadboard 830 lỗ | 1 | Dựng mạch kích thích (chia áp, LED) |
+| Dây cắm breadboard | Vài sợi | Nối GPIO phát xung với mạch kích thích |
 | Điện trở chân cắm 1 MΩ và 1 kΩ | Vài cái mỗi loại | Mạch chia áp đưa xung GPIO 3,3 V xuống vài mV vào đầu vào ECG |
 | LED 5 mm và điện trở hạn dòng | 2 | Kích thích quang trên cửa sổ MAX30101 |
 | Dây kẹp cá sấu | 4 | Nối mạch chia áp vào đầu bấm của cáp ECG |
@@ -83,8 +84,7 @@ Kiểm đồ có sẵn ở lab trước, chỉ mua phần thiếu; chưa tra gi�
 
 ## 2. Đợt 2: mua cùng PCB V1 (chưa mua)
 
-Chỉ đặt sau khi đối chiếu module thật với footprint (A.6 mục 2) và có số đo bench
-đầu tiên. Danh sách lấy từ schematic KiCad V1-module
+Chỉ đặt sau khi đối chiếu module thật với footprint (A.6 mục 2). Danh sách lấy từ schematic KiCad V1-module
 (`hardware/kicad/v1_module/`).
 
 | Bo | Ký hiệu | Linh kiện | SL |
