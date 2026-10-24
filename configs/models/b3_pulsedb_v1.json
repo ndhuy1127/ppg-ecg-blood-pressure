@@ -1,0 +1,27 @@
+{
+  "schema_version": "b3-pipeline-v1",
+  "status": "NOT_TEST_EVALUATED",
+  "unit": "mmHg",
+  "fit_split": "train",
+  "evaluation_split": "val",
+  "feature_set": "pulsedb-simple-stats-v0",
+  "label_qc": "exclude_dbp_ge_sbp",
+  "train_weighting": "inverse_subject_rows",
+  "b3": {
+    "seed": 42,
+    "params": {
+      "n_estimators": 300,
+      "max_depth": 4,
+      "learning_rate": 0.05,
+      "objective": "reg:squarederror",
+      "tree_method": "hist",
+      "n_jobs": 1
+    }
+  },
+  "bootstrap": {
+    "seed": 20261013,
+    "repetitions": 2000,
+    "confidence": 0.95,
+    "min_subjects": 2
+  }
+}

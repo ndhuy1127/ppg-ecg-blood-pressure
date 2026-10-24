@@ -13,9 +13,11 @@ import pandas as pd
 import pytest
 
 from scripts.demo_week04_huy import fixture
+from scripts.build_pulsedb_split import run as build_split
 from scripts.week05_fiducials import (
     SYNTHETIC_CASES, clicks_to_rows, detection_rows, export_record_id, load_records,
-    main, run_annotate, run_compare, select_review_rows, synthetic_record, t_apex_s,
+    main, run_annotate, run_compare, run_export, select_review_rows, synthetic_record,
+    t_apex_s,
 )
 from software.evaluation.fiducial_agreement import (
     ANNOTATION_COLUMNS, DETECTION_COLUMNS, agreement, match_events,
@@ -751,3 +753,25 @@ def test_t_apex_follows_heart_rate_and_edge_case_stays(name, delay):
         window = (times > beat + 0.1) & (times < beat + 0.36)
         apex = times[window][np.argmax(ecg.values[window])]
         assert apex == pytest.approx(beat + delay, abs=3 / ecg.fs_hz)
+
+
+def test_export_reads_a_subsampled_split_and_writes_only_train_val(tmp_path, monkeypatch):
+    from tests.pulsedb_h5_fixture import subsample_split_config, synthetic_rows
+
+    split_config, raw = subsample_split_config(tmp_path)
+    build_split(split_config, tmp_path / "split")
+
+    def whole_file(*args, **kwargs):
+        raise AssertionError("export must not load the whole file with mat73")
+
+    monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat", whole_file)
+    out = run_export(raw, tmp_path / "split", 125, 3, 2, 7, tmp_path / "export")
+    records = pd.read_csv(out / "records.csv", dtype=str)
+    assert len(records) == 6 and set(records.split) <= {"train", "val"}
+    pool = synthetic_rows(n_subjects=30, per_subject=3)
+    for record in records.itertuples():
+        row = pool[int(record.origin.rsplit(":", 1)[1])]
+        saved = np.load(out / record.file)
+        assert np.array_equal(saved["ecg"], row.ecg)
+        assert np.array_equal(saved["ppg"], row.ppg)
+        assert record.subject_id == row.subject_id

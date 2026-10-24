@@ -52,8 +52,8 @@ CODE_FILES = ("scripts/week05_fiducials.py", "software/signal_processing/fiducia
               "software/signal_processing/pat_validity.py",
               "software/evaluation/fiducial_agreement.py", "software/_provenance.py",
               # Used by export to read raw PulseDB and check the split handover.
-              "software/pulsedb/reader.py", "software/data_io/split_manifest.py",
-              "software/pulsedb/pipeline.py")
+              "software/pulsedb/reader.py", "software/pulsedb/h5_reader.py",
+              "software/data_io/split_manifest.py", "software/pulsedb/pipeline.py")
 LIBRARIES = ("numpy", "scipy", "pandas", "matplotlib", "mat73", "h5py")
 
 
@@ -249,12 +249,12 @@ def select_review_rows(manifest, n_subjects, per_subject, seed):
 
 
 def run_export(raw, split_dir, fs_hz, n_subjects, per_subject, seed, out):
-    """The whole raw file is read and every row (test included) is re-hashed
-    against the inventory, as in the B3 pipeline; only selected train/val rows
-    are written, ECG/PPG only."""
+    """Every inventory row (test included) is read block by block with the h5py
+    reader and re-hashed against the inventory, as in b3-pipeline-v1; only
+    selected train/val rows are written, ECG/PPG only."""
     from software.data_io.split_manifest import file_sha256, read_manifest_bytes
+    from software.pulsedb.h5_reader import PulseDBH5Reader
     from software.pulsedb.pipeline import verify_inputs
-    from software.pulsedb.reader import PulseDBReader
 
     _refuse_existing(out)
     split_dir = Path(split_dir)
@@ -271,22 +271,25 @@ def run_export(raw, split_dir, fs_hz, n_subjects, per_subject, seed, out):
             raise ValueError(f"{field} differs from the split handover report")
     inventory = read_manifest_bytes(payloads["inventory.csv"])
     manifest = read_manifest_bytes(payloads["manifest.csv"])
-    segments = PulseDBReader(str(raw)).read()
-    verify_inputs(manifest, inventory, segments)
     picked = select_review_rows(manifest, n_subjects, per_subject, seed)
-    out = _new_dir(out)
-    records = []
-    for row in picked.itertuples():
-        segment = segments[int(row.raw_index)]
-        record_id = export_record_id(raw_sha256, row.split, int(row.raw_index))
-        path = out / f"{record_id}.npz"
-        # Only ECG and PPG are exported; ABP and labels stay in the raw file.
-        np.savez(path, ecg=np.asarray(segment.ecg, float),
-                 ppg=np.asarray(segment.ppg, float))
-        records.append({"record_id": record_id, "subject_id": row.subject_id,
-                        "split": row.split, "source_type": "PUBLIC_PULSEDB",
-                        "origin": row.sample_id, "ecg_fs_hz": fs_hz, "ppg_fs_hz": fs_hz,
-                        "file": path.name, "file_sha256": _sha256(path)})
+    with PulseDBH5Reader(str(raw)).lazy(inventory.raw_index.tolist()) as segments:
+        verify_inputs(manifest, inventory, segments)
+        out = _new_dir(out)
+        records = []
+        for row in picked.itertuples():
+            segment = segments[int(row.raw_index)]
+            record_id = export_record_id(raw_sha256, row.split, int(row.raw_index))
+            path = out / f"{record_id}.npz"
+            # Only ECG and PPG are exported; ABP and labels stay in the raw file.
+            np.savez(path, ecg=np.asarray(segment.ecg, float),
+                     ppg=np.asarray(segment.ppg, float))
+            records.append({"record_id": record_id, "subject_id": row.subject_id,
+                            "split": row.split, "source_type": "PUBLIC_PULSEDB",
+                            "origin": row.sample_id, "ecg_fs_hz": fs_hz,
+                            "ppg_fs_hz": fs_hz, "file": path.name,
+                            "file_sha256": _sha256(path)})
+    if file_sha256(raw) != raw_sha256:
+        raise ValueError("Raw file changed during reading")
     _write_csv(out / "records.csv", RECORD_COLUMNS, records)
     _write_json(out / "export.json", {
         "selection": {"n_subjects": n_subjects, "per_subject": per_subject,

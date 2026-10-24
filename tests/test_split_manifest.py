@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import random
 import subprocess
 import sys
 from pathlib import Path
@@ -11,13 +12,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scripts.build_pulsedb_split import run
+from scripts.build_pulsedb_split import run, subject_id_format
+from software.pulsedb.h5_reader import PulseDBH5Reader
 from software.pulsedb.validator import channel_order_check
 from software.data_io.split_manifest import (
-    VERSION, build_inventory, file_sha256, make_manifest, manifest_bytes,
-    predictor_overlap, read_manifest_bytes, sample_hash, summarize_manifest,
-    validate_manifest, waveform_hash,
+    SUBSAMPLE_METHOD, VERSION, build_inventory, file_sha256, make_manifest,
+    manifest_bytes, predictor_overlap, read_manifest_bytes, sample_hash,
+    subject_list_sha256, subsample_subjects, summarize_manifest, validate_manifest,
+    waveform_hash,
 )
+from tests.pulsedb_h5_fixture import subsample_split_config, synthetic_rows
 
 
 def segments():
@@ -427,3 +431,93 @@ def test_summary_omits_test_label_statistics(inventory):
     assert summary["test"]["bp"] is None
     assert summary["test"]["segments"] == 2
     assert set(summary["val"]["bp"]) == {"sbp", "dbp"}
+
+
+# --- explicit subject subsample (pool decision 2026-10-24) -----------------------
+
+def test_subsample_follows_the_documented_method_and_ignores_row_order():
+    ids = [f"SYN_{i:03d}" for i in range(50)] * 3
+    chosen = subsample_subjects(ids, 10, 20261024)
+    pool = sorted(set(ids))
+    random.Random(20261024).shuffle(pool)  # SUBSAMPLE_METHOD, written out
+    assert chosen == sorted(pool[:10])
+    assert subsample_subjects(ids[::-1], 10, 20261024) == chosen
+    assert subsample_subjects(ids, 10, 1) != chosen
+    assert subsample_subjects(ids, 50, 3) == sorted(set(ids))
+    assert subject_list_sha256(chosen) == subject_list_sha256(chosen[::-1])
+
+
+@pytest.mark.parametrize("n_subjects,seed", [(0, 1), (51, 1), (True, 1), (2, 1.0),
+                                             (2, None)])
+def test_subsample_rejects_invalid_size_or_seed(n_subjects, seed):
+    with pytest.raises(ValueError):
+        subsample_subjects([f"SYN_{i}" for i in range(50)], n_subjects, seed)
+
+
+def test_inventory_from_row_mapping_keeps_file_rows():
+    data = segments()
+    inventory = build_inventory({7: data[7], 2: data[2]}, "SYNTHETIC", "a" * 64)
+    assert inventory.raw_index.tolist() == [2, 7]
+    assert inventory.sample_id.tolist() == ["a" * 64 + ":2", "a" * 64 + ":7"]
+    full = build_inventory(data, "SYNTHETIC", "a" * 64)
+    assert inventory.sample_hash.tolist() == full.sample_hash[[2, 7]].tolist()
+    for bad in ({True: data[0]}, {-1: data[0]}, {1.0: data[0]}):
+        with pytest.raises(ValueError, match="raw_index"):
+            build_inventory(bad, "SYNTHETIC", "a" * 64)
+    with pytest.raises(ValueError, match="record_ids"):
+        build_inventory({0: data[0]}, "SYNTHETIC", "a" * 64, record_ids=["r0"])
+
+
+def test_runner_subject_subsample_reads_only_chosen_rows(tmp_path, monkeypatch):
+    path, _ = subsample_split_config(tmp_path)
+    reads = []
+    original = PulseDBH5Reader.lazy
+
+    def spy(self, rows=None):
+        reads.append(list(rows))
+        return original(self, rows)
+
+    monkeypatch.setattr(PulseDBH5Reader, "lazy", spy)
+    report = run(path, tmp_path / "out")
+    again = run(path, tmp_path / "again")
+    pool_ids = [row.subject_id for row in synthetic_rows(n_subjects=30, per_subject=3)]
+    chosen = subsample_subjects(pool_ids, 20, 5)
+    expected_rows = [i for i, subject in enumerate(pool_ids) if subject in chosen]
+    assert reads[0] == expected_rows and len(expected_rows) == 60
+    inventory = read_manifest_bytes((tmp_path / "out" / "inventory.csv").read_bytes())
+    assert inventory.raw_index.tolist() == expected_rows
+    assert sorted(inventory.subject_id.unique()) == chosen
+    # Built from the generated rows, not through the reader under test.
+    pool = synthetic_rows(n_subjects=30, per_subject=3)
+    independent = build_inventory({i: pool[i] for i in expected_rows}, "SYN_pool.mat",
+                                  report["raw_sha256"])
+    assert manifest_bytes(independent) == manifest_bytes(inventory)
+    assert report["subject_subsample"] == {
+        "method": SUBSAMPLE_METHOD, "n_subjects": 20, "seed": 5, "pool_rows": 90,
+        "pool_subjects": 30, "selected_rows": 60,
+        "selected_subjects_sha256": subject_list_sha256(chosen),
+    }
+    assert report["pool_subject_id_format"]["matching_rows"] == 0  # SYN_ IDs
+    assert report["manifest_sha256"] == again["manifest_sha256"]
+    assert {split: summary["subjects"] for split, summary
+            in report["split_summary"].items()} == {"train": 16, "val": 2, "test": 2}
+    assert any("subject subsample" in text for text in report["limitations"])
+
+
+@pytest.mark.parametrize("subsample", [{"n_subjects": 20}, [20, 5],
+                                       {"n_subjects": 20, "seed": 5, "extra": 1}])
+def test_runner_rejects_malformed_subject_subsample(tmp_path, subsample):
+    path, _ = subsample_split_config(tmp_path)
+    config = json.loads(path.read_text(encoding="utf-8"))
+    config["subject_subsample"] = subsample
+    path.write_text(json.dumps(config), encoding="utf-8")
+    with pytest.raises(ValueError, match="subject_subsample"):
+        run(path, tmp_path / "out")
+    assert not (tmp_path / "out").exists()
+
+
+def test_subject_id_format_counts_pulsedb_ids_by_source():
+    result = subject_id_format(["p000238_1", "p000238_1", "p123456_0", "SYN_1",
+                                "p00023_1", "p000238_2"])
+    assert result["rows"] == 6 and result["matching_rows"] == 3
+    assert result["rows_by_suffix"] == {"0": 1, "1": 2}

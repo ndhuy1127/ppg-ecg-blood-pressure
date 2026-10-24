@@ -48,15 +48,20 @@ def channel_order_check(segments, sbp, dbp, threshold=0.8):
     catches a swapped channel (correlation near 0), not subtle problems.
     """
     sbp, dbp = np.asarray(sbp, dtype=float), np.asarray(dbp, dtype=float)
-    if len(segments) != len(sbp) or len(sbp) != len(dbp):
+    # One pass over any iterable of segments (e.g. a generator over a lazy
+    # reader), keeping only each channel's maximum and minimum.
+    extremes = {name: ([], []) for name in ("ecg", "ppg", "abp")}
+    for seg in segments:
+        for name, (maxima, minima) in extremes.items():
+            values = np.asarray(getattr(seg, name), dtype=float)
+            maxima.append(values.max())
+            minima.append(values.min())
+    if len(extremes["abp"][0]) != len(sbp) or len(sbp) != len(dbp):
         raise ValueError("segments, sbp and dbp must have the same length")
-    channels = {}
-    for name in ("ecg", "ppg", "abp"):
-        values = [np.asarray(getattr(seg, name), dtype=float) for seg in segments]
-        channels[name] = {
-            "r_max_sbp": _pearson([v.max() for v in values], sbp),
-            "r_min_dbp": _pearson([v.min() for v in values], dbp),
-        }
+    channels = {
+        name: {"r_max_sbp": _pearson(maxima, sbp), "r_min_dbp": _pearson(minima, dbp)}
+        for name, (maxima, minima) in extremes.items()
+    }
 
     def score(name, key):
         value = channels[name][key]

@@ -47,7 +47,7 @@ def extract_features(ecg, ppg) -> dict[str, float]:
 
 
 def feature_matrix(segments) -> np.ndarray:
-    """Read only .ecg/.ppg of each segment; one row per segment, input order."""
+    """Read only .ecg/.ppg of each segment (any iterable); one row per segment."""
     rows = [extract_features(segment.ecg, segment.ppg) for segment in segments]
     if not rows:
         raise ValueError("No segments to extract features from")

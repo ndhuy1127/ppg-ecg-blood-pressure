@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from xgboost import XGBRegressor
 
-from software._bp_validation import bp_pairs
+from software._bp_validation import bp_pairs, sample_weights
 
 VERSION = "b3-xgboost-v0"
 DEFAULT_PARAMS = {
@@ -52,16 +52,24 @@ class XGBoostBaseline:
         self._models: tuple[XGBRegressor, XGBRegressor] | None = None
         self._n_features: int | None = None
 
-    def fit(self, train_features: ArrayLike, train_labels: ArrayLike) -> "XGBoostBaseline":
-        """Fit one model per column of train_labels [SBP, DBP]; replaces old state."""
+    def fit(
+        self, train_features: ArrayLike, train_labels: ArrayLike,
+        sample_weight: ArrayLike | None = None,
+    ) -> "XGBoostBaseline":
+        """Fit one model per column of train_labels [SBP, DBP]; replaces old state.
+
+        ``sample_weight`` (one positive weight per row) is passed to both models.
+        """
         features = _features(train_features, "train_features")
         labels = bp_pairs(train_labels, "train_labels")
         if len(features) != len(labels):
             raise ValueError("train_features and train_labels need the same row count")
+        weights = None if sample_weight is None else sample_weights(
+            sample_weight, len(labels))
         models = []
         for column in range(2):
             model = XGBRegressor(**self.params, random_state=self.seed)
-            model.fit(features, labels[:, column])
+            model.fit(features, labels[:, column], sample_weight=weights)
             models.append(model)
         self._models = (models[0], models[1])
         self._n_features = features.shape[1]
