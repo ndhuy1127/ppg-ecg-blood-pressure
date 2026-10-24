@@ -2,8 +2,9 @@
 
 > **Duyệt 2026-10-24. Đã triển khai bước 1 (codec, receiver, logger, simulator; mục 9),
 > kể cả sửa đổi cùng ngày về mốc `SAMP` cho ECG và bit 8 (mục 7). Firmware: xong bước
-> 2a (encoder V0.2, `0xD1`, chuyển bit 5) và 2b (IMU giả, chia phần, neo lại); `SAMP`
-> và cách đọc PPG mới chưa làm. Chưa kiểm chứng trên thiết bị.**
+> 2a (encoder V0.2, `0xD1`, chuyển bit 5), 2b (IMU giả, chia phần, neo lại) và 2c
+> (ánh xạ `SAMP`, bit 8, với xung từ nguồn ECG giả; MCPWM capture thật chỉ mới build);
+> cách đọc PPG mới chưa làm. Chưa kiểm chứng trên thiết bị.**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -213,10 +214,22 @@ trên chip thật ở bring-up.
   Callback chỉ đọc giá trị đã chốt, gán số thứ tự xung `e` và ghi vào bộ đệm vòng, mỗi
   mục có đánh dấu thế hệ để đọc nhất quán.
 - Quy đổi bộ đếm capture sang `esp_timer` (µs): định kỳ đọc cặp hai đồng hồ theo kiểu
-  kẹp (đọc `esp_timer`, đọc bộ đếm capture, đọc lại `esp_timer`; chỉ nhận cặp có hai
-  lần đọc `esp_timer` cách nhau dưới 2 µs), nội suy tuyến tính giữa các cặp, xử lý
-  tràn bộ đếm. Sai số quy đổi phải nằm trong ngân sách (mục tiêu dưới 5 µs) và ghi
-  vào metadata; không đổi clock (tiết kiệm năng lượng) trong phiên.
+  kẹp (đọc `esp_timer`, chốt bộ đếm capture, đọc lại `esp_timer`; chỉ nhận cặp có hai
+  lần đọc `esp_timer` cách nhau dưới 2 µs), xử lý tràn bộ đếm. Sai số quy đổi phải
+  nằm trong ngân sách (mục tiêu dưới 5 µs) và ghi vào metadata; không đổi clock (tiết
+  kiệm năng lượng) trong phiên.
+  **Mô hình quy đổi (sửa 2026-10-24 khi viết `firmware/drivers/samp_capture.c`,
+  chưa chạy trên chip; trước đó ghi "nội suy tuyến tính giữa các cặp"):** bộ đếm
+  capture (APB 80 MHz) và `esp_timer` cùng lấy từ một thạch anh, nên tỉ lệ giữa hai
+  đồng hồ là danh định và cố định. Giá trị capture được quy đổi theo tỉ lệ đó từ cặp
+  kẹp gần nhất; cặp chỉ dùng để neo độ lệch. Không ước lượng độ dốc từ hai cặp: mốc
+  cần ngay lúc gửi packet nên luôn là ngoại suy, và độ dốc ước lượng từ hai cặp cách
+  100 ms với sai số đọc cỡ 1 µs chỉ thêm sai số. Cặp đọc kẹp bằng kênh capture thứ
+  hai không nối GPIO, chốt bằng phần mềm, mỗi 100 ms; cặp cũ hơn 1 s thì không quy
+  đổi (cạnh coi như thiếu, ánh xạ sang `LỖI`), xa trong giới hạn ±26,8 s của hiệu tick
+  có dấu. Độ lệch giữa dự đoán theo cặp cũ và cặp mới được in ra UART0 làm sai số quy
+  đổi; nếu ở bring-up sai số này vượt ngân sách (hai đồng hồ không cùng tỉ lệ như giả
+  định) thì phải đổi sang mô hình có độ dốc.
 - Giá trị chốt vẫn có thể bị ghi đè nếu hàm ngắt trễ hơn một chu kỳ xung (1,953 ms):
   phát hiện qua khoảng cách giữa hai giá trị chốt liên tiếp (gần 1 chu kỳ hay gần
   bội số).
@@ -240,6 +253,11 @@ trên chip thật ở bring-up.
 - FIFO tràn (`111`), ECG khởi động lại, phát hiện xung mất, thừa hoặc giá trị chốt
   bị ghi đè: chuyển `LỖI`. Từ đó mọi packet dùng mốc đọc FIFO cho tới khi khởi động
   lại ánh xạ; packet sạch đầu tiên sau khi neo lại mang bit 5 như quy tắc hiện hành.
+- **Khi nào khởi động lại ánh xạ (chốt 2026-10-24):** sau 1 s ở `LỖI` (khoảng 32
+  packet dùng mốc đọc FIFO), và tối đa một lần mỗi 10 s (lần khởi động lúc bật máy
+  không tính), để đường xung lỗi liên tục không gây khởi động lại liên tục. Mỗi lần
+  khởi động lại mất một đoạn ECG (thời gian dừng, `SYNCH` và độ trễ bộ lọc số của
+  MAX30001, đo ở bring-up) và chỉ số mẫu bắt đầu lại từ 0 (bit 5, chuỗi mới).
 
 ### 7.3. Gán mốc cho từng packet ECG
 
@@ -387,9 +405,14 @@ sau.
      tạo tồn đọng và FIFO đầy (env `esp32s3_devkitc_imu_stall`; thuật toán mục 5 chạy
      thật trong `imu_plan.c`, số mất thật chỉ in UART0 làm đáp án); chia phần trước
      khi ghi `p.data[]` (không nâng `PKT_MAX_SAMPLES` quá 32).
-   - **2c, 2d (mục 7):** MCPWM capture cho `SAMP` (nguồn giả phát số thứ tự xung),
-     trạng thái ánh xạ, chờ đúng xung của mẫu cuối, bit 8, bộ đếm in UART0; PPG xóa
-     ngắt mỗi mẫu và đọc hết FIFO (nguồn giả có chế độ trễ để `N` lớn hơn 8).
+   - **2c (làm 2026-10-24, mục 7):** trạng thái ánh xạ và kiểm danh tính trong
+     `samp_map.c` (C thuần, test trên máy tính), bộ đệm vòng 64 cạnh có đánh dấu số
+     cạnh, chờ đúng xung của mẫu cuối, bit 8, khởi động lại theo chính sách mục 7.2,
+     bộ đếm in UART0; nguồn ECG giả phát xung (env `esp32s3_devkitc_samp_faults` cố ý
+     bỏ và thêm xung). MCPWM capture thật và cặp đọc kẹp viết sẵn trong
+     `samp_capture.c` (bật bằng `BOARD_SAMP_CAPTURE=1`), mới build, chưa chạy.
+   - **2d (mục 7.6):** PPG xóa ngắt mỗi mẫu và đọc hết FIFO (nguồn giả có chế độ trễ
+     để `N` lớn hơn 8).
 3. **Tích hợp record/replay:** manifest theo phiên và `device_info`, nhiều lần khởi
    động lại, hash output xác định.
 4. **Sau khi có bo:** driver BMI270 thật (nạp microcode, cấu hình mục 3), đo `L` và
@@ -406,6 +429,10 @@ sau.
 - Mục 7: dung sai anchor `SAMP` (tạm 200 µs) và dung sai tốc độ ECG (tạm ±1 000 ppm)
   chỉnh theo số đo; chi tiết thanh ghi `EN_INT2`/`CLR_SAMP` đối chiếu datasheet
   MAX30001; nếu `PPG_RDY` không chạy ở chế độ ba khe thì chuyển sang đọc theo timer.
+  Phía firmware: dung sai một khoảng cạnh tạm 22 µs (20 µs cộng 1 000 ppm của một chu
+  kỳ); MCPWM capture thật (`samp_capture.c`) chưa chạy trên chip: kiểm cực tính,
+  độ rộng xung, thử nối vòng GPIO trên DevKitC trần, đo sai số quy đổi và tỉ lệ cặp
+  kẹp bị loại (đọc `esp_timer` hai lần cách nhau 2 µs trở lên).
 - Kiểm tải: với ECG 512 sps (N = 16), PPG ba khe 200 sps (chốt 2026-10-24) và IMU
   sáu trục 100 Hz (N = 10): PPG N = 4 cho khoảng 242 packet/s, 17,0 kB/s (ECG 3,4 +
   PPG 8,7 + IMU 4,9 kB/s), hàng đợi MCU 64 packet chịu khoảng 0,26 s khi USB không

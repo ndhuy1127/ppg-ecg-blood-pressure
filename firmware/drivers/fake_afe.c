@@ -4,16 +4,22 @@
 #include <stdlib.h>
 
 #include "esp_timer.h"
+#include "freertos/semphr.h"
 #include "packet_wire.h"
 
 struct fake_afe {
     fake_afe_config_t cfg;
     TaskHandle_t reader;
     esp_timer_handle_t timer;
+    esp_timer_handle_t drain;   /* one-shot: runs after every earlier callback */
+    SemaphoreHandle_t drained;
     portMUX_TYPE lock;
-    uint64_t fifo_first; /* cumulative index of the oldest sample in the FIFO */
+    uint64_t fifo_first; /* index of the oldest sample in the FIFO */
     uint16_t fill;
     uint32_t lost;       /* samples dropped while the FIFO was full */
+    uint64_t made;       /* samples converted since the (re)start */
+    int64_t start_us;    /* origin of the alarms: sample k is due at start + (k + 1) T */
+    bool running;        /* false from fake_afe_stop to fake_afe_resume */
 };
 
 static void on_sample(void *arg)
@@ -21,6 +27,13 @@ static void on_sample(void *arg)
     fake_afe_t *afe = arg;
     bool notify = false;
     portENTER_CRITICAL(&afe->lock);
+    /* A callback dispatched before fake_afe_stop but run after it does nothing.
+     * fake_afe_stop also waits until it has returned (drain). */
+    if (!afe->running) {
+        portEXIT_CRITICAL(&afe->lock);
+        return;
+    }
+    uint64_t index = afe->made++;
     /* Like MAX3010x with FIFO_ROLLOVER_EN = 0 or BMI270 with stop_on_full: a
      * full FIFO keeps its contents and new samples are lost, so the gap lies
      * after the last stored sample. */
@@ -32,10 +45,39 @@ static void on_sample(void *arg)
     } else {
         afe->lost++;
     }
+    if (afe->cfg.on_sample != NULL) {
+        /* The alarm time of this sample: callbacks run late, the alarms do not.
+         * Called inside the lock, so nothing of an epoch passes fake_afe_stop. */
+        afe->cfg.on_sample(index, afe->start_us + (int64_t)(index + 1) * afe->cfg.period_us);
+    }
     portEXIT_CRITICAL(&afe->lock);
     if (notify) {
         xTaskNotifyGive(afe->reader);
     }
+}
+
+static void on_drain(void *arg)
+{
+    fake_afe_t *afe = arg;
+    xSemaphoreGive(afe->drained);
+}
+
+static esp_err_t start_timer(fake_afe_t *afe)
+{
+    /* Armed inside the lock, between two clock reads, so that start_us is the
+     * time esp_timer_start_periodic took within a microsecond or two. */
+    portENTER_CRITICAL(&afe->lock);
+    afe->fifo_first = 0;
+    afe->fill = 0;
+    afe->lost = 0;
+    afe->made = 0;
+    int64_t t0 = esp_timer_get_time();
+    esp_err_t err = esp_timer_start_periodic(afe->timer, afe->cfg.period_us);
+    int64_t t1 = esp_timer_get_time();
+    afe->start_us = t0 + (t1 - t0) / 2;
+    afe->running = err == ESP_OK;
+    portEXIT_CRITICAL(&afe->lock);
+    return err;
 }
 
 esp_err_t fake_afe_start(const fake_afe_config_t *cfg, TaskHandle_t reader, fake_afe_t **out)
@@ -51,21 +93,48 @@ esp_err_t fake_afe_start(const fake_afe_config_t *cfg, TaskHandle_t reader, fake
     afe->cfg = *cfg;
     afe->reader = reader;
     portMUX_INITIALIZE(&afe->lock);
+    afe->drained = xSemaphoreCreateBinary();
     const esp_timer_create_args_t args = {
         .callback = on_sample,
         .arg = afe,
         .name = cfg->name,
     };
-    esp_err_t err = esp_timer_create(&args, &afe->timer);
+    const esp_timer_create_args_t drain_args = {
+        .callback = on_drain,
+        .arg = afe,
+        .name = "fake_afe_drain",
+    };
+    esp_err_t err = afe->drained == NULL ? ESP_ERR_NO_MEM : esp_timer_create(&args, &afe->timer);
     if (err == ESP_OK) {
-        err = esp_timer_start_periodic(afe->timer, cfg->period_us);
+        err = esp_timer_create(&drain_args, &afe->drain);
+    }
+    if (err == ESP_OK) {
+        err = start_timer(afe);
     }
     if (err != ESP_OK) {
-        free(afe);
+        free(afe); /* start failures are fatal (ESP_ERROR_CHECK in the caller) */
         return err;
     }
     *out = afe;
     return ESP_OK;
+}
+
+void fake_afe_stop(fake_afe_t *afe)
+{
+    portENTER_CRITICAL(&afe->lock);
+    afe->running = false;
+    portEXIT_CRITICAL(&afe->lock);
+    esp_timer_stop(afe->timer);
+    /* esp_timer_stop does not wait for a callback already dispatched. The
+     * esp_timer task runs callbacks one at a time, so once the one-shot drain
+     * callback has run, every earlier callback has returned. */
+    esp_timer_start_once(afe->drain, 0);
+    xSemaphoreTake(afe->drained, portMAX_DELAY);
+}
+
+esp_err_t fake_afe_resume(fake_afe_t *afe)
+{
+    return start_timer(afe);
 }
 
 fake_afe_batch_t fake_afe_latch(fake_afe_t *afe)

@@ -3,25 +3,29 @@
 > **Trạng thái:** firmware khung V1-module gửi
 > [Packet Schema V0.2](../configs/hardware/Packet_Schema_V0.2.md) từ 2026-10-24
 > (bước 2a của mục 9: encoder V0.2, packet thông tin thiết bị `0xD1`, chuyển tiếp
-> bit 5; bước 2b: IMU giả sáu trục, chia phần tồn đọng, neo lại sau FIFO đầy). Build
-> được (2026-10-24, RAM 4,5 %, flash 20,1 % của phân vùng 1 MB) nhưng **chưa chạy
-> trên bo** (chưa có phần cứng). Chưa có driver AFE hay BMI270: mọi giá trị
-> ECG/PPG/IMU là dữ liệu **giả**, chỉ để kiểm đường packet MCU → USB → logger, không
-> phải tín hiệu sinh lý. Chưa có mốc `SAMP` (bit 8) và cách đọc FIFO PPG mới (bước
-> 2c–2d).
+> bit 5; bước 2b: IMU giả sáu trục, chia phần tồn đọng, neo lại sau FIFO đầy; bước
+> 2c: mốc `SAMP` của ECG với bit 8, xung lấy từ nguồn ECG giả). Build được
+> (2026-10-24) nhưng **chưa chạy trên bo** (chưa có phần cứng). Chưa có driver AFE
+> hay BMI270: mọi giá trị ECG/PPG/IMU và mọi xung `SAMP` là dữ liệu **giả**, chỉ để
+> kiểm đường packet MCU → USB → logger, không phải tín hiệu sinh lý. MCPWM capture
+> thật đã viết nhưng tắt và chưa chạy. Chưa có cách đọc FIFO PPG mới (bước 2d).
 
 - **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị, đọc
-  IMU), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet của một lần đọc FIFO
-  BMI270 theo V0.2 mục 3–5; C thuần),
+  IMU, đọc ECG có mốc `SAMP`), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet
+  của một lần đọc FIFO BMI270 theo V0.2 mục 3–5; C thuần), `samp_map.c` (ánh xạ
+  xung `SAMP` ↔ mẫu ECG, kiểm danh tính, chính sách khởi động lại; V0.2 mục 7.2–7.3;
+  C thuần),
   `packet_wire.c` (encoder Packet Schema V0.2, đóng gói payload `0xD1` và phép tự
   kiểm lúc khởi động; C thuần, không phụ thuộc ESP-IDF; tên giống codec Python
   `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`).
 - **drivers/**: `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101/BMI270
-  (FIFO có độ sâu cấu hình được, đầy thì giữ nội dung và bỏ mẫu mới).
+  (FIFO có độ sâu cấu hình được, đầy thì giữ nội dung và bỏ mẫu mới; ECG giả phát
+  xung `SAMP`); `samp_edges.c`, bộ đệm vòng 64 cạnh `SAMP`; `samp_capture.c`, MCPWM
+  capture thật trên GPIO47 và quy đổi sang `esp_timer` (chưa chạy trên chip).
 - **boards/**: `board_v1_module.h`, GPIO theo bảng A.7 của
   [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md).
-- **include/**: `packet_wire.h`, `imu_plan.h`, `fake_afe.h`, `packet_kat.h`
-  (known-answer V0.2 của encoder).
+- **include/**: `packet_wire.h`, `imu_plan.h`, `samp_map.h`, `samp_edges.h`,
+  `samp_capture.h`, `fake_afe.h`, `packet_kat.h` (known-answer V0.2 của encoder).
 - **tests/**: chưa có test chạy trên bo. Known-answer của encoder được dựng lại
   độc lập (Python `struct` và `binascii.crc_hqx`) và đối chiếu với codec Python bằng
   [tests/test_firmware_packet_kat.py](../tests/test_firmware_packet_kat.py) (không
@@ -34,7 +38,8 @@
   `device_info_data`. Test này chỉ kiểm encoder, không kiểm ISR, task, USB hay phần
   cứng. [tests/test_firmware_imu_plan.py](../tests/test_firmware_imu_plan.py) biên
   dịch `app/imu_plan.c` theo cùng cách và so với spec V0.2 mục 3–5 (xem mục "IMU
-  giả").
+  giả"); [tests/test_firmware_samp_map.py](../tests/test_firmware_samp_map.py) làm
+  vậy với `app/samp_map.c` (xem mục "Mốc `SAMP` của ECG").
 
 Không commit khóa hoặc thông tin kết nối thật.
 
@@ -60,6 +65,7 @@ Chạy từ Git root. Nếu `pio` chưa có trong PATH, dùng
 ```powershell
 pio run -d firmware                                   # build
 pio run -d firmware -e esp32s3_devkitc_imu_stall      # build có dừng đọc IMU (mục "IMU giả")
+pio run -d firmware -e esp32s3_devkitc_samp_faults    # build có lỗi xung SAMP giả (mục "Mốc SAMP")
 pio run -d firmware -t upload --upload-port COM5      # nạp (COM5 là ví dụ)
 pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0
 ```
@@ -87,7 +93,7 @@ thái nháy nhanh. Known-answer V0.1 vẫn nằm trong fixture làm bản cũ.
 
 | `CHANNEL_ID` | Nguồn | `FS_NOMINAL_MHZ` | Chu kỳ thật | N mỗi packet | `DATA[i]` với `k = FIRST_SAMPLE_INDEX + i` |
 | --- | --- | ---: | --- | ---: | --- |
-| `0xE1` | ECG giả, giống MAX30001 | 512 000 | 1 953 µs (≈ 512,03 Hz, lệch +64 ppm so với danh định) | 16 | Word 24 bit: mẫu 18 bit bù hai `(k mod 2048) − 1024` ở bit 23…6, ETAG = PTAG = 0 |
+| `0xE1` | ECG giả, giống MAX30001, kèm một xung `SAMP` mỗi mẫu | 512 000 | 1 953 µs (≈ 512,03 Hz, lệch +64 ppm so với danh định) | 16 | Word 24 bit: mẫu 18 bit bù hai `(k mod 2048) − 1024` ở bit 23…6, ETAG = PTAG = 0 |
 | `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe ở tốc độ V1 (200 sps) | 200 000 | 5 000 µs | 8 | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
 | `0xA1`–`0xA6` | IMU giả, giống BMI270 cấu hình V1 (V0.2 mục 3): gia tốc X/Y/Z, con quay X/Y/Z | 100 000 | 10 000 µs; FIFO 170 frame, watermark 10 | 10 (tới 32 mỗi packet khi tồn đọng) | Int16 có dấu `((k · 257 + s · 8191) mod 65 536) − 32 768`, `s` = 0…5 theo trục; chạm cả hai biên −32 768 và 32 767 |
 | `0xC1` | Nút t0 | 0 | — | 1 | Mã sự kiện `1` |
@@ -124,6 +130,52 @@ Env `esp32s3_devkitc_imu_stall` (cờ `FAKE_IMU_STALLS=1`) cố ý dừng đọc
 bit 5). Bản mặc định không dừng đọc. Lần đọc đầy tạo 36 packet liền (6 phần × 6 trục),
 vẫn dưới hàng đợi MCU 64 packet nhưng có thể đẩy packet ECG/PPG vào tràn hàng đợi nếu
 USB chậm; khi đó bit 1 báo như thường.
+
+## Mốc `SAMP` của ECG (V0.2 bước 2c)
+
+Mỗi mẫu ECG có một cạnh `SAMP`. Callback capture (hoặc nguồn ECG giả) chỉ ghi giá
+trị đã chốt vào bộ đệm vòng 64 mục (`samp_edges.c`); số cạnh `e` đếm từ 0 sau mỗi
+lần khởi động ánh xạ, và mỗi ô giữ `e` của nó, nên cạnh chưa tới hoặc đã bị ghi đè
+không tra được. Task đọc ECG (`ecg_reader_task`):
+
+1. Chốt FIFO và ghi mốc đọc FIFO như V0.1.
+2. Chờ tối đa hai chu kỳ mẫu cho cạnh của mẫu cuối packet (`e = k_last`).
+3. `samp_map_packet` kiểm mọi cạnh từ cạnh của mẫu cuối packet trước (cạnh 0 với
+   packet đầu của kỷ nguyên) tới cạnh `k_last`: phải có đủ, mọi khoảng cách nằm trong
+   1 953,125 µs ± 22 µs (tạm), và cạnh `k_last` không muộn hơn mốc đọc FIFO cộng hai
+   chu kỳ. Đạt thì `T_ANCHOR_US` là thời điểm cạnh đó và bật bit 8; không đạt (thiếu
+   cạnh, cạnh tới muộn, khoảng quá ngắn: xung thừa, quá dài: xung mất hoặc giá trị
+   chốt bị ghi đè, chỉ số không liền, FIFO tràn) thì chuyển `LỖI`, dùng mốc đọc FIFO,
+   không bit 8.
+4. Ở `LỖI` 1 s (và cách lần khởi động lại trước ít nhất 10 s, chốt 2026-10-24) thì
+   khởi động lại ánh xạ: dừng chuyển đổi, xóa bộ đệm vòng, `SYNCH` (với nguồn giả:
+   chạy lại đồng hồ mẫu), chỉ số mẫu và số cạnh về 0, packet kế bật bit 5. Với nguồn
+   giả, `esp_timer_stop` không chờ callback đã phát; `fake_afe_stop` đặt một timer
+   một lần trên cùng task esp_timer và chờ nó chạy (task chạy callback lần lượt), nên
+   khi hàm trả về thì không còn cạnh nào của kỷ nguyên cũ lọt vào bộ đệm vừa xóa.
+   Gốc thời gian của nguồn giả lấy giữa hai lần đọc `esp_timer` kẹp lời gọi khởi
+   động timer.
+
+Nguồn ECG giả đặt cạnh ở thời điểm báo thức lý tưởng của mẫu cộng sai số 0–3 µs (như
+sai số capture). Env `esp32s3_devkitc_samp_faults` (cờ `FAKE_SAMP_FAULTS=1`) cứ mỗi
+20 s bỏ một cạnh (giây thứ 5: như xung mất hoặc bị ghi đè) và thêm một cạnh giả nửa
+chu kỳ trước một cạnh thật (giây thứ 15: như xung thừa).
+
+UART0 in mỗi 10 s: trạng thái ánh xạ, số packet có bit 8 và dùng mốc đọc FIFO, số
+lần vào `LỖI` theo nguyên nhân (xung mất hoặc bị ghi đè không phân biệt được: đều là
+một khoảng cỡ hai chu kỳ), số lần khởi động lại.
+
+**MCPWM capture thật** (`samp_capture.c`, bật bằng `BOARD_SAMP_CAPTURE=1` trong
+`board_v1_module.h`; cực tính cạnh `BOARD_SAMP_RISING_EDGE`, tạm cạnh xuống):
+**chưa chạy trên chip**. Kênh capture chốt bộ đếm MCPWM (80 MHz) tại cạnh GPIO47;
+kênh thứ hai không nối GPIO được chốt bằng phần mềm giữa hai lần đọc `esp_timer`
+(cặp kẹp, chỉ nhận khi hai lần đọc cách nhau dưới 2 µs) mỗi 100 ms; giá trị capture
+quy đổi theo tỉ lệ danh định từ cặp gần nhất (hai đồng hồ cùng thạch anh; spec mục
+7.1), chỉ khi cặp đó chưa quá 1 s, nếu không thì cạnh coi như thiếu. UART0 in số cặp
+nhận, bị loại, sai số quy đổi lớn nhất và số lần từ chối quy đổi vì không có cặp
+mới. `CONFIG_MCPWM_ISR_CACHE_SAFE=y`
+trong `sdkconfig.defaults`. Khi có MAX30001 thật thì driver làm phần dừng, xóa và
+`SYNCH` thay cho nguồn giả.
 
 ## Quy ước packet của firmware
 
@@ -171,13 +223,17 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
 4. Nạp bản `esp32s3_devkitc_imu_stall`, ghi vài phút: mỗi 30 s logger thấy một lần
    đọc IMU có bit 7 và một lần đầy (bit 0) rồi neo lại (`sample_index_reanchored`
    mỗi trục), `DATA` vẫn khớp chỉ số; chỉ số neo lại trùng chỉ số thật in trên UART0.
+   Bản mặc định: mọi packet ECG có bit 8, logger không báo gì về `SAMP`. Bản
+   `esp32s3_devkitc_samp_faults`: mỗi lỗi giả cho khoảng 32 packet ECG không bit 8 rồi
+   một lần neo lại (bit 5), không có `timestamp_anomaly` hay
+   `samp_resumed_without_reanchor`.
 5. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 
 ## Chưa có
 
 - Driver MAX30001, MAX30101, BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và
   gọi `imu_index_read_failed` khi đọc lỗi).
-- Xung `SAMP` của MAX30001 trên GPIO47 (INT2B) với MCPWM capture và bit 8 (V0.2
-  bước 2c), PPG xóa ngắt mỗi mẫu và đọc hết FIFO (bước 2d).
+- Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
+  INT2B của MAX30001), PPG xóa ngắt mỗi mẫu và đọc hết FIFO (V0.2 bước 2d).
 - Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.
 - Lệnh từ PC (bắt đầu/dừng, đổi cấu hình).

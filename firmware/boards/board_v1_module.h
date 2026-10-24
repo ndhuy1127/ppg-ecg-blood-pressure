@@ -25,6 +25,15 @@
 #define BOARD_ECG_MISO_GPIO 17
 #define BOARD_ECG_INTB_GPIO 21
 #define BOARD_ECG_INT2B_GPIO 47
+/* SAMP on INT2B (Packet Schema V0.2 section 7.1): 1 builds in the MCPWM capture
+ * (samp_capture.c, not run on a chip yet) instead of the fake ECG edges. The
+ * edge polarity is measured at bring-up; falling until then. */
+#ifndef BOARD_SAMP_CAPTURE
+#define BOARD_SAMP_CAPTURE 0
+#endif
+#ifndef BOARD_SAMP_RISING_EDGE
+#define BOARD_SAMP_RISING_EDGE 0
+#endif
 
 /* MAX30101 on I2C bus 1. */
 #define BOARD_PPG_SDA_GPIO 8

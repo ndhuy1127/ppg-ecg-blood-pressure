@@ -27,10 +27,15 @@ typedef struct {
     uint32_t period_us; /* real period of the fake source */
     uint16_t batch;     /* notify the reader once this many samples wait */
     uint16_t depth;     /* FIFO capacity in samples, batch .. FAKE_AFE_MAX_DEPTH */
+    /* Optional, from the esp_timer task for every converted sample (stored or
+     * lost): its index since the (re)start and its alarm time, the ideal time
+     * of the conversion. Called inside a spinlock: short, no blocking. The fake
+     * ECG source sends its SAMP edges from here. */
+    void (*on_sample)(uint64_t index, int64_t t_us);
 } fake_afe_config_t;
 
 typedef struct {
-    uint64_t first_index;   /* cumulative index of the first latched sample */
+    uint64_t first_index;   /* index of the first latched sample since the (re)start */
     uint16_t count;         /* N latched samples, 0 .. depth */
     uint32_t lost_after;    /* samples dropped after the last one (FIFO full); a
                              * real BMI270 does not report this: answer key only */
@@ -41,6 +46,15 @@ typedef struct fake_afe fake_afe_t;
 
 /* Start the fake source; the reader task gets xTaskNotifyGive per batch. */
 esp_err_t fake_afe_start(const fake_afe_config_t *cfg, TaskHandle_t reader, fake_afe_t **out);
+
+/* Stop the conversions (the alarm), as before a MAX30001 SYNCH. Blocks until
+ * the esp_timer task has finished every callback dispatched before, so when it
+ * returns no sample or on_sample call of this epoch is still to come. */
+void fake_afe_stop(fake_afe_t *afe);
+
+/* Start again with an empty FIFO and the index at 0, as SYNCH restarts the
+ * conversions; the time goes on. */
+esp_err_t fake_afe_resume(fake_afe_t *afe);
 
 /* Latch the waiting samples and take the anchor time. */
 fake_afe_batch_t fake_afe_latch(fake_afe_t *afe);

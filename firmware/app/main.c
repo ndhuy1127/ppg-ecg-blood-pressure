@@ -1,10 +1,10 @@
 /*
- * Firmware skeleton for the V1-module: fake ECG/PPG sources, t0 event packets
- * and device info packets in Packet Schema V0.2
+ * Firmware skeleton for the V1-module: fake ECG/PPG/IMU sources, t0 event
+ * packets and device info packets in Packet Schema V0.2
  * (configs/hardware/Packet_Schema_V0.2.md), sent as binary on the native USB
  * Serial/JTAG port. Text logs go to UART0 only, so the packet port carries
- * packets alone (schema section 13). No AFE driver yet: every ECG/PPG value
- * comes from fake_afe.
+ * packets alone (schema section 13). No AFE driver yet: every ECG/PPG/IMU value
+ * comes from fake_afe, and the ECG SAMP edges from the fake ECG source.
  */
 #include <inttypes.h>
 #include <stdlib.h>
@@ -23,6 +23,9 @@
 #include "freertos/task.h"
 #include "imu_plan.h"
 #include "packet_wire.h"
+#include "samp_capture.h"
+#include "samp_edges.h"
+#include "samp_map.h"
 
 static const char *TAG = "fw";
 
@@ -47,6 +50,7 @@ static const char *TAG = "fw";
  * the V1 setup (V0.2 section 3): accelerometer and gyroscope at 100 Hz,
  * watermark 10 frames, a 2 KB FIFO of 12-byte frames (170) that stops when full.
  */
+static void fake_samp_edge(uint64_t index, int64_t t_us);
 static const fake_afe_config_t ECG_FAKE = {
     .name = "fake_ecg",
     .n_slots = 1,
@@ -55,6 +59,9 @@ static const fake_afe_config_t ECG_FAKE = {
     .period_us = 1953,
     .batch = 16,
     .depth = 32,
+    /* The fake ECG source sends a SAMP edge per sample, unless the real
+     * capture on INT2B is built in (board_v1_module.h). */
+    .on_sample = BOARD_SAMP_CAPTURE ? NULL : fake_samp_edge,
 };
 static const fake_afe_config_t PPG_FAKE = {
     .name = "fake_ppg",
@@ -87,6 +94,29 @@ static const fake_afe_config_t IMU_FAKE = {
 #define FAKE_IMU_STALLS 0
 #endif
 #define IMU_STALL_PERIOD_US 30000000LL
+
+/*
+ * SAMP anchor of the ECG (V0.2 section 7). Tolerance of one edge interval:
+ * provisional 20 us plus the ECG rate allowance (1000 ppm of 1953 us, about 2
+ * us), to be set after bring-up. Wait at most two sample periods for the edge
+ * of a packet's last sample. After an error the mapping restarts 1 s later, at
+ * most once per 10 s (decided 2026-10-24).
+ */
+#define SAMP_TOLERANCE_NS 22000ULL
+#define SAMP_WAIT_PERIODS 2
+#define SAMP_REMAP_HOLDOFF_US 1000000LL
+#define SAMP_REMAP_MIN_GAP_US 10000000LL
+
+/*
+ * FAKE_SAMP_FAULTS=1 (PlatformIO env esp32s3_devkitc_samp_faults): every 20 s
+ * the fake ECG drops one SAMP edge (at +5 s, like a missed or overwritten
+ * capture) and adds a spurious one half a period early (at +15 s), so the
+ * mapping goes to the error state and restarts. V0.2 section 9, step 2c.
+ */
+#ifndef FAKE_SAMP_FAULTS
+#define FAKE_SAMP_FAULTS 0
+#endif
+#define SAMP_FAULT_PERIOD_US 20000000LL
 
 enum {
     CH_ECG, CH_PPG1, CH_PPG2, CH_PPG3, CH_PPG4, CH_EVENT, CH_DEVICE_INFO,
@@ -121,6 +151,7 @@ static uint32_t s_session_id;
 static channel_stats_t s_stats[CH_COUNT];
 static uint16_t s_drop_bits[CH_COUNT];
 static volatile uint32_t s_events_lost;
+static samp_map_t s_samp; /* written by the ECG reader only; read for the log */
 
 static int channel_index(uint8_t channel_id)
 {
@@ -217,6 +248,101 @@ static void afe_reader_task(void *arg)
                 p.data[i] = fake_afe_sample(afe, slot, b.first_index + i);
             }
             enqueue(&p);
+        }
+    }
+}
+
+/*
+ * SAMP edge of the fake ECG, from the esp_timer task: the sample's alarm time
+ * plus a capture error of 0..3 us (budget below 5 us, V0.2 section 7.1).
+ */
+static void fake_samp_edge(uint64_t index, int64_t t_us)
+{
+    static uint32_t lcg = 1;
+    static int64_t drop_at = 5000000LL, extra_at = 15000000LL;
+    (void)index;
+    lcg = lcg * 1664525u + 1013904223u;
+    t_us += lcg >> 30;
+    if (FAKE_SAMP_FAULTS && t_us >= drop_at) {
+        drop_at += SAMP_FAULT_PERIOD_US;
+        return;
+    }
+    if (FAKE_SAMP_FAULTS && t_us >= extra_at) {
+        extra_at += SAMP_FAULT_PERIOD_US;
+        samp_edges_push(t_us - ECG_FAKE.period_us / 2);
+    }
+    samp_edges_push(t_us);
+}
+
+/*
+ * ECG reads with the SAMP anchor (V0.2 section 7.3). The anchor is the FIFO
+ * read time unless samp_map_packet accepts the edges up to the packet's last
+ * sample; then it is that edge and the packet sets bit 8. A mapping restart
+ * stops the conversions, clears the edge ring and starts again (SYNCH): the
+ * index restarts at 0 and the next packet sets bit 5.
+ */
+static void ecg_reader_task(void *arg)
+{
+    const fake_afe_config_t *cfg = &ECG_FAKE;
+    const int64_t period_us = (1000000000LL + cfg->fs_nominal_mhz / 2) / cfg->fs_nominal_mhz;
+    samp_map_init(&s_samp, cfg->fs_nominal_mhz, SAMP_TOLERANCE_NS, SAMP_REMAP_HOLDOFF_US,
+                  SAMP_REMAP_MIN_GAP_US);
+    if (BOARD_SAMP_CAPTURE) {
+        ESP_ERROR_CHECK(samp_capture_start(BOARD_ECG_INT2B_GPIO, BOARD_SAMP_RISING_EDGE));
+    }
+    /* Mapping start before the first conversion (section 7.2). */
+    samp_edges_clear();
+    samp_map_restart(&s_samp, esp_timer_get_time());
+    fake_afe_t *afe;
+    ESP_ERROR_CHECK(fake_afe_start(cfg, xTaskGetCurrentTaskHandle(), &afe));
+    uint16_t restart_bits = 0;
+    for (;;) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        fake_afe_batch_t b = fake_afe_latch(afe);
+        if (b.count == 0) {
+            continue; /* SAMPLE_COUNT = 0 is never sent */
+        }
+        uint16_t status = PKT_STATUS_LATENCY_UNMEASURED | restart_bits;
+        restart_bits = 0;
+        if (b.lost_after > 0) {
+            status |= PKT_STATUS_AFE_FIFO_OVERFLOW;
+            samp_map_error(&s_samp, SAMP_OVERFLOW, esp_timer_get_time());
+        }
+        uint32_t k_first = (uint32_t)b.first_index;
+        /* The edge of the last sample may come after its data can be read; it
+         * must lie within two sample periods of the read (section 7.3). */
+        int64_t deadline = (int64_t)b.t_anchor_us + SAMP_WAIT_PERIODS * period_us;
+        if (s_samp.state != SAMP_ERROR) {
+            samp_edges_wait(k_first + b.count - 1u, deadline);
+        }
+        uint64_t anchor = b.t_anchor_us;
+        int64_t edge_us;
+        if (samp_map_packet(&s_samp, k_first, b.count, samp_edges_lookup, NULL, deadline,
+                            esp_timer_get_time(), &edge_us) == SAMP_OK) {
+            anchor = (uint64_t)edge_us;
+            status |= PKT_STATUS_ANCHOR_SAMP;
+        }
+        pkt_t p = {
+            .channel_id = PKT_CH_ECG,
+            .session_id = s_session_id,
+            .first_sample_index = k_first,
+            .t_anchor_us = anchor,
+            .t_first_us = pkt_t_first_us(anchor, b.count, cfg->fs_nominal_mhz),
+            .fs_nominal_mhz = cfg->fs_nominal_mhz,
+            .sample_count = b.count,
+            .status = status,
+        };
+        for (uint16_t i = 0; i < b.count; i++) {
+            p.data[i] = fake_afe_sample(afe, 0, b.first_index + i);
+        }
+        enqueue(&p);
+        if (samp_map_restart_due(&s_samp, esp_timer_get_time())) {
+            fake_afe_stop(afe);
+            samp_edges_clear();
+            samp_map_restart(&s_samp, esp_timer_get_time());
+            ESP_ERROR_CHECK(fake_afe_resume(afe));
+            restart_bits = PKT_STATUS_INDEX_REANCHORED;
+            ESP_LOGW(TAG, "SAMP mapping restarted (%" PRIu32 " so far)", s_samp.remaps);
         }
     }
 }
@@ -395,6 +521,23 @@ static void log_stats(void)
     if (s_events_lost) {
         ESP_LOGW(TAG, "t0 events lost in ISR queue: %" PRIu32, s_events_lost);
     }
+    /* V0.2 section 7.7. A missed and an overwritten capture look the same: one
+     * interval of about two periods. */
+    static const char *const STATES[] = {"unmapped", "mapped", "error"};
+    const uint32_t *r = s_samp.results;
+    ESP_LOGI(TAG, "SAMP %s: packets bit 8 %" PRIu32 ", FIFO-read %" PRIu32 "; errors: "
+                  "missed/overwritten %" PRIu32 ", extra %" PRIu32 ", edge missing %" PRIu32
+                  ", late %" PRIu32 ", index %" PRIu32 ", FIFO overflow %" PRIu32
+                  "; restarts %" PRIu32,
+             STATES[s_samp.state], s_samp.packets_samp, s_samp.packets_fifo, r[SAMP_LONG],
+             r[SAMP_SHORT], r[SAMP_EDGE_MISSING], r[SAMP_LATE], r[SAMP_INDEX],
+             r[SAMP_OVERFLOW], s_samp.remaps);
+    if (BOARD_SAMP_CAPTURE) {
+        samp_capture_stats_t c = samp_capture_stats();
+        ESP_LOGI(TAG, "SAMP clock pairs %" PRIu32 ", rejected %" PRIu32 ", max error %" PRId64
+                      " ns, conversions refused (no fresh pair) %" PRIu32,
+                 c.pairs, c.pairs_rejected, c.max_error_ns, c.stale);
+    }
 }
 
 void app_main(void)
@@ -455,7 +598,7 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BOARD_T0_GPIO, t0_isr, NULL));
 
-    if (xTaskCreate(afe_reader_task, "ecg_reader", 4096, (void *)&ECG_FAKE, 6, NULL) != pdPASS
+    if (xTaskCreate(ecg_reader_task, "ecg_reader", 4096, NULL, 6, NULL) != pdPASS
         || xTaskCreate(afe_reader_task, "ppg_reader", 4096, (void *)&PPG_FAKE, 6, NULL) != pdPASS
         || xTaskCreate(imu_reader_task, "imu_reader", 4096, NULL, 6, NULL) != pdPASS) {
         ESP_LOGE(TAG, "cannot create reader tasks");
