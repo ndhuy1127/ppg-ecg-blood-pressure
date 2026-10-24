@@ -158,6 +158,31 @@ Không đo trên người trong tuần này.
   build cố ý tạo lỗi để kiểm khi có bo: dừng đọc IMU, lỗi xung `SAMP`, đọc PPG trễ.
   Vẫn chưa có driver AFE thật và chưa chạy trên bo.
 
+### Cập nhật ngày 2026-10-25
+
+**PulseDB và baseline G1**
+
+- **Tải PulseDB** (Kaggle version 4, cập nhật 2022-12-08) bằng Kaggle API: Train,
+  CalFree Test, AAMI Test, `LICENSE.txt`, lưu ngoài Git. Kích thước và SHA-256 ở
+  [provenance](../../../docs/pulsedb_provenance.md) mục 4. CalFree chưa được dùng.
+- **Reader `h5py` đọc từng phần** (`software/pulsedb/h5_reader.py`): đọc ô `Subject`
+  riêng, rồi chỉ các dòng cần, từng khối tối đa 4.096 dòng, nên pool 14 GB không
+  phải nằm trọn trong RAM. Máy làm việc chỉ còn khoảng 2,5 GB RAM trống. So với
+  reader `mat73` trên AAMI Test (666 dòng): 0 sai khác ở cả 11 trường.
+- **Split Train 400 người** (`subject_subsample` của builder): pool 465.480 dòng,
+  1.293 người, mọi ID đúng dạng `p######_1`; 400 người × 360 đoạn; 320/40/40 người.
+  Chạy hai lần cho cùng hash inventory/manifest; thứ tự kênh đạt; không có ECG/PPG
+  trùng giữa các split.
+- **`b3-pipeline-v1`**: loại dòng DBP ≥ SBP ở train/val (thực tế 0 dòng); trọng số
+  train 1/n_s theo người, chuẩn về trung bình 1; v0 giữ nguyên và từ chối split có
+  lấy mẫu con. Kết quả trên val ở mục 6.4: **B3 chưa tốt hơn B0**.
+- **Phát hiện:** ECG/PPG của PulseDB Subset đã được chuẩn hóa min-max về [0, 1] theo
+  từng đoạn, nên mất biên độ. Đặc trưng thống kê đơn giản của B3 vì thế gần như
+  không mang thông tin.
+- Codex review hai vòng; các điểm đã sửa: đọc nhãn chỉ của dòng được chọn, lời văn
+  về nhãn test, script xuất Tuần 5 dùng reader mới, test bắt được lỗi trọng số và
+  lỗi đọc sai dòng, file luôn được đóng.
+
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
 | STT | Sản phẩm | Người làm | Đường dẫn |
@@ -196,21 +221,23 @@ Không đo trên người trong tuần này.
 | 32 | Firmware V0.2 (encoder, `0xD1`, IMU giả, `SAMP`, PPG) | Firmware | [firmware/](../../../firmware/README.md) |
 | 33 | Test firmware V0.2 | Firmware | [test_firmware_imu_plan.py](../../../tests/test_firmware_imu_plan.py), [test_firmware_samp_map.py](../../../tests/test_firmware_samp_map.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py) |
 | 34 | KiCad V1-draft4 | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3, A.7 |
+| 35 | Reader `h5py` và split Train 400 người (2026-10-25) | Huy | [h5_reader.py](../../../software/pulsedb/h5_reader.py), [run_pulsedb_split.md](../../../docs/protocol/run_pulsedb_split.md), [pulsedb_train400_split.json](../../../configs/data/pulsedb_train400_split.json) |
+| 36 | `b3-pipeline-v1` và kết quả B0/B3 trên val (2026-10-25) | Huy | [run_b3_pulsedb.md](../../../docs/protocol/run_b3_pulsedb.md), [b3_pulsedb_v1.json](../../../configs/models/b3_pulsedb_v1.json), [pulsedb_b3_v1/](pulsedb_b3_v1/README.md) |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
-### 5.1. Trạng thái G1 (đánh giá ngày 2026-10-21)
+### 5.1. Trạng thái G1 (đánh giá ngày 2026-10-21, cập nhật 2026-10-25)
 
 | Hạng mục | Trạng thái | Bằng chứng |
 | --- | --- | --- |
 | Pipeline tái lập (reader, inventory, provenance) | Có | `reader.py`, `split_manifest.py` (split v2), hash không phụ thuộc CRLF |
 | Split theo người có test rò rỉ | Có | `pulsedb-split-v2`, `tests/test_split_manifest.py` |
-| Baseline đầu tiên | Gần đạt | B0/B1/metrics, B3 + runner split v2, test SYNTHETIC; chưa chạy trên raw PulseDB |
+| Baseline đầu tiên | Có (val) | B0/B3 `b3-pipeline-v1` trên PulseDB Train 400 người, val 40 người, CI bootstrap theo người (mục 6.4); B1 chưa chạy (không có chronology); test và CalFree chưa chấm |
 | Đặc trưng/SQI/bootstrap | Có (SYNTHETIC) | `features-sqi-v1`, `subject_bootstrap.py`, mốc thứ hai Tuần 5 |
 | PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-draft4 qua ERC/DRC, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút, firmware khung gửi Packet Schema V0.2 build được và logger đọc được (cập nhật 2026-10-24); chưa có module, chưa chạy firmware trên bo, chưa có bản ghi trên phần cứng |
 | Hồ sơ đạo đức | Bản nháp v0.1 | `docs/ethics/` |
 
-G1 phần mềm gần đạt; G1 phần cứng chưa đạt.
+G1 phần mềm đạt phần baseline trên val (2026-10-25); G1 phần cứng chưa đạt.
 
 ### 5.2. Logger và packet V0.1 (Linh)
 
@@ -317,6 +344,7 @@ Chạy từ Git root bằng `.venv` (Python 3.13.12):
 | `python -m pytest -q -p no:cacheprovider` (toàn repo, 2026-10-23) | **471 passed** (gồm test known-answer và tương thích firmware–logger) |
 | `pio run -d firmware` (2026-10-23) | Build đạt, RAM 4,5 %, flash 19,8 % của phân vùng 1 MB; chưa nạp lên bo |
 | `python -m pytest -q -p no:cacheprovider` (toàn repo, Python 3.11 có trình biên dịch C, 2026-10-25) | **666 passed** (gồm test C của encoder, `imu_plan`, `samp_map`); `.venv` Python 3.13 không có trình biên dịch C: 622 passed, 44 skipped |
+| `python -m pytest -q -p no:cacheprovider` (toàn repo, môi trường pin Python 3.11.7 không có trình biên dịch C, 2026-10-25 sau PulseDB v1) | **680 passed, 44 skipped** (44 test C cần trình biên dịch) |
 | `pio run -d firmware -j 1`, bốn env (2026-10-24) | Build đạt, không cảnh báo; RAM 4,9 %, flash 20,4–20,5 %; build song song có lúc GCC lỗi nội bộ do thiếu RAM trống, build tuần tự thì qua |
 | CI trên PR #25 (2026-10-24, commit `ede2629`) | Đạt (ruff và pytest, Python 3.11) |
 | `python -m ruff check .` | Đạt |
@@ -374,3 +402,22 @@ phương pháp mục 8): 6 bản ghi `SYN_*` (thêm bản ghi biên T ở R + 0,
 Sóng T SYNTHETIC đặt đúng R + 0,25 s, trùng biên refractory, nên bảng này chỉ kiểm
 chứng code, không xếp hạng phương pháp. Output mặc định `features-sqi-v1` giống
 từng byte với bảng fixture Tuần 4 và giống HEAD trên 240 cửa sổ × 2 config.
+
+### 6.4. B0/B3 trên PulseDB Train 400 người, val (2026-10-25)
+
+`b3-pipeline-v1`, đặc trưng `pulsedb-simple-stats-v0`, siêu tham số chưa tuning; val
+40 người, 14.400 đoạn; MAE/bias trung bình đều theo người, CI 95% bootstrap theo
+người (2.000 lượt, seed 20261013). Chi tiết và hash:
+[pulsedb_b3_v1/](pulsedb_b3_v1/README.md).
+
+| Model | Target | MAE [CI 95%] (mmHg) | Bias [CI 95%] (mmHg) |
+| --- | --- | --- | --- |
+| B0 | SBP | 15,11 [13,47; 16,88] | 4,30 [0,79; 7,67] |
+| B0 | DBP | 10,40 [9,12; 11,80] | 2,12 [−0,92; 5,14] |
+| B3 | SBP | 14,58 [12,89; 16,49] | 3,96 [0,33; 7,52] |
+| B3 | DBP | 10,12 [8,94; 11,44] | 1,44 [−1,56; 4,33] |
+
+B3 − B0 (ghép cặp): SBP −0,52 [−1,35; 0,58], DBP −0,28 [−0,86; 0,36] mmHg; cả hai
+khoảng chứa 0. ECG/PPG đã chuẩn hóa [0, 1] theo đoạn, nên B3 chỉ còn `mean`, `std`,
+`rms` để dùng. Đây là nhãn ABP công khai, không phải cuff hay thiết bị; test của
+split và CalFree chưa chấm.

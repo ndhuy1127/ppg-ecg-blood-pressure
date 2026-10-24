@@ -1,0 +1,27 @@
+{
+  "raw_sha256": "af1c1444d03da58cd24e6d4c8eaad43c64f3d015bead9509256f30ac7744d0c9",
+  "rows": 666,
+  "subjects": 116,
+  "row_mismatches": {
+    "subject_id": 0,
+    "gender": 0,
+    "age": 0,
+    "height_cm": 0,
+    "weight_kg": 0,
+    "bmi_kg_m2": 0,
+    "sbp": 0,
+    "dbp": 0,
+    "ecg": 0,
+    "ppg": 0,
+    "abp": 0
+  },
+  "subject_ids_mismatches": 0,
+  "pass": true,
+  "commit": "4be5a6df131a523e23550997d23bb860d1a392a7",
+  "python": "3.11.7",
+  "dependencies": {
+    "numpy": "1.26.4",
+    "h5py": "3.16.0",
+    "mat73": "0.65"
+  }
+}

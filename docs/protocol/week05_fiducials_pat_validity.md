@@ -314,9 +314,11 @@ Các bước của `export`:
 
 1. Từ chối khi `--out` đã tồn tại, trước khi đọc raw.
 2. Kiểm SHA-256 raw/inventory/manifest với `report.json` của split.
-3. Đọc **toàn bộ** file raw và chạy `verify_inputs`, tức dựng lại inventory và
-   băm lại mọi hàng, **kể cả hàng test**, như pipeline B3. Bước này chỉ để kiểm
-   bàn giao; không trích đặc trưng, không ghi và không xem waveform hay nhãn test.
+3. Đọc mọi hàng có trong inventory (từ 2026-10-25 bằng reader `h5py`, từng khối,
+   nên dùng được cả split có lấy mẫu con theo người) và chạy `verify_inputs`, tức
+   dựng lại inventory và băm lại mọi hàng, **kể cả hàng test**, như
+   `b3-pipeline-v1`. Bước này chỉ để kiểm bàn giao; không trích đặc trưng, không
+   ghi và không xem waveform hay nhãn test.
 4. Bỏ hàng test trước khi chọn người.
 5. Chọn người bằng hoán vị có seed, chỉ dựa vào `subject_id`, rồi lấy các đoạn đầu
    theo `raw_index`.

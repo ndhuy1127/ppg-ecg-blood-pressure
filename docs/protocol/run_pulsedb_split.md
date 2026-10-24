@@ -54,6 +54,7 @@ Không có config mặc định và không bịa checksum. JSON phải có
 | `unit` | `mmHg` |
 | `seed` | Số nguyên; 72 là seed lịch sử, chỉ dùng nếu quyết định giữ seed đó |
 | `ratios` | Ba tỷ lệ dương tổng bằng 1, thứ tự train/val/test; 0.8/0.1/0.1 là phương án lịch sử |
+| `subject_subsample` (tùy chọn, từ 2026-10-25) | `{"n_subjects": N, "seed": S}`: lấy mẫu con N người trước khi chia (mục dưới); thiếu trường này thì giữ mọi dòng như trước |
 
 Các mô tả quyền dùng/pool/ID là khai báo cần người kiểm tra, **không phải chứng
 nhận tự động**. Có thể tính checksum tại máy được phép giữ dataset bằng
@@ -72,8 +73,38 @@ Chạy lại với cùng config/raw/code/môi trường và output mới `linh_s
 So sánh SHA-256 `manifest.csv` và `inventory.csv`; script từ chối thư mục output
 đã tồn tại. Terminal chỉ in hash và số người/đoạn, không in ID cá nhân.
 Raw được hash trước/sau đọc; checksum sai hoặc raw thay đổi thì dừng.
-Reader hiện nạp file vào RAM; chưa có streaming và không nên chạy file lớn trên
-máy thiếu bộ nhớ. Chạy tại môi trường dữ liệu được phép (ví dụ Kaggle) nếu cần.
+Không có `subject_subsample` thì reader `mat73` nạp cả file vào RAM; không chạy
+file lớn trên máy thiếu bộ nhớ. Có `subject_subsample` thì builder dùng reader
+`h5py` đọc từng phần (mục dưới).
+
+### Lấy mẫu con theo người (`subject_subsample`, từ 2026-10-25)
+
+Triển khai quyết định pool ngày 2026-10-24 ([provenance](../pulsedb_provenance.md)
+mục 5) cho `VitalDB_Train_Subset.mat` (khoảng 14 GB, 465.480 dòng):
+
+1. `PulseDBH5Reader.subject_ids()` ([h5_reader.py](../../software/pulsedb/h5_reader.py))
+   chỉ đọc ô `Subject` của mọi dòng; không đọc nhãn, nhân khẩu hay tín hiệu.
+2. `subsample_subjects` (module split): danh sách ID duy nhất được sắp xếp, xáo bằng
+   `random.Random(seed)` (cùng loại RNG với `make_manifest` nhưng seed riêng), lấy
+   `n_subjects` ID đầu.
+3. Chỉ các dòng của những người được chọn được đọc, theo từng khối (`lazy`, tối đa
+   `BLOCK_ROWS` = 4.096 dòng liền nhau trong RAM), nên pool không phải nằm trọn trong
+   RAM. `raw_index` vẫn là số dòng trong file (có khoảng trống); `sample_id` không đổi
+   quy ước.
+4. Chia train/val/test bằng `make_manifest` như cũ (seed và `ratios` của config).
+
+`report.json` có thêm `subject_subsample` (phương pháp, N, seed, số dòng và số người
+của pool, số dòng được chọn, SHA-256 của danh sách ID đã chọn ở dạng JSON chuẩn) và
+`pool_subject_id_format` (số dòng khớp mẫu `p\d{6}_[01]` và số dòng theo hậu tố
+nguồn; chỉ đếm, không từ chối, người chạy phải đọc số này). Inventory của split này
+chỉ gồm các dòng của người được chọn; runner `b3-pipeline-v0` (đọc cả file bằng
+`mat73`) sẽ từ chối nó vì inventory dựng lại không khớp, nên phải dùng
+`b3-pipeline-v1`.
+
+Reader `h5py` cho đúng các giá trị như reader `mat73` (cùng tên trường, cùng cách
+bóc lớp ngoài, chuyển trục MATLAB và dùng chung hàm chuyển đổi). Kiểm bằng
+`scripts/compare_pulsedb_readers.py` trên file thật (provenance mục 4) và trên file
+SYNTHETIC theo bố cục MATLAB v7.3 (`tests/pulsedb_h5_fixture.py`).
 
 Output gồm:
 
@@ -152,7 +183,8 @@ không phát hiện được nếu cả inventory và manifest bị thay giả �
 
 Test chỉ dùng SYNTHETIC, gọi validator thật với mất/thêm/trùng mẫu, leakage,
 ID/split/hash lỗi, thay nhãn, waveform trùng khác ID/nhãn, metadata round-trip;
-kiểm tra reader repo qua mock MAT loader, hash,
+kiểm tra reader repo qua mock MAT loader, reader `h5py` so với reader `mat73` trên
+file SYNTHETIC bố cục MATLAB v7.3, lấy mẫu con theo người, hash,
 sort, thống kê, tái chạy, checksum và không ghi đè output. Không chứng minh
 nguồn raw, ID người, record/cửa sổ gốc hoặc PulseDB đã được nghiệm thu.
 

@@ -1,0 +1,425 @@
+{
+  "schema_version": "b3-pipeline-v1",
+  "source_type": "PUBLIC_ABP",
+  "scope": "B0/B3 absolute BP on validation; not test, prototype cuff or cross-session BP",
+  "config": {
+    "schema_version": "b3-pipeline-v1",
+    "status": "NOT_TEST_EVALUATED",
+    "unit": "mmHg",
+    "fit_split": "train",
+    "evaluation_split": "val",
+    "feature_set": "pulsedb-simple-stats-v0",
+    "label_qc": "exclude_dbp_ge_sbp",
+    "train_weighting": "inverse_subject_rows",
+    "b3": {
+      "seed": 42,
+      "params": {
+        "n_estimators": 300,
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "objective": "reg:squarederror",
+        "tree_method": "hist",
+        "n_jobs": 1
+      }
+    },
+    "bootstrap": {
+      "seed": 20261013,
+      "repetitions": 2000,
+      "confidence": 0.95,
+      "min_subjects": 2
+    }
+  },
+  "inputs_sha256": {
+    "config": "d66d299d789207e518fb88a96e39af7fe548ab8e42d2f4df9f2449a6ba94f521",
+    "raw": "20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002",
+    "split_inventory": "17d3a8c2aa7a7d5a304d219aaaabada10a696232d529a1b0e19788f5d1fb7c26",
+    "split_manifest": "257d9653d6d42de26b77c291de79031b77ad7f3d29c6365d2319940acbe07d36",
+    "split_config": "437f84f409c73809ceb6d101950d6236c30b359815443bfb4e25f1f9d472fe55",
+    "split_report": "d420bc878e3330ce485f11367afa1dba8109be8d91bffd332cc196bda9991b53"
+  },
+  "split_schema_version": "pulsedb-split-v2",
+  "split_pool_decision": "Huy 2026-10-24 (docs/pulsedb_provenance.md section 5): pool = VitalDB_Train_Subset, subject subsample of 400 from Subject IDs only (seed 20261024), then train/val/test 0.8/0.1/0.1 by subject (seed 72); VitalDB_CalFree_Test_Subset is the external test; CalBased Test (same subjects as Train) and AAMI Cal/AAMI Test (AAMI Cal already exposed as test) are not used",
+  "reader": "h5py, inventory rows only",
+  "split_counts": {
+    "train": {
+      "subjects": 320,
+      "segments": 115200
+    },
+    "val": {
+      "subjects": 40,
+      "segments": 14400
+    },
+    "test": {
+      "subjects": 40,
+      "segments": 14400
+    }
+  },
+  "label_qc": {
+    "rule": "exclude_dbp_ge_sbp",
+    "excluded_rows": {
+      "train": 0,
+      "val": 0,
+      "test": null
+    },
+    "train_pulse_pressure_before_qc": {
+      "rows": 115200,
+      "rows_le_0": 0,
+      "min": 4.09766294721382,
+      "p01": 28.278355038783747,
+      "p05": 34.66648989535499,
+      "p50": 51.10320830777145,
+      "p95": 75.73486780097852,
+      "p99": 90.35992398756785,
+      "max": 141.30078410437935
+    }
+  },
+  "train_weighting": "inverse_subject_rows",
+  "feature_names": [
+    "ecg_mean",
+    "ecg_std",
+    "ecg_min",
+    "ecg_max",
+    "ecg_range",
+    "ecg_rms",
+    "ppg_mean",
+    "ppg_std",
+    "ppg_min",
+    "ppg_max",
+    "ppg_range",
+    "ppg_rms"
+  ],
+  "constant_train_features": [
+    "ecg_min",
+    "ppg_min"
+  ],
+  "B0_constant": {
+    "SBP": 116.07429372890108,
+    "DBP": 63.44083482759678
+  },
+  "evaluation": {
+    "n_rows": 14400,
+    "n_subjects": 40,
+    "seed": 20261013,
+    "repetitions": 2000,
+    "confidence": 0.95,
+    "method": "subject cluster percentile; shared draws across models",
+    "models": {
+      "B0": {
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": 15.106113009779307,
+            "subject_balanced_bias": 4.296688131772622,
+            "sample_weighted_mae": 15.106113009779309,
+            "sample_weighted_bias": 4.296688131772621,
+            "sample_sd": 18.79423270939999
+          },
+          "DBP": {
+            "subject_balanced_mae": 10.404787435699836,
+            "subject_balanced_bias": 2.115254952073054,
+            "sample_weighted_mae": 10.404787435699836,
+            "sample_weighted_bias": 2.115254952073054,
+            "sample_sd": 12.781234076322695
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                13.473206337432481,
+                16.876638017597724
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                0.7874466244462012,
+                7.672420640238099
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                13.473206337432481,
+                16.876638017597724
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                0.7874466244462012,
+                7.672420640238099
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                16.80247576137855,
+                20.547169260323965
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                9.121737376183038,
+                11.795374157687355
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                -0.9236361581415714,
+                5.137018795945264
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                9.121737376183036,
+                11.795374157687355
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                -0.9236361581415712,
+                5.137018795945264
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                11.355285875820657,
+                14.053392373032029
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      },
+      "B3": {
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": 14.582044760649538,
+            "subject_balanced_bias": 3.9640293190711176,
+            "sample_weighted_mae": 14.582044760649536,
+            "sample_weighted_bias": 3.964029319071117,
+            "sample_sd": 18.392425009352024
+          },
+          "DBP": {
+            "subject_balanced_mae": 10.122651811227295,
+            "subject_balanced_bias": 1.440044122588421,
+            "sample_weighted_mae": 10.122651811227295,
+            "sample_weighted_bias": 1.4400441225884215,
+            "sample_sd": 12.489785787234045
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                12.89356899375355,
+                16.485450525311975
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                0.3348911323442264,
+                7.522943277974501
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                12.89356899375355,
+                16.48545052531198
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                0.3348911323442263,
+                7.522943277974501
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                16.353823388159604,
+                20.17968566255648
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                8.941750905210474,
+                11.43696704498068
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                -1.557552070779402,
+                4.3319101596136065
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                8.941750905210476,
+                11.43696704498068
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                -1.5575520707794017,
+                4.3319101596136065
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                11.093936049488722,
+                13.75318418841521
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      }
+    },
+    "status": "ok",
+    "contrasts": [
+      {
+        "model": "B3",
+        "reference": "B0",
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": -0.524068249129769,
+            "sample_weighted_mae": -0.5240682491297726
+          },
+          "DBP": {
+            "subject_balanced_mae": -0.2821356244725415,
+            "sample_weighted_mae": -0.2821356244725415
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                -1.3486089771907421,
+                0.5775174977960634
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                -1.348608977190744,
+                0.5775174977960617
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                -0.8587399124795433,
+                0.3573109589621451
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                -0.8587399124795433,
+                0.35731095896214515
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "validation_log": [
+    "Raw SHA256 matches the split report before and after reading",
+    "Split inventory/manifest/config SHA256 match the split report",
+    "Inventory source_sha256 equals the raw SHA256; pool_decision present",
+    "validate_manifest: conservation and no subject/hash leakage",
+    "Inventory rebuilt from raw segments matches the handover byte-for-byte",
+    "Features read only ECG/PPG; no ABP, BP label, subject ID or hash",
+    "B0/B3 fitted on train rows only; no imputation/scaling/selection",
+    "Val scored with the same rows and bootstrap draws for B0 and B3",
+    "Test rows not featurized, predicted or scored",
+    "Train/val rows with DBP >= SBP excluded from fit and scoring (label_qc); rule not applied to unscored test rows, whose labels are only re-hashed; no SQI filter applied"
+  ],
+  "limitations": [
+    "PUBLIC_ABP labels from one PulseDB subset; not cuff or prototype data",
+    "Train rows weighted 1/n_s (mean 1): every subject weighs the same",
+    "ECG_F/PPG_F amplitude units and normalization are unverified",
+    "Hyperparameters are not tuned; no model selection has been done",
+    "B1 not run: no chronology/calibration metadata"
+  ],
+  "code_provenance": {
+    "git_commit": "4be5a6df131a523e23550997d23bb860d1a392a7",
+    "workspace_has_changes": true,
+    "sha256_lf": {
+      "scripts/run_b3_pulsedb.py": "3623be784850e1ba5aa813500e9f7ddf01e94572f091a0ade178dcb0854e444c",
+      "software/pulsedb/pipeline.py": "d0b4741feb4a6dacfe76c506f99fe20f8d1b38d2588278d39e2939e062f827d4",
+      "software/pulsedb/features.py": "8f8dcef4bb501e438f32e65e710786d9f727b31df7802b56f6d70b51c3ffcf62",
+      "software/pulsedb/reader.py": "3cf38c1b2f6a740600f3ac84ea059b8294aa33c777f9ab4dcbf85d51be50ca0f",
+      "software/pulsedb/h5_reader.py": "8376aca874bd188e9fb6c8a46dee63795d68d2dacfba8edf0d6f7bc86a14f620",
+      "software/models/xgboost_baseline.py": "b2621659b8304839b128b6cb633a06b76d308a7bb9196a5a92c36d882c5c7113",
+      "software/models/constant_baselines.py": "a826bb970b0df833f5cd102923bda51aeceb6fe6dde416e7c8235a7ead10b665",
+      "software/evaluation/subject_bootstrap.py": "12f5645b213eefd5579b52b2c9d9d0cb2949badd1fdc4e24399b9d4b5cd6323c",
+      "software/evaluation/bp_metrics.py": "54d1f9ac6fa38b045c35dbd1269a9970ce9f015cc7fa1aeadcea5e3f9ab1c6ba",
+      "software/signal_processing/fiducials.py": "c7d90fc3c9758334c3a47456335e7e7c481cbd8b63aefbacd5fa06759ee38bff",
+      "software/data_io/split_manifest.py": "59d399535549fdd9db1894a1807fb7fc3126668ce90696bfcd7dbc38cf93d85b",
+      "software/_bp_validation.py": "dc375cdbebd239ad866e495ead873110a5b29d0cd2943f16e09974ef423a6d14",
+      "software/_provenance.py": "5cb4bb9b66ec67d45c212a8573e8b5f4d9ada3e325e864c3e2cb458304fc5ccb"
+    }
+  },
+  "environment": {
+    "python": "3.11.7",
+    "numpy": "1.26.4",
+    "pandas": "2.2.1",
+    "xgboost": "3.2.0",
+    "mat73": "0.65",
+    "h5py": "3.16.0"
+  },
+  "run_time_utc": "2026-10-24T19:40:09.425224+00:00",
+  "outputs_sha256": {
+    "baseline_table.md": "cad00ea4de97b3dd98ffe65aae297874e7ff1429e9068db727327b2efcb06829",
+    "predictions_val.csv": "aad32a7f9195a83385f25574febea8457b0690ad34f38deb4d36c2383171a715",
+    "xgboost_dbp.json": "44f7e61a3b6418cf075301b52f132ffe99d510dab80fad927153d6616038b570",
+    "xgboost_sbp.json": "c95d22dd53be28643a7ac8c584926cb09bffedb505da00eb65e602ecc51cdd5f"
+  }
+}

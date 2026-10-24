@@ -16,12 +16,15 @@ bản ghi thiết bị của nhóm.
 - Bài báo: Wang W. et al., "PulseDB: A large, cleaned dataset based on MIMIC-III
   and VitalDB for benchmarking cuff-less blood pressure estimation methods",
   Frontiers in Digital Health, 2023, https://doi.org/10.3389/fdgth.2022.1090854.
-- **Chưa ghi:** số version của gói Kaggle tại thời điểm tải. Cần bổ sung khi
-  chạy lại để biết file có đổi giữa các lần chạy hay không.
+- Gói Kaggle **version 4** (cập nhật 2022-12-08). Huy tải ngày 2026-10-25 bằng
+  Kaggle API (`kaggle` 2.2.5) vào `data/raw/pulsedb/` (ngoài Git); kích thước và
+  SHA-256 ở mục 4. Không biết version của bản các notebook Tuần 3–4 đã dùng trên
+  Kaggle.
 
 ## 2. Giấy phép
 
-Dữ liệu PulseDB dẫn xuất từ VitalDB phân phối theo CC BY-NC-SA 4.0. Không commit
+Dữ liệu PulseDB dẫn xuất từ VitalDB phân phối theo CC BY-NC-SA 4.0 (gói Kaggle
+có `LICENSE.txt`, mục 4). Không commit
 file `.mat` hay toàn bộ dataset vào Git.
 
 ## 3. File trong gói Kaggle và file thực dùng
@@ -57,6 +60,23 @@ cell 4 notebook EDA in đường dẫn file này; cell 3 notebook Tuần 3 đọ
 | --- | --- | --- | --- |
 | `VitalDB_AAMI_Cal_Subset.mat` | `bc68fc239d3809f20cda01bb55eeae7aee88912f8143e0c4cde18d9c4384dcde` | Output cell 15 notebook EDA (Kaggle, kernel Python 3.11). Commit `acc8b8b` ghi cùng giá trị khi chạy `shasum -a 256 data/pulsedb_data/VitalDB_AAMI_Cal_Subset.mat` trên macOS | Lần tính trên Kaggle **không phải** phiên tạo CSV Tuần 3; cell tổng kết in lại giá trị gõ cứng. Lần tính trên macOS chưa có log lệnh, kích thước file hay version gói Kaggle đi kèm |
 | `data/processed/linh_week03/pulsedb_manifest_1000.csv` | `ed630151680665cdc4ede92189880aec95ee54e35d8a3f14c81b918fc0eb9d60` | `configs/data/b0_pulsedb_validation.json`; tính lại ngày 2026-10-15 cho cùng giá trị | Bản sao `notebooks/pulsedb_manifest_1000.csv` có nội dung giống hệt và **đang được Git theo dõi** |
+
+**Các file tải ngày 2026-10-25** (Kaggle version 4; `.mat` giải nén từ `.mat.zip`
+tải về; kích thước `.mat` khớp danh sách file của Kaggle):
+
+| File | Kích thước (byte) | SHA-256 | Vai trò |
+| --- | ---: | --- | --- |
+| `VitalDB_Train_Subset.mat` | 13.797.698.523 | `20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002` | Pool (mục 5) |
+| `VitalDB_Train_Subset.mat.zip` | 13.405.647.245 | `99428ad60ab2e23c01311ded788225aa9d6c1a3ba5a62f22f35805fd3f3e9cec` | Bản tải về |
+| `VitalDB_CalFree_Test_Subset.mat` | 1.706.947.648 | `f0dffa676987124cdca00d46ae88fd4d8bf7f6ac411e6cdb36b98ff8bcf4a00a` | Tập kiểm tra ngoài, chưa dùng |
+| `VitalDB_CalFree_Test_Subset.mat.zip` | 1.658.731.199 | `8b53b6c98420108ca946e435783eddd22e9658664f2bbaa78f21f3fea882403e` | Bản tải về |
+| `VitalDB_AAMI_Test_Subset.mat` | 19.806.481 | `af1c1444d03da58cd24e6d4c8eaad43c64f3d015bead9509256f30ac7744d0c9` | Chỉ để so hai reader (mục 6) |
+| `VitalDB_AAMI_Test_Subset.mat.zip` | 19.216.849 | `570623681ea1be9967416c33fa814997ac499c6e8735bdb7394c8c42b3acc79f` | Bản tải về |
+| `LICENSE.txt` | 20.849 | `1349a4b6148492b44f629e64eed676612e234fe9a839e4f3b277c1482c8849f1` | Giấy phép |
+
+Ghi nhận để minh bạch: ngày 2026-10-25, lệnh kiểm cấu trúc HDF5 của CalFree (chạy
+trước khi có reader mới) đã in 5 giá trị SBP đầu file. Không giá trị nào được dùng
+cho quyết định hay mô hình nào; sau đó CalFree không được đọc lại.
 
 Lần chạy split mới phải để `scripts/build_pulsedb_split.py` tự kiểm tra
 SHA-256 raw trước và sau khi đọc (xem `docs/protocol/run_pulsedb_split.md`).
@@ -104,9 +124,20 @@ hay tín hiệu của subset nào):**
 - **Lý do:** pool AAMI Cal đã bị lộ ở vai trò test; Train chưa bị chạm; 400 người
   cho khoảng 320/40/40 người theo tỉ lệ 0,8/0,1/0,1 và khoảng 4,3 GB float64, vừa
   RAM 15,7 GB của máy làm việc khi đọc từng phần.
-- **Cần làm trước khi chạy:** reader đọc từng phần bằng `h5py` (file `.mat` v7.3 là
-  HDF5; `h5py==3.16.0` đã pin ngày 2026-10-24), vì `mat73` nạp cả file
-  (khoảng 14 GB với pool Train). Kiểm cấu trúc file thật trước khi tin reader mới.
+- **Triển khai ngày 2026-10-25:** reader `h5py` đọc từng phần
+  (`software/pulsedb/h5_reader.py`, đã so với reader `mat73` ở mục 6) và trường
+  `subject_subsample` của builder split
+  ([hướng dẫn split](protocol/run_pulsedb_split.md)). Kết quả trên file Train ở trên:
+  pool có 465.480 dòng và 1.293 người (khớp Bảng 4 của bài báo). 400 người được chọn,
+  mỗi người đúng 360 đoạn, tổng 144.000 dòng; SHA-256 danh sách ID đã chọn là
+  `1f0580a149fc7c2591e952a377e68adf1de53e50e7a9e012a18ed4aa2b2269ea`. Split
+  320/40/40 người (115.200/14.400/14.400 đoạn). Chạy hai lần
+  (`data/processed/pulsedb_train400_split_run01`, `_run02`, ngoài Git) cho cùng
+  `inventory.csv` SHA-256 `17d3a8c2aa7a7d5a304d219aaaabada10a696232d529a1b0e19788f5d1fb7c26`
+  và `manifest.csv` SHA-256
+  `257d9653d6d42de26b77c291de79031b77ad7f3d29c6365d2319940acbe07d36`. Không có
+  ECG/PPG nào trùng giữa các split. Config:
+  [pulsedb_train400_split.json](../configs/data/pulsedb_train400_split.json).
 
 ## 6. Cấu trúc tín hiệu, nhãn và đơn vị
 
@@ -125,7 +156,29 @@ hay tín hiệu của subset nào):**
   resample hay bộ lọc chống aliasing đã dùng.
 - Đơn vị ECG/PPG: README PulseDB v2_0 có thêm tín hiệu "non-normalized"
   (`ECG_Record`, `PPG_Record`), gợi ý `ECG_F`/`PPG_F` đã chuẩn hóa. Vì vậy dự án
-  coi ECG/PPG của Subset là **đơn vị tùy ý (a.u.)**, không phải mV.
+  coi ECG/PPG của Subset là **đơn vị tùy ý (a.u.)**, không phải mV. **Kiểm trên
+  raw ngày 2026-10-25:** ECG và PPG đã được **chuẩn hóa min-max theo từng đoạn về
+  [0, 1]**. Trên 200 dòng train lấy cách đều trong split 400 người, min của cả hai
+  kênh đúng bằng 0 và max bằng 1 (sai khác tối đa 1 ulp) ở mọi dòng. Trên cả 115.200
+  dòng train, min của ECG/PPG là hằng số (kiểm thứ tự kênh không tính được tương
+  quan). ABP vẫn ở mmHg (cực đại từng đoạn 80–208 mmHg trên 200 dòng đó). Kiểm thứ
+  tự kênh trên train đạt: ABP có r = 0,98 với SBP và 0,93 với DBP. Hệ quả: đặc
+  trưng biên độ (`min`, `max`, `range`) của ECG/PPG không mang thông tin, và biên độ
+  PPG tuyệt đối không dùng được trên PulseDB Subset.
+- **Cấu trúc HDF5 thật** (kiểm ngày 2026-10-25, chỉ đọc metadata): khóa ngoài
+  `#refs#` và `Subset`. Trong `Subset` có `Age`, `BMI`, `DBP`, `Gender`, `Height`,
+  `SBP`, `Signals`, `Subject`, `Weight`, mỗi trường gắn `MATLAB_class`. Trường số có
+  shape `(1, N)` kiểu float64. `Subject`/`Gender` là cell `(1, N)` gồm tham chiếu tới
+  mảng char uint16 trong `#refs#`. `Signals` có shape HDF5 `(1250, 3, N)` float64,
+  tức `(N, 3, 1250)` theo MATLAB. N bằng 465.480 (Train; chunk `Signals` (1250, 3, 2)
+  gzip; `#refs#` có 100.010 mục), 57.600 (CalFree) và 666 (AAMI Test).
+- **Reader `h5py` so với reader `mat73`** (`scripts/compare_pulsedb_readers.py`,
+  2026-10-25, Python 3.11.7, numpy 1.26.4, h5py 3.16.0, mat73 0.65): trên AAMI Test
+  (666 dòng, 116 người), 0 sai khác ở cả 11 trường của mọi dòng và ở
+  `subject_ids()`. Dùng AAMI Test vì file nhỏ (vừa RAM cho `mat73`) và không thuộc
+  split mới nào; không dùng CalFree để giữ nguyên tập kiểm tra ngoài; Train quá lớn
+  cho `mat73`. Bố cục MATLAB khác (cell `(N, 1)`, file một dòng, ô rỗng, trường tùy
+  chọn thiếu, ranh giới khối) được kiểm bằng file SYNTHETIC trong test.
 - Nhãn `SBP`/`DBP` (mmHg): theo bài báo, là trung bình SBP/DBP từng nhịp trong
   đoạn, lấy từ đỉnh tâm thu và điểm chân của sóng ABP. Đây là nhãn từ ABP xâm
   lấn, không phải cuff.
@@ -155,8 +208,9 @@ hay tín hiệu của subset nào):**
   ghi, nên **không cắt hậu tố** khi chia split. Trong một pool VitalDB, mọi ID phải
   có hậu tố `_1`, và split theo nguyên chuỗi tương đương split theo mã người. Không
   suy ra cùng tiền tố ở hai nguồn là cùng người. Trong pool 1.000 dòng, mọi ID đều
-  có hậu tố `_1`. **Chưa kiểm tra** toàn file 70.212 dòng: khi chạy lại trên raw,
-  kiểm mọi ID đúng dạng và đúng hậu tố của nguồn.
+  có hậu tố `_1`; file AAMI Cal 70.212 dòng chưa được kiểm toàn bộ. **Pool Train
+  (2026-10-25):** cả 465.480 dòng khớp mẫu `p\d{6}_[01]` và đều có hậu tố `_1`
+  (`pool_subject_id_format` trong `report.json` của split).
 - File Subset không có timestamp, phiên đo hay chỉ số đoạn gốc. Đơn vị truy vết
   tốt nhất hiện có là **(SHA-256 file, chỉ số dòng trong file)**, chính là
   `sample_id = source_sha256:raw_index` của split v2. Không suy ra thứ tự thời
@@ -222,8 +276,14 @@ phục vụ việc này.
 - Không loại theo ngưỡng BP cao/thấp hay hiệu áp nhỏ (ví dụ dòng 265,6/258,5 mmHg ở
   trên vẫn được giữ), vì các ngưỡng đó chưa có nguồn và có thể loại cực trị thật.
 - Report ghi số dòng bị loại theo từng split và phân bố hiệu áp trên train.
-- Triển khai: cùng reader pool Train, trong config mới `b3-pipeline-v1`
-  (`b3-pipeline-v0` giữ hành vi cũ, không loại dòng nào).
+- Triển khai ngày 2026-10-25 trong `b3-pipeline-v1`
+  ([run_b3_pulsedb.md](protocol/run_b3_pulsedb.md)); `b3-pipeline-v0` giữ hành vi
+  cũ, không loại dòng nào. Quy tắc không áp cho dòng test, vì chúng không được chấm
+  ở bước val.
+- Kết quả trên split 400 người: **0 dòng** train và 0 dòng val có DBP ≥ SBP. Hiệu áp
+  train (115.200 dòng): min 4,1; p01 28,3; p05 34,7; p50 51,1; p95 75,7; p99 90,4;
+  max 141,3 mmHg. Train có SBP tối đa 286,6 và DBP tối đa 276,9 mmHg: các dòng này
+  được giữ, vì quy tắc không có ngưỡng BP cao.
 
 ## 10. Chính sách dữ liệu
 
@@ -238,11 +298,7 @@ sử. Hai notebook Tuần 3–4 vẫn tham chiếu các đường dẫn này và
 
 ## 11. Việc còn mở
 
-- Chốt vai trò từng subset (mục 5) và ghi vào `pool_decision`.
-- Chạy `scripts/build_pulsedb_split.py` hai lần trên raw đã chốt, bằng reader của
-  repo, và đối chiếu SHA-256 inventory/manifest.
-- Kiểm tra thứ tự kênh và ý nghĩa hậu tố ID (mục 6, 7) trên raw.
 - Xác định `ECG_F`/`PPG_F` đã qua bộ lọc nào và lọc zero-phase hay causal (mục
   6) trước khi tính PAT trên PulseDB.
-- Chốt quy tắc QC nhãn (mục 9) trước khi huấn luyện mô hình.
-- Ghi số version của gói Kaggle.
+- Đánh giá CalFree Test (tập kiểm tra ngoài) chỉ sau khi model được khóa, bằng
+  script khóa riêng (chưa viết).
