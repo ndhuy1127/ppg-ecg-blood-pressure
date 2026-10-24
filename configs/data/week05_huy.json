@@ -1,5 +1,5 @@
 {
-  "version": "fiducials-week05-v0",
+  "version": "fiducials-week05-v1",
   "status": "NOT_TEST_TUNED",
   "note": "Engineering proposals for comparing candidate methods on SYNTHETIC and train/val only. Not chosen on test or BP. features-sqi-v1 output is unchanged.",
   "signal": {
@@ -23,7 +23,10 @@
     "filter_order": 2,
     "r_method": "prominence",
     "foot_method": "tangent",
-    "r_energy_window_s": 0.1
+    "r_energy_window_s": 0.1,
+    "ppg_refractory_s": 0.35,
+    "foot_interpolation": false,
+    "r_energy_threshold": "quantile"
   },
   "pat_validity": {
     "min_ms": 80.0,
@@ -36,7 +39,10 @@
     "tolerance_s": {"ecg_r": 0.05, "ppg_foot": 0.1}
   },
   "sources": {
-    "refractory_s": "0.25 s (week04 used 0.4 s) so that HR up to 240 bpm is not cut by the refractory period; engineering choice, no source. It applies to ECG R AND PPG peaks: a PPG diastolic wave can then give false feet (docs/protocol/week05_fiducials_pat_validity.md section 7); a separate PPG value is pending Huy's decision.",
+    "refractory_s": "0.25 s for ECG R peaks (week04 used 0.4 s, which at ECG 512 Hz drops R peaks when RR is 0.4 s, HR 150 bpm); engineering choice, no source.",
+    "ppg_refractory_s": "0.35 s for PPG peaks, decided by Huy 2026-10-25 (docs/protocol/week05_fiducials_pat_validity.md section 8): suppresses a secondary wave 0.30 s after the systolic peak and stays below RR 0.4 s (HR 150 bpm, M4). Provisional, no source; a secondary wave at +0.36 s still passes.",
+    "foot_interpolation": "Off, decided by Huy 2026-10-25: on SYNTHETIC onsets (asymmetric corners) parabolic refinement increased the error of both valley_min and d2_max at 125 and 200 Hz; it helps only on smooth extrema. Kept as an option for comparison; final choice after manual annotation.",
+    "r_energy_threshold": "quantile = 0.2 x (Q95 - Q05) of the derivative energy, decided by Huy 2026-10-25: one beat x2.5 no longer hides the others (ptp: 1/9 beats found, quantile: 9/9). Does not fix spikes or slow amplitude changes; derivative_energy stays a comparison method. Q95/Q05 are engineering choices, no source.",
     "pat_validity.min_ms/max_ms": "Same 80-400 ms window as features-sqi-v1 pairing, but in pat_beats it is a label, not a pairing gate (pair_between_r pairs within the R-R interval, then out-of-range beats are labelled). No source for these bounds (chua co nguon). Context only: Mukkamala 2015 (10.1109/TBME.2015.2441951, docs/literature/week_01_literature_matrix.md #1) reports finger PAT at rest about 180-260 ms; wrist PAT is not given there.",
     "pat_validity.mad_k": "MAD outlier rule: Leys et al. 2013 (10.1016/j.jesp.2013.03.013), metadata verified, full text not read; k = 3 is an engineering choice (chua co nguon for the value).",
     "pat_validity.mad_floor_ms": "Absolute floor so that a near-constant PAT does not turn sample quantization (8 ms at 125 Hz) into outliers; found by a SYNTHETIC test on 2026-10-21; engineering choice, no source.",

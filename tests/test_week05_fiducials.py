@@ -15,14 +15,14 @@ import pytest
 from scripts.demo_week04_huy import fixture
 from scripts.week05_fiducials import (
     SYNTHETIC_CASES, clicks_to_rows, detection_rows, export_record_id, load_records,
-    main, run_annotate, run_compare, select_review_rows, synthetic_record,
+    main, run_annotate, run_compare, select_review_rows, synthetic_record, t_apex_s,
 )
 from software.evaluation.fiducial_agreement import (
     ANNOTATION_COLUMNS, DETECTION_COLUMNS, agreement, match_events,
 )
 from software.feature_extraction.week04 import extract_window
 from software.signal_processing.fiducials import (
-    Channel, SignalConfig, _vertex_offset, detect,
+    Channel, SignalConfig, _foot_time, _vertex_offset, detect,
 )
 from software.signal_processing.pat_validity import (
     PatRules, classify_pat, detectable_foot_span, pair_between_r, pat_beats,
@@ -74,6 +74,11 @@ def test_config_matches_documented_values():
     assert TOLERANCE == {"ecg_r": 0.05, "ppg_foot": 0.1}
     assert (BASE.r_method, BASE.foot_method) == ("prominence", "tangent")
     assert (BASE.pat_min_s, BASE.pat_max_s) == (0.08, 0.4)
+    # Decided 2026-10-25 (docs section 8).
+    assert CONFIG["version"] == "fiducials-week05-v1"
+    assert (BASE.refractory_s, BASE.ppg_refractory_s) == (0.25, 0.35)
+    assert BASE.foot_interpolation is False
+    assert BASE.r_energy_threshold == "quantile"
 
 
 def test_defaults_are_v1_methods_and_unknown_methods_rejected():
@@ -84,6 +89,14 @@ def test_defaults_are_v1_methods_and_unknown_methods_rejected():
             SignalConfig(**{field: "pan_tompkins"})
     with pytest.raises(ValueError):
         SignalConfig(r_energy_window_s=0)
+    # New fields keep features-sqi-v1/v2 when left at their defaults.
+    assert SignalConfig().ppg_refractory_s is None
+    assert SignalConfig().foot_interpolation is False
+    assert SignalConfig().r_energy_threshold == "quantile"
+    for bad in ({"ppg_refractory_s": 0}, {"ppg_refractory_s": float("nan")},
+                {"foot_interpolation": 1}, {"r_energy_threshold": "mad"}):
+        with pytest.raises(ValueError):
+            SignalConfig(**bad)
 
 
 @pytest.mark.parametrize("field,method", [("r_method", "derivative_energy"),
@@ -95,6 +108,12 @@ def test_features_sqi_v1_refuses_candidate_methods(field, method):
         extract_window(window, replace(SignalConfig(), **{field: method}))
 
 
+def test_features_sqi_refuses_a_separate_ppg_refractory():
+    window, _ = fixture()
+    with pytest.raises(ValueError, match="ppg_refractory_s"):
+        extract_window(window, replace(SignalConfig(), ppg_refractory_s=0.35))
+
+
 @pytest.mark.parametrize("ecg_fs", [125, 500])
 @pytest.mark.parametrize("method", ["prominence", "derivative_energy"])
 def test_clean_r_peaks_known_answer(method, ecg_fs):
@@ -104,10 +123,12 @@ def test_clean_r_peaks_known_answer(method, ecg_fs):
     assert _inside(found) == pytest.approx(_inside(r), abs=1 / ecg.fs_hz)
 
 
-def test_prominence_needs_long_refractory_to_skip_t_waves():
-    """Documented limitation: at 0.25 s the local-maxima detector also returns
-    T waves (R + 0.25 s); the derivative-energy envelope does not."""
-    ecg, _, r, _ = _case("SYN_CLEAN_HR60")
+@pytest.mark.parametrize("name", ["SYN_CLEAN_HR60", "SYN_T_EDGE_HR60"])
+def test_prominence_needs_long_refractory_to_skip_t_waves(name):
+    """Documented limitation: with a 0.25 s refractory the local-maxima detector
+    also returns T waves (at R + 0.28 s nominal, and at R + 0.25 s, exactly on the
+    boundary at 500 Hz); the derivative-energy envelope does not."""
+    ecg, _, r, _ = _case(name)
     prominence, _ = detect(ecg, replace(BASE, r_method="prominence"), "ecg")
     energy, _ = detect(ecg, replace(BASE, r_method="derivative_energy"), "ecg")
     matched, _ = match_events(_inside(r), _inside(prominence), 0.05)
@@ -135,13 +156,44 @@ def test_clean_feet_known_answer_per_method():
 @pytest.mark.parametrize("method", ["valley_min", "d2_max"])
 @pytest.mark.parametrize("offset", [0.3, -0.3])
 def test_parabolic_refinement_finds_sub_sample_minimum(method, offset):
-    """A smooth symmetric minimum between samples: refinement must land within
-    0.1 sample; no refinement is 0.3 sample off, the wrong sign 0.6."""
+    """A smooth symmetric minimum between samples: refinement (when enabled)
+    must land within 0.1 sample; no refinement is 0.3 sample off, the wrong sign
+    0.6."""
     ppg, minima = _sinusoid_ppg(offset)
-    feet, issues = detect(ppg, replace(BASE, foot_method=method), "ppg")
+    feet, issues = detect(ppg, replace(BASE, foot_method=method,
+                                       foot_interpolation=True), "ppg")
     assert not issues and len(_inside(feet)) >= 10
     nearest = minima[np.abs(_inside(feet)[:, None] - minima).argmin(axis=1)]
     assert np.abs(_inside(feet) - nearest).max() <= 0.1 / ppg.fs_hz
+
+
+@pytest.mark.parametrize("method", ["valley_min", "d2_max"])
+def test_interpolation_is_off_by_default(method):
+    """Decided 2026-10-25: without refinement a foot stays on the sample grid,
+    0.3 sample from a minimum that lies 0.3 sample after a sample."""
+    ppg, minima = _sinusoid_ppg(0.3)
+    feet, issues = detect(ppg, replace(BASE, foot_method=method), "ppg")
+    assert not issues and len(_inside(feet)) >= 10
+    on_grid = _inside(feet) * ppg.fs_hz
+    assert on_grid == pytest.approx(np.round(on_grid), abs=1e-6)
+    nearest = minima[np.abs(_inside(feet)[:, None] - minima).argmin(axis=1)]
+    assert np.abs(_inside(feet) - nearest) == pytest.approx(0.3 / ppg.fs_hz, abs=1e-6)
+
+
+@pytest.mark.parametrize("d2_next,shift", [(2.5, 0.0), (1.5, 1 / 6)])
+def test_d2_max_refines_only_a_strict_maximum(d2_next, shift):
+    """The second-difference argmax at the end of the search (slope index) is no
+    maximum when the next second difference is larger: curvature alone would
+    shift it by half a sample. A strict maximum 1, 2, 1.5 shifts by 1/6 sample."""
+    d2 = [0.0, 0.0, 1.0, 2.0, d2_next, -5.0, -5.0, 0.0]
+    values = [0.0, 0.0]
+    for k in range(1, len(d2) - 1):  # d2[k] = v[k-1] - 2 v[k] + v[k+1]
+        values.append(2 * values[k] - values[k - 1] + d2[k])
+    values = np.array(values)
+    times = np.arange(len(values)) * 0.01
+    foot = _foot_time(values, times, 1, 3, None, "d2_max", True)
+    assert foot == pytest.approx(times[3] + shift * 0.01)
+    assert _foot_time(values, times, 1, 3, None, "d2_max", False) == times[3]
 
 
 def test_vertex_offset_needs_the_right_curvature():
@@ -158,7 +210,8 @@ def test_vertex_offset_needs_the_right_curvature():
 def test_valley_plateau_is_not_refined():
     """Two equal minimal samples: the last one is kept, no half-sample shift."""
     ppg, minima = _sinusoid_ppg(0.5, decimals=6)
-    feet, _ = detect(ppg, replace(BASE, foot_method="valley_min"), "ppg")
+    feet, _ = detect(ppg, replace(BASE, foot_method="valley_min",
+                                  foot_interpolation=True), "ppg")
     nearest = minima[np.abs(_inside(feet)[:, None] - minima).argmin(axis=1)]
     assert _inside(feet) - nearest == pytest.approx(0.5 / ppg.fs_hz, abs=1e-9)
 
@@ -209,13 +262,14 @@ def test_ppg_dropout_leaves_r_unpaired_not_mispaired():
     assert pats == pytest.approx(200 + (0.5 - 1 / np.pi) * 150, abs=1000 / ppg.fs_hz)
 
 
+@pytest.mark.parametrize("refractory", [0.25, 0.4])
 @pytest.mark.parametrize("r_method", ["prominence", "derivative_energy"])
 @pytest.mark.parametrize("foot_method", ["tangent", "d2_max", "valley_min"])
-def test_high_heart_rate_every_beat_once(r_method, foot_method):
+def test_high_heart_rate_every_beat_once(r_method, foot_method, refractory):
     ecg, ppg, r, onsets = _case("SYN_HIGH_HR143")
-    # prominence keeps the v1 refractory 0.4 s (< RR 0.42 s); at 0.25 s it also
-    # returns the T wave after the last beat (see the T-wave test above).
-    refractory = 0.4 if r_method == "prominence" else BASE.refractory_s
+    # SYNTHETIC v1: at RR 0.42 s the T apex is 0.28 * sqrt(0.42) = 0.18 s after R,
+    # inside both R refractory periods, so neither detector returns it (with v0's
+    # fixed R + 0.25 s, prominence at 0.25 s also returned the last T wave).
     config = replace(BASE, r_method=r_method, foot_method=foot_method,
                      refractory_s=refractory)
     found, _ = detect(ecg, config, "ecg")
@@ -634,3 +688,66 @@ def test_annotate_refuses_existing_output_before_any_window(tmp_path, monkeypatc
     table = pd.read_csv(out)
     assert len(table) == 2 * len(SYNTHETIC_CASES) and table.time_s.isna().all()
     assert (tmp_path / "new.provenance.json").exists()
+
+
+
+def _ecg_beats(amplitudes, fs=512, rr_s=1.0):
+    """Gaussian QRS (no T wave) of the given amplitudes, one per RR, from 1 s."""
+    times = np.arange(int((len(amplitudes) + 2) * rr_s * fs)) / fs
+    r = 1.0 + rr_s * np.arange(len(amplitudes))
+    ecg = sum(a * np.exp(-0.5 * ((times - t) / 0.01) ** 2) for a, t in zip(amplitudes, r))
+    return Channel(ecg, fs, "u", None), r
+
+
+@pytest.mark.parametrize("threshold,found", [("quantile", 9), ("ptp", 1)])
+def test_energy_threshold_survives_one_large_beat(threshold, found):
+    """Docs section 7-8: with the peak-to-peak scale one beat x2.5 raises the
+    threshold above every other beat (1/9 found); Q95 - Q05 ignores that tail."""
+    ecg, r = _ecg_beats([1, 1, 1, 1, 2.5, 1, 1, 1, 1])
+    config = replace(BASE, r_method="derivative_energy", refractory_s=0.4,
+                     r_energy_threshold=threshold)
+    detected, issues = detect(ecg, config, "ecg")
+    assert not issues
+    assert len(match_events(r, detected, 0.05)[0]) == found
+
+
+def _ppg_with_secondary_wave(rr_s=0.8, delay_s=0.30, fs=200):
+    """Half-cosine pulse (rise 0.15 s, decay 0.12 s) plus a secondary bump of
+    half its height ``delay_s`` after the systolic peak."""
+    times = np.arange(int(12 * fs)) / fs
+    onsets = np.arange(1.0, 11.0, rr_s)
+    ppg = np.zeros_like(times)
+    for onset in onsets:
+        x = times - onset
+        ppg += np.where((x >= 0) & (x < 0.15), 0.5 * (1 - np.cos(np.pi * x / 0.15)),
+                        np.where(x >= 0.15, np.exp(-(x - 0.15) / 0.12), 0.0))
+        ppg += 0.5 * np.exp(-0.5 * ((x - 0.15 - delay_s) / 0.03) ** 2)
+    return Channel(ppg, fs, "u", None), onsets
+
+
+def test_separate_ppg_refractory_skips_a_secondary_wave():
+    """Docs section 7-8: a secondary wave 0.30 s after the systolic peak gives a
+    false PPG peak, hence a false foot, with the shared 0.25 s refractory; the PPG
+    refractory 0.35 s keeps one foot per pulse while ECG R keep 0.25 s."""
+    ppg, onsets = _ppg_with_secondary_wave()
+    shared, _ = detect(ppg, replace(BASE, ppg_refractory_s=None), "ppg")
+    separate, _ = detect(ppg, BASE, "ppg")
+    assert len(_inside(shared, 1.5, 10.5)) > len(_inside(onsets, 1.5, 10.5))
+    assert len(_inside(separate, 1.5, 10.5)) == len(_inside(onsets, 1.5, 10.5))
+    assert (len(match_events(_inside(onsets, 1.5, 10.5), _inside(separate, 1.5, 10.5),
+                             0.1)[0]) == len(_inside(onsets, 1.5, 10.5)))
+
+
+@pytest.mark.parametrize("name,delay", [("SYN_CLEAN_HR60", 0.28),
+                                        ("SYN_HIGH_HR143", 0.28 * np.sqrt(0.42)),
+                                        ("SYN_T_EDGE_HR60", 0.25)])
+def test_t_apex_follows_heart_rate_and_edge_case_stays(name, delay):
+    """SYNTHETIC v1: T apex 0.28 * sqrt(RR) s after R; the edge case keeps 0.25 s."""
+    assert t_apex_s(SYNTHETIC_CASES[name].get("rr_s", 1.0)) == pytest.approx(
+        0.28 * np.sqrt(SYNTHETIC_CASES[name].get("rr_s", 1.0)))
+    ecg, _, r, _ = _case(name)
+    times = np.arange(len(ecg.values)) / ecg.fs_hz
+    for beat in _inside(r, 1.0, 8.0):
+        window = (times > beat + 0.1) & (times < beat + 0.36)
+        apex = times[window][np.argmax(ecg.values[window])]
+        assert apex == pytest.approx(beat + delay, abs=3 / ecg.fs_hz)

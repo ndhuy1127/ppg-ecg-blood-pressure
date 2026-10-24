@@ -41,8 +41,11 @@ from software.signal_processing.fiducials import (  # noqa: E402
     FOOT_METHODS, R_METHODS, Channel, SignalConfig, detect,
 )
 
-SCRIPT_VERSION = "week05-fiducials-v1"
-SYNTHETIC_VERSION = "week05-synthetic-records-v0"
+SCRIPT_VERSION = "week05-fiducials-v2"
+# v1 (2026-10-25): T apex at 0.28 * sqrt(RR) s after R instead of a fixed 0.25 s,
+# which sat on the 0.25 s refractory boundary; SYN_T_EDGE_HR60 keeps the old
+# position as a boundary case. v0 results stay as history.
+SYNTHETIC_VERSION = "week05-synthetic-records-v1"
 RECORD_COLUMNS = ("record_id", "subject_id", "split", "source_type", "origin",
                   "ecg_fs_hz", "ppg_fs_hz", "file", "file_sha256")
 CODE_FILES = ("scripts/week05_fiducials.py", "software/signal_processing/fiducials.py",
@@ -127,16 +130,26 @@ def _write_json(path, payload):
 
 # --- SYNTHETIC records -------------------------------------------------------
 
+def t_apex_s(rr_s):
+    """R to T-apex delay: 0.28 * sqrt(RR / 1 s) s (about 280 ms at 60 bpm, 177 ms
+    at 150 bpm). Rate scaling in the spirit of ECGSYN
+    (https://physionet.org/content/ecgsyn/1.0.0/); an engineering nominal for
+    SYNTHETIC records, not a validated physiological model."""
+    return 0.28 * float(np.sqrt(rr_s))
+
+
 def synthetic_record(rr_s=1.0, duration_s=10.0, pat_s=0.2, rise_s=0.15, ecg_fs=500,
                      ppg_fs=125, noise_sd=0.0, wander=0.0, drop_beats=(),
-                     drop_ppg_beats=(), seed=0):
+                     drop_ppg_beats=(), seed=0, t_delay_s=None):
     """Gaussian QRS with a T wave; PPG pulse = half-cosine rise then exponential
     decay.
 
     Truth: R at the Gaussian centre; foot at pulse onset (start of the rise).
+    The T apex is ``t_delay_s`` after R (default ``t_apex_s(rr_s)``).
     ``drop_beats`` removes beat k from both channels (pause); ``drop_ppg_beats``
     removes only its PPG pulse. Shapes are not physiological models.
     """
+    t_delay = t_apex_s(rr_s) if t_delay_s is None else t_delay_s
     rng = np.random.default_rng(seed)
     beats = np.arange(1.0, duration_s - 0.6, rr_s)
     kept = np.array([t for k, t in enumerate(beats) if k not in drop_beats])
@@ -149,7 +162,7 @@ def synthetic_record(rr_s=1.0, duration_s=10.0, pat_s=0.2, rise_s=0.15, ecg_fs=5
         ecg += (np.exp(-0.5 * ((et - r) / 0.01) ** 2)
                 - 0.15 * np.exp(-0.5 * ((et - r + 0.03) / 0.008) ** 2)
                 - 0.2 * np.exp(-0.5 * ((et - r - 0.03) / 0.008) ** 2)
-                + 0.3 * np.exp(-0.5 * ((et - r - 0.25) / 0.04) ** 2))
+                + 0.3 * np.exp(-0.5 * ((et - r - t_delay) / 0.04) ** 2))
     ppg = np.zeros_like(pt)
     for onset in pulses:
         x = pt - onset
@@ -169,6 +182,8 @@ SYNTHETIC_CASES = {
     "SYN_PAUSE_HR60": {"drop_beats": (4,)},
     "SYN_PPG_DROPOUT_HR60": {"drop_ppg_beats": (3,)},
     "SYN_HIGH_HR143": {"rr_s": 0.42, "pat_s": 0.16, "rise_s": 0.1},
+    # Boundary case: T apex exactly on the 0.25 s ECG refractory period.
+    "SYN_T_EDGE_HR60": {"t_delay_s": 0.25},
 }
 
 

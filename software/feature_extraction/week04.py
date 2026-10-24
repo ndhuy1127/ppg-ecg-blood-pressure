@@ -108,6 +108,10 @@ def extract_window(window: SignalWindow, config: SignalConfig,
         # candidate method in features needs a new version once it is chosen.
         raise ValueError("features-sqi-v1 defines only r_method='prominence' and "
                          "foot_method='tangent'")
+    if config.ppg_refractory_s is not None:
+        # features-sqi-v1/v2 use one refractory_s for ECG and PPG peaks.
+        raise ValueError("features-sqi-v1/v2 use refractory_s for both channels; "
+                         "ppg_refractory_s must be None")
     required = ("sample_id", "subject_id", "source", "source_sha256", "raw_index", "split")
     if not isinstance(window.metadata, dict) or any(k not in window.metadata for k in required):
         raise ValueError("Window needs manifest identity/provenance and split")

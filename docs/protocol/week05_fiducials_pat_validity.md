@@ -1,7 +1,8 @@
 # Tuần 5 — mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay
 
-Huy, 2026-10-21; sửa ngày 2026-10-22 theo review độc lập. Version
-config: `fiducials-week05-v0`, trạng thái `NOT_TEST_TUNED`. Kiểm tra mới chỉ trên
+Huy, 2026-10-21; sửa ngày 2026-10-22 theo review độc lập; bốn quyết định ngày
+2026-10-25 ở mục 8. Version config: `fiducials-week05-v1` (v0 tới 2026-10-24),
+trạng thái `NOT_TEST_TUNED`. Kiểm tra mới chỉ trên
 SYNTHETIC; **chưa chạy trên PulseDB** (không có raw trên máy, xem mục 6). Không
 phải phương pháp đã khóa.
 
@@ -30,23 +31,27 @@ R → chân sóng PPG, không phải PTT. BP/ABP không là đầu vào của m�
   refractory/prominence, rồi dời về cực đại tín hiệu trong ±1 cửa sổ. Ý tưởng
   đạo hàm + bình phương có trong Pan–Tompkins, nhưng **đây không phải
   Pan–Tompkins**: không có bộ lọc dải cố định, ngưỡng thích nghi hay search-back.
+  Ngưỡng prominence của đường bao (`r_energy_threshold`, từ 2026-10-25):
+  `quantile` = 0,2 × (Q95 − Q05) của năng lượng (mặc định), `ptp` = 0,2 × biên độ
+  đỉnh-đỉnh (cách của v0, giữ để tái tạo kết quả cũ).
 
 **PPG foot** (`foot_method`), cùng valley và peak như v1:
 
 - `tangent` (mặc định): tiếp tuyến tại sườn lên dốc nhất cắt mức valley.
-- `d2_max` (mới): cực đại sai phân bậc hai giữa valley và điểm dốc nhất, nội suy
-  parabol dưới một mẫu khi ba điểm cong đúng chiều cực đại.
-- `valley_min` (mới): cực tiểu cuối trước sườn lên; nội suy parabol chỉ khi là
-  cực tiểu chặt. Đoạn phẳng (hai mẫu bằng nhau) không nội suy.
+- `d2_max` (mới): cực đại sai phân bậc hai giữa valley và điểm dốc nhất.
+- `valley_min` (mới): cực tiểu cuối trước sườn lên.
 
-Nội suy parabol (`_vertex_offset`) chỉ dời mốc khi parabol cong đúng chiều (cực
-tiểu cho `valley_min`, cực đại cho `d2_max`); từ 2026-10-22, parabol cong ngược
-chiều thì không dời (trước đó `d2_max` có thể dời nửa mẫu sai hướng ở biên đoạn
-tìm). **Giới hạn đã biết:** một góc nhọn bất đối xứng (sườn xuống dốc, sườn lên
-thoải, như điểm bắt đầu xung SYNTHETIC) vẫn là cực tiểu chặt nên vẫn bị nội
-suy, và nội suy làm sai số **tăng**: probe review 2026-10-22 (quét pha onset, PPG
-125 Hz) cho `valley_min` MAE 6,28 ms có nội suy so với 3,56 ms không nội suy. Giữ,
-bỏ hay giới hạn nội suy là **quyết định chờ Huy**.
+**Nội suy parabol dưới một mẫu** (`foot_interpolation`, **mặc định tắt** từ
+2026-10-25, mục 8): khi bật, chỉ dời mốc ở cực trị chặt ba điểm (cực tiểu chặt của
+tín hiệu cho `valley_min`, cực đại chặt của sai phân bậc hai cho `d2_max`; đoạn
+phẳng không nội suy), tối đa nửa mẫu. Trước 2026-10-25, `d2_max` chỉ xét chiều cong
+nên điểm argmax ở biên đoạn tìm vẫn có thể bị dời nửa mẫu. **Lý do tắt:** một góc
+nhọn bất đối xứng (sườn xuống dốc, sườn lên thoải, như điểm bắt đầu xung SYNTHETIC)
+vẫn là cực trị chặt nên bị nội suy, và nội suy làm sai số **tăng** ở cả hai phương
+pháp (quét 101 pha onset, Codex 2026-10-25): `valley_min` 3,32 → 6,59 ms ở 125 Hz,
+2,00 → 3,91 ms ở 200 Hz; `d2_max` 9,90 → 11,93 ms ở 125 Hz, 6,63 → 8,25 ms ở 200 Hz.
+Trên cực trị trơn đối xứng thì nội suy giảm sai số (khoảng 2 ms xuống gần 0), nên
+giữ làm tùy chọn để đối chứng; chốt cuối sau khi có đánh dấu tay.
 
 `d2_max` và `valley_min` chưa có làm mượt; trên dữ liệu nhiễu kết quả kém hơn
 `tangent` (mục 5). Nếu dùng thật cần lọc trước, và lựa chọn đó phải khóa trên
@@ -118,7 +123,9 @@ khóa các giá trị của nó bằng đúng bảng dưới.
 | Quy tắc MAD | median ± k · 1,4826 · MAD | Leys et al. 2013, [10.1016/j.jesp.2013.03.013](https://doi.org/10.1016/j.jesp.2013.03.013); mới đối chiếu metadata, chưa đọc toàn văn |
 | `mad_k` | 3 | **Chưa có nguồn** cho giá trị; lựa chọn kỹ thuật |
 | `mad_floor_ms` | 10 ms | **Chưa có nguồn**. Thêm ngày 2026-10-21 sau khi test SYNTHETIC cho thấy không có sàn thì PAT gần như hằng bị gắn outlier chỉ vì lượng tử hóa 1 mẫu (8 ms ở 125 Hz) |
-| `refractory_s` (config Tuần 5) | 0,25 s | **Chưa có nguồn**; để HR tới 240 bpm không bị refractory cắt. v1 giữ 0,4 s. Giá trị này áp cho **cả đỉnh PPG** (mục 7) |
+| `refractory_s` (config Tuần 5) | 0,25 s, cho đỉnh R | **Chưa có nguồn**; để HR cao không bị refractory cắt. v1 (features-sqi) giữ 0,4 s cho cả hai kênh, nhưng ở ECG 512 Hz với RR 0,4 s (HR 150) chỉ còn 17/21 đỉnh R (Codex 2026-10-25) |
+| `ppg_refractory_s` (config Tuần 5 v1) | 0,35 s, cho đỉnh PPG | Quyết định 2026-10-25 (mục 8), **chưa có nguồn**: chặn sóng phụ cách đỉnh tâm thu 0,30 s và vẫn dưới RR 0,4 s; sóng phụ ở +0,36 s vẫn lọt |
+| `r_energy_threshold` | `quantile`, 0,2 × (Q95 − Q05) | Quyết định 2026-10-25 (mục 8); Q95/Q05 là lựa chọn kỹ thuật, **chưa có nguồn** |
 | Dung sai so khớp | R 50 ms, foot 100 ms | **Chưa có nguồn**. Phải chốt trước khi đánh dấu, không đổi sau khi xem kết quả |
 
 ## 4. So với đánh dấu tay
@@ -297,17 +304,26 @@ Chỉ xuất ECG/PPG; ABP và nhãn ở lại file raw. `--fs-hz` do người ch
   - một nhịp ×2,5: chỉ còn **1/9**;
   - một spike 1 mẫu biên độ 0,8 × R: 0/9.
 
-  Trong cả ba trường hợp `prominence` vẫn 9/9, tới nhịp ×5,5. Đổi sang ngưỡng
-  robust là **quyết định chờ Huy**.
-- **Refractory 0,25 s áp cho cả đỉnh PPG** (`detect` dùng chung
-  `config.refractory_s`). PPG có sóng tâm trương thì sinh foot giả: probe HR 75,
+  Trong cả ba trường hợp `prominence` vẫn 9/9, tới nhịp ×5,5. Từ 2026-10-25 ngưỡng
+  mặc định là `quantile` (mục 8): nhịp ×2,5 cho lại 9/9, nhưng gai 1 mẫu vẫn cho 1
+  FP và biên độ tụt còn 0,3 giữa chừng vẫn chỉ 5/9 (probe Codex, 512 Hz). Vì vậy
+  `derivative_energy` vẫn chỉ là phương pháp để so sánh.
+- **Refractory chung cho đỉnh PPG** (tới 2026-10-24 `detect` dùng chung
+  `config.refractory_s` 0,25 s; từ 2026-10-25 PPG dùng `ppg_refractory_s` 0,35 s,
+  mục 8). PPG có sóng tâm trương thì sinh foot giả: probe HR 75,
   sóng tâm trương biên độ 0,5, cách ≥ 0,30 s cho 21 foot, trong khi chỉ có 11 foot
   thật; với 0,4 s ra đúng 11. Foot giả ảnh hưởng ghép PAT theo ba cách: làm R
   thành `ambiguous` (mất cặp, nên số nhịp có PAT giảm và median tính trên tập nhịp
   khác); nằm ngoài giới hạn; hoặc, nếu là ứng viên duy nhất trong giới hạn của
   khoảng R–R, được ghép thành một PAT sai mà quy tắc không phát hiện. PPV foot so
-  với đánh dấu tay cũng giảm. SYNTHETIC hiện không có sóng tâm trương. Tách `ppg_refractory_s` là
-  **quyết định chờ Huy**.
+  với đánh dấu tay cũng giảm. SYNTHETIC hiện không có sóng tâm trương; test
+  `test_separate_ppg_refractory_skips_a_secondary_wave` dựng riêng một sóng phụ ở
+  +0,30 s. Refractory 0,35 s không giải quyết sóng tâm trương nói chung (sóng phụ
+  ở +0,36 s vẫn lọt); chọn foot gần R nhất cũng không an toàn (lặng lẽ chọn foot
+  giả). `pair_between_r` giữ quy tắc ở mục 3: khi một khoảng R–R có nhiều foot thì
+  nhịp chỉ được ghép nếu **đúng một** foot nằm trong giới hạn PAT, còn lại là
+  `ambiguous`; vì vậy một foot giả nằm ngoài giới hạn không chặn nhịp, nhưng một
+  foot giả trong giới hạn bên cạnh foot thật làm nhịp thành `ambiguous`.
 - ECG đảo cực mà không đặt `ecg_polarity` vẫn được tính TP: theo probe review
   2026-10-22, cả hai phương pháp bắt sóng S SYNTHETIC (R + 0,03 s), lệch +30 ms,
   nằm trong dung sai 50 ms. PPG đảo cực thì 0 TP. Polarity phải khai báo đúng.
@@ -318,3 +334,32 @@ Chỉ xuất ECG/PPG; ABP và nhãn ở lại file raw. `--fs-hz` do người ch
   sinh lý nhanh trong cửa sổ.
 - Các giới hạn và dung sai chưa có nguồn (mục 3); phải khóa trước pilot/validation,
   không chỉnh theo test.
+
+## 8. Quyết định ngày 2026-10-25
+
+Huy chọn ngày 2026-10-25, sau khi Codex phân tích độc lập và chạy probe trong bộ
+nhớ. Cả bốn là đề xuất kỹ thuật tạm, **không** phải tham số đã thẩm định; lựa chọn
+cuối cho nội suy và bộ tham số chờ đánh dấu tay, chọn trên train/val theo người,
+không bao giờ trên test.
+
+1. **Nội suy foot:** thành tùy chọn `foot_interpolation`, mặc định tắt; khi bật chỉ
+   nội suy ở cực trị chặt ba điểm, tối đa nửa mẫu (mục 2).
+2. **Ngưỡng `derivative_energy`:** `r_energy_threshold = "quantile"`, tức
+   0,2 × (Q95 − Q05) của năng lượng; `prominence` vẫn là bộ dò R mặc định. Ngưỡng
+   thích nghi kiểu Pan–Tompkins (T = N + 0,25 (S − N), cập nhật 0,125) để sau, chỉ
+   khi có dữ liệu đánh dấu để thẩm định (mục 7).
+3. **Refractory:** tách `ppg_refractory_s`; config Tuần 5 v1 dùng R 0,25 s, PPG
+   0,35 s. `features-sqi-v1/v2` giữ một `refractory_s` cho cả hai kênh và từ chối
+   `ppg_refractory_s` khác `None`. Ứng viên sau: refractory PPG theo RR cục bộ
+   (`min(0,40 s; 0,75 × trung vị RR)`), cần R tin cậy và phải báo riêng.
+4. **Sóng T SYNTHETIC:** đỉnh T đặt ở R + 0,28 × √(RR / 1 s) giây (khoảng 280 ms ở
+   60 bpm, 177 ms ở 150 bpm; phỏng theo cách co giãn theo nhịp của ECGSYN, không
+   phải mô hình sinh lý đã thẩm định). Bản ghi `SYN_T_EDGE_HR60` giữ T ở 0,25 s làm
+   ca biên. Generator `week05-synthetic-records-v1`, script `week05-fiducials-v2`;
+   bảng ở mục 5 là kết quả v0 (T ở 0,25 s, nội suy bật, ngưỡng `ptp`), giữ làm lịch
+   sử.
+
+Không quyết định nào chặn việc tải PulseDB hay phát triển thiết bị. Quyết định 4
+phải có trước khi tạo bảng so sánh SYNTHETIC mới; quyết định 3 trước khi tin độ phủ
+PAT ở nhịp tim cao (M4); quyết định 2 trước khi dùng `derivative_energy` ngoài so
+sánh.

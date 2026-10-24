@@ -65,6 +65,14 @@ Hàm chỉ nhận vector ECG và PPG, không nhận ABP, nhãn BP, ID người h
 Không impute: NaN/Inf, vector rỗng hoặc masked array gây `ValueError`. PAT và
 module `features-sqi-v1` chưa được tích hợp.
 
+**Quyết định 2026-10-25 (Huy):** B3 (kể cả `b3-pipeline-v1`) giữ đặc trưng
+`pulsedb-simple-stats-v0` để đóng baseline G1. PAT, nhịp tim và SQI đi vào một
+model **B4** riêng, chỉ sau khi đánh dấu tay trên train/val (không bao giờ test)
+xác nhận mốc R/foot ([tài liệu mốc Tuần 5](week05_fiducials_pat_validity.md) mục
+8). Báo B4 − B3 ghép cặp theo người để biết PAT thêm được bao nhiêu. Lý do: mốc chưa
+thẩm định; PPG của PulseDB là PPG ngón tay 125 Hz, khác cổ tay của thiết bị; lọc theo
+SQI làm đổi tập được đánh giá và ngưỡng SQI chưa có nguồn.
+
 ## B3
 
 [xgboost_baseline.py](../../software/models/xgboost_baseline.py): hai
