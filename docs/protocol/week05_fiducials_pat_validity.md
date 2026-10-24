@@ -1,10 +1,11 @@
 # Tuần 5 — mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay
 
 Huy, 2026-10-21; sửa ngày 2026-10-22 theo review độc lập; bốn quyết định ngày
-2026-10-25 ở mục 8. Version config: `fiducials-week05-v1` (v0 tới 2026-10-24),
-trạng thái `NOT_TEST_TUNED`. Kiểm tra mới chỉ trên
-SYNTHETIC; **chưa chạy trên PulseDB** (không có raw trên máy, xem mục 6). Không
-phải phương pháp đã khóa.
+2026-10-25 ở mục 8; kế hoạch đánh dấu tay và ngưỡng chấp nhận ngày 2026-10-25 ở
+mục 9. Version config: `fiducials-week05-v2` (v1 sáng 2026-10-25, v0 tới
+2026-10-24), trạng thái `NOT_TEST_TUNED`. Kết quả mới chỉ có trên SYNTHETIC. Bộ
+đoạn PulseDB để đánh dấu đã được xuất (mục 6), nhưng **chưa có đánh dấu tay**.
+Không phải phương pháp đã khóa.
 
 Kế thừa [tài liệu Tuần 4](week04_features_sqi_bootstrap.md). PAT là khoảng
 R → chân sóng PPG, không phải PTT. BP/ABP không là đầu vào của mốc, PAT hay SQI.
@@ -16,10 +17,11 @@ R → chân sóng PPG, không phải PTT. BP/ABP không là đầu vào của m�
 | Phương pháp mốc, chọn qua `SignalConfig` | `software/signal_processing/fiducials.py` (`R_METHODS`, `FOOT_METHODS`, `r_peaks`, `detect`) |
 | PAT hợp lệ và outlier | `software/signal_processing/pat_validity.py` (`PatRules`, `pair_between_r`, `classify_pat`, `pat_beats`) |
 | So với đánh dấu tay | `software/evaluation/fiducial_agreement.py` (`match_events`, `agreement`) |
-| Script synth/export/plot/annotate/detect/compare | `scripts/week05_fiducials.py` |
+| Ngưỡng chấp nhận và độ lặp lại (mục 9) | `software/evaluation/fiducial_gate.py` (`gate`, `repeatability`) |
+| Script synth/export/plot/annotate/detect/compare/repeat/gate | `scripts/week05_fiducials.py` |
 | Config và ghi chú nguồn | `configs/data/week05_huy.json` |
 | Mẫu CSV đánh dấu tay (trống) | `docs/protocol/templates/manual_fiducials_template.csv` |
-| Test | `tests/test_week05_fiducials.py` |
+| Test | `tests/test_week05_fiducials.py`, `tests/test_fiducial_gate.py` |
 
 ## 2. Phương pháp ứng viên
 
@@ -126,11 +128,12 @@ khóa các giá trị của nó bằng đúng bảng dưới.
 | `refractory_s` (config Tuần 5) | 0,25 s, cho đỉnh R | **Chưa có nguồn**; để HR cao không bị refractory cắt. v1 (features-sqi) giữ 0,4 s cho cả hai kênh, nhưng ở ECG 512 Hz với RR 0,4 s (HR 150) chỉ còn 17/21 đỉnh R (Codex 2026-10-25) |
 | `ppg_refractory_s` (config Tuần 5 v1) | 0,35 s, cho đỉnh PPG | Quyết định 2026-10-25 (mục 8), **chưa có nguồn**: chặn sóng phụ cách đỉnh tâm thu 0,30 s và vẫn dưới RR 0,4 s; sóng phụ ở +0,36 s vẫn lọt |
 | `r_energy_threshold` | `quantile`, 0,2 × (Q95 − Q05) | Quyết định 2026-10-25 (mục 8); Q95/Q05 là lựa chọn kỹ thuật, **chưa có nguồn** |
-| Dung sai so khớp | R 50 ms, foot 100 ms | **Chưa có nguồn**. Phải chốt trước khi đánh dấu, không đổi sau khi xem kết quả |
+| Dung sai so khớp | R 24 ms, foot 48 ms (3 và 6 mẫu ở 125 Hz) | Chốt ngày 2026-10-25, trước khi đánh dấu (mục 9); **chưa có nguồn**. v1 dùng 50/100 ms, mức đó từng tính sóng S trễ 30 ms là R đúng. Không đổi sau khi xem kết quả |
 
 ## 4. So với đánh dấu tay
 
-Quy trình (chỉ train/val; script từ chối split khác):
+Quy trình (script từ chối mọi split ngoài train/val; từ 2026-10-25 phương pháp chỉ
+được chọn trên **train**, mục 9):
 
 1. Lấy bản ghi: `synth` (SYNTHETIC) hoặc `export` (tập nhỏ train/val của
    PulseDB, mục 6).
@@ -300,14 +303,14 @@ Cách đọc:
 - Đây là đáp án do mã sinh ra, **không phải đánh dấu tay**, và không nói gì về
   độ chính xác trên người hay PulseDB.
 
-## 6. PulseDB: bị chặn
+## 6. PulseDB: xuất bộ đoạn để đánh dấu
 
-Không có `data/raw/` hay file `.mat` PulseDB trên máy (kiểm tra 2026-10-21), và
-chưa có thư mục split v2 do Linh bàn giao. Vì vậy chưa xuất bản ghi, chưa đánh dấu
-tay và chưa có bảng sai số trên PulseDB. Khi Linh bàn giao raw + split v2:
+Từ 2026-10-25 có raw và split Train 400 người
+([provenance](../pulsedb_provenance.md) mục 5). `export` theo `review_plan` của
+config (mục 9):
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\week05_fiducials.py export --raw <file.mat> --split-dir <split_v2> --fs-hz 125 --subjects 5 --per-subject 2 --out tmp\w5\pulsedb
+python scripts\week05_fiducials.py export --raw data\raw\pulsedb\VitalDB_Train_Subset.mat --split-dir data\processed\pulsedb_train400_split_run01 --fs-hz 125 --out data\processed\pulsedb_w5_review_v1
 ```
 
 Các bước của `export`:
@@ -319,13 +322,20 @@ Các bước của `export`:
    dựng lại inventory và băm lại mọi hàng, **kể cả hàng test**, như
    `b3-pipeline-v1`. Bước này chỉ để kiểm bàn giao; không trích đặc trưng, không
    ghi và không xem waveform hay nhãn test.
-4. Bỏ hàng test trước khi chọn người.
-5. Chọn người bằng hoán vị có seed, chỉ dựa vào `subject_id`, rồi lấy các đoạn đầu
-   theo `raw_index`.
+4. Chỉ hàng **train** là ứng viên (val và test bị bỏ trước khi chọn).
+5. Chọn `n_subjects` người bằng hoán vị có seed, chỉ dựa vào `subject_id`;
+   `selection_subjects` người đầu thành nhóm chọn phương pháp, phần còn lại thành
+   nhóm xác nhận. Với mỗi người, danh sách `raw_index` đã sắp xếp được chia thành
+   `per_subject` phần và lấy ngẫu nhiên một đoạn trong mỗi phần (`raw_index` là
+   dòng trong file, không phải thời gian).
+6. Ghi `main/` (mọi đoạn, thứ tự xáo trộn, cho lần đánh dấu đầu), `repeat/`
+   (`repeat_segments` đoạn, một nửa mỗi nhóm, một đoạn mỗi người, thứ tự xáo trộn
+   khác, cho lần đánh dấu lại) và `export.json` (nhóm người, hash hai
+   `records.csv`; có ID người nên để ngoài Git).
 
 Chỉ xuất ECG/PPG; ABP và nhãn ở lại file raw. `--fs-hz` do người chạy khai báo
 (125 Hz theo [provenance PulseDB](../pulsedb_provenance.md)), không suy từ shape.
-Đường xuất này mới được test phần chọn hàng, **chưa chạy trên raw thật**.
+Chạy trên raw thật ngày 2026-10-25 (kết quả ở mục 9.4).
 
 ## 7. Giới hạn
 
@@ -373,8 +383,8 @@ Chỉ xuất ECG/PPG; ABP và nhãn ở lại file raw. `--fs-hz` do người ch
 
 Huy chọn ngày 2026-10-25, sau khi Codex phân tích độc lập và chạy probe trong bộ
 nhớ. Cả bốn là đề xuất kỹ thuật tạm, **không** phải tham số đã thẩm định; lựa chọn
-cuối cho nội suy và bộ tham số chờ đánh dấu tay, chọn trên train/val theo người,
-không bao giờ trên test.
+cuối cho nội suy và bộ tham số chờ đánh dấu tay, chọn theo người, không bao giờ
+trên test (từ 2026-10-25 chỉ trên train, mục 9).
 
 1. **Nội suy foot:** thành tùy chọn `foot_interpolation`, mặc định tắt; khi bật chỉ
    nội suy ở cực trị chặt ba điểm, tối đa nửa mẫu (mục 2).
@@ -397,3 +407,128 @@ Không quyết định nào chặn việc tải PulseDB hay phát triển thiế
 phải có trước khi tạo bảng so sánh SYNTHETIC mới; quyết định 3 trước khi tin độ phủ
 PAT ở nhịp tim cao (M4); quyết định 2 trước khi dùng `derivative_energy` ngoài so
 sánh.
+
+## 9. Kế hoạch đánh dấu tay PulseDB và ngưỡng chấp nhận (chốt 2026-10-25)
+
+Huy chọn ngày 2026-10-25, **trước khi đánh dấu bất kỳ đoạn PulseDB nào**, từ đề
+xuất của Codex (2026-10-25). Mọi con số ở đây là đề xuất kỹ thuật, **chưa có
+nguồn**; chúng được khóa trong `review_plan` và `acceptance` của config
+`fiducials-week05-v2`, và không được đổi sau khi xem kết quả. Theo quyết định B3/B4
+([run_b3_pulsedb.md](run_b3_pulsedb.md)), B4 chỉ được xây khi bước này đạt.
+
+### 9.1. Mẫu
+
+- **Chỉ train**: 40 người × 2 đoạn = 80 đoạn (khoảng 2.000 click). Người val không
+  được dùng để chọn phương pháp mốc, để B4 − B3 trên val vẫn là bằng chứng độc lập.
+  Điều này thay câu "chọn trên train/val" ở mục 8.
+- 20 người **nhóm chọn**, 20 người **nhóm xác nhận**, chia sẵn khi xuất (seed
+  20261025).
+- Mỗi người: một đoạn ngẫu nhiên trong mỗi nửa danh sách `raw_index` đã sắp xếp.
+- **Đánh dấu lặp lại**: 16 đoạn (20%; 8 mỗi nhóm, mỗi người một đoạn), thứ tự xáo
+  trộn, đánh dấu lại **ít nhất 2 ngày** sau lần đầu, không xem lần trước hay kết
+  quả detector.
+
+### 9.2. Định nghĩa mốc khi click
+
+- **R**: đỉnh sóng R.
+- **Foot PPG**: **điểm cực tiểu ngay trước sườn lên tâm thu**. `valley_min` nhắm
+  đúng điểm này; `tangent` (giao điểm tiếp tuyến) và `d2_max` nhắm điểm khác, nên
+  lệch có hệ thống so với mốc tay là thông tin về định nghĩa, không phải lỗi của
+  chúng. Nếu sau này cần PAT theo tiếp tuyến thì phải có đợt đánh dấu riêng.
+- Dùng zoom của cửa sổ (click không tự hút về đỉnh). Đoạn hay nhịp không chắc thì
+  vẫn đánh dấu theo định nghĩa và ghi chú; không âm thầm bỏ đoạn khó.
+
+### 9.3. Ngưỡng chấp nhận và quy tắc chọn
+
+Dung sai ghép R ±24 ms, foot ±48 ms (3 và 6 mẫu ở 125 Hz). Sai số = tự động − tay.
+
+| Chỉ số | R | Foot |
+| --- | ---: | ---: |
+| Độ nhạy và PPV (mỗi chỉ số) | ≥ 99% | ≥ 98% |
+| \|Bias\| | ≤ 4 ms | ≤ 8 ms |
+| MAE | ≤ 8 ms | ≤ 16 ms |
+| SD (`ddof=1`) | ≤ 8 ms | ≤ 16 ms |
+
+- Độ nhạy, PPV và MAE: tính cho từng người (gộp các đoạn của người đó) rồi lấy
+  trung bình đều theo người. Bias và SD: gộp mọi cặp ghép được. Nếu một chỉ số
+  không xác định được ở bất kỳ người nào (không có mốc tay, không có detection,
+  không ghép được cặp nào) thì chỉ số đó là `None` và coi như không đạt.
+- Phải có đủ mọi đoạn đã xuất cho mọi phương pháp (80 đoạn × 5 phương pháp), và
+  mốc tay phải có provenance của `annotate` trên đúng `main/`. Thiếu đoạn, hoặc
+  CSV điền tay không có provenance, thì `gate` từ chối.
+- Thêm điều kiện theo đoạn: ít nhất 95% số đoạn có độ nhạy và PPV ≥ 90%; đoạn
+  không có mốc tay nào thì không đạt. Báo đoạn tệ nhất.
+- Quyết định dựa trên **ước lượng điểm**. CI 95% bootstrap theo người (2.000 lượt,
+  seed 20261025) được báo cáo nhưng không dùng để quyết định.
+- **Chọn** trên nhóm chọn: trong các phương pháp đạt mọi ngưỡng, lấy MAE trung bình
+  theo người nhỏ nhất. Hòa tuyệt đối thì theo thứ tự `prominence` trước
+  `derivative_energy`, và `valley_min` trước `tangent` trước `d2_max`. Mọi thiết
+  lập khác giữ nguyên (không nội suy).
+- **Xác nhận** trên nhóm xác nhận: chỉ chấm phương pháp thắng, một lần. Không đổi
+  phương pháp sau khi xác nhận thất bại.
+- **Độ lặp lại** của người đánh dấu (lần 2 − lần 1, cùng dung sai): MAE R ≤ 8 ms,
+  foot ≤ 16 ms, **và** mọi mốc của cả hai lần đều ghép được. Nếu không có điều kiện
+  này, các mốc bỏ sót hay lệch quá dung sai sẽ bị loại khỏi MAE và bị che đi
+  (Codex review 2026-10-25). Lần 2 phải phủ đúng 16 đoạn của `repeat/`, cùng vùng
+  review, và bắt đầu ít nhất 2 ngày sau ngày cuối của lần 1. Không đạt thì phải
+  sửa quy trình đánh dấu rồi xác nhận lại trên dữ liệu mới.
+- `gate` chỉ nhận kết quả độ lặp lại của `repeat`, làm từ đúng file mốc lần 1 mà
+  `compare` đã dùng, cùng config và cùng export, và có `passed` đúng bằng `true`.
+- Kết luận của lệnh `gate`: `B4_ALLOWED` chỉ khi cả R và foot được xác nhận và độ
+  lặp lại đạt. `PENDING_REPEATABILITY` khi chưa có lần đánh dấu lại.
+  `B4_NOT_ALLOWED` thì không xây B4 theo quyết định này, kể cả khi kèm ghi chú
+  giới hạn.
+
+### 9.4. Bộ đoạn đã xuất và lệnh chạy
+
+Kết quả lần xuất ngày 2026-10-25 được ghi ở
+[báo cáo Tuần 5](../../reports/weekly/week_05/README.md) mục 6.5. Thư mục
+`data/processed/pulsedb_w5_review_v1/` nằm ngoài Git, vì `records.csv` và
+`export.json` có ID người.
+
+Bước đánh dấu cần cửa sổ Tk. Môi trường Python 3.11 đã pin trên máy làm việc không
+có tkinter, nên bước này chạy bằng `.venv` (Python 3.13, có Tk 8.6). Mọi bước khác
+chạy bằng môi trường đã pin.
+
+Mỗi đoạn được ghi ngay khi đóng cửa sổ, và `<out>.progress.json` ghi các đoạn đã
+xong. Có thể dừng giữa chừng (Ctrl+C trong terminal), rồi chạy lại đúng lệnh kèm
+`--resume`, có thể vào ngày khác (`--date` là ngày của lần ngồi mới). `--resume`
+yêu cầu cùng `records`, `annotator` và `--edge-s`. Sau mỗi đoạn, file progress ghi
+độ dài và SHA-256 của CSV (checkpoint). Khi resume, phần đầu CSV phải khớp từng byte
+với checkpoint, nên CSV bị sửa tay thì bị từ chối. Nếu máy dừng đúng lúc đã ghi CSV
+mà chưa ghi checkpoint, các hàng của đoạn đó bị cắt bỏ, số byte bị cắt được ghi vào
+`sittings`, và đoạn đó được đánh dấu lại. File provenance chỉ được ghi khi xong
+đoạn cuối, nên `compare` chỉ chạy được trên một lần đánh dấu đã hoàn tất.
+
+```powershell
+# Lần 1: mọi đoạn trong main/; dừng giữa chừng thì chạy lại lệnh này kèm --resume
+.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records data\processed\pulsedb_w5_review_v1\main --out data\processed\pulsedb_w5_review_v1\manual_main.csv --annotator Huy --date <YYYY-MM-DD>
+# So với detector (detections_main.csv đã chạy sẵn), rồi chấm ngưỡng
+python scripts\week05_fiducials.py compare --annotations data\processed\pulsedb_w5_review_v1\manual_main.csv --detections data\processed\pulsedb_w5_review_v1\detections_main.csv --out data\processed\pulsedb_w5_review_v1\agreement_main.json
+python scripts\week05_fiducials.py gate --agreement data\processed\pulsedb_w5_review_v1\agreement_main.json --export data\processed\pulsedb_w5_review_v1\export.json --out data\processed\pulsedb_w5_review_v1\gate_v1.json
+# Lần 2 (ít nhất 2 ngày sau lần 1): repeat/, rồi độ lặp lại và gate cuối
+.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records data\processed\pulsedb_w5_review_v1\repeat --out data\processed\pulsedb_w5_review_v1\manual_repeat.csv --annotator Huy --date <YYYY-MM-DD>
+python scripts\week05_fiducials.py repeat --first data\processed\pulsedb_w5_review_v1\manual_main.csv --second data\processed\pulsedb_w5_review_v1\manual_repeat.csv --export data\processed\pulsedb_w5_review_v1\export.json --out data\processed\pulsedb_w5_review_v1\repeatability.json
+python scripts\week05_fiducials.py gate --agreement data\processed\pulsedb_w5_review_v1\agreement_main.json --export data\processed\pulsedb_w5_review_v1\export.json --repeatability data\processed\pulsedb_w5_review_v1\repeatability.json --out data\processed\pulsedb_w5_review_v1\gate_final.json
+```
+
+`compare` in tóm tắt gộp mọi đoạn của cả hai nhóm. Bảng đó chỉ để xem; quyết định
+lấy từ `gate`, vốn tách nhóm chọn và nhóm xác nhận. Output của `gate` không có ID
+người, nhưng `record_id` của đoạn tệ nhất vẫn truy ngược được về dòng raw, nên giữ
+nó ngoài Git cùng các file còn lại.
+
+### 9.5. Điều được và không được kết luận
+
+- Đánh dấu tay chỉ kiểm vị trí mốc trên tín hiệu **đã lọc** của PulseDB, không kiểm
+  PAT sinh lý. Chưa biết bộ lọc của PulseDB là zero-phase hay causal
+  ([provenance](../pulsedb_provenance.md) mục 6), nên khoảng R → foot đo trên
+  PulseDB là một khoảng thời gian trên tín hiệu đã xử lý, kèm một sai lệch hệ thống
+  chưa biết. Được dùng nó làm đặc trưng tương đối cho mô hình; không so trị tuyệt
+  đối (ms) với PAT của thiết bị, không gọi là PTT.
+- Ở 125 Hz một mẫu là 8 ms. Mốc có phần lẻ dưới một mẫu (ví dụ `tangent`) không
+  chứng minh độ chính xác dưới một mẫu.
+- Một người đánh dấu chỉ đo được độ lặp lại của chính người đó, không đo được độ
+  thống nhất giữa các người đánh dấu.
+- Khi có B4: báo B4 − B3 ghép cặp theo người trên cùng các dòng val, riêng SBP/DBP,
+  kèm mô hình đối chứng **B3 + HR/SQI** (không có PAT), để biết phần cải thiện có
+  đến từ PAT hay không.

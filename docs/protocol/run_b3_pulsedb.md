@@ -76,6 +76,15 @@ xác nhận mốc R/foot ([tài liệu mốc Tuần 5](week05_fiducials_pat_vali
 thẩm định; PPG của PulseDB là PPG ngón tay 125 Hz, khác cổ tay của thiết bị; lọc theo
 SQI làm đổi tập được đánh giá và ngưỡng SQI chưa có nguồn.
 
+**Điều kiện xây B4 (chốt 2026-10-25,
+[tài liệu mốc Tuần 5](week05_fiducials_pat_validity.md) mục 9):** lệnh `gate` phải
+kết luận `B4_ALLOWED`. Nghĩa là phương pháp R và foot chọn trên 20 người train đạt
+mọi ngưỡng, được xác nhận một lần trên 20 người train khác, và độ lặp lại của người
+đánh dấu đạt. Người val không dùng để chọn mốc. Khi có B4, báo thêm mô hình đối
+chứng B3 + HR/SQI (không có PAT), trên cùng các dòng val, để biết phần cải thiện có
+đến từ PAT hay không. PAT trên PulseDB chỉ là đặc trưng tương đối (bộ lọc của
+PulseDB chưa rõ là zero-phase hay causal).
+
 ## B3
 
 [xgboost_baseline.py](../../software/models/xgboost_baseline.py): hai

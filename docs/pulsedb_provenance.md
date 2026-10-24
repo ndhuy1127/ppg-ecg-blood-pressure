@@ -192,9 +192,39 @@ hay tín hiệu của subset nào):**
   và các điểm chuyển (turning points). Mục 2.4.1 chỉ ghi R-peak ECG được tìm bằng
   Pan–Tompkins, không mô tả bộ lọc ECG riêng. Phần text đã đọc **không** nói bộ
   lọc Chebyshev-II là zero-phase hay causal, và không nói `PPG_F`/`ECG_F` trong
-  file Subset có phải là tín hiệu đã qua bộ lọc này hay không. Vì vậy độ trễ do
-  lọc của `ECG_F`/`PPG_F` vẫn **chưa xác định**, và PAT trên PulseDB vẫn cần
-  kiểm chứng riêng (ví dụ đối chiếu với code tạo subset của PulseDB).
+  file Subset có phải là tín hiệu đã qua bộ lọc này hay không.
+- **Supplementary Material của bài báo** (`Supplementary Materials.pdf` trong repo
+  PulseDB, nhánh `main`, đọc ngày 2026-10-25, SHA-256
+  `34a237a8d86587cb7501980e7f28e83931eb1173213fce3ac805f9b2138730d8`), mục 1.1:
+  `ECG_F` lọc thông dải Butterworth [0,5; 40] Hz; `PPG_F` (và `ABP_F`) lọc
+  Chebyshev-II [0,5; 8] Hz; biên độ ECG/PPG của mỗi đoạn được ánh xạ tuyến tính về
+  [0, 1], còn ABP giữ nguyên để bảo toàn SBP/DBP. Điều này khớp với dữ liệu (mục 6:
+  min 0, max 1). `Generate_Subsets.m` (commit `db4075f`, 2022-12-08) ghép
+  `[ECG_F, PPG_F, ABP_Raw]` vào `Signals`, nên kênh 2 là **ABP thô, chưa lọc**.
+  Repo không chứa code lọc. Vì vậy vẫn **chưa xác định** bộ lọc là zero-phase hay
+  causal, và bậc của bộ lọc ECG. Nếu là causal thì PAT trên PulseDB có thêm một
+  độ lệch do hiệu độ trễ nhóm của hai bộ lọc (khác nhau và phụ thuộc tần số),
+  chưa biết độ lớn. Vì vậy chỉ dùng PAT PulseDB **tương đối** (làm đặc trưng mô
+  hình), không so trị tuyệt đối (ms) với PAT của thiết bị.
+- **Khoảng R → foot dài bất thường (quan sát ngày 2026-10-25, chưa thẩm định).** Trên
+  80 đoạn train đã xuất để đánh dấu tay (40 người; R theo `derivative_energy`, foot
+  theo `valley_min`, chưa qua kiểm bằng đánh dấu tay; chỉ dùng thời gian tín hiệu,
+  không dùng nhãn BP), trung vị theo đoạn của khoảng từ R tới foot kế tiếp là
+  572 ms (p10 374, p90 632 ms). 86% số đoạn có trung vị trên 400 ms, và trên nhiều
+  đoạn foot nằm **trước** đỉnh R của cùng nhịp. RR trung vị theo đoạn là 804 ms. PAT
+  ngón tay lúc nghỉ thường khoảng 180–260 ms (Mukkamala 2015), nên PPG có vẻ trễ
+  thêm khoảng 300 ms so với ECG. Một preprint medRxiv năm 2025
+  ([10.1101/2025.03.31.25324979](https://doi.org/10.1101/2025.03.31.25324979))
+  dẫn Lee et al. rằng ECG và PPG trong VitalDB lệch nhau khoảng 350 ms. Đây là
+  **nguồn thứ cấp**: chưa đọc được bài gốc và chưa biết độ lệch có cố định giữa các
+  ca hay không. Điều này trái với câu "VitalDB được đồng bộ" ở trên. Hệ quả cho
+  PAT trên PulseDB: giới hạn 80–400 ms của `pat_validity` không dùng được nguyên
+  trạng, và khi nhịp nhanh (RR gần 570 ms) thì foot kế tiếp có thể rơi sau R kế
+  tiếp, làm ghép R–foot sai.
+- File Segment gốc của PulseDB (tải riêng từ Box/Google Drive/OneDrive, không có
+  trong gói Kaggle) có thêm `ECG_RPeaks`, `PPG_Turns`… do thuật toán của nhóm tác
+  giả tìm (Pan–Tompkins, Elgendi). Đó là mốc tự động, không phải đánh dấu tay;
+  dự án chưa tải các file này.
 - Đơn vị nhân khẩu: `Age` năm, `Height` cm, `Weight` kg, `BMI` kg/m². Khi file
   không có trường chiều cao/cân nặng/BMI, reader trả `NaN`, không điền 0.
 
@@ -298,7 +328,9 @@ sử. Hai notebook Tuần 3–4 vẫn tham chiếu các đường dẫn này và
 
 ## 11. Việc còn mở
 
-- Xác định `ECG_F`/`PPG_F` đã qua bộ lọc nào và lọc zero-phase hay causal (mục
-  6) trước khi tính PAT trên PulseDB.
+- Xác định bộ lọc `ECG_F`/`PPG_F` là zero-phase hay causal (cấu hình bộ lọc đã
+  biết từ Supplementary Material, mục 6), trước khi nói gì về PAT tuyệt đối trên
+  PulseDB. Cách khả dĩ: so `ECG_F`/`PPG_F` với tín hiệu thô của cùng bản ghi
+  VitalDB (cần file Segment có trường `T`).
 - Đánh giá CalFree Test (tập kiểm tra ngoài) chỉ sau khi model được khóa, bằng
   script khóa riêng (chưa viết).

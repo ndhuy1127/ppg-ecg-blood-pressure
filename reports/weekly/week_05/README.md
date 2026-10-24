@@ -183,6 +183,32 @@ Không đo trên người trong tuần này.
   về nhãn test, script xuất Tuần 5 dùng reader mới, test bắt được lỗi trọng số và
   lỗi đọc sai dòng, file luôn được đóng.
 
+**Chuẩn bị B4: đánh dấu tay mốc R/foot trên PulseDB**
+
+- **Kế hoạch và ngưỡng chấp nhận chốt trước khi đánh dấu** (Huy, từ đề xuất của
+  Codex; [tài liệu mốc](../../../docs/protocol/week05_fiducials_pat_validity.md)
+  mục 9; config `fiducials-week05-v2`):
+  - chỉ train: 40 người × 2 đoạn, chia sẵn 20 người để chọn phương pháp và 20 người
+    để xác nhận một lần; người val không dùng để chọn mốc;
+  - foot là điểm cực tiểu ngay trước sườn lên;
+  - dung sai R ±24 ms, foot ±48 ms;
+  - R: độ nhạy/PPV ≥ 99%, |bias| ≤ 4, MAE ≤ 8, SD ≤ 8 ms; foot: ≥ 98%, |bias| ≤ 8,
+    MAE ≤ 16, SD ≤ 16 ms;
+  - đánh dấu lặp lại 16 đoạn sau ít nhất 2 ngày.
+
+  Lệnh `gate` mới chỉ kết luận `B4_ALLOWED` khi đạt cả ba điều kiện: chọn được
+  phương pháp, xác nhận được phương pháp đó, và độ lặp lại đạt.
+- **Đã xuất 80 đoạn** (`main/`) và 16 đoạn lặp lại (`repeat/`), chạy sẵn cả năm
+  detector và in hình mù (mục 6.5). Bước đánh dấu tay đang chờ Huy làm.
+- **Cấu hình bộ lọc của PulseDB** (Supplementary Material): ECG Butterworth
+  [0,5; 40] Hz, PPG Chebyshev-II [0,5; 8] Hz, chuẩn hóa [0, 1] theo từng đoạn. Vẫn
+  chưa biết lọc zero-phase hay causal.
+- **Phát hiện: PPG trễ so với ECG.** Khoảng R → foot kế tiếp có trung vị 572 ms,
+  trong khi PAT ngón tay lúc nghỉ chỉ khoảng 180–260 ms. Một preprint dẫn lại rằng
+  ECG–PPG trong VitalDB lệch khoảng 350 ms (nguồn thứ cấp). Vì vậy PAT PulseDB chỉ
+  dùng được như đặc trưng tương đối, và giới hạn 80–400 ms phải xem lại trước khi
+  làm B4 ([provenance](../../../docs/pulsedb_provenance.md) mục 6).
+
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
 | STT | Sản phẩm | Người làm | Đường dẫn |
@@ -223,6 +249,7 @@ Không đo trên người trong tuần này.
 | 34 | KiCad V1-draft4 | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3, A.7 |
 | 35 | Reader `h5py` và split Train 400 người (2026-10-25) | Huy | [h5_reader.py](../../../software/pulsedb/h5_reader.py), [run_pulsedb_split.md](../../../docs/protocol/run_pulsedb_split.md), [pulsedb_train400_split.json](../../../configs/data/pulsedb_train400_split.json) |
 | 36 | `b3-pipeline-v1` và kết quả B0/B3 trên val (2026-10-25) | Huy | [run_b3_pulsedb.md](../../../docs/protocol/run_b3_pulsedb.md), [b3_pulsedb_v1.json](../../../configs/models/b3_pulsedb_v1.json), [pulsedb_b3_v1/](pulsedb_b3_v1/README.md) |
+| 37 | Kế hoạch đánh dấu tay, ngưỡng chấp nhận, lệnh `repeat`/`gate`, `annotate --resume` (2026-10-25) | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) mục 9, [fiducial_gate.py](../../../software/evaluation/fiducial_gate.py), [week05_huy.json](../../../configs/data/week05_huy.json) |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
@@ -285,12 +312,13 @@ RAM máy làm việc khi đọc từng phần ([pulsedb_provenance.md](../../../
 - `derivative_energy`: đạo hàm bình phương, trung bình trượt, dời về cực đại tín
   hiệu (không phải Pan–Tompkins).
 - `d2_max`: cực đại đạo hàm bậc hai trước sườn lên; `valley_min`: cực tiểu trước
-  peak; cả hai nội suy parabol dưới một mẫu.
+  peak. Nội suy parabol dưới một mẫu là tùy chọn, mặc định tắt từ 2026-10-25.
 - PAT ngoài 80–400 ms vẫn được ghép rồi gắn nhãn `out_of_range`; `r_status` là
   `paired`/`no_foot`/`ambiguous`/`edge` (từ `pat-validity-v1`, 2026-10-23: R sát
   biên cửa sổ mà foot nằm ngoài khoảng PPG phát hiện được là `edge`, không tính là
   R không ghép, như `features-sqi-v1`).
-- Dung sai so khớp với đánh dấu tay chốt trước khi đánh dấu: R 50 ms, foot 100 ms.
+- Dung sai so khớp với đánh dấu tay chốt trước khi đánh dấu: R 24 ms, foot 48 ms
+  (2026-10-25; trước đó 50/100 ms), cùng các ngưỡng chấp nhận ở tài liệu mốc mục 9.
 
 ### 5.6. Kịch bản bài báo (Huy)
 
@@ -421,3 +449,59 @@ B3 − B0 (ghép cặp): SBP −0,52 [−1,35; 0,58], DBP −0,28 [−0,86; 0,36
 khoảng chứa 0. ECG/PPG đã chuẩn hóa [0, 1] theo đoạn, nên B3 chỉ còn `mean`, `std`,
 `rms` để dùng. Đây là nhãn ABP công khai, không phải cuff hay thiết bị; test của
 split và CalFree chưa chấm.
+
+### 6.5. Bộ đoạn PulseDB để đánh dấu tay (2026-10-25)
+
+Xuất bằng `week05_fiducials.py export` với config `fiducials-week05-v2` từ split
+Train 400 người (raw SHA-256 `20f19685…d002`), môi trường pin Python 3.11.7. Thư mục
+`data/processed/pulsedb_w5_review_v1/` nằm ngoài Git.
+
+| Mục | Kết quả |
+| --- | --- |
+| `main/` | 80 đoạn, 40 người, mỗi người 2 đoạn, chỉ train; 20 + 20 người |
+| `repeat/` | 16 đoạn, 8 mỗi nhóm, mỗi người 1 đoạn, đều có trong `main/` |
+| Detector trên `main/` | Không kênh nào bị loại. Số mốc: R `prominence` 1.572, `derivative_energy` 1.005; foot `valley_min` 955, `tangent` 966, `d2_max` 968 |
+| R → foot kế tiếp (`derivative_energy`, `valley_min`, chưa thẩm định) | Trung vị theo đoạn 572 ms (p10 374, p90 632); 86% số đoạn trên 400 ms |
+
+Số R của `prominence` nhiều hơn khoảng 56% so với `derivative_energy`. Điều này hợp
+với việc nó bắt cả sóng T ở refractory 0,25 s, nhưng chỉ đánh dấu tay mới cho biết
+bên nào đúng. Chưa có kết quả chấm ngưỡng nào: bảng sẽ có sau khi Huy đánh dấu.
+
+## 7. Mốc đóng Tuần 5 và việc chuyển sang Tuần 6
+
+Đánh giá ngày 2026-10-25 theo mục "Mốc đóng tuần" của
+[kế hoạch Tuần 5](../../../docs/plans/WEEK_05.md).
+
+| Mốc đóng tuần | Trạng thái | Người xử lý | Chuyển sang |
+| --- | --- | --- | --- |
+| Bảng B0/B3 trên raw có CI | Đạt trên val (mục 6.4). Test của split và CalFree chưa chấm; chỉ chấm khi model đã khóa | Huy | — |
+| Module đã đặt mua | **Chưa đạt**: [danh sách mua](../../../hardware/bom/purchase_list_v1_module.md) ở trạng thái chờ duyệt, chưa đặt hàng | Huy | Tuần 6, việc đầu tiên |
+| A.6 đóng, một pin map chuẩn | Đạt: pin map A.7, KiCad V1-draft4 qua ERC/DRC. Độ rộng xung LED (411 hay 215 µs) chờ số đo bring-up | Phần cứng và firmware | Độ rộng xung: khi bring-up |
+| Đặt gia công PCB V1 | Chưa: đã có gói file gia công và tờ kiểm footprint tỉ lệ 1:1; chưa in để kiểm, chưa đặt | Huy | Tuần 6 |
+| Firmware khung gửi packet tới logger | Đạt một phần: firmware V0.2 build được, logger đọc đúng luồng dựng theo quy ước firmware (mục 6.1, 6.2). Chưa chạy trên DevKitC thật | Phần cứng và firmware, Linh | Khi nhận DevKitC |
+| Hồ sơ đạo đức sẵn sàng nộp | Chưa: bản nháp v0.1 đủ năm file, còn các ô chờ thầy/hội đồng | Huy | Tuần 6, sau khi thầy trả lời |
+| Sơ đồ phân bổ tay được xác nhận | Đạt (2026-10-23, protocol v0.2 mục 5.2) | — | — |
+| Bảng sai số mốc so với đánh dấu tay | Chưa: kế hoạch, ngưỡng và bộ 80 đoạn đã sẵn (mục 6.5); chờ đánh dấu | Huy | Tuần 6 (lần 1); lần 2 sau ít nhất 2 ngày |
+
+**G1:** phần mềm đạt (baseline trên val, pipeline và split có kiểm rò rỉ); phần cứng
+chưa đạt (chưa có module, chưa có bản ghi ECG–PPG đồng bộ). Đường găng vẫn là phần
+cứng, nên Tuần 6 ưu tiên việc mua hàng và đặt PCB, trước mọi việc phần mềm.
+
+**Câu hỏi cho thầy (mang theo đầu Tuần 6):**
+
+1. Hội đồng đạo đức nào xét, mất bao lâu; đo thử trên thành viên nhóm (G2) có cần
+   phê duyệt không.
+2. Có mượn được máy cuff đã kiểm định hoặc thiết bị đo huyết áp liên tục không;
+   loại cuff dùng làm tham chiếu.
+3. Nghiệm pháp M0–M4 có được chấp nhận không; chân ngâm nước lạnh ở M3.
+4. Các ô `[...]` trong hồ sơ đạo đức (dùng lại dữ liệu cho nghiên cứu sau, chia sẻ
+   dữ liệu).
+
+**Việc phải chờ phần cứng:** driver thật cho MAX30001, MAX30101 và BMI270; bring-up
+theo [trình tự V1-module](../../../hardware/test_reports/v1_bringup_procedure.md); đo
+đồng bộ 10 phút; chốt độ rộng xung LED; chọn cách đo dòng rò. Ngày giao hàng chưa
+có, nên chưa xếp được tuần cho các việc này.
+
+**B4 (PAT trên PulseDB):** chỉ làm khi lệnh `gate` cho `B4_ALLOWED`. Trước khi làm
+còn phải quyết cách ghép R–foot và giới hạn PAT cho PulseDB, vì PPG có vẻ trễ
+khoảng 300 ms so với ECG (mục "Cập nhật ngày 2026-10-25").
