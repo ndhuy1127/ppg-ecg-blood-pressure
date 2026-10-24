@@ -10,8 +10,11 @@ schema value ranges, not physiological waveforms. ``synthetic-packet-v2``
 ``wire_version`` 1 gives Packet Schema V0.1 streams. ``wire_version`` 2 gives
 V0.2 streams: the same channels plus optional BMI270 IMU axes (one FIFO read
 shared by the six axes, signed payload) and device info packets, with the V0.2
-cases ``V02_CASES``. Streams of a V0.1 config are byte for byte those of the
-code before V0.2 support (2026-10-24), except event STATUS (2026-10-23).
+cases ``V02_CASES``. In V0.2 the ECG anchor is the SAMP edge of the last sample
+(STATUS bit 8, V0.2 section 7) unless a case says otherwise; ``samp`` of the
+config sets its delay and jitter. Streams of a V0.1 config are byte for byte
+those of the code before V0.2 support (2026-10-24), except event STATUS
+(2026-10-23).
 """
 
 import random
@@ -20,8 +23,9 @@ from fractions import Fraction
 
 from software.data_io.packet_wire import (
     CHANNELS, DEVICE_INFO_CHANNEL, ECG_CHANNEL, EVENT_CHANNEL, IMU_CHANNELS,
-    MAX_SAMPLE_COUNT, PPG_CHANNELS, STATUS_RESERVED_MASKS, VERSION_CHANNELS,
-    WIRE_VERSION, WIRE_VERSION_V02, Packet, device_info_data, encode_packet,
+    MAX_SAMPLE_COUNT, PPG_CHANNELS, SAMP_ANCHOR_BIT, STATUS_RESERVED_MASKS,
+    VERSION_CHANNELS, WIRE_VERSION, WIRE_VERSION_V02, Packet, device_info_data,
+    encode_packet,
 )
 
 VERSION = "synthetic-packet-v3"
@@ -31,8 +35,11 @@ CASES = (
     "session_restart",
 )
 # V0.2 only: IMU backlog split into chunks (bit 7), IMU FIFO full then re-anchor
-# (bit 0, then bit 5), one packet of the old VERSION, device info that changes.
-V02_CASES = ("imu_backlog", "imu_fifo_full", "mixed_version", "device_info_changed")
+# (bit 0, then bit 5), one packet of the old VERSION, device info that changes,
+# and on ECG whatever fault_channel says: SAMP mapping lost then restarted
+# (FIFO-read anchors, then bit 5), a one-sample SAMP mapping error from mid-session.
+V02_CASES = ("imu_backlog", "imu_fifo_full", "mixed_version", "device_info_changed",
+             "samp_remap", "samp_shift")
 CONFIG_FIELDS = {
     "schema_version", "source_type", "wire_version", "seed", "session_id",
     "restart_session_id", "epoch_us", "anchor_delay_us", "anchor_jitter_us",
@@ -43,6 +50,8 @@ CONFIG_FIELDS = {
 DATA_CHANNELS = (ECG_CHANNEL, *PPG_CHANNELS, *IMU_CHANNELS)
 ORDER = (*DATA_CHANNELS, EVENT_CHANNEL, DEVICE_INFO_CHANNEL)
 DEVICE_INFO_FIELDS = {"elf_sha256", "app_version", "idf_version", "interval_us"}
+# SAMP anchor = sample time + edge_delay_us + jitter in [0, jitter_us].
+SAMP_FIELDS = {"edge_delay_us", "jitter_us"}
 UINT16, UINT32 = (1 << 16) - 1, (1 << 32) - 1
 AFE_OVERFLOW_BIT, REANCHOR_BIT, BACKLOG_BIT = 1 << 0, 1 << 5, 1 << 7
 
@@ -69,7 +78,8 @@ def validate_config(config):
     if not isinstance(config, dict):
         raise ValueError("Config must be an object")
     v02 = config.get("wire_version") == WIRE_VERSION_V02
-    if set(config) != (CONFIG_FIELDS | {"device_info"} if v02 else CONFIG_FIELDS):
+    if set(config) != (CONFIG_FIELDS | {"device_info", "samp"} if v02
+                       else CONFIG_FIELDS):
         raise ValueError("Config has missing or unsupported fields")
     if (config["schema_version"], config["source_type"]) != (VERSION, "SYNTHETIC"):
         raise ValueError("Only the synthetic-packet-v3 SYNTHETIC config is supported")
@@ -85,6 +95,8 @@ def validate_config(config):
     _integer(config["status"], "status", 0, UINT16)
     if config["status"] & STATUS_RESERVED_MASKS[config["wire_version"]]:
         raise ValueError("STATUS reserved bits of this wire version must be 0")
+    if config["status"] & SAMP_ANCHOR_BIT:
+        raise ValueError("STATUS bit 8 is ECG only and set by the generator")
     channels = config["channels"]
     if not isinstance(channels, dict) or _key(ECG_CHANNEL) not in channels:
         raise ValueError("channels must include 0xE1")
@@ -119,6 +131,11 @@ def validate_config(config):
             raise ValueError(f"device_info needs {fields}")
         device_info_data(info["elf_sha256"], info["app_version"], info["idf_version"])
         _integer(info["interval_us"], "device_info interval_us", 1, 10 ** 9)
+        samp = config["samp"]
+        if not isinstance(samp, dict) or set(samp) != SAMP_FIELDS:
+            raise ValueError("samp needs edge_delay_us and jitter_us")
+        for name in sorted(SAMP_FIELDS):
+            _integer(samp[name], f"samp {name}", 0, 10 ** 6)
     if not isinstance(config["events"], list):
         raise ValueError("events must be a list")
     previous = -1
@@ -282,6 +299,7 @@ def _session(config, rng, case, session_id, packet_count, with_events):
     """Return ``(sort_key, channel_id, ordinal, Packet)`` rows of one session."""
     fault = _channel_id(config["fault_channel"])
     version = config["wire_version"]
+    index = config["fault_index"]
     rows = []
     jitter = {}
     for key in sorted(config["channels"], key=lambda k: ORDER.index(_channel_id(k))):
@@ -292,6 +310,8 @@ def _session(config, rng, case, session_id, packet_count, with_events):
         fs, count = spec["fs_nominal_mhz"], spec["sample_count"]
         period = Fraction(10 ** 9, fs)  # microseconds per sample
         group = "PPG" if channel_id in PPG_CHANNELS else key
+        samp = version == WIRE_VERSION_V02 and channel_id == ECG_CHANNEL
+        mapping_lost = False
         for ordinal in range(packet_count):
             first = config["index_start"] + ordinal * count
             status = config["status"]
@@ -308,12 +328,36 @@ def _session(config, rng, case, session_id, packet_count, with_events):
                 ordinal == config["fault_index"] + 1
             ):
                 status |= (1 << 0) | (1 << 5)
+            # V0.2 section 7.2: an AFE FIFO overflow puts the SAMP mapping in the
+            # error state; no case here restarts it, so FIFO-read anchors follow.
+            mapping_lost |= bool(status & AFE_OVERFLOW_BIT)
+            # samp_remap: packets index, index + 1 are sent in the error state
+            # (FIFO-read anchor); packet index + 2 is the first after the mapping
+            # restart (SYNCH): a new index epoch from 0 (V0.1 section 9, V0.2
+            # section 7.3), bit 5, bit 8 back. The restart loses
+            # reanchor_jump_samples samples of time.
+            edge = samp and not mapping_lost and not (
+                case == "samp_remap" and index <= ordinal < index + 2)
+            sent_first = first
+            if samp and case == "samp_remap" and ordinal >= index + 2:
+                first += config["reanchor_jump_samples"]
+                sent_first = (ordinal - index - 2) * count
+                if ordinal == index + 2:
+                    status |= REANCHOR_BIT
+            if edge:
+                status |= SAMP_ANCHOR_BIT
             # PPG slots of one read share the anchor, hence one jitter draw.
             if (group, ordinal) not in jitter:
-                jitter[group, ordinal] = rng.randint(0, config["anchor_jitter_us"])
+                jitter[group, ordinal] = rng.randint(
+                    0, config["samp"]["jitter_us"] if edge
+                    else config["anchor_jitter_us"])
             last = first + count - 1
-            anchor = (config["epoch_us"] + last * period + config["anchor_delay_us"]
+            delay = config["samp"]["edge_delay_us"] if edge else (
+                config["anchor_delay_us"])
+            anchor = (config["epoch_us"] + last * period + delay
                       + jitter[group, ordinal])
+            if samp and case == "samp_shift" and ordinal >= index:
+                anchor += period  # the edge of the sample after the last one
             # timestamp_first: the first anchor of a chain, which is the hardest
             # one for a receiver that compares with the previous packet.
             if channel_id == fault and (case == "offset" or (
@@ -323,7 +367,7 @@ def _session(config, rng, case, session_id, packet_count, with_events):
             anchor = round(anchor)
             packet = Packet(
                 version, channel_id, session_id,
-                (config["seq_start"] + ordinal) & UINT32, first & UINT32,
+                (config["seq_start"] + ordinal) & UINT32, sent_first & UINT32,
                 anchor, round(anchor - (count - 1) * period), fs, status,
                 _payload(rng, channel_id, count),
             )
@@ -361,6 +405,8 @@ def generate_stream(config, case="valid"):
         raise ValueError(f"Case {case} needs wire_version 2 (Packet Schema V0.2)")
     if case in V02_CASES[:2] and _key(IMU_CHANNELS[0]) not in config["channels"]:
         raise ValueError(f"Case {case} needs the IMU channels")
+    if case == "samp_remap" and config["fault_index"] + 3 > config["packet_count"]:
+        raise ValueError("samp_remap needs packet_count >= fault_index + 3")
     rng = random.Random(config["seed"])
     fault = _channel_id(config["fault_channel"])
     index = config["fault_index"]
@@ -437,6 +483,15 @@ def session_metadata(config, case, config_sha256):
             "latency_l_us": None, "latency_source": None,
             "unit_conversion": None, "afe_config": None,
         }
+        if config["wire_version"] == WIRE_VERSION_V02 and key == _key(ECG_CHANNEL):
+            # V0.2 section 8: latency of SAMP anchors, apart from FIFO reads.
+            channels[key].update(latency_samp_l_us=None, latency_samp_source=None)
+            reasons.update({
+                f"channels.{key}.latency_samp_l_us": "not measured; generator SAMP "
+                                                     "edge delay is a simulation "
+                                                     "parameter",
+                f"channels.{key}.latency_samp_source": "no bench measurement",
+            })
         reasons.update({
             f"channels.{key}.latency_l_us": "not measured; generator anchor delay "
                                             "is a simulation parameter",
@@ -455,7 +510,10 @@ def session_metadata(config, case, config_sha256):
         "clock_id": "SYN_ESP_TIMER_US", "firmware_version": None,
         "firmware_commit": None, "device_id": "SYN_DEVICE_001", "operator": None,
         "electrode_type": None, "electrode_placement": None, "channels": channels,
+        # samp_remap restarts the ECG index at 0 while time goes on, so sample 0
+        # of every channel no longer shares one epoch.
         "simulation": {"generator": VERSION, "case": case,
-                       "config_sha256": config_sha256, "common_index_epoch": True},
+                       "config_sha256": config_sha256,
+                       "common_index_epoch": case != "samp_remap"},
         "null_reasons": dict(sorted(reasons.items())),
     }

@@ -38,14 +38,23 @@ VERSION_CHANNELS = {
     WIRE_VERSION_V02: frozenset((ECG_CHANNEL, *PPG_CHANNELS, EVENT_CHANNEL,
                                  *IMU_CHANNELS, DEVICE_INFO_CHANNEL)),
 }
-# Schema section 9; bit 7 exists from V0.2 on. Reserved bits must be sent as 0.
+# Schema section 9; bits 7 and 8 exist from V0.2 on. Reserved bits must be sent as 0.
 STATUS_BITS = {
     0: "afe_fifo_overflow", 1: "mcu_buffer_overflow", 2: "ecg_lead_off",
     3: "afe_error", 4: "latency_unmeasured", 5: "index_reanchored",
-    6: "ppg_alc_overflow", 7: "backlog_chunk",
+    6: "ppg_alc_overflow", 7: "backlog_chunk", 8: "anchor_samp",
 }
 STATUS_RESERVED_MASK = 0xFF80  # V0.1
-STATUS_RESERVED_MASKS = {WIRE_VERSION: 0xFF80, WIRE_VERSION_V02: 0xFF00}
+STATUS_RESERVED_MASKS = {WIRE_VERSION: 0xFF80, WIRE_VERSION_V02: 0xFE00}
+# V0.2 section 7.4: T_ANCHOR_US is the SAMP edge of the packet's last sample.
+# Defined for ECG only; on any other channel bit 8 is reserved.
+SAMP_ANCHOR_BIT = 1 << 8
+
+
+def status_reserved_mask(version, channel_id):
+    """Reserved STATUS bits of a packet of this VERSION and channel."""
+    mask = STATUS_RESERVED_MASKS[version]
+    return mask if channel_id == ECG_CHANNEL else mask | SAMP_ANCHOR_BIT
 # V0.2 device info payload (section 6): layout 1, 25 words.
 DEVICE_INFO_LAYOUT = 1
 DEVICE_INFO_COUNT = 25

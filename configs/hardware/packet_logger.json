@@ -6,6 +6,8 @@
   "anchor_tolerance_samples": 1,
   "anchor_tolerance_extra_us": 500,
   "anchor_rate_tolerance_ppm": 30000,
+  "ecg_anchor_rate_tolerance_ppm": 1000,
+  "samp_anchor_tolerance_us": 200,
   "channel_offset_tolerance_us": 1000,
   "read_chunk_bytes": 4096
 }

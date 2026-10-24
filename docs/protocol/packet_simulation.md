@@ -194,8 +194,13 @@ quyết là luồng không có `SYNC` giả, nên số lỗi decode khớp chín
 sinh luồng [Packet Schema V0.2](../../configs/hardware/Packet_Schema_V0.2.md): mọi
 packet mang `VERSION = 2`, thêm sáu trục IMU `0xA1`–`0xA6` (một lần đọc FIFO chung,
 chung anchor và jitter, payload int16 có dấu) và packet thông tin thiết bị `0xD1`
-theo `device_info.interval_us` (phát lại ở phiên mới sau `session_restart`). Các
-case V0.1 chạy được trên config V0.2. Bốn case chỉ có ở V0.2:
+theo `device_info.interval_us` (phát lại ở phiên mới sau `session_restart`). Packet
+ECG mang bit 8: `T_ANCHOR_US` là cạnh `SAMP` của mẫu cuối (V0.2 mục 7), bằng thời
+điểm mẫu cộng `samp.edge_delay_us` (500) cộng jitter trong [0, `samp.jitter_us`]
+(5); packet ECG không có bit 8 dùng `anchor_delay_us`/`anchor_jitter_us` như mốc
+đọc FIFO. Hai số này là tham số mô phỏng, không phải độ trễ đo được. Các case V0.1
+chạy được trên config V0.2. Sáu case chỉ có ở V0.2 (hai case `samp_*` luôn tác động
+lên ECG, bất kể `fault_channel`):
 
 | Case | Lỗi cài vào | Đáp án |
 | --- | --- | --- |
@@ -203,6 +208,16 @@ case V0.1 chạy được trên config V0.2. Bốn case chỉ có ở V0.2:
 | `imu_fifo_full` | Lần đọc 2 gặp FIFO đầy (bit 0, đọc trễ 2 lần), lần 3–4 mất, lần 5 neo lại theo công thức V0.2 mục 5 (bit 5) | `sample_index_reanchored` 6 (mỗi trục 1); 2 chuỗi mỗi trục, số mẫu mất `null` |
 | `mixed_version` | Packet PPG khe 1 thứ 3 mang `VERSION = 1` | `version_mixed_in_session` 1, `missing_packets` 1, `channel_missing` 8 (ở phần V0.1) |
 | `device_info_changed` | Packet `0xD1` thứ 2 có phiên bản ứng dụng khác | `device_info_changed` 2 (đổi rồi đổi lại) |
+| `samp_remap` | ECG packet 2–3 ở trạng thái `LỖI` (mốc đọc FIFO, không bit 8); packet 4 là packet đầu sau khi khởi động lại ánh xạ bằng `SYNCH`: index bắt đầu lại từ 0 (V0.1 mục 9, V0.2 mục 7.3), bit 5, bit 8 trở lại; thời gian thật tiếp tục, mất `reanchor_jump_samples` mẫu lúc khởi động lại | `sample_index_reanchored` 1; ECG 2 chuỗi, index 0, 16, 32, 48 rồi lại 0, 16, 32, 48; `anchor_sources` = 6 `samp`, 2 `fifo_read`, đổi nguồn ở `SEQ` 2 và 4. Metadata khai `common_index_epoch: false` (index ECG không còn chung gốc với kênh khác), nên `offset_vs_ecg_us` = null |
+| `samp_shift` | Từ ECG packet 2, mốc `SAMP` là cạnh của mẫu **sau** mẫu cuối (muộn một chu kỳ, bit 8 vẫn bật) | `timestamp_anomaly` 2 (`SEQ` 0–1: logger giữ phía dài hơn, ở đây là phía sai) và `channel_offset` 8 (epoch ECG lấy từ packet muộn). Với dung sai mốc đọc FIFO (1 chu kỳ + 500 µs) lệch lọt qua và cả 7 phép kiểm báo `anchor_check_weak` |
+
+Với config V0.2 có `fault_channel` = `0xE1`, packet ECG mang bit 0 (ca `index_jump`,
+`reanchor`) đưa ánh xạ vào `LỖI`: từ packet đó tới hết phiên ECG dùng mốc đọc FIFO
+(các ca này không khởi động lại ánh xạ). Mất xung, thừa xung và giá trị chốt bị ghi
+đè được firmware phát hiện rồi chuyển về mốc đọc FIFO, nên với logger chúng giống
+`samp_remap`; phần phát hiện thuộc test
+firmware (V0.2 mục 9 bước 2). Lệch cố định một mẫu ngay từ đầu chuỗi không có case
+vì logger không bắt được (V0.2 mục 7.2).
 
 Config V0.1 sinh đúng từng byte như code trước khi có V0.2 (đã so SHA-256 của 13
 case cùng config ngày 2026-10-24); IMU và `0xD1` được rút số ngẫu nhiên sau các kênh

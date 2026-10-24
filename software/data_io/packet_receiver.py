@@ -16,13 +16,13 @@ from fractions import Fraction
 
 from software.data_io.packet_wire import (
     CHANNELS, DEVICE_INFO_CHANNEL, DEVICE_INFO_COUNT, DEVICE_INFO_LAYOUT, ECG_CHANNEL,
-    EVENT_CHANNEL, IMU_CHANNELS, MAX_SAMPLE_COUNT, PPG_CHANNELS, STATUS_BITS,
-    STATUS_RESERVED_MASKS, WIRE_VERSION, WIRE_VERSION_V02,
+    EVENT_CHANNEL, IMU_CHANNELS, MAX_SAMPLE_COUNT, PPG_CHANNELS, SAMP_ANCHOR_BIT,
+    STATUS_BITS, WIRE_VERSION, WIRE_VERSION_V02, status_reserved_mask,
 )
 
 # v1 (2026-10-23): channel_missing, event ordinal check, FS 0 never an index
-# reference, rate (not period) tolerance; Packet Schema V0.2 (2026-10-24). v0 was
-# committed in 250139d.
+# reference, rate (not period) tolerance; Packet Schema V0.2 (2026-10-24), with
+# its section 7 (SAMP anchor, bit 8) the same day. v0 was committed in 250139d.
 LOGGER_VERSION = "packet-logger-v1"
 PACKET_SCHEMAS = {WIRE_VERSION: "packet-v0.1", WIRE_VERSION_V02: "packet-v0.2"}
 METADATA_VERSION = "packet-session-metadata-v0"
@@ -51,7 +51,8 @@ ORDINAL_CHANNELS = {
 CONFIG_FIELDS = {
     "schema_version", "packet_schemas", "status", "wire_versions",
     "anchor_tolerance_samples", "anchor_tolerance_extra_us",
-    "anchor_rate_tolerance_ppm", "channel_offset_tolerance_us", "read_chunk_bytes",
+    "anchor_rate_tolerance_ppm", "ecg_anchor_rate_tolerance_ppm",
+    "samp_anchor_tolerance_us", "channel_offset_tolerance_us", "read_chunk_bytes",
 }
 TEXT_FIELDS = (
     "clock_id", "firmware_version", "firmware_commit", "device_id", "operator",
@@ -61,6 +62,9 @@ CHANNEL_FIELDS = (
     "sensor", "fs_nominal_mhz", "latency_l_us", "latency_source",
     "unit_conversion", "afe_config",
 )
+# V0.2 section 8: ECG may declare the latency of SAMP anchors (bit 8) apart from
+# latency_l_us, which belongs to FIFO-read anchors. Both or neither.
+SAMP_LATENCY_FIELDS = ("latency_samp_l_us", "latency_samp_source")
 SIMULATION_FIELDS = {"generator", "case", "config_sha256", "common_index_epoch"}
 PACKET_COLUMNS = (
     "arrival", "stream_offset", "session_id", "version", "channel_id", "seq", "seq_ext",
@@ -81,7 +85,8 @@ LIMITATIONS = [
     "quarantines the shorter side, and if the first and the last anchor of a "
     "chain are both bad, the good packets between them can be quarantined",
     "The anchor rate tolerance assumes the true sample rate is within "
-    "anchor_rate_tolerance_ppm of FS_NOMINAL_MHZ; it is not measured",
+    "anchor_rate_tolerance_ppm (ECG: ecg_anchor_rate_tolerance_ppm) of "
+    "FS_NOMINAL_MHZ; it is not measured",
     "A false SYNC followed by a passing CRC (about 1 in 65536) is not excluded",
     "Anchors of packets with STATUS bit 0 (AFE FIFO overflow) are neither checked "
     "nor used as references: the FIFO held older samples, so the anchor is late. "
@@ -92,6 +97,14 @@ LIMITATIONS = [
     "earlier chunks have no usable anchor",
     "A V0.2 re-anchor (STATUS bit 5) always starts a new chain; several lost "
     "re-anchors merged into one gap are seen as one",
+    "V0.2 ECG anchors are checked per source within a chain: SAMP edges (bit 8) "
+    "against SAMP edges with samp_anchor_tolerance_us, FIFO reads against FIFO "
+    "reads; the two are never compared. A one-sample error of the SAMP mapping "
+    "that holds from the first SAMP packet of a chain is not detectable here "
+    "(Packet Schema V0.2 section 7.2)",
+    "A SAMP check that would also pass a one-sample shift at some rate and anchor "
+    "error inside the tolerance (a long gap), or a SAMP packet with no other SAMP "
+    "packet in its chain, is reported as anchor_check_weak, not as checked",
 ]
 
 
@@ -131,6 +144,10 @@ def validate_config(config):
              10 ** 6)
     _integer(config["anchor_rate_tolerance_ppm"], "anchor_rate_tolerance_ppm", 0,
              10 ** 5)
+    _integer(config["ecg_anchor_rate_tolerance_ppm"], "ecg_anchor_rate_tolerance_ppm",
+             0, 10 ** 5)
+    _integer(config["samp_anchor_tolerance_us"], "samp_anchor_tolerance_us", 0,
+             10 ** 6)
     _integer(config["channel_offset_tolerance_us"], "channel_offset_tolerance_us",
              0, 10 ** 6)
     _integer(config["read_chunk_bytes"], "read_chunk_bytes", 1, 1 << 20)
@@ -159,13 +176,18 @@ def validate_metadata(metadata):
     if not isinstance(channels, dict) or not channels or not set(channels) <= known:
         raise ValueError("channels must map known CHANNEL_ID keys such as 0xE1")
     for key, spec in channels.items():
-        if not isinstance(spec, dict) or set(spec) != set(CHANNEL_FIELDS):
+        names = CHANNEL_FIELDS
+        if key == channel_key(ECG_CHANNEL) and isinstance(spec, dict) and (
+            set(SAMP_LATENCY_FIELDS) <= set(spec)
+        ):
+            names = CHANNEL_FIELDS + SAMP_LATENCY_FIELDS
+        if not isinstance(spec, dict) or set(spec) != set(names):
             raise ValueError(f"Channel {key} metadata has missing or extra fields")
-        for name in CHANNEL_FIELDS:
+        for name in names:
             value = spec[name]
             if value is None:
                 nulls.add(f"channels.{key}.{name}")
-            elif name in ("fs_nominal_mhz", "latency_l_us"):
+            elif name in ("fs_nominal_mhz", "latency_l_us", "latency_samp_l_us"):
                 _integer(value, f"{key}.{name}")
             elif name == "afe_config":
                 if not isinstance(value, dict):
@@ -194,9 +216,10 @@ def _unwrap(value, reference):
     return reference + (value - reference + half) % UINT32 - half
 
 
-def _status_counts(packets, version):
-    """Named bits of the packet's version; reserved bits are reported apart."""
-    reserved = STATUS_RESERVED_MASKS[version]
+def _status_counts(packets, version, channel_id):
+    """Named bits of the packet's version and channel; reserved bits are reported
+    apart."""
+    reserved = status_reserved_mask(version, channel_id)
     counts = Counter()
     for packet in packets:
         for bit, name in STATUS_BITS.items():
@@ -336,7 +359,7 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
             missing += after - before - 1
             issue("missing_packets", **where, after_seq=before,
                   count=after - before - 1)
-    reserved = STATUS_RESERVED_MASKS[version]
+    reserved = status_reserved_mask(version, channel_id)
     for seq in seqs:
         packet = received[seq].packet
         if packet.status & reserved:
@@ -352,7 +375,7 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
         "conflicting_duplicates": len(conflicts), "missing_packets": missing,
         "first_seq": seqs[0], "last_seq": seqs[-1],
         "status_bit_counts": _status_counts((received[s].packet for s in seqs),
-                                            version),
+                                            version, channel_id),
         "fs_nominal_mhz": sorted({received[s].packet.fs_nominal_mhz for s in seqs}),
     }
     if channel_id == EVENT_CHANNEL:
@@ -377,9 +400,41 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
                                        else 0)
     untimed = {seq for seq in present
                if received[seq].packet.status & untimed_bits}
+    rate_ppm = config["ecg_anchor_rate_tolerance_ppm" if channel_id == ECG_CHANNEL
+                      else "anchor_rate_tolerance_ppm"]
+    fifo_read = (config["anchor_tolerance_samples"],
+                 config["anchor_tolerance_extra_us"], rate_ppm)
+    # V0.2 section 7.5: ECG anchors are SAMP edges (bit 8) or FIFO reads, with an
+    # unknown offset between the two, so each source is checked on its own.
+    by_source = version >= WIRE_VERSION_V02 and channel_id == ECG_CHANNEL
+    edges = {seq for seq in present
+             if by_source and received[seq].packet.status & SAMP_ANCHOR_BIT}
     for chain in chains:
-        _timing_pass([seq for seq in chain if seq not in untimed], received, index,
-                     quarantine, config, where, issue)
+        checked = [seq for seq in chain if seq not in untimed]
+        if not by_source:
+            _timing_pass(checked, received, index, quarantine, fifo_read, where, issue)
+            continue
+        _timing_pass([seq for seq in checked if seq in edges], received, index,
+                     quarantine, (0, config["samp_anchor_tolerance_us"], rate_ppm),
+                     where, issue, "samp")
+        _timing_pass([seq for seq in checked if seq not in edges], received, index,
+                     quarantine, fifo_read, where, issue, "fifo_read")
+    if edges:
+        # Section 7.2: SAMP comes back only after a mapping restart (SYNCH), whose
+        # first packet has bit 5 (or gets it from FS-0 packets just before, as in
+        # _index_pass). With no SEQ missing between, none was lost.
+        pending = 0
+        for before, seq in zip(present, present[1:]):
+            packet = received[before].packet
+            pending = pending | packet.status if packet.fs_nominal_mhz == 0 else 0
+            restart = (received[seq].packet.status | pending) & REANCHOR_BIT
+            if seq == before + 1 and seq in edges and before not in edges and (
+                not restart
+            ):
+                issue("samp_resumed_without_reanchor", **where, seq=seq)
+        # Section 8: the latency of SAMP anchors is not that of FIFO reads.
+        if spec is not None and SAMP_LATENCY_FIELDS[0] not in spec:
+            issue("samp_latency_metadata_missing", **where)
     accepted = [seq for seq in present if seq not in quarantine]
     gaps = _gaps(seqs, accepted, received, index, quarantine, conflicts, jumps)
     samples = []
@@ -404,6 +459,14 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
         "first_sample_index": index[accepted[0]] if accepted else None,
         "samples_accepted": len(samples), "gaps": gaps,
     })
+    if by_source:
+        # Bit 8 as sent, on every received packet (quarantined and bit 0/7 ones
+        # too), so that a fallback to FIFO reads stays visible.
+        summary["anchor_sources"] = {
+            "samp": len(edges), "fifo_read": len(present) - len(edges),
+            "switch_seqs": [seq for before, seq in zip(present, present[1:])
+                            if (before in edges) != (seq in edges)],
+        }
     first = None
     if timed:
         packet = received[timed[0]].packet
@@ -625,8 +688,14 @@ def _chains(present, received, quarantine, jumps, where, issue):
     return chain_of, chains
 
 
-def _timing_pass(chain, received, index, quarantine, config, where, issue):
+def _timing_pass(chain, received, index, quarantine, tolerance, where, issue,
+                 source=None):
     """Schema step 6 on one chain: T_ANCHOR_US increases and matches index/fs.
+
+    ``tolerance`` is ``(samples, extra_us, rate_ppm)``: the fixed part is
+    ``samples`` periods plus ``extra_us``. ``source`` names the V0.2 ECG anchor
+    source in the issues (None elsewhere); for ``"samp"`` the checks that cannot
+    tell a one-sample shift are also reported (``anchor_check_weak``).
 
     Each packet is compared with the last kept packet before it, so a single
     bad anchor is quarantined without moving the reference. The walk is done
@@ -641,9 +710,8 @@ def _timing_pass(chain, received, index, quarantine, config, where, issue):
         return
     # Microseconds per sample; FS_NOMINAL_MHZ is in millihertz.
     period = Fraction(10 ** 9, received[chain[0]].packet.fs_nominal_mhz)
-    fixed = (config["anchor_tolerance_samples"] * period
-             + config["anchor_tolerance_extra_us"])
-    rate = Fraction(config["anchor_rate_tolerance_ppm"], 10 ** 6)
+    fixed = tolerance[0] * period + tolerance[1]
+    rate = Fraction(tolerance[2], 10 ** 6)
     shortest, longest = period / (1 + rate), period / (1 - rate)
     points = [(seq, index[seq] + len(received[seq].packet.data) - 1,
                received[seq].packet.t_anchor_us) for seq in chain]
@@ -670,12 +738,29 @@ def _timing_pass(chain, received, index, quarantine, config, where, issue):
 
     forward, backward = walk(points), walk(points[::-1])
     flagged = backward if len(backward) < len(forward) else forward
+    named = {} if source is None else {"anchor_source": source}
     for seq in chain:
         if seq in flagged:
             kind, deviation, reference = flagged[seq]
             issue("timestamp_anomaly", **where, seq=seq, kind=kind,
-                  deviation_us=str(deviation), reference_seq=reference)
+                  deviation_us=str(deviation), reference_seq=reference, **named)
             quarantine[seq] = "timestamp_anomaly"
+    if source != "samp":
+        return
+    if len(points) == 1:
+        issue("anchor_check_weak", **where, seq=points[0][0], reference_seq=None,
+              steps=None, **named)
+    kept = [point for point in points if point[0] not in flagged]
+    # Kept packets were each checked against the kept packet next to them. An
+    # anchor one sample late comes at least (n + 1) * shortest - fixed after the
+    # reference (fastest rate, anchor error up to the fixed part); the check is
+    # weak when that fits under n * longest + fixed. One sample early can only
+    # pass where one sample late already does.
+    for (reference, before, _), (seq, last, _) in zip(kept, kept[1:]):
+        steps = abs(last - before)
+        if (steps + 1) * shortest - fixed <= steps * longest + fixed:
+            issue("anchor_check_weak", **where, seq=seq, reference_seq=reference,
+                  steps=steps, **named)
 
 
 def _gaps(seqs, accepted, received, index, quarantine, conflicts, jumps):

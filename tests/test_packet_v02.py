@@ -6,6 +6,7 @@ code under test; they verify code, not a device.
 
 import copy
 import json
+import math
 from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
@@ -14,7 +15,9 @@ import pytest
 
 from scripts.packet_logger import record, replay
 from scripts.simulate_packets import run as simulate
-from software.data_io.packet_receiver import analyze_stream, decode_device_info
+from software.data_io.packet_receiver import (
+    analyze_stream, decode_device_info, validate_metadata,
+)
 from software.data_io.packet_simulation_v3 import (
     V02_CASES, backlog_chunks, generate_stream, reanchor_index, session_metadata,
     validate_config,
@@ -73,6 +76,17 @@ def ppg(seq, first, status=16, version=2, n=4):
                   100000, status, (7,) * n)
 
 
+ECG_T = Fraction(10 ** 9, 512_000)  # 1953.125 us
+
+
+def ecg(seq, first, samp=True, late_us=0, version=2, n=16):
+    """ECG, 512 Hz, anchor on the index plus ``late_us``; bit 8 if ``samp``."""
+    anchor = round(1_000_000 + (first + n - 1) * ECG_T + late_us)
+    return Packet(version, 0xE1, 1, seq, first, anchor,
+                  round(anchor - (n - 1) * ECG_T), 512_000, 16 | (256 if samp else 0),
+                  (7 << 6,) * n)
+
+
 def info_packet(seq, ordinal, data=None, version=2, **fields):
     data = data or device_info_data(ELF, "0.2.0-sim", "v5.5.3")
     t = 1_000_000 + 300_000 * ordinal
@@ -118,6 +132,11 @@ def test_device_info_words_keep_the_bit_pattern():
     ("mixed_version", {"version_mixed_in_session": 1, "missing_packets": 1,
                        "channel_missing": 8}),
     ("device_info_changed", {"device_info_changed": 2}),
+    ("samp_remap", {"sample_index_reanchored": 1}),
+    # The shift is caught, but the walk keeps the longer side (packets 2-7, all
+    # one sample late) and quarantines the two good ones; the ECG epoch of the
+    # channel offset then comes from a late packet.
+    ("samp_shift", {"timestamp_anomaly": 2, "channel_offset": 8}),
 ])
 def test_v02_cases_known_answers(sim, logger, case, expected):
     result, rows, samples = analyze(generate_stream(sim, case)[0], sim, logger, case)
@@ -261,12 +280,18 @@ def test_v02_simulator_reproducible_and_v01_rejects_v02_parts(sim):
         validate_config(with_imu)
     for broken in ({**sim, "device_info": None},
                    {k: v for k, v in sim.items() if k != "device_info"},
+                   {k: v for k, v in sim.items() if k != "samp"},
+                   {**sim, "samp": {"edge_delay_us": 500}},
+                   {**sim, "samp": {"edge_delay_us": -1, "jitter_us": 5}},
+                   {**sim, "status": 16 | 256},  # bit 8 is ECG only, per case
                    {**sim, "channels": {k: v for k, v in sim["channels"].items()
                                         if k != "0xA6"}},
                    {**sim, "unsupported_version": 2},
                    {**sim, "fault_channel": "0xA1"}):
         with pytest.raises(ValueError):
             validate_config(broken)
+    with pytest.raises(ValueError):  # no packet left after the mapping restart
+        generate_stream({**sim, "fault_index": sim["packet_count"] - 2}, "samp_remap")
 
 
 # --- receiver rules ----------------------------------------------------------------
@@ -279,12 +304,213 @@ def test_reserved_status_bits_are_per_version(sim, logger):
     result, _, _ = analyze(restream(late), sim, logger, metadata=metadata)
     assert result["issue_counts"] == {"status_reserved_bits": 1,
                                       "timestamp_anomaly": 1}
-    # V0.2: bit 7 is a backlog chunk, its anchor is not checked; bit 8 is reserved.
+    # V0.2: bit 7 is a backlog chunk, its anchor is not checked; bit 8 is reserved
+    # off ECG (section 7.4), so it is not named and the anchor is a FIFO read.
     chunk = [ppg(0, 0), replace(ppg(1, 4, status=16 | 128), t_anchor_us=2_000_000),
              ppg(2, 8, status=16 | 256)]
     result, _, _ = analyze(restream(chunk), sim, logger, metadata=metadata)
     assert result["issue_counts"] == {"status_reserved_bits": 1}
-    assert result["sessions"][0]["channels"]["0xF1"]["packets_anchor_unreliable"] == 1
+    summary = result["sessions"][0]["channels"]["0xF1"]
+    assert summary["packets_anchor_unreliable"] == 1
+    assert "anchor_samp" not in summary["status_bit_counts"]
+    assert "anchor_sources" not in summary
+    # V0.1 ECG: bit 8 is reserved too, and anchors are not split by source.
+    metadata = only(session_metadata(sim, "valid", "0" * 64), "0xE1")
+    packets = [ecg(0, 0, version=1), ecg(1, 16, version=1)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {"status_reserved_bits": 2}
+    assert "anchor_sources" not in result["sessions"][0]["channels"]["0xE1"]
+
+
+# --- SAMP anchor (section 7) --------------------------------------------------------
+
+def test_v02_simulator_ecg_anchor_is_the_samp_edge(sim):
+    epoch, delay, jitter = sim["epoch_us"], 500, 5  # config "samp"
+    packets = decoded(generate_stream(sim)[0])
+    for p in packets:
+        if p.channel_id in (0xE1, 0xF1, 0xA1):
+            assert bool(p.status & 256) is (p.channel_id == 0xE1)
+    for p in (p for p in packets if p.channel_id == 0xE1):
+        edge = epoch + (p.first_sample_index + len(p.data) - 1) * ECG_T
+        assert edge + delay - 1 <= p.t_anchor_us <= edge + delay + jitter + 1
+
+
+def test_samp_remap_sources_and_chains(sim, logger):
+    stream, _ = generate_stream(sim, "samp_remap")
+    ecg_packets = [p for p in decoded(stream) if p.channel_id == 0xE1]
+    status = [p.status for p in ecg_packets]
+    # Packets 2-3 in the error state (FIFO read, no bit 8); packet 4 after SYNCH
+    # starts a new index epoch at 0, 40 samples (78 125 us) later in time.
+    assert [bool(s & 256) for s in status] == [True] * 2 + [False] * 2 + [True] * 4
+    assert [bool(s & 32) for s in status] == [False] * 4 + [True] + [False] * 3
+    assert [p.first_sample_index for p in ecg_packets] == [0, 16, 32, 48] * 2
+    step = ecg_packets[4].t_anchor_us - ecg_packets[1].t_anchor_us
+    assert abs(step - (48 + 40) * ECG_T) < 600  # FIFO vs SAMP delay and jitter
+    result, _, _ = analyze(stream, sim, logger, "samp_remap")
+    summary = result["sessions"][0]["channels"]["0xE1"]
+    assert summary["anchor_sources"] == {"samp": 6, "fifo_read": 2,
+                                         "switch_seqs": [2, 4]}
+    assert summary["chains"] == 2 and summary["status_bit_counts"]["anchor_samp"] == 6
+    assert [g["lost_samples"] for g in summary["gaps"]] == [None]
+    # Index 0 of ECG is no longer the epoch of the other channels, so the
+    # metadata does not claim one; with the first chain lost there is no false
+    # channel offset.
+    metadata = session_metadata(sim, "samp_remap", "0" * 64)
+    assert metadata["simulation"]["common_index_epoch"] is False
+    late = [p for p in decoded(stream) if not (p.channel_id == 0xE1 and p.seq < 4)]
+    result, _, _ = analyze(restream(late), sim, logger, "samp_remap")
+    assert "channel_offset" not in result["issue_counts"]
+    assert result["sessions"][0]["channel_offset"]["offset_vs_ecg_us"] is None
+
+
+def test_samp_shift_is_caught_only_by_the_samp_tolerance(sim, logger):
+    stream, _ = generate_stream(sim, "samp_shift")
+    result, _, _ = analyze(stream, sim, logger, "samp_shift")
+    flagged = [(i["seq"], i["anchor_source"]) for i in result["issues"]
+               if i["code"] == "timestamp_anomaly"]
+    assert flagged == [(0, "samp"), (1, "samp")]
+    # The tolerance of a FIFO-read anchor (1 period + 500 us) lets the shift
+    # through, and every check of the chain says it could not see one.
+    loose = dict(logger, samp_anchor_tolerance_us=1953 + 500)
+    result, _, _ = analyze(stream, sim, loose, "samp_shift")
+    assert result["issue_counts"] == {"anchor_check_weak": 7}
+
+
+def test_samp_and_fifo_anchors_are_never_compared(sim, logger):
+    # SAMP -> FIFO read (the error state) is a legal switch within a chain. The
+    # FIFO reads come 5 ms after the SAMP edges: more than the FIFO tolerance
+    # (2.45 ms), so any comparison across the two sources would fail.
+    metadata = only(session_metadata(sim, "valid", "0" * 64), "0xE1")
+    packets = [ecg(0, 0), ecg(1, 16), ecg(2, 32), ecg(3, 48, samp=False,
+                                                      late_us=5000),
+               ecg(4, 64, samp=False, late_us=5000)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {}
+    assert result["sessions"][0]["channels"]["0xE1"]["anchor_sources"] == {
+        "samp": 3, "fifo_read": 2, "switch_seqs": [3]}
+    # One SAMP edge 300 us late is outside 200 us; the FIFO reads are not checked
+    # against it.
+    packets[1] = ecg(1, 16, late_us=300)
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    flagged = [(i["seq"], i["anchor_source"]) for i in result["issues"]
+               if i["code"] == "timestamp_anomaly"]
+    assert flagged == [(1, "samp")]
+
+
+def test_samp_back_without_restart_is_reported(sim, logger):
+    metadata = only(session_metadata(sim, "valid", "0" * 64), "0xE1")
+    fifo = ecg(1, 16, samp=False, late_us=5000)
+    # SEQ 1 -> 2 with nothing lost: no packet with bit 5 can have been missed.
+    packets = [ecg(0, 0), fifo, ecg(2, 32), ecg(3, 48)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {"samp_resumed_without_reanchor": 1}
+    # A lost packet between could have carried bit 5: not reported.
+    packets = [ecg(0, 0), fifo, ecg(3, 48), ecg(4, 64)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {"missing_packets": 1}
+    # The restart packet itself (bit 5, index from 0) is the legal way back.
+    # SEQ 0 is then the only SAMP packet of chain 0: its anchor is unchecked.
+    restart = replace(ecg(2, 0, late_us=100_000), status=16 | 32 | 256)
+    packets = [ecg(0, 0), fifo, restart, ecg(3, 16, late_us=100_000)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {"sample_index_reanchored": 1,
+                                      "anchor_check_weak": 1}
+    # Bit 5 on an FS-0 restart packet carries to the next packet; bit 5 on the
+    # first trusted packet after leading FS-0 packets is a restart as well.
+    broken = replace(restart, fs_nominal_mhz=0)
+    packets = [ecg(0, 0), fifo, broken, ecg(3, 16, late_us=100_000)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert "samp_resumed_without_reanchor" not in result["issue_counts"]
+    packets = [replace(fifo, seq=0, fs_nominal_mhz=0),
+               replace(restart, seq=1), ecg(2, 16, late_us=100_000)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert "samp_resumed_without_reanchor" not in result["issue_counts"]
+    # A bit 5 carried from an FS-0 FIFO-read packet just before also counts.
+    carried = replace(fifo, seq=2, first_sample_index=0, status=16 | 32,
+                      fs_nominal_mhz=0)
+    packets = [ecg(0, 0), fifo, carried, replace(restart, seq=3, status=16 | 256)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert "samp_resumed_without_reanchor" not in result["issue_counts"]
+
+
+@pytest.mark.parametrize("steps,weak", [(397, False), (398, True)])
+def test_samp_check_is_weak_when_a_one_sample_shift_could_pass(sim, logger, steps,
+                                                               weak):
+    # T = 1953.125 us, r = 1000 ppm, F = 200 us: true period in [T/1.001,
+    # T/0.999], anchor error within F. An anchor one sample late comes at least
+    # (n + 1) T/1.001 - F after the reference; the check accepts up to
+    # n T/0.999 + F. Weak iff the first fits under the second: n >= 397.1.
+    metadata = only(session_metadata(sim, "valid", "0" * 64), "0xE1")
+    reference = ecg(0, 0)
+    earliest = math.ceil((steps + 1) * ECG_T / Fraction(1001, 1000) - 200)
+    shifted = replace(ecg(20, steps), t_anchor_us=reference.t_anchor_us + earliest)
+    result, _, _ = analyze(restream([reference, shifted]), sim, logger,
+                           metadata=metadata)
+    weak_checks = [(i["seq"], i["reference_seq"], i["steps"])
+                   for i in result["issues"] if i["code"] == "anchor_check_weak"]
+    # Either the shift is caught, or the check says it could not be.
+    if weak:
+        assert weak_checks == [(20, 0, steps)]
+        assert "timestamp_anomaly" not in result["issue_counts"]
+    else:
+        assert weak_checks == []
+        assert result["issue_counts"]["timestamp_anomaly"] == 1
+
+
+def test_ecg_overflow_ends_samp_and_every_packet_is_counted(sim, logger):
+    config = {**sim, "fault_channel": "0xE1"}
+    stream, _ = generate_stream(config, "index_jump")
+    status = [p.status for p in decoded(stream) if p.channel_id == 0xE1]
+    # Bit 0 on packet 2 (fault_index) puts the mapping in the error state.
+    assert [bool(s & 256) for s in status] == [True] * 2 + [False] * 6
+    assert bool(status[2] & 1)
+    result, _, _ = analyze(stream, config, logger, "index_jump")
+    sources = result["sessions"][0]["channels"]["0xE1"]["anchor_sources"]
+    # The bit 0 packet has no usable anchor but still counts as a FIFO read.
+    assert sources == {"samp": 2, "fifo_read": 6, "switch_seqs": [2]}
+
+
+def test_samp_stream_without_samp_latency_metadata(sim, logger):
+    metadata = only(session_metadata(sim, "valid", "0" * 64), "0xE1")
+    for name in ("latency_samp_l_us", "latency_samp_source"):
+        del metadata["channels"]["0xE1"][name]
+        del metadata["null_reasons"][f"channels.0xE1.{name}"]
+    packets = [ecg(0, 0), ecg(1, 16)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {"samp_latency_metadata_missing": 1}
+    # Without bit 8 the FIFO-read latency is enough.
+    packets = [ecg(0, 0, samp=False), ecg(1, 16, samp=False)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    assert result["issue_counts"] == {}
+
+
+def test_lone_samp_packet_in_a_chain_is_weak(sim, logger):
+    metadata = only(session_metadata(sim, "valid", "0" * 64), "0xE1")
+    packets = [ecg(0, 0), ecg(1, 16, samp=False), ecg(2, 32, samp=False)]
+    result, _, _ = analyze(restream(packets), sim, logger, metadata=metadata)
+    weak_checks = [(i["seq"], i["reference_seq"]) for i in result["issues"]
+                   if i["code"] == "anchor_check_weak"]
+    assert weak_checks == [(0, None)]
+
+
+def test_samp_latency_metadata_is_ecg_only_and_paired(sim):
+    metadata = session_metadata(sim, "valid", "0" * 64)
+    assert validate_metadata(metadata)
+    ecg_spec = metadata["channels"]["0xE1"]
+    assert ecg_spec["latency_samp_l_us"] is None
+    for mutate in (
+        lambda m: m["channels"]["0xE1"].pop("latency_samp_source"),
+        lambda m: m["channels"]["0xF1"].update(latency_samp_l_us=None,
+                                               latency_samp_source=None),
+        lambda m: m["channels"]["0xE1"].update(latency_samp_l_us=-1),
+    ):
+        broken = copy.deepcopy(metadata)
+        mutate(broken)
+        with pytest.raises(ValueError):
+            validate_metadata(broken)
+    # V0.1 metadata without the keys stays valid.
+    assert validate_metadata(session_metadata(json.loads(SIM_V01.read_bytes()),
+                                              "valid", "0" * 64))
 
 
 def test_v02_bit5_always_reanchors_and_only_on_its_own_packet(sim, logger):

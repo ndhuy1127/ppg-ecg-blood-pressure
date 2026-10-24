@@ -1,8 +1,8 @@
 # Packet Schema V0.2 – thêm IMU và packet thông tin thiết bị
 
-> **Duyệt 2026-10-24. Đã triển khai bước 1 (codec, receiver, logger, simulator; mục 9);
-> firmware chưa. Sửa đổi cùng ngày: mốc `SAMP` cho ECG và bit 8 (mục 7), chưa triển
-> khai. Chưa kiểm chứng trên thiết bị.**
+> **Duyệt 2026-10-24. Đã triển khai bước 1 (codec, receiver, logger, simulator; mục 9),
+> kể cả sửa đổi cùng ngày về mốc `SAMP` cho ECG và bit 8 (mục 7); firmware chưa. Chưa
+> kiểm chứng trên thiết bị.**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -289,9 +289,10 @@ trên chip thật ở bring-up.
   nguồn mốc; loại anchor của packet bit 0/bit 7 như cũ. Không so trực tiếp mốc
   `SAMP` với mốc đọc FIFO qua chỗ đổi nguồn: hai nguồn lệch nhau một khoảng (thời
   gian mẫu nằm trong FIFO cộng độ trễ đọc) phải ước lượng riêng trước khi so.
-- Dung sai tốc độ nhân theo độ dài khoảng trống giữa hai packet: với ±1 000 ppm, sau
-  khoảng trống dài hơn khoảng 1 s thì lệch một mẫu ECG có thể lọt; logger báo riêng
-  các khoảng trống như vậy thay vì coi là đã kiểm.
+- Dung sai tốc độ nhân theo độ dài khoảng trống giữa hai packet: với ±1 000 ppm và
+  200 µs, tính cả sai số anchor tới 200 µs, phép kiểm qua từ 398 mẫu trở lên (khoảng
+  0,78 s) không còn phân biệt được lệch một mẫu ECG; logger báo riêng các phép kiểm
+  như vậy (`anchor_check_weak`) thay vì coi là đã kiểm.
 - Báo số packet bit 8, số packet dùng mốc đọc FIFO và vị trí đổi nguồn.
 - Quy ước: `t′` là thời điểm mẫu **chưa trừ độ trễ** (V0.1 mục 5.3 với `δ = d_pipe = 0`);
   chỉ trừ độ trễ đúng một lần, theo nguồn mốc của packet chứa mẫu đó. Nếu thời điểm
@@ -363,10 +364,18 @@ sau.
    - Thêm config và fixture V0.2 với các ca: IMU hợp lệ, tồn đọng 32/33/64/65 frame,
      mất phần cuối, FIFO đầy rồi neo lại, mất packet bit 5, trộn version, thông tin
      thiết bị thiếu, sai hoặc đổi.
-   - **Sửa đổi mục 7 (chưa làm):** mask dự trữ V0.2 `0xFE00` và tên bit 8; kiểm bit 8
-     chỉ trên `0xE1`; dung sai anchor và tốc độ ECG riêng theo nguồn mốc, hồi quy
-     tách theo nguồn, đếm packet theo nguồn; metadata độ trễ theo nguồn; simulator và
-     fixture các ca ở mục 7.7.
+   - **Sửa đổi mục 7 (làm 2026-10-24):** mask dự trữ V0.2 `0xFE00` và tên bit 8
+     (`anchor_samp`); bit 8 chỉ hợp lệ trên `0xE1`; kiểm anchor ECG riêng theo nguồn
+     mốc trong mỗi chuỗi (`samp_anchor_tolerance_us` 200, tốc độ ECG
+     `ecg_anchor_rate_tolerance_ppm` 1 000), báo `anchor_check_weak`, đếm packet và
+     chỗ đổi nguồn (`anchor_sources`), báo `samp_resumed_without_reanchor` khi mốc
+     `SAMP` trở lại mà không neo lại; metadata `latency_samp_l_us` và
+     `latency_samp_source` cho `0xE1` (thiếu khi luồng có bit 8:
+     `samp_latency_metadata_missing`). Simulator: ECG V0.2 mặc định mang bit 8 (config
+     `samp`), ca `samp_remap` (mất ánh xạ rồi khởi động lại) và `samp_shift` (lệch
+     một mẫu giữa phiên). Mất xung, thừa xung, ghi đè được firmware phát hiện nên
+     với logger giống `samp_remap`; phần phát hiện trong firmware thử ở bước 2.
+     Logger không hồi quy tốc độ; hồi quy offline tách theo nguồn theo mục 7.5.
 2. **Firmware:**
    - `PKT_VERSION = 0x02`; known-answer V0.2 mới cho tự kiểm lúc khởi động (giữ
      known-answer V0.1 trong fixture làm bản cũ);

@@ -98,8 +98,8 @@ giờ nối sang phiên khác.
 | --- | --- | --- |
 | 3. `SEQ` | Mở rộng uint32 qua mốc 2³² (giá trị gần nhất với `SEQ` lớn nhất đã nhận). Thiếu = mất. Lặp cùng nội dung = trùng (giữ bản đầu). Lặp khác nội dung = xung đột (cách ly **cả hai** bản). Nhỏ hơn giá trị lớn nhất đã nhận = đảo thứ tự (vẫn nhận, sắp lại offline) | `missing_packets` (một issue mỗi đoạn, kèm `count`), `duplicate`, `conflicting_duplicate`, `out_of_order` |
 | 4. `FIRST_SAMPLE_INDEX` | Mở rộng uint32 rồi so với `index + N` của packet trước. Packet `FS_NOMINAL_MHZ = 0` có header không tin được: có `sample_index_ext` trong `packets.csv` nhưng không bao giờ làm mốc cho packet sau (cách ly ở bước 6). Nhảy tiến khi `SEQ` liên tục: có bit 0 hoặc 1 thì biết số mẫu mất, không có bit nào là không giải thích được. Index nhảy kèm bit 5: neo lại, không biết số mẫu mất, chuỗi mới (`chain_id` + 1). Index lùi: cách ly packet. Báo bất nhất khi số mẫu mất ít hơn số packet vắng, hoặc nhiều hơn 32 × số packet vắng (`SAMPLE_COUNT` ≤ 32) mà không có bit 0/1 | `sample_gap_status`, `sample_gap_unexplained`, `sample_index_reanchored`, `sample_index_overlap`, `sample_index_inconsistent` |
-| 5. `STATUS` | Đếm từng bit theo kênh (`status_bit_counts`) và ghi `status` của từng packet trong `packets.csv`. Bit dự trữ 7–15 khác 0 thì báo | `status_reserved_bits` |
-| 6. `T_ANCHOR_US` | Theo từng chuỗi (`chain_id`). Packet có `FS_NOMINAL_MHZ = 0` bị cách ly trước và không cắt chuỗi. Packet có bit 0 (FIFO AFE tràn) giữ mẫu nhưng anchor không được kiểm và không làm mốc, vì FIFO đã đầy nên anchor đến muộn so với mẫu cuối (`disposition` = `accepted_anchor_unreliable`, đếm ở `packets_anchor_unreliable`; từ 2026-10-23, trước đó cả packet bị cách ly `timestamp_anomaly`). Mỗi packet so với packet được giữ gần nhất trước nó: phải tăng cùng chiều với chỉ số mẫu, và \|Δk\|·T/(1 + r) − F ≤ ΔA ≤ \|Δk\|·T/(1 − r) + F (ΔA tính theo chiều của Δk), với T = 10⁹/`FS_NOMINAL_MHZ` µs, Δk là số mẫu tính từ mốc, r = `anchor_rate_tolerance_ppm`·10⁻⁶ là dung sai của **tốc độ** mẫu (chu kỳ thật nằm trong [T/(1 + r), T/(1 − r)]) và F = `anchor_tolerance_samples`·T + `anchor_tolerance_extra_us`. `deviation_us` vẫn báo ΔA − Δk·T. Sai thì cách ly packet, mốc giữ nguyên. Phép kiểm chạy **xuôi và ngược**, giữ chiều cách ly ít packet hơn (bằng nhau thì giữ chiều xuôi). Chuỗi mới sau neo lại hoặc khi đổi FS | `timestamp_anomaly` (`kind` = `not_increasing`/`mismatch`, `deviation_us`, `reference_seq`), `fs_changed`, `fs_invalid` |
+| 5. `STATUS` | Đếm từng bit theo kênh (`status_bit_counts`) và ghi `status` của từng packet trong `packets.csv`. Bit dự trữ khác 0 thì báo: V0.1 bit 7–15; V0.2 bit 9–15, và bit 8 ở mọi kênh trừ ECG `0xE1` (bit dự trữ không được đếm tên) | `status_reserved_bits` |
+| 6. `T_ANCHOR_US` | Theo từng chuỗi (`chain_id`). Packet có `FS_NOMINAL_MHZ = 0` bị cách ly trước và không cắt chuỗi. Packet có bit 0 (FIFO AFE tràn) giữ mẫu nhưng anchor không được kiểm và không làm mốc, vì FIFO đã đầy nên anchor đến muộn so với mẫu cuối (`disposition` = `accepted_anchor_unreliable`, đếm ở `packets_anchor_unreliable`; từ 2026-10-23, trước đó cả packet bị cách ly `timestamp_anomaly`). Mỗi packet so với packet được giữ gần nhất trước nó: phải tăng cùng chiều với chỉ số mẫu, và \|Δk\|·T/(1 + r) − F ≤ ΔA ≤ \|Δk\|·T/(1 − r) + F (ΔA tính theo chiều của Δk), với T = 10⁹/`FS_NOMINAL_MHZ` µs, Δk là số mẫu tính từ mốc, r = `anchor_rate_tolerance_ppm`·10⁻⁶ (ECG: `ecg_anchor_rate_tolerance_ppm`) là dung sai của **tốc độ** mẫu (chu kỳ thật nằm trong [T/(1 + r), T/(1 − r)]) và F = `anchor_tolerance_samples`·T + `anchor_tolerance_extra_us`. `deviation_us` vẫn báo ΔA − Δk·T. Sai thì cách ly packet, mốc giữ nguyên. Phép kiểm chạy **xuôi và ngược**, giữ chiều cách ly ít packet hơn (bằng nhau thì giữ chiều xuôi). Chuỗi mới sau neo lại hoặc khi đổi FS. ECG V0.2: kiểm riêng từng nguồn mốc (mục "Packet Schema V0.2") | `timestamp_anomaly` (`kind` = `not_increasing`/`mismatch`, `deviation_us`, `reference_seq`), `fs_changed`, `fs_invalid` |
 | 7. Không nội suy | `gaps` liệt kê lỗ hổng chỉ số mẫu (`index_from`, `index_to`, `lost_samples`, lý do). `samples.csv` chỉ chứa mẫu của packet được nhận | — |
 | 8. Không ghép ECG–PPG | Không ghép theo chỉ số mẫu, không dịch kênh, không dùng PAT. Offset kênh chỉ tính ở mô phỏng (mục dưới) | `channel_offset` (chỉ SYNTHETIC) |
 
@@ -114,7 +114,10 @@ có phiên để báo. Packet sự kiện: xem R1.
 
 **Dung sai mặc định (chưa kiểm chứng trên phần cứng):** 1 chu kỳ mẫu + 500 µs, cộng
 phần do tốc độ mẫu thật lệch tới ±3 % so với danh định (`anchor_rate_tolerance_ppm` =
-30 000).
+30 000). ECG có dung sai tốc độ riêng ±1 000 ppm (`ecg_anchor_rate_tolerance_ppm`),
+và mốc `SAMP` của ECG V0.2 có phần cố định riêng 200 µs (`samp_anchor_tolerance_us`);
+cả hai là giá trị tạm, chốt 2026-10-24 (Packet Schema V0.2 mục 7.5), chỉnh sau
+bring-up.
 
 - **Phần cố định:** theo mục 5.1–5.2, `0 ≤ δ < 10⁶/fs + d`, với d khoảng
   0,1–0,2 ms (I²C) hoặc 6 µs (SPI). Vì vậy hiệu δ giữa hai packet nằm trong
@@ -128,8 +131,10 @@ phần do tốc độ mẫu thật lệch tới ±3 % so với danh định (`an
   không có phần này, mọi packet sau khoảng mất bị cách ly (review 2026-10-22: lệch
   3 % và mất 10 packet PPG là đủ). Trước 2026-10-23, logger áp ±3 % lên **chu kỳ**
   (3 % · Δk · T hai phía), tức tốc độ chậm đúng 3 % bị loại oan.
-- Hệ số được áp cho mọi kênh. Với ECG (FCLK 32,768 kHz, mục 4), hệ số này chỉ làm
-  giảm độ nhạy, không gây cách ly giả.
+- Từ 2026-10-24, ECG dùng hệ số riêng ±1 000 ppm: tốc độ ECG theo FCLK 32,768 kHz
+  (mục 4), nên ±3 % chỉ làm giảm độ nhạy. Hệ số này áp cho ECG của cả V0.1 lẫn V0.2
+  (tốc độ là của chip, không phụ thuộc version); các luồng mô phỏng V0.1 cho cùng
+  kết quả như trước.
 - Hệ số này không phải ước lượng tốc độ thực ở mục 5.3. Thay bằng số đo bench
   khi có (D10).
 
@@ -159,7 +164,8 @@ R5 vẫn là giá trị tạm, chờ số đo bench (D8, D10).
 - **R4:** `VERSION` được kiểm trước CRC; CRC16 little-endian; `SAMPLE_COUNT = 0`
   là vô lý.
 - **R5:** dung sai ở `configs/hardware/packet_logger.json`, kể cả dung sai tốc độ
-  ±3 % (thêm 2026-10-22).
+  ±3 % (thêm 2026-10-22), dung sai tốc độ ECG ±1 000 ppm và dung sai mốc `SAMP`
+  200 µs (thêm 2026-10-24).
 - **R6 (2026-10-22):** chuỗi chỉ số/thời gian (`chain_id`) đánh số từ 0 trong
   từng phiên và kênh, tăng 1 khi index nhảy kèm bit 5 (neo lại, `sample_index_reanchored`)
   hoặc khi `FS_NOMINAL_MHZ` đổi. Theo R2 bit 5 có thể ở packet trước hoặc sau chỗ
@@ -176,7 +182,7 @@ Config `wire_versions` = `[1, 2]`, `packet_schemas` = `["packet-v0.1", "packet-v
 
 - **Bảng mã kênh theo version** (decoder, sau CRC): `0xA1`–`0xA6` (IMU) và `0xD1`
   (thông tin thiết bị) chỉ hợp lệ ở V0.2; ở V0.1 là `unknown_channel`. Bit `STATUS`
-  dự trữ: 7–15 ở V0.1, 8–15 ở V0.2.
+  dự trữ: 7–15 ở V0.1; 9–15 ở V0.2, cộng bit 8 ở mọi kênh trừ `0xE1`.
 - **Một phiên trộn version:** `version_mixed_in_session`; mọi packet được giữ và kiểm
   riêng theo (phiên, version), nên `decode.json` có một mục phiên cho mỗi version
   (`packet_schema`), issue theo kênh mang trường `version`, và kênh khai báo mà
@@ -195,6 +201,40 @@ Config `wire_versions` = `[1, 2]`, `packet_schemas` = `["packet-v0.1", "packet-v
   `device_info_missing` (phiên V0.2 nguồn `DEVICE` không có `0xD1` hợp lệ) và
   `firmware_metadata_mismatch`. `0xD1` không vào `samples.csv` và không thuộc kiểm
   `channel_missing`.
+- **Mốc `SAMP` của ECG (bit 8, spec mục 7; từ 2026-10-24):** packet ECG bit 8 có
+  `T_ANCHOR_US` là cạnh `SAMP` của mẫu cuối; không có bit 8 là mốc đọc FIFO như V0.1.
+  Trong mỗi chuỗi, bước 6 chạy **riêng** cho từng nguồn: packet bit 8 chỉ so với
+  packet bit 8, với F = `samp_anchor_tolerance_us` (200 µs, không cộng chu kỳ mẫu)
+  để lệch một mẫu (1,953 ms) bị bắt; packet mốc đọc FIFO so với nhau với F như cũ.
+  Hai nguồn lệch nhau một khoảng chưa biết (thời gian mẫu nằm trong FIFO cộng độ trễ
+  đọc), nên không bao giờ so chéo; đổi nguồn không cắt chuỗi. `timestamp_anomaly`
+  của ECG V0.2 có thêm `anchor_source` (`samp` hoặc `fifo_read`).
+  - Phép kiểm `SAMP` qua n mẫu là **yếu** khi (n + 1)·T/(1 + r) − F ≤ n·T/(1 − r) + F:
+    anchor muộn một mẫu, ở tốc độ nhanh nhất trong dung sai và sai số anchor tới F,
+    vẫn lọt (sớm một mẫu chỉ lọt khi muộn một mẫu đã lọt). Với giá trị mặc định là
+    n ≥ 398 mẫu (khoảng 0,78 s; với packet 16 mẫu là từ 24 packet mất liền). Logger
+    báo `anchor_check_weak` (`seq`, `reference_seq`, `steps`) thay vì coi là đã kiểm;
+    chuỗi chỉ nhận được đúng một packet bit 8 (không có gì để so) cũng báo, với
+    `reference_seq` và `steps` = null.
+  - Tóm tắt kênh ECG V0.2 có `anchor_sources`: số packet theo bit 8 như firmware gửi
+    (`samp`, `fifo_read`), tính trên **mọi** packet nhận được trừ bản trùng và packet
+    xung đột (kể cả packet bị cách ly hoặc có bit 0/7), và `switch_seqs` (các `SEQ`
+    mà bit 8 đổi so với packet nhận được trước đó). Nhờ vậy một lần rơi về mốc đọc
+    FIFO luôn lộ ra; anchor dùng được hay không xem ở `packets_anchor_unreliable` và
+    `disposition`. Bit 8 được đếm trong `status_bit_counts` với tên `anchor_samp`.
+  - Theo spec mục 7.2, mốc `SAMP` chỉ trở lại sau khi khởi động lại ánh xạ bằng
+    `SYNCH`, mà packet đầu tiên sau đó mang bit 5. Packet bit 8 đi ngay sau (`SEQ`
+    liền, không mất gì ở giữa) một packet không có bit 8 mà không có bit 5 (của chính
+    nó, hoặc chuyển từ các packet `FS_NOMINAL_MHZ = 0` ngay trước nó như ở bước 4) thì
+    báo `samp_resumed_without_reanchor`. Có `SEQ` mất ở giữa thì không báo, vì packet
+    bit 5 có thể nằm trong phần mất.
+  - Luồng có packet bit 8 mà metadata `0xE1` thiếu `latency_samp_l_us` thì báo
+    `samp_latency_metadata_missing` (spec mục 8): độ trễ của mốc `SAMP` khác của mốc
+    đọc FIFO.
+  - Lệch cố định một mẫu ngay từ packet bit 8 đầu tiên của chuỗi thì logger **không**
+    bắt được (spec mục 7.2); chỉ phép đo kích thích bắt được.
+  - Một lệch phát sinh giữa chuỗi bị bắt, nhưng theo quy ước số đông logger cách ly
+    phía ngắn hơn, có thể là phía đúng (ca mô phỏng `samp_shift`).
 
 ## Lệch kênh: chỉ có nghĩa trong mô phỏng
 
@@ -204,7 +244,9 @@ chưa đo. Logger không thể biết lệch kênh từ packet, nên với `DEVI
 chung theo kế hoạch đo 10 phút.
 
 Với `SYNTHETIC`, generator khai báo `common_index_epoch: true` (mẫu 0 của mọi
-kênh cùng thời điểm). Logger ước lượng epoch của mỗi kênh là `T_ANCHOR_US` của
+kênh cùng thời điểm), trừ ca V0.2 `samp_remap`: index ECG bắt đầu lại từ 0 sau
+`SYNCH` trong khi thời gian vẫn chạy, nên ca này khai `false` và không có offset
+kênh. Logger ước lượng epoch của mỗi kênh là `T_ANCHOR_US` của
 packet được nhận đầu tiên trừ `k_last·T`, rồi lấy hiệu so với ECG. Vượt
 `channel_offset_tolerance_us` thì báo `channel_offset`. Giá trị dương nghĩa là
 nhãn thời gian của kênh đó muộn hơn ECG, cùng quy ước với `offset_ppg_minus_ecg_us`
@@ -235,7 +277,11 @@ khác manifest. Exit 0 **không** có nghĩa là luồng sạch: phải đọc `
   `electrode_placement`;
 - `channels`, khóa dạng `"0xE1"`, mỗi kênh có `sensor`, `fs_nominal_mhz`,
   `latency_l_us`, `latency_source`, `unit_conversion`, `afe_config` (object
-  thanh ghi AFE theo mục 11, ví dụ `ECG_RATE`, `LED_PW`);
+  thanh ghi AFE theo mục 11, ví dụ `ECG_RATE`, `LED_PW`). Riêng `0xE1` có thể
+  thêm cặp `latency_samp_l_us`, `latency_samp_source` (V0.2 mục 8: độ trễ của mốc
+  `SAMP`; `latency_l_us` là của mốc đọc FIFO): có cả hai hoặc không có cái nào,
+  kênh khác không được có. Phiên có packet ECG bit 8 phải khai báo cặp này (null
+  kèm lý do khi chưa đo), nếu không logger báo `samp_latency_metadata_missing`;
 - `simulation` (chỉ cho SYNTHETIC, `null` với DEVICE);
 - `null_reasons`.
 
@@ -297,8 +343,11 @@ và hash config/metadata được so với manifest.
   - Nếu cả anchor đầu lẫn anchor cuối của một chuỗi đều sai, hai chiều cách ly
     bằng nhau. Chiều xuôi được giữ, nên các packet **đúng** ở giữa bị cách ly
     (ECG 8 packet, đầu và cuối cùng +20 ms: cách ly SEQ 1–6).
-- Dung sai tốc độ ±3 % là giả định chưa đo (xem dung sai mặc định). Một bước nhảy
-  thời gian nhỏ hơn dung sai đã nới sau một khoảng mất dài không bị phát hiện.
+- Dung sai tốc độ ±3 % (ECG ±1 000 ppm) là giả định chưa đo (xem dung sai mặc
+  định). Một bước nhảy thời gian nhỏ hơn dung sai đã nới sau một khoảng mất dài
+  không bị phát hiện; với mốc `SAMP`, trường hợp này được báo `anchor_check_weak`.
+- Logger không kiểm được lệch cố định của ánh xạ xung `SAMP` ↔ mẫu, và không dùng
+  `latency_samp_l_us` (không tính thời gian mẫu).
 - Toàn bộ packet được giữ trong RAM tới cuối phiên. 10 phút (khoảng 5·10⁴ packet)
   không có vấn đề; phiên rất dài sẽ cần ghi theo dòng.
 - Chỉ dùng thư viện chuẩn; chưa có hiệu chỉnh `L`, fs thật hay drift.
@@ -341,7 +390,9 @@ firmware"); D8 và D10 chờ bench.
 - **D10 (thêm 2026-10-22).** Tốc độ lấy mẫu thật của PPG (và ECG) lệch bao nhiêu so
   với `FS_NOMINAL_MHZ` trên board? Logger đang giả định ±3 %
   (`anchor_rate_tolerance_ppm` = 30 000), suy từ clock ADC MAX30101
-  10,2–10,8 MHz ở mục 4. Phép đo 10 phút có cho số này không?
+  10,2–10,8 MHz ở mục 4. Phép đo 10 phút có cho số này không? → **ECG: tạm
+  ±1 000 ppm (`ecg_anchor_rate_tolerance_ppm`, chốt 2026-10-24, Packet Schema V0.2
+  mục 7.5), chỉnh sau bring-up. PPG vẫn chờ số đo.**
 
 ## Danh sách để Đức Anh review logger theo spec
 
@@ -363,7 +414,8 @@ Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
       bench.
 - [x] Dung sai mặc định phù hợp cấu hình dự kiến (ECG 512 sps, N = 16): dung sai
       một packet bình thường khoảng 3,4 ms. Dung sai tốc độ ±3 % giữ tới khi có
-      số đo (D10).
+      số đo (D10). Từ 2026-10-24 ECG dùng ±1 000 ppm: khoảng 2,48 ms với mốc đọc
+      FIFO, 0,23 ms với mốc `SAMP`.
 - [x] Trường metadata phiên đủ cho mục 11; cách điền cho firmware khung ở mục
       "Metadata phiên".
 - [ ] Khi có bo và cách đọc cổng serial được duyệt: chạy 10 phút không tải,
