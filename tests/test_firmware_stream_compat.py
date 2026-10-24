@@ -2,7 +2,7 @@
 
 SYNTHETIC only. The stream mirrors firmware/app/main.c and
 firmware/drivers/fake_afe.c (change both together): fake ECG every 1953 us read
-16 at a time, fake PPG with three slots every 10000 us read 4 at a time and
+16 at a time, fake PPG with three slots every 5000 us read 8 at a time and
 sharing one anchor, t0 event packets, SEQ assigned at send per channel, STATUS
 bit 4 on data packets, bit 1 after an MCU queue drop, bits 0 and 1 of a dropped
 or USB-lost packet moved to the next packet of the channel, bit 1 on the next
@@ -25,7 +25,7 @@ ROM_TEXT = b"ESP-ROM:esp32s3-20210327\r\nrst:0x1 (POWERON),boot:0x8\r\n"
 BIT0, BIT1, BIT4 = 1 << 0, 1 << 1, 1 << 4
 GAP_BITS = BIT0 | BIT1
 ECG, PPG, EVENT = 0xE1, (0xF1, 0xF2, 0xF3), 0xC1
-SOURCES = ((ECG,), 1953, 16, 512000), (PPG, 10000, 4, 100000)
+SOURCES = ((ECG,), 1953, 16, 512000), (PPG, 5000, 8, 200000)
 
 
 def ecg_word(index):
@@ -122,7 +122,7 @@ def stream(items, queue_drops=(), usb_losses=(), carry_bits=GAP_BITS):
 
 def metadata():
     channels, reasons = {}, {}
-    for channel, fs in ((ECG, 512000), *((c, 100000) for c in PPG), (EVENT, None)):
+    for channel, fs in ((ECG, 512000), *((c, 200000) for c in PPG), (EVENT, None)):
         key = f"0x{channel:02X}"
         channels[key] = {"sensor": "SYN_fake_afe", "fs_nominal_mhz": fs,
                          "latency_l_us": None, "latency_source": None,
@@ -165,7 +165,7 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
     channels = result["sessions"][0]["channels"]
     assert [g["lost_samples"] for g in channels["0xE1"]["gaps"]] == [32]
     assert channels["0xE1"]["status_bit_counts"]["mcu_buffer_overflow"] == 1
-    assert [g["lost_samples"] for g in channels["0xF2"]["gaps"]] == [4]
+    assert [g["lost_samples"] for g in channels["0xF2"]["gaps"]] == [8]
     assert channels["0xC1"]["events"] == 7
     assert all(not c.get("packets_quarantined") for c in channels.values())
     for _, key, _, _, index, value, _ in samples:

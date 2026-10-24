@@ -67,7 +67,7 @@ thì không gửi packet nào và LED trạng thái nháy nhanh.
 | `CHANNEL_ID` | Nguồn | `FS_NOMINAL_MHZ` | Chu kỳ thật | N mỗi packet | `DATA[i]` với `k = FIRST_SAMPLE_INDEX + i` |
 | --- | --- | ---: | --- | ---: | --- |
 | `0xE1` | ECG giả, giống MAX30001 | 512 000 | 1 953 µs (≈ 512,03 Hz, lệch +64 ppm so với danh định) | 16 | Word 24 bit: mẫu 18 bit bù hai `(k mod 2048) − 1024` ở bit 23…6, ETAG = PTAG = 0 |
-| `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe | 100 000 | 10 000 µs | 4 | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
+| `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe ở tốc độ V1 (200 sps) | 200 000 | 5 000 µs | 8 | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
 | `0xC1` | Nút t0 | 0 | — | 1 | Mã sự kiện `1` |
 
 `DATA` là hàm của chỉ số mẫu, nên receiver kiểm được từng mẫu. Độ lệch +64 ppm của

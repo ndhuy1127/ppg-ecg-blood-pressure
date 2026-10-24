@@ -367,13 +367,13 @@ Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
 
 [`tests/test_firmware_stream_compat.py`](../../tests/test_firmware_stream_compat.py)
 dựng luồng byte theo đúng quy ước của firmware khung trong 10 phút: chữ ROM ở đầu,
-ECG giả 1 953 µs × 16 mẫu, PPG giả ba khe 10 000 µs × 4 mẫu dùng chung mốc neo,
+ECG giả 1 953 µs × 16 mẫu, PPG giả ba khe 5 000 µs × 8 mẫu dùng chung mốc neo,
 task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, một lần tràn hàng đợi MCU kèm USB
 timeout của chính packet mang bit 1, một USB timeout ở PPG khe 2. Với config mặc
-định, logger nhận 64 206 packet, 487 196 mẫu, tất cả đúng công thức `DATA` của
+định, logger nhận 64 206 packet, 667 192 mẫu, tất cả đúng công thức `DATA` của
 firmware. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
 `missing_packets`, cùng hai khoảng trống: ECG mất 32 mẫu (bit 1 đã chuyển sang
-packet kế), PPG khe 2 mất 4 mẫu. Không có `timestamp_anomaly`. Test thứ hai cho
+packet kế), PPG khe 2 mất 8 mẫu. Không có `timestamp_anomaly`. Test thứ hai cho
 thấy khi mất 48 mẫu ECG (hai lần tràn hàng đợi cộng một USB timeout), logger chỉ
 giải thích được khoảng trống nhờ bit 1 được chuyển sang packet kế; không chuyển
 thì báo `sample_index_inconsistent`. Tương tự với bit 0: một packet ECG báo tràn

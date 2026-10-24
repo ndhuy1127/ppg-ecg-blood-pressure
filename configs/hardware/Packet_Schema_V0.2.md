@@ -240,6 +240,6 @@ sau.
 - Kiểm tải: với ECG 512 sps (N = 16), PPG ba khe 200 sps (chốt 2026-10-24) và IMU
   sáu trục 100 Hz (N = 10): PPG N = 4 cho khoảng 242 packet/s, 17,0 kB/s (ECG 3,4 +
   PPG 8,7 + IMU 4,9 kB/s), hàng đợi MCU 64 packet chịu khoảng 0,26 s khi USB không
-  nhận; PPG N = 8 cho 167 packet/s, 13,9 kB/s. Nguồn giả hiện vẫn chạy PPG 100 sps
-  (N = 4). Cần test burst, host ngừng đọc và timeout
-  20 ms.
+  nhận; PPG N = 8 cho 167 packet/s, 13,9 kB/s, hàng đợi chịu khoảng 0,38 s. Nguồn
+  giả của firmware chạy PPG 200 sps, N = 8. Cần test burst, host ngừng đọc và
+  timeout 20 ms.

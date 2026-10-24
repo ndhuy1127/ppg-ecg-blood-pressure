@@ -114,15 +114,36 @@ Lưu ý khi chốt:
   datasheet không nêu sai số tốc độ lấy mẫu. Tốc độ thực của từng kênh phải đo
   (xem kế hoạch đo 10 phút).
 
-**Cấu hình V1:** ECG 512 sps (FMSTR 00, đúng tần số dao động trên breakout; chốt
-2026-10-23, `custom_board_proposal.md` A.2). PPG multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR)
-ở 200 sps mỗi khe, `SMP_AVE = 1` (chốt 2026-10-24, A.6 mục 3); độ rộng xung (411 hay
-215 µs) còn mở (mục 6).
+**Cấu hình V1:**
+
+- **ECG 512 sps** (FMSTR 00, đúng tần số dao động trên breakout; chốt 2026-10-23,
+  `custom_board_proposal.md` A.2). Không đổi sang 500 sps (FMSTR 01) chỉ để hạ về
+  125 Hz theo hệ số nguyên. 256 sps chỉ xét nếu bench cho thấy MCU đọc FIFO ECG
+  không kịp: FIFO 32 mẫu chứa khoảng 62,5 ms ở 512 sps.
+- **PPG 200 sps mỗi khe**, multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR),
+  `SMP_AVE = 1` (chốt 2026-10-24, A.6 mục 3); độ rộng xung (411 hay 215 µs) còn mở
+  (mục 6). Lý do:
+  - MAX3010x không có 500 sps; ba khe chạy tới mức 200 sps (A.6 mục 3).
+  - `SMP_AVE = 1` không thêm trễ lấy trung bình vào PAT.
+  - Ở 200 sps, nhấp nháy 100 Hz của đèn (điện lưới 50 Hz) nằm ở tần số Nyquist,
+    lọc được; ở 100 sps nó gập về gần DC. Hài 200 Hz vẫn gập về gần DC ở cả hai
+    tốc độ: đo ở bench (mục 6).
+  - Dữ liệu 200 sps hạ được về tốc độ thấp hơn để thử. Riêng hành vi khi chip chạy
+    thật ở 100 sps (nhiễu, dòng LED) phải đo riêng, không suy từ dữ liệu 200 sps đã
+    hạ tần số.
+  - Không dùng 400 sps lấy trung bình 2: ba khe ở 400 sps chỉ cho độ rộng xung
+    ≤ 215 µs, thêm khoảng 1,25 ms trễ, và chưa có bằng chứng SNR tốt hơn.
+- **Hệ quả cho firmware:** FIFO PPG 32 mẫu chứa 160 ms ở 200 sps. `FIFO_A_FULL` chỉ
+  đặt được để ngắt khi có 17–32 mẫu chưa đọc (MAX30102 tr. 17), nên muốn đọc lô nhỏ
+  hơn (ví dụ 8 mẫu, 25 packet/s mỗi khe) thì đếm ngắt `PPG_RDY` hoặc đọc theo timer.
+  Thời gian LED sáng của ba khe chiếm 24,7% ở 411 µs và 12,9% ở 215 µs (tính từ giá
+  trị danh định): dòng xung LED ảnh hưởng VLED+ và 3V3 (A.6 mục 3).
 
 `configs/hardware/packet_simulation.json` (mô phỏng SYNTHETIC v2, giữ nguyên) dùng
 PPG 128 Hz, **không có trong bảng tốc độ MAX3010x**. Mô phỏng v3
-(`packet_simulation_v3.json`) và nguồn giả của firmware dùng PPG 100 sps, khác
-tốc độ đã chốt 200 sps; đây chỉ là tham số mô phỏng.
+(`packet_simulation_v3.json`) dùng PPG 100 sps, khác tốc độ đã chốt; đây chỉ là
+tham số mô phỏng. Nguồn giả của firmware chạy PPG 200 sps, 8 mẫu mỗi lần đọc
+(`firmware/README.md`).
 
 ## 5. Clock, ngắt và đồng bộ
 

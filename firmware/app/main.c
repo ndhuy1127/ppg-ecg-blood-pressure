@@ -39,8 +39,10 @@ static const char *TAG = "fw";
 /*
  * Fake sources, not hardware settings. ECG like MAX30001 at 512 sps with
  * EFIT = 15 (16 samples per read); PPG like MAX30101 multi-LED mode, three
- * slots at 100 sps, 4 samples per read. The ECG period of 1953 us is
- * 512.03 Hz, +64 ppm from nominal: the bench rate regression should see it.
+ * slots at 200 sps (the V1 rate), 8 samples per read: 25 packets/s per slot.
+ * FIFO_A_FULL cannot fire before 17 unread samples, so a real driver reading 8
+ * needs PPG_RDY or a timer. The ECG period of 1953 us is 512.03 Hz, +64 ppm
+ * from nominal: the bench rate regression should see it.
  */
 static const fake_afe_config_t ECG_FAKE = {
     .name = "fake_ecg",
@@ -54,9 +56,9 @@ static const fake_afe_config_t PPG_FAKE = {
     .name = "fake_ppg",
     .n_slots = 3,
     .channel_ids = {PKT_CH_PPG_SLOT1, PKT_CH_PPG_SLOT2, PKT_CH_PPG_SLOT3},
-    .fs_nominal_mhz = 100000,
-    .period_us = 10000,
-    .batch = 4,
+    .fs_nominal_mhz = 200000,
+    .period_us = 5000,
+    .batch = 8,
 };
 
 enum { CH_ECG, CH_PPG1, CH_PPG2, CH_PPG3, CH_PPG4, CH_EVENT, CH_COUNT };
