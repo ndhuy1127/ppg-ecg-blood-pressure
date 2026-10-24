@@ -57,7 +57,7 @@ Ghi chú giao tiếp theo bảng A.7:
 
 | Bus / tín hiệu | GPIO | Ghi chú |
 | --- | --- | --- |
-| SPI bus 1, MAX30001 (SCLK, MOSI, MISO, CS) | 15, 16, 17, 7 | Bus riêng, nên đường MISO không dùng chung với thiết bị khác qua TXB0108 luôn bật của breakout [BRK]. Đi qua GPIO matrix, chạy 4 MHz (A.2); MAX30001 cho SCLK tới 12 MHz, SPI mode 0 hoặc 3 (MAX30001 tr. 10, tr. 36). GPIO15/16 trùng XTAL_32K_P/N, chỉ ảnh hưởng bản hoàn chỉnh (mục 6 ý 3) |
+| SPI bus 1, MAX30001 (SCLK, MOSI, MISO, CS) | 15, 16, 17, 7 | Bus riêng, nên đường MISO không dùng chung với thiết bị khác qua TXB0108 luôn bật của breakout [BRK]. Đi qua GPIO matrix, chạy 4 MHz (A.2); MAX30001 cho SCLK tới 12 MHz, SPI mode 0 hoặc 3 (MAX30001 tr. 10, tr. 36). GPIO15/16 trùng XTAL_32K_P/N, chỉ ảnh hưởng bản hoàn chỉnh (mục 6 ý 2) |
 | MAX30001 INTB | 21 | Tích cực mức thấp. Mặc định open-drain kéo lên nội 125 kΩ; đi qua TXB0108 nên firmware đặt CMOS (`INTB_TYPE = 01`, tr. 43; A.2) |
 | MAX30001 INT2B | 47 | Xung `SAMP` ở tốc độ dữ liệu ECG (tr. 42, tr. 44): đánh dấu lúc mẫu vào FIFO, không phải lúc lấy mẫu analog (`Packet_Schema_V0.1.md` mục 5.2). Chạy 3,3 V với module WROOM-1-N16R8/N8R8 (A.6 mục 4) |
 | I²C bus 1, MAX30101 (SDA, SCL) | 8, 9 | Bus riêng, tối đa 400 kHz; địa chỉ ghi/đọc 0xAE/0xAF (MAX30101 Rev 2, Bảng 17, tr. 30). Kéo lên trên bo SparkFun (A.4) |
@@ -135,8 +135,10 @@ Lưu ý khi chốt:
     ≤ 215 µs, thêm khoảng 1,25 ms trễ, và chưa có bằng chứng SNR tốt hơn.
 - **Hệ quả cho firmware:** FIFO PPG 32 mẫu chứa 160 ms ở 200 sps. `FIFO_A_FULL` chỉ
   đặt được để ngắt khi có 17–32 mẫu chưa đọc (MAX30102 tr. 17), nên muốn đọc lô nhỏ
-  hơn thì đếm ngắt `PPG_RDY` hoặc đọc theo timer. Chốt 2026-10-24: đếm `PPG_RDY`,
-  đọc 8 mẫu (25 packet/s mỗi khe); ECG `EFIT = 15`, đọc 16 mẫu.
+  hơn thì đếm ngắt `PPG_RDY` hoặc đọc theo timer. Chốt 2026-10-24: xóa ngắt
+  `PPG_RDY` sau mỗi mẫu (đọc 0x00), tới mẫu thứ 8 đọc hết FIFO (thường 8 mẫu, 25
+  packet/s mỗi khe; Packet Schema V0.2 mục 7.6); ECG `EFIT = 15`, đọc tới EOF
+  (thường 16 mẫu, tối đa 32).
   Thời gian LED sáng của ba khe chiếm 24,7% ở 411 µs và 12,9% ở 215 µs (tính từ giá
   trị danh định): dòng xung LED ảnh hưởng VLED+ và 3V3 (A.6 mục 3).
 
@@ -156,9 +158,10 @@ tham số mô phỏng. Nguồn giả của firmware chạy PPG 200 sps, 8 mẫu 
   thời gian: packet schema mục 5.
 - Không có clock chung giữa hai AFE. Drift giữa hai kênh là chắc chắn có; độ lớn
   phải đo.
-- **INT2B:** KiCad V1-module nối INT2B của MAX30001 vào GPIO47. Nếu firmware bật
-  xung `SAMP` (`EN_INT2`, `SAMP_IT`; tr. 42–44; còn mở, mục 6), MCU chụp
-  `esp_timer` tại cạnh xung, được mốc phần cứng lúc mẫu ECG vào FIFO;
+- **INT2B:** KiCad V1-module nối INT2B của MAX30001 vào GPIO47. Firmware bật xung
+  `SAMP` luôn (`EN_INT2`, `SAMP_IT`; tr. 42–44; chốt 2026-10-24, Packet Schema V0.2
+  mục 7). MCPWM capture chốt bộ đếm riêng của nó tại cạnh xung, quy đổi sang
+  `esp_timer`, được mốc phần cứng lúc mẫu ECG vào FIFO;
   thời điểm lấy mẫu analog bằng mốc này trừ độ trễ đo ở bench
   (`Packet_Schema_V0.1.md` mục 5.2). MAX3010x không có chân tương đương; phía PPG vẫn dựa vào
   mốc đọc FIFO và phép đo bench.
@@ -169,10 +172,7 @@ tham số mô phỏng. Nguồn giả của firmware chạy PPG 200 sps, 8 mẫu 
 1. Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up. V1 chốt
    multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps, `SMP_AVE = 1`
    (2026-10-24, `custom_board_proposal.md` A.6 mục 3).
-2. Cách đưa mốc xung `SAMP` vào packet (chốt 2026-10-24: bật xung `SAMP` luôn (không chỉ khi đo bench) và dùng làm mốc thời gian ECG; cách đưa mốc vào packet đang chốt cho Packet Schema V0.2). V1 đã nối INT2B vào
-   GPIO47, chạy 3,3 V (`custom_board_proposal.md` A.6 mục 4); bản hoàn chỉnh cũng
-   phải nối.
-3. KiCad V1-module dùng GPIO15/16 cho SCLK/MOSI của MAX30001, trùng XTAL_32K_P/N
+2. KiCad V1-module dùng GPIO15/16 cho SCLK/MOSI của MAX30001, trùng XTAL_32K_P/N
    của ESP32-S3 (datasheet ESP32-S3 v2.2, Bảng 2-4 tr. 21, Bảng 2-8 tr. 24).
    `custom_board_proposal.md` Phần B mục 5 đề xuất thạch anh 32,768 kHz cho RTC;
    nếu bản cuối giữ pin map V1-module thì hai việc này xung đột. V1 không có thạch

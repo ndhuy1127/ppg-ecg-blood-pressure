@@ -78,10 +78,13 @@ tiếp chưa được ghi khi bắt đầu lượt đọc. Do đó
 `0 ≤ δ < 10⁶/fs + d_ptr_us`, với `d_ptr_us` là thời gian lượt đọc con trỏ trên
 I²C (cỡ 0,1–0,2 ms ở 400 kHz; phải đo).
 
-V1 (chốt 2026-10-24): firmware đếm ngắt `PPG_RDY` (mỗi mẫu một ngắt) và đọc khi đủ
-8 mẫu, nên `N = 8` (25 packet/s mỗi khe ở 200 sps) và lượt đọc bắt đầu ngay sau mẫu
-thứ 8: `δ` thực tế chỉ còn cỡ độ trễ ngắt cộng `d_ptr_us`. `FIFO_A_FULL` không dùng
-để kích đọc (chỉ ngắt được khi có 17–32 mẫu chưa đọc).
+V1 (chốt 2026-10-24; chi tiết Packet Schema V0.2 mục 7.6): `PPG_RDY` giữ chân INT ở
+mức thấp tới khi đọc `Interrupt Status 1` (0x00), nên firmware đọc 0x00 sau mỗi ngắt
+để xóa cờ và đếm; tới mẫu thứ 8 thì chốt con trỏ và đọc **hết** số mẫu có trong FIFO
+lúc chốt (thường 8, tức 25 packet/s mỗi khe ở 200 sps), không cố định 8. Vì đọc ngay
+sau mẫu thứ 8, `δ` thực tế chỉ còn cỡ độ trễ ngắt cộng `d_ptr_us`. `FIFO_A_FULL`
+không dùng để kích đọc (chỉ ngắt được khi có 17–32 mẫu chưa đọc). `PPG_RDY` ở chế độ
+ba khe phải kiểm khi bring-up; không chạy thì đọc theo timer.
 
 ### 5.2. MAX30001 (SPI)
 
@@ -99,7 +102,7 @@ tr. 38–40). Trạng thái FIFO đi kèm từng word qua ETAG (tr. 65, Bảng 4
    Word ETAG `001`/`011` (fast recovery) vẫn là bước thời gian hợp lệ nhưng điện áp
    không hợp lệ: giữ nguyên (mục 8). ETAG `111` (tràn): xem mục 9.
 
-**Phương án neo tốt hơn (đề xuất phần cứng):** MAX30001 phát xung `SAMP` ở tốc độ
+**Phương án neo tốt hơn (chốt dùng từ V0.2 ngày 2026-10-24, Packet Schema V0.2 mục 7):** MAX30001 phát xung `SAMP` ở tốc độ
 dữ liệu ECG (tr. 42), mỗi 1/2/4/16 mẫu tùy `SAMP_IT` (tr. 44), đưa ra chân INT2B
 qua `EN_INT2`. Xung này **không** đánh dấu lúc lấy mẫu analog. Theo ghi chú ứng
 dụng của ADI cho MAX30003 (cùng kênh ECG; ghi chú nói MAX30001 cũng dùng được),
@@ -112,8 +115,9 @@ trễ bộ lọc số ở bảng của datasheet (mục 5.3) cộng **1,003 ms**
 mỗi mẫu một mốc trên clock MCU với jitter rất nhỏ, không phụ thuộc độ trễ đọc
 FIFO. Chưa kiểm trên MAX30001; phép đo bench phải xác nhận độ trễ này. KiCad
 V1-module, pin map chuẩn của V1, nối INT2B vào GPIO47
-(`configs/hardware/custom_board_proposal.md` mục A.6, A.7). Việc nối ở bản cuối
-và việc firmware có bật `SAMP` hay không còn mở (mục 15).
+(`configs/hardware/custom_board_proposal.md` mục A.6, A.7). Từ V0.2 (chốt
+2026-10-24): firmware bật `SAMP` luôn và dùng làm mốc ECG (Packet Schema V0.2 mục 7);
+bản cuối cũng phải nối INT2B. Firmware V0.1 không dùng `SAMP`.
 
 ### 5.3. Thời điểm từng mẫu
 
@@ -392,9 +396,6 @@ v2 ở bảng trên giữ nguyên.
 
 - Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up (V1 chốt
   multi-LED ba khe ở 200 sps, `SMP_AVE = 1`, 2026-10-24).
-- Cách đưa mốc xung `SAMP` vào packet (chốt 2026-10-24: bật xung `SAMP` luôn (không chỉ khi đo bench) và dùng làm mốc thời gian ECG; cách đưa mốc vào packet đang chốt cho Packet Schema V0.2). Vì `SAMP` là mốc ECG,
-  bản hoàn chỉnh cũng phải nối INT2B. `N` đã chốt: ECG `EFIT = 15` (16 mẫu mỗi
-  packet), PPG 8 mẫu (mục 5.1).
 - Độ trễ hiệu dụng `L` của từng cấu hình (đo theo kế hoạch đo 10 phút), kể cả
   khoảng 1,0 ms trễ lấy mẫu ADC của MAX30001 ngoài bảng datasheet (mục 5.2, 5.3).
 

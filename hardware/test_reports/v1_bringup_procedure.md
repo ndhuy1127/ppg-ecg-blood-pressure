@@ -123,13 +123,15 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
    dùng để nhận chip (`protocentral_max30001_arduino_library`, `src/protocentral_max30001.cpp`).
 3. Cấu hình theo A.2: 512 sps, gain và bộ lọc cố định, `EN_BIOZ = 0`, **tắt lead
    bias nội** (cấu hình 3 điện cực, VCM qua R3), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
-   và `EN_INT2`, `EFIT = 15`, `SAMP_IT = 00` (xung `SAMP` mỗi mẫu, chốt 2026-10-24).
-   Đọc lại từng thanh ghi đã ghi.
+   và `EN_INT2`, `EFIT = 15`, `SAMP_IT = 00` (xung `SAMP` mỗi mẫu), `CLR_SAMP = 1`,
+   chỉ `SAMP` ra INT2B (chốt 2026-10-24, Packet Schema V0.2 mục 7). Đọc lại từng thanh ghi đã ghi.
 4. Oscilloscope:
    - INTB (GPIO21): xung theo ngưỡng `EFIT = 15`, tức 32 Hz khi đọc 16 mẫu một lần;
    - INT2B (GPIO47): xung `SAMP` 512 Hz khi `SAMP_IT = 00`, biên độ khoảng 3,3 V
      phía MCU (A.6 mục 4). Cạnh xung ứng với lúc mẫu vào FIFO, không phải lúc lấy
-     mẫu analog (schema mục 5.2).
+     mẫu analog (schema mục 5.2). Đo cực tính, độ rộng (khoảng 488 µs với
+     `CLR_SAMP = 1`) và rung trước/sau TXB0108; kiểm MCPWM capture chốt đúng cạnh;
+     kiểm xung đầu tiên sau `SYNCH` ứng với mẫu đầu tiên của FIFO (Packet Schema V0.2 mục 7.2).
 5. Tín hiệu nhân tạo qua cáp ECG (mạch chia áp ở
    [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Trước
    khi nối: chốt nút tham chiếu của mạch chia áp (GND của bo hay VCM/sleeve, việc còn
@@ -165,7 +167,9 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
      = 0x01, rồi kiểm trạng thái khởi tạo theo datasheet;
    - chụp SCK tại TP5 (phía cáp): dội nhiều thì chỉnh R9–R11; ổn mới lên 2 MHz (A.2).
 6. Tốc độ PPG (A.6 mục 3): multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps,
-   `SMP_AVE = 1`. Đọc lại `SPO2_SR` và đo tốc độ ra từng khe: phải bằng tốc độ cấu
+   `SMP_AVE = 1`. Kiểm `PPG_RDY` có báo mỗi mẫu ở chế độ ba khe không (xóa bằng đọc
+   0x00; không có thì firmware chuyển sang đọc theo timer, Packet Schema V0.2 mục 7.6).
+   Đọc lại `SPO2_SR` và đo tốc độ ra từng khe: phải bằng tốc độ cấu
    hình trong sai số dao động; còn một nửa hay bội số khác nghĩa là chip đã đổi tốc
    độ.
 7. Dây cáp và dây điện cực không kéo hay đè bo PPG khi đặt cẳng tay lên bàn, đo

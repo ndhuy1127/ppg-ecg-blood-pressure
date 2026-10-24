@@ -23,8 +23,9 @@ dùng PAT hay mốc sinh lý để suy ra lệch clock.
 
 - Bring-up đạt tới bước giao tiếp và thu được dữ liệu từ cả hai AFE
   ([v1_bringup_procedure.md](v1_bringup_procedure.md) mục 7–8).
-- Firmware gửi packet theo `configs/hardware/Packet_Schema_V0.1.md`, có
-  `FIRST_SAMPLE_INDEX`, `T_ANCHOR_US` và packet sự kiện `0xC1`.
+- Firmware gửi packet có `FIRST_SAMPLE_INDEX`, `T_ANCHOR_US` và packet sự kiện
+  `0xC1`. Phép đo `L_ECG,SAMP` cần firmware V0.2 có mốc `SAMP` (bit 8, Packet Schema
+  V0.2 mục 7); lần đo với firmware V0.1 chỉ cho `L_ECG` của mốc đọc FIFO và ghi riêng.
 - Cấu hình AFE (tốc độ, FMSTR, chế độ LED, lấy trung bình, bộ lọc) đã ghi vào
   metadata phiên. Mỗi cấu hình khác nhau là một lần đo riêng.
 - **Không gắn điện cực lên người.** Mọi đo đạc dùng tín hiệu nhân tạo.
@@ -77,11 +78,24 @@ mẫu vào FIFO), độ lệch chuẩn khoảng 3–4 µs (`Packet_Schema_V0.1.m
 được đọc. Kết quả đo lệch xa các giá trị này là dấu hiệu sai cấu hình hoặc sai cách
 gán thời điểm.
 
+Từ V0.2, packet ECG có bit 8 mang mốc `SAMP` (Packet Schema V0.2 mục 7). Với các packet này,
+đại lượng đo là `L_ECG,SAMP`: độ trễ từ lúc lấy mẫu analog tới cạnh `SAMP` đã chốt,
+**không** gồm thời gian mẫu nằm trong FIFO. Tính và báo riêng `L_ECG,SAMP` và `L_ECG`
+của mốc đọc FIFO; khi phân tích không trừ cả hai. Nếu ánh xạ xung ↔ mẫu lệch cố định
+một mẫu, `L_ECG,SAMP` đo được lệch 1,953 ms so với giá trị dự kiến: phép đo này là
+kiểm tra độc lập cho ánh xạ đó.
+
 ## 4. Quy trình
 
 1. Khởi động MCU, ghi metadata phiên. Laptop chạy pin.
 2. Thu 1 phút để ổn định, bỏ khỏi phân tích (ghi lại, không xóa).
-3. Thu 10 phút liên tục với kích thích 1 Hz: khoảng 600 sự kiện.
+3. Thu 10 phút liên tục với kích thích khoảng 1 Hz: khoảng 600 sự kiện. Mỗi xung
+   cách xung trước 1 s cộng một độ lệch ngẫu nhiên đều trong [0; 1 953) µs (seed ghi
+   vào metadata; thời điểm thật của từng xung đã có trong packet sự kiện), để pha của
+   xung phủ đều một chu kỳ mẫu ECG. Một chu kỳ cố định (ví dụ 1 000 049 µs) có thể
+   khóa pha nếu tốc độ ECG thật lệch đúng khoảng −49 ppm. Khi phân tích, đo độ phủ pha
+   so với cạnh `SAMP`; chỉ báo `L_ECG,SAMP` với độ phân giải dưới một mẫu khi độ phủ
+   đạt, nếu không thì đổi seed và đo lại.
 4. Lặp lại 3 lần cho mỗi cấu hình, khởi động lại MCU giữa các lần.
 5. Lưu: file packet nhị phân thô, file `t_rx` của PC, metadata JSON, sơ đồ đấu nối,
    SHA-256 của từng file, commit firmware và commit script phân tích.
@@ -90,6 +104,11 @@ gán thời điểm.
 
 Ký hiệu cho mỗi kênh c: `k` là chỉ số mẫu tích lũy của mẫu cuối mỗi packet,
 `A_us(k)` là `T_ANCHOR_US` tương ứng (µs); `fs_c` tính bằng Hz.
+
+Mọi hồi quy và chỉ số dưới đây tính riêng cho từng phiên, từng chuỗi liên tục (ranh
+giới bit 5) và, với ECG, từng nguồn mốc (bit 8 = 1: mốc `SAMP`; bit 8 = 0: mốc đọc
+FIFO; Packet Schema V0.2 mục 7.5); bỏ anchor của packet bit 0/bit 7. Không gộp hai
+nguồn mốc trong một hồi quy, và `L_ECG` luôn ghi kèm nguồn mốc.
 
 | Chỉ số | Cách tính |
 | --- | --- |
@@ -100,7 +119,7 @@ Ký hiệu cho mỗi kênh c: `k` là chỉ số mẫu tích lũy của mẫu cu
 | Thời điểm mẫu tạm | `t'_us[i]` theo packet schema mục 5.3, dùng `fs_c` đã ước lượng nhưng **tạm đặt** `δ = 0`, `d_pipe = 0` |
 | Độ trễ hiệu dụng `L_c` | Với mỗi sự kiện: thời điểm cạnh trong tín hiệu theo `t'` trừ `T_ANCHOR_US` của packet sự kiện; lấy trung vị. `L_c` gộp `d_pipe` và giá trị trung bình của `δ`, chính là lượng cần trừ khỏi `t'` |
 | Jitter theo sự kiện | Độ lệch chuẩn của hiệu trên qua 600 sự kiện |
-| Offset ECG–PPG | `L_ECG − L_PPG`, kèm khoảng tin cậy |
+| Offset ECG–PPG | `L_ECG − L_PPG` cho từng nguồn mốc ECG (`L_ECG,SAMP` và `L_ECG` của mốc đọc FIFO báo riêng), kèm khoảng tin cậy |
 | Ổn định theo thời gian | Vẽ hiệu trên theo thời gian; độ dốc khác 0 là drift chưa hiệu chỉnh |
 | Mất dữ liệu | Số `SEQ` thiếu / tổng; số mẫu mất từ `FIRST_SAMPLE_INDEX`; số lần STATUS bit 0, 1, 5; số lỗi CRC |
 
@@ -142,9 +161,7 @@ hạn. Ghi riêng "giá trị thiết kế/datasheet" và "giá trị đo đư�
    trước.
 2. Nút tham chiếu của mạch chia áp đưa xung vào đầu vào ECG: GND của bo hay
    VCM/sleeve của jack điện cực (mục 3).
-3. INT2B (xung `SAMP`): đã nối GPIO47 trên KiCad V1-module; còn mở cho bản cuối
-   và cấu hình firmware (mục 3).
-4. MAX30101 ở multi-LED ba khe: datasheet không có bảng tổ hợp tốc độ × độ rộng
+3. MAX30101 ở multi-LED ba khe: datasheet không có bảng tổ hợp tốc độ × độ rộng
    xung cho chế độ này (`custom_board_proposal.md` A.6 mục 3), và chip tự đổi tốc
    độ khi tổ hợp không được phép. Trước khi đo, đọc lại thanh ghi `SPO2_SR`; khi
    đo, so tốc độ thực từng khe với tốc độ cấu hình chia `SMP_AVE` (bắt đầu với
