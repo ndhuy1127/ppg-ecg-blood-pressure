@@ -1,6 +1,7 @@
 # Báo cáo tiến độ Tuần 5
 
-> **Giai đoạn:** Tuần 5 / 28 tuần (2026-10-20 → 2026-10-23)
+> **Giai đoạn:** Tuần 5 / 28 tuần (2026-10-20 → 2026-10-24; phần ngày 2026-10-24 ở
+> cuối mục 3)
 >
 > **Thành viên:** Linh, Trương Đức Anh, Nguyễn Đức Huy
 
@@ -109,6 +110,54 @@ Không đo trên người trong tuần này.
   riêng, PCB trần, sửa module, hàn lắp, MAX30001, bo cổ tay, đo 10 phút.
 - **Sơ đồ khối V1** (SVG) thay `Hardware_Diagram.png`.
 
+### Cập nhật ngày 2026-10-24
+
+**Dữ liệu và phần mềm**
+
+- **Chốt pool PulseDB:** `VitalDB_Train_Subset.mat`, lấy mẫu con 400 người chỉ theo
+  trường `Subject` (seed 20261024), để chia train/val/test;
+  `VitalDB_CalFree_Test_Subset.mat` làm tập kiểm tra ngoài; không dùng CalBased Test
+  (cùng người với Train) và hai subset AAMI (test của AAMI Cal đã bị chấm trong
+  notebook Tuần 3–4). Pin `h5py==3.16.0` để đọc từng phần file `.mat` v7.3; reader
+  đọc từng phần chưa viết, B0/B3 chưa chạy trên raw.
+- **Quy tắc QC nhãn**, khóa trước khi đọc nhãn: chỉ loại dòng DBP ≥ SBP, ở mọi split,
+  tại bước mô hình (config mới `b3-pipeline-v1`, mới có kế hoạch; `b3-pipeline-v0`
+  giữ hành vi cũ).
+- `features-sqi-v2` ghi `None` kèm lý do khi chưa ghép được PAT; split v2 từ chối khi
+  ECG/PPG trùng giữa các split hoặc sai thứ tự kênh; bootstrap theo người gắn
+  `few_subjects` khi dưới 10 người (vẫn tính CI) và API mặc định chỉ chấm val; CI cho
+  hiệu ghép cặp và cho B3 − B0 trong runner.
+- `motion-sqi-v0`: cờ cử động mạnh từ IMU ở cổ tay đeo PPG (định nghĩa chốt, ngưỡng
+  0,15 g / 20 °/s chưa khóa; protocol v0.2).
+- Gỡ hai CSV nhãn/MAE test của pool AAMI Cal khỏi Git (lấy lại được từ lịch sử Git).
+
+**Phần cứng**
+
+- Bỏ bản V0 nối dây, đi thẳng PCB V1-module; MCU chốt ESP32-S3-DevKitC-1-N8R8 chính
+  hãng; bỏ các dòng mua chỉ dùng cho bản nối dây.
+- Lấy mẫu chốt: ECG 512 sps (`EFIT = 15`, đọc FIFO tới EOF); PPG MAX30101 ba khe
+  (xanh, đỏ, IR) 200 sps mỗi khe, `SMP_AVE = 1`, đọc khi FIFO có 8 mẫu và đọc hết;
+  giữ VLED 5,1 V (đo ở bring-up). Độ rộng xung LED (411 hay 215 µs) còn mở.
+- KiCad V1-draft4: thứ tự chân cáp mới có GND xen giữa các đường tín hiệu, header J3
+  cho xung kích thích (GPIO6), bỏ TP7–TP10, không thêm điện trở kéo I²C, giữ C2/C3 ở
+  bo cổ tay. ERC/DRC chỉ còn cảnh báo thư viện như trước khi sửa. Đặt gia công PCB
+  ngay sau ERC/DRC.
+- Bật xung `SAMP` của MAX30001 luôn và dùng làm mốc thời gian ECG (mục 5.8).
+
+**Packet, logger và firmware**
+
+- **Packet Schema V0.2** (`VERSION = 0x02`): IMU BMI270 sáu trục `0xA1`–`0xA6` ở
+  100 Hz, phần tồn đọng (bit 7), FIFO đầy rồi neo lại (bit 5), packet thông tin thiết
+  bị `0xD1`, mốc `SAMP` cho ECG (bit 8).
+- **Logger** đọc V0.1 và V0.2, ghi được thẳng từ cổng serial (`--port`, pyserial 3.5),
+  kiểm mốc ECG theo nguồn mốc (mục 5.8), ghi manifest theo từng phiên khi một raw có
+  nhiều lần khởi động lại.
+- **Firmware khung gửi V0.2:** packet `0xD1` mỗi 10 s; IMU giả có chia phần tồn đọng
+  và neo lại sau FIFO đầy; mốc `SAMP` với xung giả; PPG đọc khi FIFO có 8 mẫu. MCPWM
+  capture thật đã viết nhưng tắt và chưa chạy trên chip. Ngoài bản thường có ba bản
+  build cố ý tạo lỗi để kiểm khi có bo: dừng đọc IMU, lỗi xung `SAMP`, đọc PPG trễ.
+  Vẫn chưa có driver AFE thật và chưa chạy trên bo.
+
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
 | STT | Sản phẩm | Người làm | Đường dẫn |
@@ -140,6 +189,13 @@ Không đo trên người trong tuần này.
 | 25 | Chốt packet schema V0.1, review logger | Firmware | [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) mục 2, 5, 6, 9, [packet_logger.md](../../../docs/protocol/packet_logger.md) |
 | 26 | Trình tự bring-up V1-module | Phần cứng | [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
 | 27 | Sơ đồ khối V1 | Phần cứng | [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
+| 28 | Quyết định pool PulseDB, quy tắc QC nhãn (2026-10-24) | Huy | [pulsedb_provenance.md](../../../docs/pulsedb_provenance.md), [run_b3_pulsedb.md](../../../docs/protocol/run_b3_pulsedb.md) |
+| 29 | `motion-sqi-v0` | Huy | [motion_sqi.py](../../../software/feature_extraction/motion_sqi.py), [protocol v0.2](../../../docs/protocol/protocol_outline_v0.2.md) mục 7.3 |
+| 30 | Packet Schema V0.2 | Phần cứng và firmware | [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) |
+| 31 | Logger và mô phỏng V0.2 | Huy | [packet_receiver.py](../../../software/data_io/packet_receiver.py), [packet_simulation_v3_v02.json](../../../configs/hardware/packet_simulation_v3_v02.json), [test_packet_v02.py](../../../tests/test_packet_v02.py) |
+| 32 | Firmware V0.2 (encoder, `0xD1`, IMU giả, `SAMP`, PPG) | Firmware | [firmware/](../../../firmware/README.md) |
+| 33 | Test firmware V0.2 | Firmware | [test_firmware_imu_plan.py](../../../tests/test_firmware_imu_plan.py), [test_firmware_samp_map.py](../../../tests/test_firmware_samp_map.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py) |
+| 34 | KiCad V1-draft4 | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3, A.7 |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
@@ -151,7 +207,7 @@ Không đo trên người trong tuần này.
 | Split theo người có test rò rỉ | Có | `pulsedb-split-v2`, `tests/test_split_manifest.py` |
 | Baseline đầu tiên | Gần đạt | B0/B1/metrics, B3 + runner split v2, test SYNTHETIC; chưa chạy trên raw PulseDB |
 | Đặc trưng/SQI/bootstrap | Có (SYNTHETIC) | `features-sqi-v1`, `subject_bootstrap.py`, mốc thứ hai Tuần 5 |
-| PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-module, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút và firmware khung build được (cập nhật 2026-10-23); chưa có module, chưa chạy firmware trên bo, chưa có bản ghi bench |
+| PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-draft4 qua ERC/DRC, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút, firmware khung gửi Packet Schema V0.2 build được và logger đọc được (cập nhật 2026-10-24); chưa có module, chưa chạy firmware trên bo, chưa có bản ghi trên phần cứng |
 | Hồ sơ đạo đức | Bản nháp v0.1 | `docs/ethics/` |
 
 G1 phần mềm gần đạt; G1 phần cứng chưa đạt.
@@ -177,6 +233,11 @@ G1 phần mềm gần đạt; G1 phần cứng chưa đạt.
 | Không dùng vì trùng người | `VitalDB_AAMI_Test_Subset.mat` | `VitalDB_CalBased_Test_Subset.mat` |
 | Held-out ngoài | `VitalDB_CalFree_Test_Subset.mat` (144 người) | `VitalDB_CalFree_Test_Subset.mat` |
 | Số người theo split (seed 72) | 92/11/13 | — |
+
+**Chốt 2026-10-24 (Huy): phương án B**, lấy mẫu con 400 người của Train (khoảng
+320/40/40 người theo 0,8/0,1/0,1), CalFree Test làm tập kiểm tra ngoài. Lý do: test
+của AAMI Cal đã bị chấm trong notebook Tuần 3–4, Train chưa bị chạm; 400 người vừa
+RAM máy làm việc khi đọc từng phần ([pulsedb_provenance.md](../../../docs/pulsedb_provenance.md)).
 
 ### 5.4. Phân bổ tay và nghiệm pháp (Huy)
 
@@ -219,10 +280,29 @@ bản có thông điệp chính, RQ trả lời được, bảng/hình chính v�
   để không lẫn vào luồng byte của logger.
 - Mốc SAMP/INT2B của MAX30001 là lúc mẫu vào FIFO, không phải lúc lấy mẫu analog;
   phân tích offline trừ độ trễ hiệu dụng `L_us` đo ở bench, không dùng thẳng bảng
-  datasheet (Packet Schema mục 5.2, 5.3). Firmware có bật `SAMP` hay không còn mở
-  (mục 15).
+  datasheet (Packet Schema mục 5.2, 5.3). Từ 2026-10-24 `SAMP` bật luôn và làm mốc
+  ECG (mục 5.8).
 - Firmware chỉ phát dữ liệu giả, nên mọi kết quả hiện có chỉ kiểm đường packet
   MCU → USB → logger, không nói gì về chất lượng tín hiệu ECG/PPG.
+
+### 5.8. Packet Schema V0.2 và mốc `SAMP` (2026-10-24)
+
+- **Bit 8 (chỉ ECG):** `T_ANCHOR_US` là thời điểm cạnh `SAMP` của mẫu cuối packet,
+  chốt bằng MCPWM capture; bit 8 = 0 là mốc đọc FIFO như V0.1. Firmware chỉ bật bit 8
+  khi mọi cạnh từ mẫu cuối packet trước tới mẫu cuối packet này đều có, cách nhau
+  1 953,125 µs ± 22 µs (tạm), và cạnh cuối tới trong hai chu kỳ sau lúc đọc FIFO. Lỗi
+  thì dùng mốc đọc FIFO, sau 1 s khởi động lại ánh xạ (tối đa 1 lần mỗi 10 s; chỉ số
+  mẫu về 0, bit 5).
+- **Logger** kiểm hai nguồn mốc riêng, không bao giờ so chéo (chúng lệch nhau một
+  khoảng chưa biết): mốc `SAMP` dung sai 200 µs, tốc độ ECG ±1 000 ppm (giá trị tạm,
+  chỉnh sau bring-up), để lệch một mẫu (1,953 ms) bị bắt. Phép kiểm qua từ 398 mẫu
+  (khoảng 0,78 s) không còn phân biệt được lệch một mẫu nên được báo
+  `anchor_check_weak`. Lệch cố định một mẫu ngay từ đầu phiên logger không bắt được;
+  chỉ phép đo kích thích 10 phút bắt được.
+- **Độ trễ:** `L_ECG,SAMP` (từ lúc lấy mẫu analog tới cạnh `SAMP`) khác `L_ECG` của
+  mốc đọc FIFO; metadata ghi riêng, PAT trừ đúng độ trễ của nguồn mốc.
+- **PPG** vẫn dùng mốc đọc FIFO ở 200 sps, nên sai số thời gian phía PPG vẫn là phần
+  đóng góp chính vào sai số PAT.
 
 ## 6. Kết quả kiểm tra kỹ thuật
 
@@ -236,6 +316,9 @@ Chạy từ Git root bằng `.venv` (Python 3.13.12):
 | `python -B -m pytest -q -p no:cacheprovider` (phần Linh, 2026-10-22) | **416 passed** (gồm test `test_packet_logger.py`; test v2 không đổi) |
 | `python -m pytest -q -p no:cacheprovider` (toàn repo, 2026-10-23) | **471 passed** (gồm test known-answer và tương thích firmware–logger) |
 | `pio run -d firmware` (2026-10-23) | Build đạt, RAM 4,5 %, flash 19,8 % của phân vùng 1 MB; chưa nạp lên bo |
+| `python -m pytest -q -p no:cacheprovider` (toàn repo, Python 3.11 có trình biên dịch C, 2026-10-25) | **666 passed** (gồm test C của encoder, `imu_plan`, `samp_map`); `.venv` Python 3.13 không có trình biên dịch C: 622 passed, 44 skipped |
+| `pio run -d firmware -j 1`, bốn env (2026-10-24) | Build đạt, không cảnh báo; RAM 4,9 %, flash 20,4–20,5 %; build song song có lúc GCC lỗi nội bộ do thiếu RAM trống, build tuần tự thì qua |
+| CI trên PR #25 (2026-10-24, commit `ede2629`) | Đạt (ruff và pytest, Python 3.11) |
 | `python -m ruff check .` | Đạt |
 | `python -m ruff check --select E501` trên file `.py` mới | Đạt (≤ 88 ký tự) |
 | `python -m pip check` | Đạt |
