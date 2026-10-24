@@ -4,8 +4,8 @@
 > kể cả sửa đổi cùng ngày về mốc `SAMP` cho ECG và bit 8 (mục 7). Firmware: xong bước
 > 2a (encoder V0.2, `0xD1`, chuyển bit 5), 2b (IMU giả, chia phần, neo lại), 2c
 > (ánh xạ `SAMP`, bit 8, với xung từ nguồn ECG giả; MCPWM capture thật chỉ mới build)
-> và 2d (PPG đọc theo `PPG_RDY` và con trỏ FIFO, đọc hết FIFO). Chưa kiểm chứng trên
-> thiết bị.**
+> và 2d (PPG đọc theo `PPG_RDY` và con trỏ FIFO, đọc hết FIFO); bước 3 (record/replay
+> nhiều lần khởi động) có test. Còn bước 4, cần bo. Chưa kiểm chứng trên thiết bị.**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -420,8 +420,12 @@ sau.
      lớn hơn 8); lúc đọc do số mẫu trong FIFO quyết định, ngắt chỉ để đánh thức; chế
      độ đọc theo timer `BOARD_PPG_READ_PERIOD_MS` dành cho trường hợp `PPG_RDY` không
      chạy. Việc đọc 0x00 để nhả chân INT thuộc driver MAX30101 thật (chưa viết).
-3. **Tích hợp record/replay:** manifest theo phiên và `device_info`, nhiều lần khởi
-   động lại, hash output xác định.
+3. **Tích hợp record/replay (làm 2026-10-24):** manifest theo phiên và `device_info`,
+   nhiều lần khởi động lại, hash output xác định. Code đã có từ bước 1; bước này thêm
+   test: một raw ba lần khởi động (chữ ROM giữa các phiên, packet cuối bị reset cắt,
+   firmware nạp lại ở lần thứ ba) qua record và replay, manifest đúng `device_info`
+   từng phiên; và output `decode.json`, `packets.csv`, `samples.csv` giống từng byte
+   khi đọc nguồn theo khối 1 byte, khối lẫn lộn hay 4 096 byte.
 4. **Sau khi có bo:** driver BMI270 thật (nạp microcode, cấu hình mục 3), đo `L` và
    kiểm dấu trục trên bench. Driver MAX30001/MAX30101 thật: kiểm xung `SAMP` đầu
    tiên ứng với mẫu đầu tiên của FIFO, cực tính và độ rộng xung, `PPG_RDY` ở chế độ

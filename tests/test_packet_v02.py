@@ -623,3 +623,81 @@ def test_record_replay_v02_manifest(tmp_path):
     result = replay(session / "raw.bin", tmp_path / "replay", LOGGER_CONFIG, metadata,
                     ROOT, session / "session_manifest.json")
     assert result["expected_manifest"]["mismatches"] == []
+
+
+ROM = (b"ESP-ROM:esp32s3-20210327\r\n"
+       b"rst:0xc (RTC_SW_CPU_RST),boot:0x8 (SPI_FAST_FLASH_BOOT)\r\n")
+
+
+def three_boots(sim):
+    """One USB raw over three boots of the V0.2 firmware: ROM text before each
+    session, a new SESSION_ID, SEQ, indices and clock from 0 each time, the last
+    packet of a session cut by the reset, another app version after a reflash."""
+    parts = []
+    for n, app in enumerate(("0.2.0-sim", "0.2.0-sim", "0.2.1-sim")):
+        config = {**sim, "session_id": 100 + n, "restart_session_id": 200 + n,
+                  "device_info": {**sim["device_info"], "app_version": app}}
+        stream, layout = generate_stream(config)
+        assert layout[-1][1] == 82  # an IMU packet of 10 samples ends each boot
+        parts.append(ROM + (stream[:-20] if n < 2 else stream))
+    return b"".join(parts)
+
+
+def _metadata_file(tmp_path, sim):
+    path = tmp_path / "session_metadata.json"
+    path.write_text(json.dumps(session_metadata(sim, "valid", "0" * 64), indent=2),
+                    encoding="utf-8")
+    return path
+
+
+def test_record_replay_three_boots_keeps_device_info_per_session(tmp_path, sim):
+    source = tmp_path / "usb.bin"
+    source.write_bytes(three_boots(sim))
+    metadata, session = _metadata_file(tmp_path, sim), tmp_path / "session"
+    with source.open("rb") as stream:
+        manifest = record(stream, session, LOGGER_CONFIG, metadata, ROOT, "usb.bin")
+    # 3 x 77 packets less the two cut by a reset. A cut packet fails its CRC and
+    # is skipped with the ROM text after it (62 + 83 bytes); it was the last SEQ
+    # of its channel, so no gap shows it (a documented logger limitation).
+    assert manifest["issue_counts"] == {"crc_mismatch": 2, "session_change": 2,
+                                        "skipped_bytes": 3}
+    assert manifest["decode"]["packets_decoded"] == 229
+    assert manifest["session_ids"] == [100, 101, 102] and manifest["session_id"] is None
+    sessions = manifest["sessions"]
+    assert [s["packet_schema"] for s in sessions] == ["packet-v0.2"] * 3
+    # Device info per SESSION_ID; the reflash is a new session, not a change.
+    assert [[i["app_version"] for i in s["device_info"]["identities"]]
+            for s in sessions] == [["0.2.0-sim"], ["0.2.0-sim"], ["0.2.1-sim"]]
+    assert [s["device_info"]["valid_packets"] for s in sessions] == [3, 3, 3]
+    assert (session / "raw.bin").read_bytes() == source.read_bytes()
+    assert (session / "session_metadata.json").read_bytes() == metadata.read_bytes()
+    result = replay(session / "raw.bin", tmp_path / "replay", LOGGER_CONFIG, metadata,
+                    ROOT, session / "session_manifest.json")
+    assert result["expected_manifest"]["mismatches"] == []
+
+
+class Chunked:
+    """A byte source that returns at most the next of ``sizes`` bytes per read."""
+
+    def __init__(self, payload, sizes):
+        self.payload, self.sizes, self.pos, self.reads = payload, sizes, 0, 0
+
+    def read(self, n):
+        size = min(n, self.sizes[self.reads % len(self.sizes)])
+        self.reads += 1
+        chunk = self.payload[self.pos:self.pos + size]
+        self.pos += len(chunk)
+        return chunk
+
+
+def test_record_outputs_do_not_depend_on_how_the_bytes_arrive(tmp_path, sim):
+    raw, metadata = three_boots(sim), _metadata_file(tmp_path, sim)
+    manifests, reads = [], []
+    for k, sizes in enumerate(((1,), (7, 300, 2), (4096,))):
+        source = Chunked(raw, sizes)
+        manifests.append(record(source, tmp_path / f"s{k}", LOGGER_CONFIG, metadata,
+                                ROOT, "usb.bin"))
+        reads.append(source.reads)
+    assert reads[0] > reads[1] > reads[2]  # the reads really differed
+    for name in ("raw.bin", "decode.json", "packets.csv", "samples.csv"):
+        assert len({m["outputs_sha256"][name] for m in manifests}) == 1, name

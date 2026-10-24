@@ -334,6 +334,15 @@ và hash config/metadata được so với manifest.
 - Trên thiết bị, cổng USB native có chữ của ROM và bootloader trước packet đầu
   tiên. Decoder bỏ qua và báo một `skipped_bytes` ở offset 0; đây là bình thường,
   không phải lỗi đường truyền.
+- Một raw có thể kéo qua nhiều lần MCU khởi động lại (reset, nạp lại firmware). Mỗi
+  lần là một phiên mới (`session_change`, `SEQ`, chỉ số và đồng hồ từ 0), chữ ROM lại
+  xuất hiện trước packet đầu của phiên, và reset có thể cắt cụt packet đang gửi:
+  packet đó hỏng CRC (`crc_mismatch`) và bị bỏ cùng chữ ROM sau nó trong một
+  `skipped_bytes`. Packet bị cắt là `SEQ` cuối của kênh trong phiên cũ nên không có
+  khoảng trống nào chỉ ra nó. Manifest ghi `session_ids` và `sessions` theo từng
+  `SESSION_ID` (`packet_schema`, `device_info`); firmware nạp lại giữa hai phiên hiện
+  thành hai định danh ở hai phiên, không phải `device_info_changed`. Kiểm bằng
+  `tests/test_packet_v02.py` (ba lần khởi động trong một raw, 2026-10-24).
 - `T_ANCHOR_US` được kiểm xuôi và ngược, rồi giữ chiều cách ly ít packet hơn. Vì
   vậy một anchor sai ở đầu chuỗi, ở cuối chuỗi, hoặc ngay sau khoảng mất (khi dung
   sai đã nới theo Δk) chỉ làm mất packet đó. Hai trường hợp vẫn khó:
