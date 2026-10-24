@@ -41,7 +41,7 @@ $$\text{<subject\_id>\_<session\_id>\_<event\_id>\_<data\_type>.<ext>}$$
 * **DBP (Huyết áp tâm trương):** $mmHg$
 
 ### Tần số lấy mẫu (Sampling Rate):
-* **Thiết bị prototype (ECG và PPG):** **chưa chốt**. Bảng tốc độ mà từng linh kiện cấu hình được và phương án dự kiến nằm ở [interface_power_sampling_v0.md, mục 4](../configs/hardware/interface_power_sampling_v0.md); các quyết định còn mở (ECG 500 hay 512 sps; linh kiện, chế độ LED và tốc độ PPG) ghi ở mục 6 của tài liệu đó. Tài liệu này không lặp lại giá trị ứng viên để tránh lệch nhau.
+* **Thiết bị prototype (ECG và PPG):** cấu hình V1 và lý do nằm ở [interface_power_sampling_v0.md, mục 4](../configs/hardware/interface_power_sampling_v0.md); quyết định còn mở (độ rộng xung PPG) ở mục 6 của tài liệu đó. Tài liệu này không lặp lại giá trị để tránh lệch nhau.
 * **PulseDB Subset (dữ liệu công khai):** $125\,Hz$ cho cả ba kênh (suy ra từ 1250 mẫu/đoạn 10 giây, khớp với bài báo PulseDB; xem [provenance PulseDB](pulsedb_provenance.md), mục 6).
 
 ---

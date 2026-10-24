@@ -1,0 +1,44 @@
+{
+  "schema_version": "synthetic-packet-v3",
+  "source_type": "SYNTHETIC",
+  "wire_version": 2,
+  "seed": 20261024,
+  "session_id": 1,
+  "restart_session_id": 2,
+  "epoch_us": 1000000,
+  "anchor_delay_us": 1000,
+  "anchor_jitter_us": 200,
+  "samp": {"edge_delay_us": 500, "jitter_us": 5},
+  "seq_start": 0,
+  "index_start": 0,
+  "packet_count": 8,
+  "status": 16,
+  "channels": {
+    "0xE1": {"fs_nominal_mhz": 512000, "sample_count": 16},
+    "0xF1": {"fs_nominal_mhz": 100000, "sample_count": 4},
+    "0xF2": {"fs_nominal_mhz": 100000, "sample_count": 4},
+    "0xA1": {"fs_nominal_mhz": 100000, "sample_count": 10},
+    "0xA2": {"fs_nominal_mhz": 100000, "sample_count": 10},
+    "0xA3": {"fs_nominal_mhz": 100000, "sample_count": 10},
+    "0xA4": {"fs_nominal_mhz": 100000, "sample_count": 10},
+    "0xA5": {"fs_nominal_mhz": 100000, "sample_count": 10},
+    "0xA6": {"fs_nominal_mhz": 100000, "sample_count": 10}
+  },
+  "events": [
+    {"code": 1, "time_us": 1050000},
+    {"code": 2, "time_us": 1080000}
+  ],
+  "device_info": {
+    "elf_sha256": "f0e1d2c3b4a5968778695a4b3c2d1e0f00112233445566778899aabbccddeeff",
+    "app_version": "0.2.0-sim",
+    "idf_version": "v5.5.3",
+    "interval_us": 300000
+  },
+  "fault_channel": "0xF1",
+  "fault_index": 2,
+  "time_fault_us": 20000,
+  "index_jump_samples": 5,
+  "reanchor_jump_samples": 40,
+  "byte_loss_count": 5,
+  "unsupported_version": 3
+}

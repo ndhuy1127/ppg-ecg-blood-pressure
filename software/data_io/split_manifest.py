@@ -80,9 +80,36 @@ def waveform_hash(segment):
     return _hash_waveforms(segment, h)
 
 
-def _hash_waveforms(segment, h):
+def predictor_hash(segment):
+    """ECG + PPG fingerprint: what a model sees, without ABP, labels or IDs.
+
+    ``waveform_hash`` includes ABP, so two rows with identical ECG/PPG but a
+    different ABP are not matched by it. Not stored in the split-v2 manifest;
+    the split builder uses it to refuse identical predictors across splits.
+    """
+    h = hashlib.sha256(canonical_json({"version": VERSION, "kind": "predictors"}))
+    return _hash_waveforms(segment, h, ("ecg", "ppg"))
+
+
+def predictor_overlap(manifest, segments):
+    """Counts of identical ECG/PPG (``predictor_hash``) within and across splits.
+
+    ``segments`` is indexed by ``raw_index``. Returns ``{"across_splits": n,
+    "within_split": n}``: groups of identical predictors spanning more than one
+    split, and extra copies inside one split.
+    """
+    groups = {}
+    for raw_index, split in zip(manifest.raw_index, manifest.split):
+        key = predictor_hash(segments[int(raw_index)])
+        groups.setdefault(key, []).append(split)
+    across = sum(len(set(splits)) > 1 for splits in groups.values())
+    within = sum(len(splits) - len(set(splits)) for splits in groups.values())
+    return {"across_splits": across, "within_split": within}
+
+
+def _hash_waveforms(segment, h, channels=("ecg", "ppg", "abp")):
     lengths = []
-    for channel in ("ecg", "ppg", "abp"):
+    for channel in channels:
         values = np.asarray(getattr(segment, channel))
         if values.dtype.kind not in "iuf" or values.ndim != 1 or not values.size:
             raise ValueError("Waveforms must be nonempty numeric vectors")

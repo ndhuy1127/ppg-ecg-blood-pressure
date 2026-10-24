@@ -1,0 +1,62 @@
+{
+  "config_version": "fiducials-week05-v0",
+  "config_status": "NOT_TEST_TUNED",
+  "signal_config": {
+    "flat_std": 1e-08,
+    "min_beats": 3,
+    "refractory_s": 0.4,
+    "prominence_fraction": 0.2,
+    "foot_lookback_s": 0.5,
+    "pat_min_s": 0.08,
+    "pat_max_s": 0.4,
+    "gap_factor": 1.5,
+    "sampling_rtol": 0.05,
+    "sampling_atol_s": 1e-06,
+    "shape_min_correlation": 0.8,
+    "edge_s": 0.1,
+    "ecg_polarity": 1,
+    "ppg_polarity": 1,
+    "filter_mode": "none",
+    "ecg_band_hz": [
+      0.5,
+      40.0
+    ],
+    "ppg_band_hz": [
+      0.5,
+      8.0
+    ],
+    "filter_order": 2,
+    "r_method": "prominence",
+    "foot_method": "tangent",
+    "r_energy_window_s": 0.1
+  },
+  "channel_issues": {},
+  "output_sha256": "e57a0bbcd51c9b5ee088d14b9912bcd81e95e1cd373586516648460b70b9c980",
+  "provenance": {
+    "script_version": "week05-fiducials-v1",
+    "command": "detect",
+    "source_types": [
+      "SYNTHETIC"
+    ],
+    "git_commit": "3ff44f2d16b93daf42168147c79f4ff02809e70f",
+    "workspace_has_changes": true,
+    "code_sha256_lf": {
+      "scripts/week05_fiducials.py": "3b031339324732501b4b31eb8ac66023bc32fa6fa60d8b3569ba8818b460f554",
+      "software/signal_processing/fiducials.py": "b6f601a1f5aafe2ba16473c23b5ccdb7f8579b282346361669afe6e71f0b920c",
+      "software/signal_processing/pat_validity.py": "b9db4d4c05bf32c479677713a814a81682dc58351bd91bbc8b7a26419fd2521b",
+      "software/evaluation/fiducial_agreement.py": "e2955864535e1224ccf359063328095d9ce075ac15566ab5ff4dccb53439b434",
+      "software/_provenance.py": "5cb4bb9b66ec67d45c212a8573e8b5f4d9ada3e325e864c3e2cb458304fc5ccb"
+    },
+    "inputs_sha256": {
+      "records_csv": "afcf5eff450e137ee4545f03a289e86597504fb55a68ea0736d762a37db45bc8",
+      "config": "e7d5a616739631e05949c481599784500c16a056954a644fcbb21a4cd4795af3"
+    },
+    "environment": {
+      "python": "3.13.12",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.6",
+      "matplotlib": "3.11.2"
+    }
+  }
+}

@@ -76,3 +76,11 @@ _autosave-*
 \#auto_saved_files\#
 *.lck
 hardware/kicad/**/.history/
+
+# Firmware build outputs (PlatformIO / ESP-IDF)
+firmware/.pio/
+firmware/sdkconfig
+firmware/sdkconfig.*
+!firmware/sdkconfig.defaults
+firmware/managed_components/
+firmware/dependencies.lock

@@ -12,6 +12,10 @@ bản gốc:
 - B0 và B3 chạy cùng một lần, trên cùng các dòng val và cùng lượt bootstrap.
 - Metrics qua `evaluate_prediction_table`: MAE/bias trung bình đều theo người,
   MAE/bias/SD theo mẫu (`ddof=1`, `None` khi n=1), CI 95% bootstrap theo người.
+  Từ 2026-10-23 có thêm hiệu ghép cặp B3 − B0 của MAE (`evaluation.contrasts`,
+  một dòng cho mỗi huyết áp dưới bảng `baseline_table.md`), tính trong từng lượt
+  bootstrap chung. Đây là so sánh BP tuyệt đối trên PulseDB, không phải kết quả
+  ΔBP của RQ1.
 - Config, seed, hash input, commit và phiên bản thư viện được ghi kèm output.
   Runner nằm trong `scripts/`, ghi vào `runs/`, không ghi đè.
 
@@ -101,12 +105,27 @@ Linux; raw, inventory, manifest, config split và output vẫn hash theo byte.
 ## Ghi nhận và việc còn mở
 
 - Bản cũ đã chạy và công bố MAE trên test (`docs/testing.md`,
-  `notebooks/metrics_all_splits.csv`, notebook `week4-train-xgboost.ipynb`).
+  `notebooks/metrics_all_splits.csv`, gỡ khỏi Git ngày 2026-10-24, còn trong lịch
+  sử ở commit `acc8b8b`; notebook `week4-train-xgboost.ipynb`).
   Không được dùng các số đó để chọn model; cần ghi sai lệch này vào báo cáo.
 - CSV 1.000 đoạn lịch sử không chạy được với runner này vì không có inventory.
-- Cần chốt nội dung `pool_decision`: `VitalDB_AAMI_Cal_Subset` trùng người với
-  AAMI Test. Runner chỉ kiểm tra trường này có mặt, không đánh giá nội dung. Xem
-  [provenance](../pulsedb_provenance.md).
+- Pool đã chốt ngày 2026-10-24: `VitalDB_Train_Subset`, mẫu con 400 người (seed
+  20261024), CalFree Test làm tập kiểm tra ngoài
+  ([provenance](../pulsedb_provenance.md)). Runner chỉ kiểm tra trường
+  `pool_decision` có mặt, không đánh giá nội dung.
+
+**Kế hoạch `b3-pipeline-v1` (chốt 2026-10-24, chưa triển khai; `b3-pipeline-v0`
+giữ nguyên hành vi):**
+
+- Đọc pool Train bằng reader đọc từng phần (`h5py`), chỉ các dòng của 400 người đã
+  chọn.
+- QC nhãn: loại dòng DBP ≥ SBP khỏi fit và chấm điểm ở mọi split, báo số dòng loại
+  theo split và phân bố hiệu áp trên train (provenance mục 9).
+- **Trọng số theo người:** mỗi dòng train nặng 1/n_s (n_s = số dòng còn lại của người
+  đó sau QC). B0 là trung bình của các trung bình theo người; B3 truyền
+  `sample_weight` cho XGBoost. Lý do: chỉ số chính là MAE trung bình đều theo người;
+  trọng số theo dòng làm người có nhiều đoạn nặng hơn.
+- Báo hiệu B3 − B0 ghép cặp như v0 (đã có).
 - Cần CI trên Python 3.11; `xgboost` 3.3 trở lên yêu cầu Python ≥ 3.12, nên repo
   pin 3.2.0.
 

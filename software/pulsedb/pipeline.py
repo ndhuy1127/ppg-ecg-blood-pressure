@@ -99,7 +99,7 @@ def run_baselines(segments, manifest, inventory, config) -> dict:
     ], ignore_index=True)
     evaluation = evaluate_prediction_table(
         manifest, inventory, table, split="val",
-        config=BootstrapConfig(**config["bootstrap"]),
+        config=BootstrapConfig(**config["bootstrap"]), contrasts=[("B3", "B0")],
     )
     counts = {
         split: {
@@ -156,10 +156,19 @@ def baseline_table(evaluation, counts) -> str:
                 f"{_number(point['sample_weighted_bias'])} | "
                 f"{_number(point['sample_sd'])} |"
             )
-    lines += [
-        "",
+    lines.append("")
+    for contrast in evaluation.get("contrasts", []):
+        name = f"{contrast['model']} - {contrast['reference']}"
+        for target in TARGETS:
+            lines.append(
+                f"{name}, {target}, subject-balanced MAE difference (same draws): "
+                f"{_number(contrast['point'][target]['subject_balanced_mae'])} "
+                f"{_interval(contrast, target, 'subject_balanced_mae')} mmHg; "
+                "negative means lower error than the reference."
+            )
+    lines.append(
         f"Error = prediction - reference (mmHg). Bootstrap: {evaluation['method']}, "
         f"seed {evaluation['seed']}, {evaluation['repetitions']} repetitions, "
-        f"status {evaluation['status']}.",
-    ]
+        f"status {evaluation['status']}."
+    )
     return "\n".join(lines) + "\n"

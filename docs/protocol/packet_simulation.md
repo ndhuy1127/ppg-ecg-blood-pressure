@@ -11,11 +11,15 @@ Tham khảo yêu cầu generator/replay và packet ở `origin/dev/ducanh@40ede4
 Ở commit đó, `configs/hardware/Packet_Schema_V0.1.md` là bản gốc của Đức Anh. Bản
 cùng tên trong nhánh này đã được viết lại (layout byte, `T_ANCHOR_US`/`T_FIRST_US`,
 `STATUS`) và khác bản gốc; mô phỏng giữ định nghĩa timestamp của bản gốc (thời
-điểm sample đầu batch). Các khác biệt chưa thống nhất nằm ở mục 15 của schema.
+điểm sample đầu batch). Schema đã chốt định nghĩa timestamp ngày 2026-10-23 (mục 3, 5); bản v2 giữ định nghĩa cũ.
 Version riêng `synthetic-packet-v2`; JSON, không phải binary wire format.
 Bảng đối chiếu trường với schema phần cứng dự kiến nằm ở
 [Packet_Schema_V0.1.md mục 14](../../configs/hardware/Packet_Schema_V0.1.md).
 Code: `software/data_io/packet_simulation.py`; runner: `scripts/simulate_packets.py`.
+
+Từ Tuần 5 có thêm `synthetic-packet-v3` (luồng byte đúng layout V0.1, mục cuối
+của tài liệu này) để test [logger](packet_logger.md). **v2 vẫn được hỗ trợ**,
+không đổi code, config, đáp án hay hash; v1 vẫn bị từ chối.
 
 ## Schema, clock và thông số giả lập
 
@@ -115,6 +119,114 @@ Hai lần cùng đầu vào/config/code phải cho cùng packets/result hash. Me
 commit/dirty có thể thay đổi giữa các lần, nên không yêu cầu toàn report cùng hash.
 Lỗi ghi có thể để lại thư mục chưa hoàn chỉnh: chỉ bàn giao khi lệnh exit 0,
 đủ bốn file và hash khớp. Không đổi tên output giả lập thành dữ liệu đo thật.
+
+## `synthetic-packet-v3`: luồng byte theo layout V0.1 (Tuần 5, Linh)
+
+**Quyết định version (2026-10-21, Linh):** v3 là version mới, có module riêng
+`software/data_io/packet_simulation_v3.py` và config riêng
+`configs/hardware/packet_simulation_v3.json`. Đầu ra là byte theo mục 6 của
+schema, không phải JSON, nên không thay thế v2. Config v2 chỉ nhận case v2;
+config v3 không nhận `--packets` (replay v3 là việc của logger). Không đổi tên
+version trên artifact cũ.
+
+Mỗi packet có `SYNC` `0xA5 0x5A`, `VERSION` `0x01`, `CHANNEL_ID`, `SESSION_ID`,
+`SEQ` uint32, `FIRST_SAMPLE_INDEX` uint32, `T_ANCHOR_US`/`T_FIRST_US` uint64,
+`FS_NOMINAL_MHZ` (mHz), `SAMPLE_COUNT` ≤ 32, `STATUS`, `DATA` int32 và CRC16
+(CRC-16/CCITT-FALSE trên byte 2 … 39 + 4N). Tất cả là little-endian, mỗi packet
+dài 42 + 4N byte.
+
+**Thông số mô phỏng, không phải quyết định phần cứng** (mục 15 của schema còn
+mở). Seed `20261021`, 8 packet mỗi kênh dữ liệu.
+
+- ECG `0xE1`: 512 000 mHz, N = 16. PPG `0xF1`/`0xF2`: 100 000 mHz, N = 4, hai khe
+  chung một lần đọc FIFO nên chung `FIRST_SAMPLE_INDEX` và `T_ANCHOR_US`.
+- Hai sự kiện `0xC1` (mã 1 lúc 1 050 000 µs, mã 2 lúc 1 080 000 µs).
+- `STATUS` = 16 (bit 4: `L` chưa đo) trên mọi packet ECG/PPG. Packet sự kiện
+  `0xC1` gửi `STATUS` = 0 như firmware (schema mục 10; sửa tại chỗ 2026-10-23, giữ
+  tên `synthetic-packet-v3`: trước ngày này packet sự kiện cũng mang 16, nên
+  `stream.bin` sinh trước đó khác byte ở các packet sự kiện; số issue và mẫu được
+  nhận không đổi vì logger không dựa vào bit 4).
+
+Mô hình thời gian: mẫu k của kênh c ở thời điểm `epoch_us + k·10⁹/FS_mHz`, với
+`epoch_us` = 1 000 000 µs. `T_ANCHOR_US` là thời điểm mẫu cuối cộng
+`anchor_delay_us` (1 000 µs) và jitter nguyên ngẫu nhiên trong [0, 200] µs, rồi
+làm tròn (Python `round`, làm tròn nửa về số chẵn). `T_FIRST_US` =
+`T_ANCHOR_US − (N−1)·T`, cũng làm tròn như vậy.
+
+ECG DATA là mẫu 18 bit bù hai căn trái trong word 24 bit, ETAG/PTAG = 0. PPG
+DATA là số 18 bit không dấu. Cả hai là số ngẫu nhiên tái lập, không phải hình
+thái sinh lý. Packet `0xC1` dùng giá trị tạm: `FIRST_SAMPLE_INDEX` = thứ tự sự
+kiện, `FS_NOMINAL_MHZ` = 0, `T_FIRST_US` = `T_ANCHOR_US`. Logger bỏ qua các trường
+này (quy tắc R1 trong [logger](packet_logger.md)).
+
+Lỗi chèn vào kênh `0xF1`, packet thứ tự 2 (đếm từ 0), trừ `session_restart` và
+`timestamp_first` (packet thứ tự 0). Lỗi chỉ chèn vào **một** kênh để đáp án dễ
+đối chiếu; mô phỏng không cố tái hiện tương quan giữa các khe PPG.
+
+| Case | Lỗi chèn | Kết quả mong đợi (`tests/fixtures/packet_v3_expected.json`) |
+| --- | --- | --- |
+| `valid` | Không | Không issue; 8/8/8 packet dữ liệu, 2 sự kiện |
+| `missing` | Bỏ packet | `missing_packets` 1; khoảng trống 4 mẫu |
+| `duplicate` | Gửi hai lần cùng byte | `duplicate` 1; mẫu giống `valid` |
+| `reordered` | Đổi chỗ packet 2 và 3 | `out_of_order` 1; mẫu giống `valid` |
+| `timestamp` | `T_ANCHOR_US` +20 000 µs ở một packet | `timestamp_anomaly` 1; packet bị cách ly |
+| `timestamp_first` (thêm 2026-10-22) | `T_ANCHOR_US` +20 000 µs ở packet **đầu** (thứ tự 0) của `0xF1` | `timestamp_anomaly` 1; chỉ packet đầu bị cách ly, 7 packet còn lại được nhận. Không có `gaps`, vì gap chỉ tính giữa hai packet được nhận; `first_sample_index` của kênh là 4. Offset kênh tính từ packet được nhận |
+| `offset` | +20 000 µs cho cả kênh `0xF1` | `channel_offset` 1 (khoảng +20 000 µs ± jitter) |
+| `crc` | Lật bit 0 của byte DATA đầu, giữ CRC | `crc_mismatch` 1, `skipped_bytes` 1 (58 byte), `missing_packets` 1 |
+| `byte_loss` | Mất 5 byte giữa DATA của packet | `crc_mismatch` 1, `skipped_bytes` 1 (53 byte), `missing_packets` 1; packet sau được bắt lại nhờ dò `SYNC` |
+| `index_jump` | `FIRST_SAMPLE_INDEX` +5 từ packet 3, bit 0 ở packet 2, `SEQ` liên tục | `sample_gap_status` 1; mất 5 mẫu |
+| `reanchor` | `FIRST_SAMPLE_INDEX` +40 từ packet 3, bit 0 và 5 ở packet 3 | `sample_index_reanchored` 1; số mẫu mất `null` |
+| `version` | `VERSION` = 3 (CRC tính lại; trước 2026-10-24 là 2, nay 2 là V0.2 hợp lệ) | `unsupported_version` 1, `skipped_bytes` 1, `missing_packets` 1 |
+| `session_restart` | Sau packet 2 của mọi kênh: `SESSION_ID` mới, `SEQ`/index/clock bắt đầu lại | `session_change` 1; phiên 1 có 3 packet/kênh và 2 sự kiện, phiên 2 có 5 packet/kênh |
+
+Đáp án được suy ra bằng tay từ định nghĩa case, không sinh bằng code đang
+test. Packet ví dụ 50 byte trong fixture được ghép từng trường, CRC tính bằng
+`binascii.crc_hqx(body, 0xFFFF)` của thư viện chuẩn. Known-answer:
+CRC-16/CCITT-FALSE(`"123456789"`) = `0x29B1`. Test kiểm tra thêm điều kiện tiên
+quyết là luồng không có `SYNC` giả, nên số lỗi decode khớp chính xác.
+
+```powershell
+.\.venv\Scripts\python.exe scripts/simulate_packets.py --config configs/hardware/packet_simulation_v3.json --case byte_loss --output runs/packet_simulation_v3/byte_loss_01
+```
+
+**V0.2 (từ 2026-10-24):** config có `wire_version: 2`
+([packet_simulation_v3_v02.json](../../configs/hardware/packet_simulation_v3_v02.json))
+sinh luồng [Packet Schema V0.2](../../configs/hardware/Packet_Schema_V0.2.md): mọi
+packet mang `VERSION = 2`, thêm sáu trục IMU `0xA1`–`0xA6` (một lần đọc FIFO chung,
+chung anchor và jitter, payload int16 có dấu) và packet thông tin thiết bị `0xD1`
+theo `device_info.interval_us` (phát lại ở phiên mới sau `session_restart`). Packet
+ECG mang bit 8: `T_ANCHOR_US` là cạnh `SAMP` của mẫu cuối (V0.2 mục 7), bằng thời
+điểm mẫu cộng `samp.edge_delay_us` (500) cộng jitter trong [0, `samp.jitter_us`]
+(5); packet ECG không có bit 8 dùng `anchor_delay_us`/`anchor_jitter_us` như mốc
+đọc FIFO. Hai số này là tham số mô phỏng, không phải độ trễ đo được. Các case V0.1
+chạy được trên config V0.2. Sáu case chỉ có ở V0.2 (hai case `samp_*` luôn tác động
+lên ECG, bất kể `fault_channel`):
+
+| Case | Lỗi cài vào | Đáp án |
+| --- | --- | --- |
+| `imu_backlog` | Lần đọc IMU 2–5 thành một lần đọc trễ 40 frame: phần 32 frame (bit 7) và phần 8 frame | Không issue; mỗi trục 6 packet, 1 anchor không dùng, không khoảng trống |
+| `imu_fifo_full` | Lần đọc 2 gặp FIFO đầy (bit 0, đọc trễ 2 lần), lần 3–4 mất, lần 5 neo lại theo công thức V0.2 mục 5 (bit 5) | `sample_index_reanchored` 6 (mỗi trục 1); 2 chuỗi mỗi trục, số mẫu mất `null` |
+| `mixed_version` | Packet PPG khe 1 thứ 3 mang `VERSION = 1` | `version_mixed_in_session` 1, `missing_packets` 1, `channel_missing` 8 (ở phần V0.1) |
+| `device_info_changed` | Packet `0xD1` thứ 2 có phiên bản ứng dụng khác | `device_info_changed` 2 (đổi rồi đổi lại) |
+| `samp_remap` | ECG packet 2–3 ở trạng thái `LỖI` (mốc đọc FIFO, không bit 8); packet 4 là packet đầu sau khi khởi động lại ánh xạ bằng `SYNCH`: index bắt đầu lại từ 0 (V0.1 mục 9, V0.2 mục 7.3), bit 5, bit 8 trở lại; thời gian thật tiếp tục, mất `reanchor_jump_samples` mẫu lúc khởi động lại | `sample_index_reanchored` 1; ECG 2 chuỗi, index 0, 16, 32, 48 rồi lại 0, 16, 32, 48; `anchor_sources` = 6 `samp`, 2 `fifo_read`, đổi nguồn ở `SEQ` 2 và 4. Metadata khai `common_index_epoch: false` (index ECG không còn chung gốc với kênh khác), nên `offset_vs_ecg_us` = null |
+| `samp_shift` | Từ ECG packet 2, mốc `SAMP` là cạnh của mẫu **sau** mẫu cuối (muộn một chu kỳ, bit 8 vẫn bật) | `timestamp_anomaly` 2 (`SEQ` 0–1: logger giữ phía dài hơn, ở đây là phía sai) và `channel_offset` 8 (epoch ECG lấy từ packet muộn). Với dung sai mốc đọc FIFO (1 chu kỳ + 500 µs) lệch lọt qua và cả 7 phép kiểm báo `anchor_check_weak` |
+
+Với config V0.2 có `fault_channel` = `0xE1`, packet ECG mang bit 0 (ca `index_jump`,
+`reanchor`) đưa ánh xạ vào `LỖI`: từ packet đó tới hết phiên ECG dùng mốc đọc FIFO
+(các ca này không khởi động lại ánh xạ). Mất xung, thừa xung và giá trị chốt bị ghi
+đè được firmware phát hiện rồi chuyển về mốc đọc FIFO, nên với logger chúng giống
+`samp_remap`; phần phát hiện thuộc test
+firmware (V0.2 mục 9 bước 2). Lệch cố định một mẫu ngay từ đầu chuỗi không có case
+vì logger không bắt được (V0.2 mục 7.2).
+
+Config V0.1 sinh đúng từng byte như code trước khi có V0.2 (đã so SHA-256 của 13
+case cùng config ngày 2026-10-24); IMU và `0xD1` được rút số ngẫu nhiên sau các kênh
+V0.1. Test: `tests/test_packet_v02.py`.
+
+Output là thư mục mới: `config.json`, `stream.bin`, `session_metadata.json`,
+`report.json` (seed, hash config/stream/metadata, commit/dirty, hash code,
+Python, số packet theo kênh, vị trí packet lỗi). Hai lần chạy cùng config/case
+cho cùng `stream.bin`. Đọc luồng bằng [logger](packet_logger.md).
 
 ## Việc còn mở
 

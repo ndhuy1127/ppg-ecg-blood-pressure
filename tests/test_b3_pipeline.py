@@ -167,6 +167,29 @@ def test_val_and_test_labels_and_test_waveforms_do_not_change_predictions():
     assert before["evaluation"] != after["evaluation"]  # Val labels still matter.
 
 
+def test_feature_extraction_never_sees_test_segments(monkeypatch):
+    # Predictions alone cannot show this: test features could be computed and
+    # then dropped. Spy on the feature stage itself.
+    segments = make_segments()
+    manifest, inventory = make_split(segments)
+    seen = []
+    original = features.feature_matrix
+
+    def spy(batch):
+        batch = list(batch)
+        seen.extend(id(segment) for segment in batch)
+        return original(batch)
+
+    monkeypatch.setattr("software.pulsedb.pipeline.features.feature_matrix", spy)
+    run_baselines(segments, manifest, inventory, small_config())
+    by_split = {
+        split: {id(segments[i]) for i in manifest.raw_index[manifest.split == split]}
+        for split in ("train", "val", "test")
+    }
+    assert by_split["test"] and not by_split["test"] & set(seen)
+    assert set(seen) == by_split["train"] | by_split["val"]
+
+
 def test_rejects_subject_leakage_altered_hash_and_missing_row():
     segments = make_segments()
     manifest, inventory = make_split(segments)

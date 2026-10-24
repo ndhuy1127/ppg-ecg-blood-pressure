@@ -13,8 +13,8 @@ Các module được tách theo trách nhiệm:
 ## Code đã có và nên đọc file nào
 
 Đã có reader/validator PulseDB, split theo người có inventory, baseline B0/B1/B3,
-mốc ECG/PPG và đặc trưng/SQI sơ bộ, bootstrap theo người, metrics BP và mô phỏng
-packet. Các phần này được kiểm thử bằng dữ liệu giả lập; sự tồn tại của code không
+mốc ECG/PPG và đặc trưng/SQI sơ bộ, bootstrap theo người, metrics BP, mô phỏng
+packet và decoder/kiểm tra packet cho logger. Các phần này được kiểm thử bằng dữ liệu giả lập; sự tồn tại của code không
 chứng minh dataset/split đã được nghiệm thu. `preprocessing/` và `deployment/` chỉ
 chứa `__init__.py`.
 
@@ -24,14 +24,20 @@ chứa `__init__.py`.
 | [_provenance.py](_provenance.py) | SHA-256 của file text tracked (code, config JSON) sau khi đổi CRLF thành LF | Byte file → hash không phụ thuộc checkout Windows/Linux |
 | [pulsedb/reader.py](pulsedb/reader.py), [pulsedb/validator.py](pulsedb/validator.py) | Đọc file Subset PulseDB `.mat`; gắn cờ NaN/Inf, nhãn bất thường, waveform trùng (không xóa dòng) | File `.mat` → `PulseSegment`; segment → bảng cờ |
 | [data_io/split_manifest.py](data_io/split_manifest.py) | Inventory, split theo người `pulsedb-split-v2`, kiểm tra bảo toàn/leakage, CSV chuẩn | Segment → inventory → manifest train/val/test |
-| [signal_processing/fiducials.py](signal_processing/fiducials.py) | Chuẩn bị kênh, R-peak, PPG foot tiếp tuyến, ghép PAT | Vector ECG/PPG + fs/clock/timestamp → mốc và PAT |
+| [signal_processing/fiducials.py](signal_processing/fiducials.py) | Chuẩn bị kênh, R-peak, PPG foot tiếp tuyến, ghép PAT; phương pháp ứng viên Tuần 5 (`derivative_energy`, `d2_max`, `valley_min`) chọn qua `SignalConfig`, mặc định giữ v1 | Vector ECG/PPG + fs/clock/timestamp → mốc và PAT |
+| [signal_processing/pat_validity.py](signal_processing/pat_validity.py) | PAT hợp lệ Tuần 5: ghép R–foot trong khoảng R–R, gắn nhãn `out_of_range`/`outlier` (MAD), không xóa nhịp | Thời điểm R và foot → trạng thái từng nhịp; không đọc BP |
+| [evaluation/fiducial_agreement.py](evaluation/fiducial_agreement.py) | So mốc tự động với đánh dấu tay: ghép một–một tối ưu, TP/FP/FN, bias/MAE/SD; chỉ train/val; từ chối đáp án SYNTHETIC nếu không có cờ | Bảng đánh dấu tay + bảng detections → summary và per_record |
 | [feature_extraction/week04.py](feature_extraction/week04.py) | Đặc trưng và cờ SQI theo cửa sổ `features-sqi-v1` | Cửa sổ ECG/PPG có metadata → đặc trưng, quality, flags |
+| [feature_extraction/motion_sqi.py](feature_extraction/motion_sqi.py) | Cờ chuyển động mạnh từ IMU `motion-sqi-v0` (ngưỡng nháp, chưa khóa) | Gia tốc (g) và gyro (°/s) (n, 3), cửa sổ, bias gyro → `motion` / `no_motion_detected` / `not_evaluable` |
 | [models/constant_baselines.py](models/constant_baselines.py) | Tính dự đoán hằng số B0/B1 | Nhãn train hoặc calibration → cặp dự đoán `[SBP, DBP]` |
 | [models/xgboost_baseline.py](models/xgboost_baseline.py) | B3: XGBoost riêng SBP/DBP | Đặc trưng + nhãn train → model; đặc trưng val → `[SBP, DBP]` |
 | [pulsedb/features.py](pulsedb/features.py), [pulsedb/pipeline.py](pulsedb/pipeline.py) | 12 đặc trưng ECG/PPG đơn giản; fit B0/B3 trên train, đánh giá val | Đoạn PulseDB + manifest/inventory split v2 → dự đoán và metrics |
 | [evaluation/bp_metrics.py](evaluation/bp_metrics.py) | Tính MAE/bias/SD và tổng hợp theo người | Nhãn tham chiếu + dự đoán + ID người → kết quả đánh giá |
 | [evaluation/subject_bootstrap.py](evaluation/subject_bootstrap.py) | CI bootstrap percentile lấy mẫu theo người; đánh giá bảng dự đoán theo manifest | Dự đoán + manifest/inventory → metrics và CI |
 | [data_io/packet_simulation.py](data_io/packet_simulation.py) | Sinh/replay packet ECG/PPG SYNTHETIC `synthetic-packet-v2` với 6 case lỗi | Config/seed → packet → timeline, gap, offset |
+| [data_io/packet_wire.py](data_io/packet_wire.py) | Codec byte Packet Schema V0.1: CRC-16/CCITT-FALSE, đóng gói, decoder dò `SYNC` theo luồng | Byte (từng đoạn bất kỳ) → packet đã kiểm CRC/header + log lỗi, byte bị bỏ |
+| [data_io/packet_receiver.py](data_io/packet_receiver.py) | Kiểm tra mục 12 của schema V0.1/V0.2 theo từng phiên/kênh (`packet-logger-v1`), metadata phiên | Packet theo thứ tự đến → issue, gap, bảng packet/mẫu có `chain_id` |
+| [data_io/packet_simulation_v3.py](data_io/packet_simulation_v3.py) | Sinh luồng byte SYNTHETIC `synthetic-packet-v3` đúng layout V0.1, 13 case lỗi | Config/seed → `stream.bin` + metadata phiên |
 
 Chi tiết đầu vào/đầu ra nằm trong [README models](models/README.md) và
 [README evaluation](evaluation/README.md).

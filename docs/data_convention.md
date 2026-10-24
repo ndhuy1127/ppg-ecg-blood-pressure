@@ -18,7 +18,7 @@ thuẫn, `quy_uoc_du_lieu.md` được ưu tiên.
 | Nguồn | ECG | PPG | Trạng thái |
 | --- | --- | --- | --- |
 | PulseDB Subset (công khai) | 125 Hz | 125 Hz | Suy ra từ shape: 1250 mẫu mỗi đoạn 10 giây; khớp với bài báo PulseDB, xem [provenance PulseDB](pulsedb_provenance.md), mục 6 |
-| Thiết bị prototype | 500 hoặc 512 sps (MAX30001 cấu hình được cả hai) | Phụ thuộc linh kiện PPG, chế độ LED và lấy trung bình | **Chưa chốt**; bảng tốc độ và phương án dự kiến ở [interface_power_sampling_v0.md, mục 4](../configs/hardware/interface_power_sampling_v0.md), quyết định còn mở ở mục 6 của tài liệu đó |
+| Thiết bị prototype (V1-module) | 512 sps (MAX30001, chốt 2026-10-23) | 200 sps mỗi khe, MAX30101 ba khe xanh/đỏ/IR, `SMP_AVE = 1` (chốt 2026-10-24) | Giá trị danh định; tốc độ thực phải đo. Lý do và độ rộng xung PPG còn mở: [interface_power_sampling_v0.md, mục 4 và 6](../configs/hardware/interface_power_sampling_v0.md) |
 
 Không giả định hai kênh dùng chung một tần số lấy mẫu hay một clock.
 
