@@ -55,10 +55,19 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
    UART0 (115 200 baud): thấy `packet self-test passed`, `SESSION_ID`, ELF SHA-256.
 4. Đo chân 3V3–GND của DevKitC: khoảng 3,3 V. Ghi giá trị đo và dòng đọc trên USB
    tester khi firmware khung đang chạy (mốc so sánh cho mục 6–8).
-5. Ghi luồng packet từ cổng USB native 10 phút không tải, chạy logger theo
-   [packet_logger.md](../../docs/protocol/packet_logger.md): chỉ có `skipped_bytes`
-   ở offset 0 (chữ ROM), `SEQ` và `T_ANCHOR_US` tăng đơn điệu, `DATA` khớp công
-   thức trong firmware README. Bước này cần cách ghi cổng serial ra file, chưa chốt.
+5. Ghi luồng packet từ cổng USB native 10 phút không tải bằng logger
+   (`python scripts/packet_logger.py record --port COMy --duration-s 600 --metadata
+   ...`, [packet_logger.md](../../docs/protocol/packet_logger.md); cổng mở với
+   DTR/RTS không kích hoạt, kiểm `SESSION_ID` trên UART0 không đổi khi mở cổng). Đạt
+   khi: chỉ có `skipped_bytes` ở offset 0 (chữ ROM); `SEQ` và `T_ANCHOR_US` tăng đơn
+   điệu; `DATA` khớp công thức trong firmware README; mọi packet là `VERSION = 2`;
+   `device_info` có ELF SHA-256 trùng log UART0 và khoảng 60 packet hợp lệ; mọi
+   packet ECG có bit 8 (mốc `SAMP` từ nguồn ECG giả); đủ sáu trục IMU.
+6. Nạp lần lượt ba bản build tạo lỗi (`-e esp32s3_devkitc_imu_stall`,
+   `esp32s3_devkitc_samp_faults`, `esp32s3_devkitc_ppg_delay`), ghi vài phút mỗi bản
+   và so với kết quả chờ đợi ở mục "Kiểm tra khi có bo" của
+   [firmware/README.md](../../firmware/README.md). Bước này chỉ kiểm firmware và
+   logger với dữ liệu giả; MCPWM capture thật (`BOARD_SAMP_CAPTURE=1`) kiểm ở mục 7.
 
 ## 3. PCB trần (chưa hàn)
 
@@ -130,8 +139,11 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
    - INT2B (GPIO47): xung `SAMP` 512 Hz khi `SAMP_IT = 00`, biên độ khoảng 3,3 V
      phía MCU (A.6 mục 4). Cạnh xung ứng với lúc mẫu vào FIFO, không phải lúc lấy
      mẫu analog (schema mục 5.2). Đo cực tính, độ rộng (khoảng 488 µs với
-     `CLR_SAMP = 1`) và rung trước/sau TXB0108; kiểm MCPWM capture chốt đúng cạnh;
-     kiểm xung đầu tiên sau `SYNCH` ứng với mẫu đầu tiên của FIFO (Packet Schema V0.2 mục 7.2).
+     `CLR_SAMP = 1`) và rung trước/sau TXB0108; kiểm MCPWM capture chốt đúng cạnh
+     (build với `BOARD_SAMP_CAPTURE=1` và `BOARD_SAMP_RISING_EDGE` theo cực tính đo
+     được; UART0 in số cặp đọc kẹp nhận/bị loại và sai số quy đổi, ngân sách dưới
+     5 µs, [firmware/README.md](../../firmware/README.md) mục "Mốc `SAMP`"); kiểm xung
+     đầu tiên sau `SYNCH` ứng với mẫu đầu tiên của FIFO (Packet Schema V0.2 mục 7.2).
 5. Tín hiệu nhân tạo qua cáp ECG (mạch chia áp ở
    [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Trước
    khi nối: chốt nút tham chiếu của mạch chia áp (GND của bo hay VCM/sleeve, việc còn
