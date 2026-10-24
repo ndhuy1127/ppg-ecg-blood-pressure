@@ -346,7 +346,20 @@ Mỗi case: `simulate_packets.py` chạy hai lần cho cùng SHA-256 `stream.bin
 
 ### 6.3. Mốc R/foot trên SYNTHETIC (Huy)
 
-5 bản ghi `SYN_*`, đáp án do mã sinh
+**Bản v1 (2026-10-25)**, sau bốn quyết định về mốc (tách refractory PPG 0,35 s, ngưỡng
+năng lượng theo phân vị, không nội suy foot, đỉnh T giả lập theo nhịp tim; tài liệu
+phương pháp mục 8): 6 bản ghi `SYN_*` (thêm bản ghi biên T ở R + 0,25 s),
+[agreement_synthetic.json](synthetic_fiducials_v1/agreement_synthetic.json).
+
+| Phương pháp | Kết quả v1 |
+| --- | --- |
+| R `derivative_energy` | 64/64 TP, 7 FP (đều ở bản ghi nhiễu) |
+| R `prominence` (refractory 0,25 s) | 64/64 TP, 44 FP (bắt đỉnh T ở mọi bản ghi HR 60) |
+| Foot `tangent` | 63/63; lệch +27,4 ms (do hình dạng xung) |
+| Foot `d2_max` | 59/63, MAE 13,0 ms |
+| Foot `valley_min` | 57/63, MAE 2,7 ms (bản ghi sạch lệch 0 chỉ vì onset rơi đúng lưới mẫu) |
+
+**Bản v0 (2026-10-21/22, lịch sử)**, 5 bản ghi `SYN_*`, đáp án do mã sinh
 ([agreement_synthetic.json](synthetic_fiducials/agreement_synthetic.json)):
 
 | Phương pháp | Kết quả |

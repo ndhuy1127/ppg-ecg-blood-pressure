@@ -218,6 +218,38 @@ pool) không trùng ID.
 
 ## 5. Kết quả SYNTHETIC (chỉ kiểm chứng code)
 
+### 5.1. Kết quả v1 (2026-10-25, sau các quyết định ở mục 8)
+
+Generator `week05-synthetic-records-v1` (đỉnh T ở R + 0,28 × √RR, thêm bản ghi biên
+`SYN_T_EDGE_HR60` với T ở R + 0,25 s, tổng 6 bản ghi), config `fiducials-week05-v1`
+(R 0,25 s, PPG 0,35 s, không nội suy, ngưỡng năng lượng `quantile`), code commit
+`034771d`. Output: `reports/weekly/week_05/synthetic_fiducials_v1/`.
+
+| Mốc | Phương pháp | Mốc đúng | TP | FP | FN | Bias (ms) | MAE (ms) | SD (ms) |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| R | `derivative_energy` | 64 | 64 | 7 | 0 | −0,1 | 0,1 | 0,5 |
+| R | `prominence` | 64 | 64 | 44 | 0 | −0,1 | 0,1 | 0,5 |
+| foot | `tangent` | 63 | 63 | 0 | 0 | 27,4 | 27,4 | 10,7 |
+| foot | `d2_max` | 63 | 59 | 4 | 4 | 6,8 | 13,0 | 20,4 |
+| foot | `valley_min` | 63 | 57 | 6 | 6 | −1,3 | 2,7 | 13,1 |
+
+Cách đọc (theo `per_record`):
+
+- `prominence` ở refractory 0,25 s bắt đỉnh T ở **mọi** bản ghi HR 60 (9 FP mỗi bản
+  ghi, kể cả bản ghi biên); ở HR 143 đỉnh T cách R 0,18 s, nằm trong refractory, nên
+  0 FP. Đây là giới hạn đã biết của bộ dò cực đại địa phương khi refractory ngắn.
+- 7 FP của `derivative_energy` đều ở bản ghi nhiễu (v0: 2 FP). Ngưỡng `quantile`
+  thấp hơn ngưỡng `ptp`, nên cho nhiều đỉnh nhiễu qua hơn: đó là cái giá của quyết
+  định 2 (đổi lại một nhịp lớn không còn che các nhịp khác).
+- `valley_min` lệch 0,0 ms và `d2_max` +8 ms trên các bản ghi sạch HR 60 chỉ vì điểm
+  bắt đầu xung SYNTHETIC rơi đúng lưới mẫu PPG (1,2 s + k ở 125 Hz). Không phải độ
+  chính xác thật: quét pha onset (mục 2) mới cho sai số theo pha, khoảng 2–3 ms với
+  `valley_min` không nội suy. Cả hai vẫn hỏng trên bản ghi nhiễu (chưa làm mượt).
+- `tangent` không đổi so với v0 (lệch do hình dạng xung, mục 5.2).
+- Đây là đáp án do mã sinh, không phải đánh dấu tay.
+
+### 5.2. Kết quả v0 (2026-10-21/22, lịch sử)
+
 Năm bản ghi `SYN_*` 10 s, ECG 500 Hz, PPG 125 Hz: sạch HR 60, nhiễu (trắng SD 0,03
 và trôi nền 0,25 Hz), ngừng một nhịp, mất một xung PPG, HR 143 (RR 0,42 s).
 ECG: Gaussian QRS + sóng T (biên độ 0,3 tại R + 0,25 s). PPG: sườn lên nửa cosin
@@ -356,8 +388,8 @@ không bao giờ trên test.
    60 bpm, 177 ms ở 150 bpm; phỏng theo cách co giãn theo nhịp của ECGSYN, không
    phải mô hình sinh lý đã thẩm định). Bản ghi `SYN_T_EDGE_HR60` giữ T ở 0,25 s làm
    ca biên. Generator `week05-synthetic-records-v1`, script `week05-fiducials-v2`;
-   bảng ở mục 5 là kết quả v0 (T ở 0,25 s, nội suy bật, ngưỡng `ptp`), giữ làm lịch
-   sử.
+   kết quả mới ở mục 5.1; bảng mục 5.2 là kết quả v0 (T ở 0,25 s, nội suy bật,
+   ngưỡng `ptp`), giữ làm lịch sử.
 
 Không quyết định nào chặn việc tải PulseDB hay phát triển thiết bị. Quyết định 4
 phải có trước khi tạo bảng so sánh SYNTHETIC mới; quyết định 3 trước khi tin độ phủ

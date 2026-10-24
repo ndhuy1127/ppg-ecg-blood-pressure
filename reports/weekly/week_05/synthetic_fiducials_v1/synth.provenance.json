@@ -1,0 +1,74 @@
+{
+  "generator_version": "week05-synthetic-records-v1",
+  "cases": {
+    "SYN_CLEAN_HR60": {
+      "defaults_overridden": {}
+    },
+    "SYN_NOISY_HR60": {
+      "defaults_overridden": {
+        "noise_sd": 0.03,
+        "wander": 0.2,
+        "seed": 5
+      }
+    },
+    "SYN_PAUSE_HR60": {
+      "defaults_overridden": {
+        "drop_beats": [
+          4
+        ]
+      }
+    },
+    "SYN_PPG_DROPOUT_HR60": {
+      "defaults_overridden": {
+        "drop_ppg_beats": [
+          3
+        ]
+      }
+    },
+    "SYN_HIGH_HR143": {
+      "defaults_overridden": {
+        "rr_s": 0.42,
+        "pat_s": 0.16,
+        "rise_s": 0.1
+      }
+    },
+    "SYN_T_EDGE_HR60": {
+      "defaults_overridden": {
+        "t_delay_s": 0.25
+      }
+    }
+  },
+  "outputs_sha256": {
+    "records.csv": "6af1e704c92be3cc675d60af53aaedf1657dc6e83529b91b7594bffeb9ff7e80",
+    "truth_synthetic.csv": "07414a9e249b15d6d71a7d1b984f3da8289b51a6648ac27afbc7ee08f05c8620"
+  },
+  "provenance": {
+    "script_version": "week05-fiducials-v2",
+    "command": "synth",
+    "source_types": [
+      "SYNTHETIC"
+    ],
+    "git_commit": "034771d89e7a40c9945c6e85ab7f4cb7b850114e",
+    "workspace_has_changes": true,
+    "code_sha256_lf": {
+      "scripts/week05_fiducials.py": "cf8744a1577bbf01180633ae689a2e5b8d210799373c0d928e559ec634b628a6",
+      "software/signal_processing/fiducials.py": "c7d90fc3c9758334c3a47456335e7e7c481cbd8b63aefbacd5fa06759ee38bff",
+      "software/signal_processing/pat_validity.py": "3cd75c0c70a6035cb408572dded043639da192e3685c73e4dc64a61e7914d7f4",
+      "software/evaluation/fiducial_agreement.py": "e2955864535e1224ccf359063328095d9ce075ac15566ab5ff4dccb53439b434",
+      "software/_provenance.py": "5cb4bb9b66ec67d45c212a8573e8b5f4d9ada3e325e864c3e2cb458304fc5ccb",
+      "software/pulsedb/reader.py": "e9ea91e9d03549e947415e456cd79c4745c5623a3e9cb538a61158f950c08e3c",
+      "software/data_io/split_manifest.py": "3b614463a91f7479277cb88570593847009e684d090bb874c26dfc62697d0584",
+      "software/pulsedb/pipeline.py": "31e0c3135b15a601d98f12ee5fb166a2d5c8e37c62294a7a91c66c15158e08b5"
+    },
+    "inputs_sha256": {},
+    "environment": {
+      "python": "3.13.12",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.6",
+      "matplotlib": "3.11.2",
+      "mat73": "0.65",
+      "h5py": "3.16.0"
+    }
+  }
+}
