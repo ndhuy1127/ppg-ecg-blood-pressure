@@ -1,7 +1,7 @@
 # Trình tự bring-up V1-module
 
 > **Chưa thực hiện**: chưa có module và PCB. Áp dụng cho KiCad V1-module (bo đế
-> V1-draft3, bo cổ tay V1-draft3), pin map chuẩn ở
+> V1-draft4, bo cổ tay V1-draft4), pin map chuẩn ở
 > [custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) mục
 > A.7 và [firmware khung](../../firmware/README.md).
 >
@@ -123,9 +123,10 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
    dùng để nhận chip (`protocentral_max30001_arduino_library`, `src/protocentral_max30001.cpp`).
 3. Cấu hình theo A.2: 512 sps, gain và bộ lọc cố định, `EN_BIOZ = 0`, **tắt lead
    bias nội** (cấu hình 3 điện cực, VCM qua R3), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
-   và `EN_INT2`, `EFIT`, `SAMP_IT`. Đọc lại từng thanh ghi đã ghi.
+   và `EN_INT2`, `EFIT = 15`, `SAMP_IT = 00` (xung `SAMP` mỗi mẫu, chốt 2026-10-24).
+   Đọc lại từng thanh ghi đã ghi.
 4. Oscilloscope:
-   - INTB (GPIO21): xung theo ngưỡng `EFIT`, ví dụ 32 Hz khi đọc 16 mẫu một lần;
+   - INTB (GPIO21): xung theo ngưỡng `EFIT = 15`, tức 32 Hz khi đọc 16 mẫu một lần;
    - INT2B (GPIO47): xung `SAMP` 512 Hz khi `SAMP_IT = 00`, biên độ khoảng 3,3 V
      phía MCU (A.6 mục 4). Cạnh xung ứng với lúc mẫu vào FIFO, không phải lúc lấy
      mẫu analog (schema mục 5.2).
@@ -187,7 +188,7 @@ Theo [sync_10min_test_plan.md](sync_10min_test_plan.md), sau khi bước 7 và 8
 
 Mỗi lần bring-up ghi một file `hardware/test_reports/<YYYY-MM-DD>_v1_bringup.md`:
 
-- ngày, người làm, revision hai bo (theo title block KiCad, hiện cả hai là V1-draft3);
+- ngày, người làm, revision hai bo (theo title block KiCad, hiện cả hai là V1-draft4);
 - ký hiệu module, kết quả `chip_id` và `espefuse summary` (các trường VDD_SPI),
   revision breakout MAX30001, kết quả đo thông mạch cáp ECG;
 - commit firmware và ELF SHA-256, `SESSION_ID` của mỗi lần ghi;

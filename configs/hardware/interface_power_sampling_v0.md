@@ -35,8 +35,8 @@ Lưu ý:
 
 - LED xanh của MAX30101 (thường dùng cho PPG cổ tay) cần VLED+ 4,5–5,5 V. Bo
   SparkFun lấy VLED+ từ boost PAM2401 trên bo, đặt 5,1 V danh định: trong dải
-  của LED xanh nhưng vượt 0,1 V dải 3,1–5,0 V bảo đảm PSRR cho đỏ/IR. Phải đo
-  khi không tải và dưới tải ([custom_board_proposal.md](custom_board_proposal.md)
+  của LED xanh nhưng vượt 0,1 V dải 3,1–5,0 V bảo đảm PSRR cho đỏ/IR. Chốt
+  2026-10-24: giữ nguyên, không sửa bo SparkFun. Phải đo khi không tải và dưới tải ([custom_board_proposal.md](custom_board_proposal.md)
   A.6 mục 3).
 - MAX3010x cần tụ bypass ≥ 1 µF sát chân VLED+ và đường cấp có trở kháng ≪ 1 Ω, để
   xung dòng LED không thành nhiễu quang (MAX30102 tr. 23).

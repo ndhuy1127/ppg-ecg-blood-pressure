@@ -210,7 +210,7 @@ Phân biệt **số khe** và **loại LED**:
   chế độ này, thứ tự kênh trong FIFO là đỏ rồi IR (MAX30102 tr. 15, Hình 2), và
   receiver dùng `0xF1` cho đỏ, `0xF2` cho IR.
 
-Ánh xạ khe → LED ghi trong metadata phiên. Các khe của cùng một mẫu PPG có chung
+Ánh xạ khe → LED ghi trong metadata phiên. V1 (chốt 2026-10-24): `SLOT1` xanh (`0xF1`), `SLOT2` đỏ (`0xF2`), `SLOT3` IR (`0xF3`), 200 sps mỗi khe, `SMP_AVE = 1`. Các khe của cùng một mẫu PPG có chung
 `FIRST_SAMPLE_INDEX` và `T_ANCHOR_US`, nhưng **không** cùng thời điểm phát LED:
 khoảng cách cạnh lên giữa hai khe liên tiếp là 427 / 525 / 720 / 1 107 µs với độ
 rộng xung 69 / 118 / 215 / 411 µs (MAX30102 tr. 25, Bảng 14; MAX30101 tr. 22,
