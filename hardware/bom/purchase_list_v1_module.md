@@ -84,7 +84,7 @@ Kiểm đồ có sẵn ở lab trước, chỉ mua phần thiếu; chưa tra gi�
 
 ## 2. Đợt 2: mua cùng PCB V1 (chưa mua)
 
-Đặt gia công PCB ngay sau khi sửa bo đế (header J3, test point INT;
+Đặt gia công PCB ngay sau khi sửa bo đế (header J3, V1-draft4;
 `custom_board_proposal.md` A.2) và ERC/DRC sạch, song song với đợt 1, không chờ
 module (chốt 2026-10-24); lệch footprint thì làm lại PCB (A.6 mục 2). Danh sách
 lấy từ schematic KiCad V1-module

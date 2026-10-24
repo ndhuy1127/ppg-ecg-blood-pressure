@@ -84,7 +84,7 @@
   <text x="372" y="472" fill="#212121">R9–R11 33 Ω nối tiếp trên</text>
   <text x="372" y="490" fill="#212121">BMI_SCK, MOSI, CS (mặt dưới)</text>
   <text x="372" y="510" fill="#212121">C9 100 nF sát J2.1/J2.2</text>
-  <text x="372" y="528" fill="#212121">GND: chân 2, 4, 7, 9, 14–16</text>
+  <text x="372" y="528" fill="#212121">GND: chân 2, 4, 6, 8, 10, 12, 14</text>
 
   <!-- Wrist board container -->
   <rect x="340" y="620" width="580" height="320" rx="10" fill="#fdfbff" stroke="#6a1b9a" stroke-dasharray="6 4"/>

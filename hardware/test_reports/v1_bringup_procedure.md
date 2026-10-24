@@ -66,7 +66,8 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
    kích thước.
 2. Đo điện trở 3V3–GND trên cả hai bo: không chập.
 3. Đo thông mạch theo bảng A.7: mỗi chân của J2 (bo đế) tới pad U1 tương ứng, mỗi
-   chân của J1 (bo cổ tay) tới pad M1/M3 tương ứng; GND ở chân 2, 4, 7, 9, 14, 15, 16.
+   chân của J1 (bo cổ tay) tới pad M1/M3 tương ứng; GND ở chân 2, 4, 6, 8, 10, 12, 14
+   (thứ tự cáp V1-draft4). J3.1 (`STIM`) tới pad 6 của U1, J3.2 tới GND.
 
 ## 4. Sửa module (trước khi lắp)
 
@@ -141,7 +142,7 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
 ## 8. Bo cổ tay qua cáp
 
 1. Rút cả hai cáp USB. Đo thông mạch cáp 16 dây: chân n ↔ chân n; GND ở chân 2,
-   4, 7, 9, 14, 15, 16; chân 1 (3V3) không chập GND.
+   4, 6, 8, 10, 12, 14; chân 1 (3V3) không chập GND.
 2. Cắm cáp vào J2 và J1 (đúng khe khóa), cấp nguồn lại qua USB tester, theo dõi
    dòng như mục 6. Đo 3V3 tại chân C2 của bo cổ tay (bo cổ tay không có test point).
 3. Nguồn LED của MAX30101 (net 5V trên bo SparkFun), theo A.6 mục 3:
