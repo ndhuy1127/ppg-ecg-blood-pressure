@@ -78,6 +78,11 @@ tiếp chưa được ghi khi bắt đầu lượt đọc. Do đó
 `0 ≤ δ < 10⁶/fs + d_ptr_us`, với `d_ptr_us` là thời gian lượt đọc con trỏ trên
 I²C (cỡ 0,1–0,2 ms ở 400 kHz; phải đo).
 
+V1 (chốt 2026-10-24): firmware đếm ngắt `PPG_RDY` (mỗi mẫu một ngắt) và đọc khi đủ
+8 mẫu, nên `N = 8` (25 packet/s mỗi khe ở 200 sps) và lượt đọc bắt đầu ngay sau mẫu
+thứ 8: `δ` thực tế chỉ còn cỡ độ trễ ngắt cộng `d_ptr_us`. `FIFO_A_FULL` không dùng
+để kích đọc (chỉ ngắt được khi có 17–32 mẫu chưa đọc).
+
 ### 5.2. MAX30001 (SPI)
 
 MAX30001 **không** có thanh ghi đếm số mẫu trong FIFO ECG (bản đồ thanh ghi
@@ -387,9 +392,9 @@ v2 ở bảng trên giữ nguyên.
 
 - Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up (V1 chốt
   multi-LED ba khe ở 200 sps, `SMP_AVE = 1`, 2026-10-24).
-- `N` mỗi packet, `EFIT` và `FIFO_A_FULL`.
-- INT2B (xung `SAMP`): V1 nối vào GPIO47; còn mở cho bản cuối, và firmware có bật
-  `SAMP` (`EN_INT2`, `SAMP_IT`) hay không.
+- Cách đưa mốc xung `SAMP` vào packet (chốt 2026-10-24: bật xung `SAMP` luôn (không chỉ khi đo bench) và dùng làm mốc thời gian ECG; cách đưa mốc vào packet đang chốt cho Packet Schema V0.2). Vì `SAMP` là mốc ECG,
+  bản hoàn chỉnh cũng phải nối INT2B. `N` đã chốt: ECG `EFIT = 15` (16 mẫu mỗi
+  packet), PPG 8 mẫu (mục 5.1).
 - Độ trễ hiệu dụng `L` của từng cấu hình (đo theo kế hoạch đo 10 phút), kể cả
   khoảng 1,0 ms trễ lấy mẫu ADC của MAX30001 ngoài bảng datasheet (mục 5.2, 5.3).
 

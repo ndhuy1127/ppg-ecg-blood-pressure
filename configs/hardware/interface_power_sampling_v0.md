@@ -135,7 +135,8 @@ Lưu ý khi chốt:
     ≤ 215 µs, thêm khoảng 1,25 ms trễ, và chưa có bằng chứng SNR tốt hơn.
 - **Hệ quả cho firmware:** FIFO PPG 32 mẫu chứa 160 ms ở 200 sps. `FIFO_A_FULL` chỉ
   đặt được để ngắt khi có 17–32 mẫu chưa đọc (MAX30102 tr. 17), nên muốn đọc lô nhỏ
-  hơn (ví dụ 8 mẫu, 25 packet/s mỗi khe) thì đếm ngắt `PPG_RDY` hoặc đọc theo timer.
+  hơn thì đếm ngắt `PPG_RDY` hoặc đọc theo timer. Chốt 2026-10-24: đếm `PPG_RDY`,
+  đọc 8 mẫu (25 packet/s mỗi khe); ECG `EFIT = 15`, đọc 16 mẫu.
   Thời gian LED sáng của ba khe chiếm 24,7% ở 411 µs và 12,9% ở 215 µs (tính từ giá
   trị danh định): dòng xung LED ảnh hưởng VLED+ và 3V3 (A.6 mục 3).
 
@@ -168,9 +169,9 @@ tham số mô phỏng. Nguồn giả của firmware chạy PPG 200 sps, 8 mẫu 
 1. Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up. V1 chốt
    multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps, `SMP_AVE = 1`
    (2026-10-24, `custom_board_proposal.md` A.6 mục 3).
-2. Firmware có bật xung `SAMP` (`EN_INT2`, `SAMP_IT`) hay không; bản hoàn chỉnh có
-   nối INT2B không (V1 đã nối vào GPIO47, chạy 3,3 V; `custom_board_proposal.md`
-   A.6 mục 4).
+2. Cách đưa mốc xung `SAMP` vào packet (chốt 2026-10-24: bật xung `SAMP` luôn (không chỉ khi đo bench) và dùng làm mốc thời gian ECG; cách đưa mốc vào packet đang chốt cho Packet Schema V0.2). V1 đã nối INT2B vào
+   GPIO47, chạy 3,3 V (`custom_board_proposal.md` A.6 mục 4); bản hoàn chỉnh cũng
+   phải nối.
 3. KiCad V1-module dùng GPIO15/16 cho SCLK/MOSI của MAX30001, trùng XTAL_32K_P/N
    của ESP32-S3 (datasheet ESP32-S3 v2.2, Bảng 2-4 tr. 21, Bảng 2-8 tr. 24).
    `custom_board_proposal.md` Phần B mục 5 đề xuất thạch anh 32,768 kHz cho RTC;

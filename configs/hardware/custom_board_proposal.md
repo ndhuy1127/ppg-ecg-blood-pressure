@@ -160,7 +160,8 @@ nhận hàng ở
      ứng dụng MAX30101 ghi nguồn +5 V "200 mA MAX" (tr. 32); hai số này không
      chứng minh bo đủ dòng, vì còn phụ thuộc cuộn cảm, nguồn 3V3 vào (dòng vào
      ≈ 5,1 × I_out / (3,3 × hiệu suất), cộng tải của MCU, ECG và IMU) và LDO 3V3
-     của DevKitC. **Khi có bo:** đo VLED+ khi không tải, quá áp lúc khởi động
+     của DevKitC. Chốt 2026-10-24: giữ nguyên 5,1 V, không sửa bo SparkFun.
+     **Khi có bo:** đo VLED+ khi không tải, quá áp lúc khởi động
      và gợn khi LED xanh chạy xung dòng cao nhất đã chọn, so với dải chung
      4,5–5,0 V của cả ba LED; đo 3V3 tại bo cổ tay cùng lúc, vì 3V3 đi qua cáp
      20–30 cm từ DevKitC.
@@ -380,8 +381,8 @@ vẫn truyền qua USB tới laptop.
    TMP117 và FSR).
 3. ADC cho FSR ở bản hoàn chỉnh (nếu giữ FSR): ADC nội ESP32 hay ADC ngoài.
 4. Có jack điện cực dán Ag/AgCl để lấy ECG tham chiếu không.
-5. Firmware có bật xung `SAMP` của MAX30001 (`EN_INT2`, `SAMP_IT`) hay không. V1 đã
-   nối INT2B vào GPIO47 (A.7); bản hoàn chỉnh có nối INT2B không.
+5. Cách đưa mốc xung `SAMP` vào packet (chốt 2026-10-24: bật xung `SAMP` luôn (không chỉ khi đo bench) và dùng làm mốc thời gian ECG; cách đưa mốc vào packet đang chốt cho Packet Schema V0.2). V1 đã nối INT2B vào
+   GPIO47 (A.7); vì `SAMP` là mốc ECG, bản hoàn chỉnh cũng phải nối INT2B.
 6. Ngủ giữa các cửa sổ (thêm thạch anh 32 kHz) hay giữ MCU thức suốt phiên.
 7. Xung đột chân: KiCad V1-module dùng GPIO15/16 cho `ECG_SCLK`/`ECG_MOSI`, trùng
    XTAL_32K_P/N của ESP32-S3 (mục 5). V1 không có thạch anh 32 kHz nên không bị

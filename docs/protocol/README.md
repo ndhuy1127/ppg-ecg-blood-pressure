@@ -29,5 +29,5 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Sinh và replay packet giả lập](packet_simulation.md): `synthetic-packet-v2`
   (JSON) và `synthetic-packet-v3` (luồng byte theo Packet Schema V0.1)
 - [Logger packet phía máy tính](packet_logger.md): decoder `SYNC`/CRC16, kiểm tra
-  mục 12 theo kênh, raw bất biến, session manifest; serial trực tiếp chờ duyệt
-  `pyserial`
+  mục 12 theo kênh, raw bất biến, session manifest; đọc cổng serial trực tiếp
+  bằng `pyserial` (`--port`, `--duration-s`)

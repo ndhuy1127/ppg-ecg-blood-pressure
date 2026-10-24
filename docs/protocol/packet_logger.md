@@ -30,9 +30,9 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
   Metadata phiên (`packet-session-metadata-v0`) không đổi tên version; nhận thêm khóa
   kênh của V0.2. Config đổi trường `packet_schema` thành `packet_schemas`. Phiên ghi bằng v0 vẫn đọc được manifest; replay bằng v1 so với
   manifest v0 có thể lệch hash và manifest ghi rõ `logger_version` của mỗi bên.
-- **Chờ:** đọc cổng serial trực tiếp, vì cần `pyserial`, mà gói này chưa có trong
-  `requirements.txt` và chưa được nhóm duyệt (mục 7). Cũng chờ chạy 10 phút với
-  firmware khung của Đức Anh, vì chưa có firmware.
+- **Đọc cổng serial trực tiếp** (2026-10-24, `pyserial==3.5` được duyệt):
+  `record --port ... --duration-s ...` (mục Nguồn byte). **Chờ:** chạy 10 phút với
+  firmware khung trên bo thật.
 - Không phải phép đo đồng bộ phần cứng, không ước lượng fs thật/drift/jitter
   (việc đó thuộc [kế hoạch đo 10 phút](../../hardware/test_reports/sync_10min_test_plan.md)),
   không tính PAT. Kết quả SYNTHETIC chỉ kiểm chứng code.
@@ -48,10 +48,17 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
 ## Nguồn byte
 
 `record(source, ...)` nhận bất kỳ object nào có `read(n) -> bytes`; `b""` nghĩa
-là hết phiên. Hiện CLI mở file bằng `--source-file` (chế độ `rb`), coi như luồng
-đến từ thiết bị. Khi `pyserial` được duyệt, có thể truyền `serial.Serial(...)`
-vào đây. Riêng `read` của serial trả `b""` cả khi hết timeout, nên lúc đó cần
-thêm điều kiện dừng (thời lượng, Ctrl+C); phần này chưa làm. Decoder nhận byte
+là hết phiên. CLI có hai nguồn:
+
+- `--source-file`: mở file (chế độ `rb`), coi như luồng đến từ thiết bị.
+- `--port COM5 --duration-s 600 [--baud 115200]`: đọc cổng serial bằng `pyserial`
+  qua `SerialSource`. `read` của serial trả `b""` khi hết timeout (0,1 s); ở đây đó
+  chỉ là chưa có byte, nên logger đọc tiếp tới khi hết `--duration-s`. Ctrl+C trong
+  lúc đọc kết thúc phiên bình thường: raw, decode và manifest vẫn được ghi. Manifest
+  ghi `source = {kind: "serial", name, baudrate, duration_s, stopped_by, pyserial}`.
+  Cổng được mở với DTR và RTS ở mức không kích hoạt, vì USB Serial/JTAG của
+  ESP32-S3 khởi động lại chip với một số chuyển trạng thái DTR/RTS (như esptool
+  dùng); chưa kiểm trên bo thật. Cổng USB gốc bỏ qua baud. Decoder nhận byte
 theo từng đoạn bất kỳ: test xác nhận kết quả giống hệt nhau với đoạn 1, 2, 41,
 4096 byte hoặc cả luồng.
 

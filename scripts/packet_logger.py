@@ -4,8 +4,8 @@ record: every received byte, corrupt ones included, goes to raw.bin opened with
 exclusive create; PC receive times go to separate files and are never sample
 times; packets are decoded and checked, and session_manifest.json is written
 last. replay: the same decode/check code on an existing raw file; --expect
-compares the result hashes with a session manifest. Live serial is not
-implemented: pyserial is not an approved dependency (docs/protocol/packet_logger.md).
+compares the result hashes with a session manifest. record --port reads a serial
+port (pyserial) until --duration-s elapses or Ctrl+C (docs/protocol/packet_logger.md).
 """
 
 import argparse
@@ -86,11 +86,64 @@ def _csv(header, rows):
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
+class SerialSource:
+    """A serial port as a byte source that ends after ``duration_s`` or Ctrl+C.
+
+    pyserial's ``read`` returns b"" on timeout; here that only means no bytes
+    yet, so reading continues until the deadline. Ctrl+C during a read ends the
+    session normally (raw, decode and manifest are still written).
+    """
+
+    def __init__(self, port, duration_s, name, clock=time.monotonic):
+        if not duration_s > 0:
+            raise ValueError("duration_s must be > 0")
+        self.port, self.name, self.clock = port, name, clock
+        self.duration_s = duration_s
+        self.deadline = clock() + duration_s
+        self.stopped_by = None
+
+    def read(self, n):
+        try:
+            while self.clock() < self.deadline:
+                chunk = self.port.read(n)
+                if chunk:
+                    return bytes(chunk)
+        except KeyboardInterrupt:
+            self.stopped_by = "keyboard_interrupt"
+            return b""
+        self.stopped_by = self.stopped_by or "duration"
+        return b""
+
+    def describe(self):
+        import serial
+
+        return {"kind": "serial", "name": self.name, "baudrate": self.port.baudrate,
+                "duration_s": self.duration_s, "stopped_by": self.stopped_by,
+                "pyserial": serial.__version__}
+
+
+def open_serial(name, baudrate, timeout_s=0.1):
+    """Open ``name`` with DTR and RTS deasserted.
+
+    The ESP32-S3 USB Serial/JTAG port resets the chip on some DTR/RTS
+    transitions (as esptool uses them), so both stay deasserted while opening.
+    Not yet checked on the board. The native USB port ignores the baud rate.
+    """
+    import serial
+
+    port = serial.Serial()
+    port.port, port.baudrate, port.timeout = name, baudrate, timeout_s
+    port.dtr = False
+    port.rts = False
+    port.open()
+    return port
+
+
 def record(source, output, config_path, metadata_path, repo, source_name):
     """Log ``source`` until ``read`` returns b"" (end of session).
 
-    ``source`` is any object with ``read(n) -> bytes``: an open file now, a
-    serial port once pyserial is approved (it then needs a stop condition).
+    ``source`` is any object with ``read(n) -> bytes``: an open file, or a
+    ``SerialSource`` (its ``describe()`` goes into the manifest).
     """
     from software.data_io.packet_receiver import (
         LOGGER_VERSION, analyze_stream, render_outputs,
@@ -165,7 +218,8 @@ def record(source, output, config_path, metadata_path, repo, source_name):
     manifest = {
         "packet_schemas": result["packet_schemas"], "logger_version": LOGGER_VERSION,
         "mode": "record", "source_type": metadata["source_type"],
-        "source": {"kind": "file", "name": source_name},
+        "source": (source.describe() if hasattr(source, "describe")
+                   else {"kind": "file", "name": source_name}),
         "session_id": session_ids[0] if len(session_ids) == 1 else None,
         "session_ids": session_ids,
         # Schema and device info as decoded from the stream, per session.
@@ -253,8 +307,14 @@ def main():
     for name in ("record", "replay"):
         command = commands.add_parser(name)
         if name == "record":
-            command.add_argument("--source-file", type=Path, required=True,
-                                 help="Byte stream read as if it came from the device")
+            source = command.add_mutually_exclusive_group(required=True)
+            source.add_argument("--source-file", type=Path,
+                                help="Byte stream read as if it came from the device")
+            source.add_argument("--port", help="Serial port, e.g. COM5 or /dev/ttyACM0")
+            command.add_argument("--duration-s", type=float,
+                                 help="Recording length for --port (Ctrl+C stops early)")
+            command.add_argument("--baud", type=int, default=115200,
+                                 help="Baud rate for --port (ignored by native USB)")
         else:
             command.add_argument("--raw", type=Path, required=True)
             command.add_argument("--expect", type=Path,
@@ -266,8 +326,18 @@ def main():
         command.add_argument("--output", type=Path,
                              default=runs / f"{stamp}_{name}")
     args = parser.parse_args()
+    if args.command == "record" and (args.port is None) != (args.duration_s is None):
+        parser.error("--port and --duration-s go together")
     try:
-        if args.command == "record":
+        if args.command == "record" and args.port is not None:
+            port = open_serial(args.port, args.baud)
+            try:
+                source = SerialSource(port, args.duration_s, args.port)
+                summary = record(source, args.output, args.config, args.metadata,
+                                 repo, args.port)
+            finally:
+                port.close()
+        elif args.command == "record":
             with args.source_file.open("rb") as source:
                 summary = record(source, args.output, args.config, args.metadata,
                                  repo, args.source_file.name)

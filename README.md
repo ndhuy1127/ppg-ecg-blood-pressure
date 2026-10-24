@@ -89,7 +89,8 @@ conda activate ppg-ecg-env
 
 `requirements.txt`, `pyproject.toml` và `environment.yml` cố định phiên bản
 `mat73==0.65` (reader PulseDB), `h5py==3.16.0` (đọc từng phần file `.mat` v7.3, thêm
-2026-10-24) và `xgboost==3.2.0` (baseline B3). PyTorch chưa có
+2026-10-24), `pyserial==3.5` (logger đọc cổng serial, thêm 2026-10-24) và
+`xgboost==3.2.0` (baseline B3). PyTorch chưa có
 trong dependency; thành viên cần dùng sẽ bổ sung kèm phiên bản cố định.
 
 ## Chạy kiểm tra

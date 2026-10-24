@@ -112,12 +112,13 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
 [trình tự bring-up](../hardware/test_reports/v1_bringup_procedure.md) mục 2.
 
 1. Nạp, mở UART0: thấy `packet self-test passed` và `SESSION_ID`.
-2. Ghi luồng byte của cổng USB native ra file trong 10 phút chạy không tải. Logger
-   chưa đọc cổng serial trực tiếp vì `pyserial` chưa được duyệt; cách ghi cổng ra
-   file chốt khi có bo.
-3. `python scripts/packet_logger.py record --source-file ...`
-   ([hướng dẫn](../docs/protocol/packet_logger.md)): `SEQ` và `T_ANCHOR_US` tăng
-   đơn điệu, không lỗi CRC, `DATA` khớp công thức ở trên.
+2. Ghi cổng USB native trong 10 phút chạy không tải bằng logger:
+   `python scripts/packet_logger.py record --port COMx --duration-s 600 --metadata ...`
+   ([hướng dẫn](../docs/protocol/packet_logger.md)). Cổng được mở với DTR/RTS ở mức
+   không kích hoạt; kiểm rằng mở cổng không làm chip khởi động lại (`SESSION_ID`
+   trên UART0 không đổi).
+3. Trong kết quả: `SEQ` và `T_ANCHOR_US` tăng đơn điệu, không lỗi CRC, `DATA` khớp
+   công thức ở trên.
 4. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 
 ## Chưa có

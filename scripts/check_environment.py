@@ -17,6 +17,7 @@ import mat73
 import numpy as np
 import pandas as pd
 import scipy
+import serial
 import sklearn
 import xgboost
 import yaml
@@ -80,6 +81,7 @@ def main() -> int:
         f"xgboost={xgboost.__version__},",
         f"mat73={version(mat73.__name__)},",
         f"h5py={h5py.__version__},",
+        f"pyserial={serial.__version__},",
         f"pyyaml={yaml.__version__}",
     )
     print(f"NumPy result: {doubled.tolist()}")

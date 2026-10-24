@@ -776,6 +776,113 @@ def test_session_restart_manifest_lists_both_sessions(tmp_path):
     assert "session_id" in manifest["null_reasons"]
 
 
+class FakePort:
+    """pyserial-like port: scripted chunks, b"" stands for a read timeout."""
+
+    baudrate = 115200
+
+    def __init__(self, chunks, interrupt_after=None):
+        self.chunks, self.reads, self.interrupt_after = list(chunks), 0, interrupt_after
+
+    def read(self, n):
+        self.reads += 1
+        if self.interrupt_after is not None and self.reads > self.interrupt_after:
+            raise KeyboardInterrupt
+        if not self.chunks:
+            return b""
+        chunk = self.chunks.pop(0)
+        if len(chunk) > n:
+            self.chunks.insert(0, chunk[n:])
+            chunk = chunk[:n]
+        return chunk
+
+
+def fake_clock(step):
+    now = [0.0]
+
+    def clock():
+        now[0] += step
+        return now[0]
+
+    return clock
+
+
+def test_serial_source_waits_through_timeouts_until_the_deadline(tmp_path):
+    generated = tmp_path / "generated"
+    simulate(SIM_CONFIG, "valid", generated)
+    metadata = generated / "session_metadata.json"
+    stream = (generated / "stream.bin").read_bytes()
+    third = len(stream) // 3
+    port = FakePort([b"", stream[:third], b"", b"", stream[third:2 * third], b"",
+                     stream[2 * third:]])
+    source = packet_logger.SerialSource(port, 5.0, "COM9", clock=fake_clock(0.01))
+    manifest = record(source, tmp_path / "serial", LOGGER_CONFIG, metadata, ROOT, "COM9")
+    with (generated / "stream.bin").open("rb") as file_source:
+        from_file = record(file_source, tmp_path / "file", LOGGER_CONFIG, metadata, ROOT,
+                           "stream.bin")
+    # Timeouts are not the end of the session: every byte arrives, then the
+    # deadline (about 500 reads of 0.01 s) ends it.
+    assert (tmp_path / "serial" / "raw.bin").read_bytes() == stream
+    assert port.reads > 400
+    assert manifest["source"] == {"kind": "serial", "name": "COM9", "baudrate": 115200,
+                                  "duration_s": 5.0, "stopped_by": "duration",
+                                  "pyserial": __import__("serial").__version__}
+    for name in ("decode.json", "packets.csv", "samples.csv"):
+        assert manifest["outputs_sha256"][name] == from_file["outputs_sha256"][name]
+
+
+def test_ctrl_c_on_a_serial_port_still_writes_the_manifest(tmp_path):
+    generated = tmp_path / "generated"
+    simulate(SIM_CONFIG, "valid", generated)
+    stream = (generated / "stream.bin").read_bytes()
+    session = tmp_path / "session"
+    port = FakePort([stream], interrupt_after=1)
+    source = packet_logger.SerialSource(port, 60.0, "COM9", clock=fake_clock(0.01))
+    manifest = record(source, session, LOGGER_CONFIG,
+                      generated / "session_metadata.json", ROOT, "COM9")
+    chunk = json.loads(LOGGER_CONFIG.read_bytes())["read_chunk_bytes"]
+    assert (session / "raw.bin").read_bytes() == stream[:chunk]
+    assert manifest["source"]["stopped_by"] == "keyboard_interrupt"
+    assert (session / "session_manifest.json").exists()
+
+
+def test_serial_source_needs_a_positive_duration():
+    for duration in (0, -1.0):
+        with pytest.raises(ValueError):
+            packet_logger.SerialSource(FakePort([]), duration, "COM9")
+
+
+def test_open_serial_keeps_dtr_and_rts_deasserted_while_opening(monkeypatch):
+    import serial
+
+    events = []
+
+    class Port:
+        def __setattr__(self, name, value):
+            events.append((name, value))
+            object.__setattr__(self, name, value)
+
+        def open(self):
+            events.append(("open", None))
+
+    monkeypatch.setattr(serial, "Serial", Port)
+    port = packet_logger.open_serial("COM9", 115200)
+    assert port.port == "COM9" and port.baudrate == 115200
+    opened = events.index(("open", None))
+    assert events.index(("dtr", False)) < opened
+    assert events.index(("rts", False)) < opened
+
+
+@pytest.mark.parametrize("extra", [["--port", "COM9"],
+                                   ["--source-file", "x.bin", "--duration-s", "5"]])
+def test_cli_pairs_port_with_duration(monkeypatch, extra):
+    monkeypatch.setattr(sys, "argv", ["packet_logger.py", "record", *extra,
+                                      "--metadata", "m.json"])
+    with pytest.raises(SystemExit) as stopped:
+        packet_logger.main()
+    assert stopped.value.code == 2
+
+
 def test_v2_and_v3_inputs_are_not_mixed(tmp_path):
     with pytest.raises(ValueError):
         simulate(ROOT / "configs/hardware/packet_simulation.json", "crc",
