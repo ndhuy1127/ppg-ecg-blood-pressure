@@ -145,10 +145,11 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
      5 µs, [firmware/README.md](../../firmware/README.md) mục "Mốc `SAMP`"); kiểm xung
      đầu tiên sau `SYNCH` ứng với mẫu đầu tiên của FIFO (Packet Schema V0.2 mục 7.2).
 5. Tín hiệu nhân tạo qua cáp ECG (mạch chia áp ở
-   [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Trước
-   khi nối: chốt nút tham chiếu của mạch chia áp (GND của bo hay VCM/sleeve, việc còn
-   mở ở mục 8 của kế hoạch đó), vẽ sơ đồ đấu nối, đo mức vi sai và mức chung ở đầu
-   vào bằng oscilloscope. Chưa chốt thì không nối.
+   [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Nút
+   tham chiếu của mạch chia áp là sleeve (RL → R3 → VCM), không phải GND (chốt
+   2026-10-25; cách đấu và mức chờ đợi ở mục 3 của kế hoạch đó). Trước khi nối: vẽ
+   sơ đồ đấu nối, đo mức vi sai và mức chung ở đầu vào bằng oscilloscope; mức chung
+   phải nằm trong khoảng 0,29–1,39 V.
    - xung dương đưa vào LA (ring) so với RA (tip) cho mẫu ECG dương;
    - ETAG của mẫu hợp lệ;
    - bật phát hiện lead-off DC rồi tháo một đầu bấm: có cờ `DCLOFFINT`, packet
