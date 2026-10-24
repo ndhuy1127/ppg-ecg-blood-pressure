@@ -86,9 +86,13 @@ Kiểm đồ có sẵn ở lab trước, chỉ mua phần thiếu; chưa tra gi�
 
 Đặt gia công PCB ngay sau khi sửa bo đế (header J3, V1-draft4;
 `custom_board_proposal.md` A.2) và ERC/DRC sạch, song song với đợt 1, không chờ
-module (chốt 2026-10-24); lệch footprint thì làm lại PCB (A.6 mục 2). Danh sách
-lấy từ schematic KiCad V1-module
-(`hardware/kicad/v1_module/`).
+module (chốt 2026-10-24); lệch footprint thì làm lại PCB (A.6 mục 2). Trước khi gửi
+file: in tờ kiểm footprint tỉ lệ 1:1 của từng bo (lớp fab, courtyard, silkscreen,
+cạnh bo; mặt dưới in lật; kiểm thước 50 mm trên tờ in) và so các khoảng cách chính
+với bản vẽ của nhà sản xuất (hai hàng chân DevKitC 22,86 mm, header và lỗ vít của ba
+breakout); Gerber, file khoan và tờ kiểm xuất bằng `kicad-cli` vào `runs/` (Git bỏ
+qua), lần đầu ngày 2026-10-25 từ commit `98279b9`. Danh sách lấy từ schematic KiCad
+V1-module (`hardware/kicad/v1_module/`).
 
 | Bo | Ký hiệu | Linh kiện | SL |
 | --- | --- | --- | --- |
