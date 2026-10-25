@@ -66,7 +66,15 @@
 #define BOARD_PPG_SCL_GPIO 9
 #define BOARD_PPG_INT_GPIO 18
 
-/* BMI270 on SPI bus 2. */
+/* BMI270 on SPI bus 2. BOARD_IMU_REAL 1 reads it (drivers/bmi270.c, not run on a
+ * chip yet) instead of the fake IMU source; SPI 1 MHz to start, 2 MHz after the
+ * scope check through the cable (interface_power_sampling_v0.md). */
+#ifndef BOARD_IMU_REAL
+#define BOARD_IMU_REAL 0
+#endif
+#ifndef BOARD_IMU_SPI_HZ
+#define BOARD_IMU_SPI_HZ 1000000
+#endif
 #define BOARD_BMI_CS_GPIO 10
 #define BOARD_BMI_MOSI_GPIO 11
 #define BOARD_BMI_SCK_GPIO 12

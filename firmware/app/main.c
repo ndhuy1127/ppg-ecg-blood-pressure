@@ -10,6 +10,9 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include "bmi270.h"
+#include "bmi270_config.h"
+#include "bmi270_esp.h"
 #include "board_v1_module.h"
 #include "bootloader_random.h"
 #include "die_temp.h"
@@ -744,6 +747,151 @@ static void ecg_reader_task(void *arg)
 
 #endif /* BOARD_ECG_REAL */
 
+#if BOARD_IMU_REAL
+/*
+ * IMU from a BMI270 (drivers/bmi270.c; not run on a chip yet), V0.2 sections 3-5.
+ * Every INT1 rising edge (FIFO watermark, 10 frames), and every IMU_POLL_MS
+ * without one (INT1 is non-latched and stays high while the FIFO is at or above
+ * the watermark, so a late reader gets no new edge), the reader reads
+ * FIFO_LENGTH, takes T_ANCHOR_US right after it, and once 10 frames wait (or the
+ * FIFO is full) reads exactly the latched frames in one burst. imu_plan_read
+ * gives the index, the chunks of at most 32 frames (bit 7), bit 0 when full and
+ * the re-anchor after it (bit 5); a failed latch or read sends nothing and the
+ * next read re-anchors (bits 3 and 5). A read that failed may have taken some
+ * frames out, so the FIFO is flushed before reading on (bit 0 kept if it was
+ * full): frames kept from before a loss must not join later ones; if the flush
+ * fails too, the chip is started again (its start ends with a flush). A FIFO
+ * length that is not whole frames calls for a check at the next wake. Every
+ * IMU_CHECK_MS
+ * bmi270_check makes sure the chip was not reset or broken; if it was, the chip
+ * is started again every IMU_RESTART_MS until that works, with no packet and
+ * no INT1 interrupt meanwhile, and the next read re-anchors (bits 3 and 5). The
+ * first start is tried IMU_START_TRIES times before giving up.
+ */
+#define IMU_FS_NOMINAL_MHZ 100000u
+#define IMU_WATERMARK_FRAMES 10u
+#define IMU_POLL_MS 20
+#define IMU_CHECK_MS 1000
+#define IMU_RESTART_MS 100
+#define IMU_START_TRIES 10
+
+static const uint8_t IMU_CHANNELS[BMI270_AXES] = {
+    PKT_CH_ACC_X, PKT_CH_ACC_Y, PKT_CH_ACC_Z, PKT_CH_GYR_X, PKT_CH_GYR_Y, PKT_CH_GYR_Z};
+
+static bmi270_bus_t s_imu_bus;
+static bmi270_regs_t s_imu_regs;
+
+static void imu_give_up(int err)
+{
+    ESP_LOGE(TAG, "BMI270 start failed (%d): no IMU packets", err);
+    bmi270_esp_stop();
+    for (;;) {
+        vTaskSuspend(NULL); /* keep the handle valid for an ISR in flight */
+    }
+}
+
+static void imu_reader_task(void *arg)
+{
+    (void)arg;
+    ESP_ERROR_CHECK(bmi270_esp_init(&s_imu_bus, BOARD_IMU_SPI_HZ,
+                                    xTaskGetCurrentTaskHandle()));
+    bmi270_v1_regs(&s_imu_regs);
+    bmi270_err_t err = BMI270_ERR_BUS;
+    for (int i = 0; i < IMU_START_TRIES && err != BMI270_OK; i++) {
+        if (i > 0) {
+            vTaskDelay(pdMS_TO_TICKS(IMU_RESTART_MS));
+        }
+        err = bmi270_start(&s_imu_bus, &s_imu_regs, bmi270_config_file);
+    }
+    ESP_LOGI(TAG, "BMI270 start %d, SPI %u Hz", (int)err, (unsigned)BOARD_IMU_SPI_HZ);
+    if (err != BMI270_OK) {
+        imu_give_up((int)err);
+    }
+    bmi270_esp_int_enable(true);
+    imu_index_t index;
+    imu_index_init(&index, 0);
+    imu_chunk_t chunks[IMU_MAX_CHUNKS];
+    static bmi270_frames_t frames;
+    bool restart = false;
+    int64_t next_check = esp_timer_get_time() + IMU_CHECK_MS * 1000LL;
+    int64_t next_restart = 0;
+    for (;;) {
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(IMU_POLL_MS));
+        int64_t now = esp_timer_get_time();
+        if (!restart && now >= next_check) {
+            next_check = now + IMU_CHECK_MS * 1000LL;
+            err = bmi270_check(&s_imu_bus, &s_imu_regs);
+            if (err != BMI270_OK) {
+                ESP_LOGE(TAG, "BMI270 check failed (%d): starting it again", (int)err);
+                imu_index_read_failed(&index);
+                bmi270_esp_int_enable(false);
+                restart = true;
+            }
+        }
+        if (restart) {
+            if (now < next_restart) {
+                continue;
+            }
+            next_restart = now + IMU_RESTART_MS * 1000LL;
+            err = bmi270_start(&s_imu_bus, &s_imu_regs, bmi270_config_file);
+            if (err != BMI270_OK) {
+                ESP_LOGE(TAG, "BMI270 start failed (%d), retrying", (int)err);
+                continue;
+            }
+            ESP_LOGW(TAG, "BMI270 started again");
+            bmi270_esp_int_enable(true);
+            restart = false;
+            next_check = esp_timer_get_time() + IMU_CHECK_MS * 1000LL;
+            continue;
+        }
+        bmi270_latch_t latch;
+        err = bmi270_latch(&s_imu_bus, &latch);
+        if (err != BMI270_OK) {
+            imu_index_read_failed(&index);
+            if (err == BMI270_ERR_STATE) {
+                next_check = now; /* not a fill level: is the chip still there? */
+            }
+            continue;
+        }
+        uint64_t anchor = esp_timer_get_time(); /* right after FIFO_LENGTH (section 3) */
+        if (latch.frames == 0 || (latch.frames < IMU_WATERMARK_FRAMES && !latch.full)) {
+            continue;
+        }
+        if (bmi270_read_frames(&s_imu_bus, latch.frames, &frames) != BMI270_OK) {
+            imu_index_read_failed(&index);
+            if (latch.full) {
+                index.pending |= PKT_STATUS_AFE_FIFO_OVERFLOW; /* frames were lost */
+            }
+            if (bmi270_flush(&s_imu_bus) != BMI270_OK) {
+                ESP_LOGE(TAG, "BMI270 FIFO flush failed: starting it again");
+                bmi270_esp_int_enable(false);
+                restart = true;
+            }
+            continue;
+        }
+        size_t n = imu_plan_read(&index, latch.frames, anchor, latch.full, IMU_FS_NOMINAL_MHZ,
+                                 PKT_STATUS_LATENCY_UNMEASURED, chunks, IMU_MAX_CHUNKS);
+        for (size_t c = 0; c < n; c++) {
+            for (unsigned axis = 0; axis < BMI270_AXES; axis++) {
+                pkt_t p = {
+                    .channel_id = IMU_CHANNELS[axis],
+                    .session_id = s_session_id,
+                    .first_sample_index = chunks[c].first_index,
+                    .t_anchor_us = anchor,
+                    .t_first_us = chunks[c].t_first_us,
+                    .fs_nominal_mhz = IMU_FS_NOMINAL_MHZ,
+                    .sample_count = chunks[c].count,
+                    .status = chunks[c].status,
+                };
+                for (uint16_t i = 0; i < chunks[c].count; i++) {
+                    p.data[i] = frames.value[chunks[c].offset + i][axis];
+                }
+                enqueue(&p);
+            }
+        }
+    }
+}
+#else
 /*
  * IMU reads (V0.2 sections 3-5), with the fake source in place of a BMI270.
  * The six axes of a read share FIRST_SAMPLE_INDEX, T_ANCHOR_US and STATUS;
@@ -809,6 +957,7 @@ static void imu_reader_task(void *arg)
         }
     }
 }
+#endif /* BOARD_IMU_REAL */
 
 /* Falling edge of the t0 button: keep the time of the first edge. */
 static void t0_isr(void *arg)
@@ -1011,12 +1160,13 @@ void app_main(void)
         abort();
     }
     ESP_LOGI(TAG, "streaming %s ECG 0xE1 %u us x %u, %s PPG 0xF1-0xF3 %u us x %u, "
-                  "IMU 0xA1-0xA6 %u us x %u%s, t0 on GPIO%d",
+                  "%s IMU 0xA1-0xA6 %u us x %u%s, t0 on GPIO%d",
              BOARD_ECG_REAL ? "MAX30001" : "FAKE", (unsigned)ECG_FAKE.period_us,
              (unsigned)ECG_FAKE.batch, BOARD_PPG_REAL ? "MAX30101" : "FAKE",
-             (unsigned)PPG_FAKE.period_us,
-             (unsigned)PPG_FAKE.batch, (unsigned)IMU_FAKE.period_us, (unsigned)IMU_FAKE.batch,
-             FAKE_IMU_STALLS ? " with read stalls" : "", BOARD_T0_GPIO);
+             (unsigned)PPG_FAKE.period_us, (unsigned)PPG_FAKE.batch,
+             BOARD_IMU_REAL ? "BMI270" : "FAKE", (unsigned)IMU_FAKE.period_us,
+             (unsigned)IMU_FAKE.batch, FAKE_IMU_STALLS ? " with read stalls" : "",
+             BOARD_T0_GPIO);
     if (BOARD_PPG_READ_PERIOD_MS > 0) {
         ESP_LOGW(TAG, "PPG read every %d ms (timer), not on PPG_RDY", BOARD_PPG_READ_PERIOD_MS);
     }

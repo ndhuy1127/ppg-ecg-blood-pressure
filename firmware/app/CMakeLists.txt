@@ -3,6 +3,7 @@ idf_component_register(
          "../drivers/fake_afe.c" "../drivers/samp_edges.c" "../drivers/samp_capture.c"
          "../drivers/max30001.c" "../drivers/max30001_esp.c"
          "../drivers/max30101.c" "../drivers/max30101_esp.c"
+         "../drivers/bmi270.c" "../drivers/bmi270_config.c" "../drivers/bmi270_esp.c"
     INCLUDE_DIRS "../include" "../boards"
     PRIV_REQUIRES
         bootloader_support
