@@ -101,6 +101,11 @@ typedef struct {
  * headerless FIFO of both sensors, stop on full, watermark 10 frames on INT1. */
 void bmi270_v1_regs(bmi270_regs_t *regs);
 
+/* The 14 register words of a 0xD2 packet (Packet Schema V0.2 section 12),
+ * address << 24 | value, in the order of section 3. Returns 14. */
+#define BMI270_CONFIG_WORDS 14u
+unsigned bmi270_config_words(const bmi270_regs_t *regs, uint32_t out[BMI270_CONFIG_WORDS]);
+
 bmi270_err_t bmi270_write(const bmi270_bus_t *bus, uint8_t reg, const uint8_t *data, size_t n);
 bmi270_err_t bmi270_read(const bmi270_bus_t *bus, uint8_t reg, uint8_t *data, size_t n);
 

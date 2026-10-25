@@ -112,6 +112,34 @@ bool pkt_device_info_data(const uint8_t elf_sha256[32], const char *app_version,
     return true;
 }
 
+uint16_t pkt_afe_config_data(uint8_t afe, uint8_t source, bool configured, uint32_t generation,
+                             const uint32_t *regs, uint16_t n,
+                             int32_t out[PKT_MAX_SAMPLES])
+{
+    bool with_regs = source == PKT_AFE_SOURCE_CHIP && configured;
+    if (!with_regs) {
+        n = 0;
+    }
+    if (n > PKT_AFE_MAX_REGS) {
+        return 0;
+    }
+    const uint32_t head[5] = {PKT_AFE_CONFIG_LAYOUT, afe, source, configured ? 1u : 0u,
+                              generation};
+    memcpy(out, head, sizeof(head)); /* same bit patterns in int32 */
+    if (n > 0) {
+        memcpy(&out[5], regs, n * sizeof(uint32_t));
+    }
+    return (uint16_t)(5u + n);
+}
+
+void pkt_command_ack_data(uint8_t cmd_id, uint16_t cmd_seq, uint8_t result,
+                          uint32_t generation, int32_t out[PKT_COMMAND_ACK_COUNT])
+{
+    const uint32_t words[PKT_COMMAND_ACK_COUNT] = {PKT_COMMAND_ACK_LAYOUT, cmd_id, cmd_seq,
+                                                   result, generation};
+    memcpy(out, words, sizeof(words));
+}
+
 static bool encodes_to(const pkt_t *p, const uint8_t *expected, size_t size)
 {
     uint8_t buf[PKT_MAX_SIZE];

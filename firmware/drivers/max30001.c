@@ -50,6 +50,23 @@ void max30001_v1_regs(max30001_regs_t *regs)
     regs->en_int2 = MAX30001_EN_SAMP | 1u;
 }
 
+unsigned max30001_config_words(const max30001_regs_t *r, uint32_t out[MAX30001_CONFIG_WORDS])
+{
+    const struct {
+        uint8_t reg;
+        uint32_t value;
+    } pairs[MAX30001_CONFIG_WORDS] = {
+        {MAX30001_CNFG_GEN, r->cnfg_gen},   {MAX30001_CNFG_CAL, r->cnfg_cal},
+        {MAX30001_CNFG_EMUX, r->cnfg_emux}, {MAX30001_CNFG_ECG, r->cnfg_ecg},
+        {MAX30001_MNGR_INT, r->mngr_int},   {MAX30001_MNGR_DYN, r->mngr_dyn},
+        {MAX30001_EN_INT, r->en_int},       {MAX30001_EN_INT2, r->en_int2},
+    };
+    for (unsigned i = 0; i < MAX30001_CONFIG_WORDS; i++) {
+        out[i] = (uint32_t)pairs[i].reg << 24 | (pairs[i].value & 0xFFFFFFu);
+    }
+    return MAX30001_CONFIG_WORDS;
+}
+
 void max30001_cal_regs(const max30001_regs_t *base, max30001_regs_t *regs)
 {
     *regs = *base;

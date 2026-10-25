@@ -15,8 +15,12 @@
 #define BOARD_LED_STAT_GPIO 5
 
 /* J3 pin 1 (pin 2 is GND): pulse output for the 10-minute sync stimulus
- * (hardware/test_reports/sync_10min_test_plan.md, section 3). */
+ * (hardware/test_reports/sync_10min_test_plan.md, section 3). BOARD_STIM 1
+ * drives it and sends event packets with code 3 (main.c, stim_plan.c). */
 #define BOARD_STIM_GPIO 6
+#ifndef BOARD_STIM
+#define BOARD_STIM 0
+#endif
 
 /* MAX30001 on SPI bus 1. */
 #define BOARD_ECG_CS_GPIO 7

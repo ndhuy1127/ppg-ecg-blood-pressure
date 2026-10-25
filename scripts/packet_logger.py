@@ -6,6 +6,8 @@ times; packets are decoded and checked, and session_manifest.json is written
 last. replay: the same decode/check code on an existing raw file; --expect
 compares the result hashes with a session manifest. record --port reads a serial
 port (pyserial) until --duration-s elapses or Ctrl+C (docs/protocol/packet_logger.md).
+record --commands also sends commands to the device from the recording's
+command_inbox.jsonl (scripts/device_command.py; Packet Schema V0.2 section 13).
 """
 
 import argparse
@@ -23,7 +25,9 @@ from pathlib import Path
 CODE_FILES = (
     "scripts/packet_logger.py", "software/data_io/packet_wire.py",
     "software/data_io/packet_receiver.py", "software/_provenance.py",
+    "software/data_io/command_wire.py", "software/data_io/command_desk.py",
 )
+COMMAND_FILES = ("command_inbox.jsonl", "commands_sent.jsonl")
 DECODE_OUTPUTS = ("decode.json", "packets.csv", "samples.csv")
 
 
@@ -101,6 +105,7 @@ class SerialSource:
         self.duration_s = duration_s
         self.deadline = clock() + duration_s
         self.stopped_by = None
+        self.on_idle = None  # called after each read timeout with no bytes
 
     def read(self, n):
         try:
@@ -108,11 +113,18 @@ class SerialSource:
                 chunk = self.port.read(n)
                 if chunk:
                     return bytes(chunk)
+                if self.on_idle is not None:
+                    self.on_idle()
         except KeyboardInterrupt:
             self.stopped_by = "keyboard_interrupt"
             return b""
         self.stopped_by = self.stopped_by or "duration"
         return b""
+
+    def write(self, data):
+        """Command bytes to the device; returns the count written."""
+        written = self.port.write(data)
+        return len(data) if written is None else written
 
     def describe(self):
         import serial
@@ -122,8 +134,11 @@ class SerialSource:
                 "pyserial": serial.__version__}
 
 
-def open_serial(name, baudrate, timeout_s=0.1):
+def open_serial(name, baudrate, timeout_s=0.1, write_timeout_s=0.5):
     """Open ``name`` with DTR and RTS deasserted.
+
+    A write that does not finish within ``write_timeout_s`` raises, so a stuck
+    port cannot stall the recording (record --commands).
 
     The ESP32-S3 USB Serial/JTAG port resets the chip on some DTR/RTS
     transitions (as esptool uses them), so both stay deasserted while opening.
@@ -133,17 +148,22 @@ def open_serial(name, baudrate, timeout_s=0.1):
 
     port = serial.Serial()
     port.port, port.baudrate, port.timeout = name, baudrate, timeout_s
+    port.write_timeout = write_timeout_s
     port.dtr = False
     port.rts = False
     port.open()
     return port
 
 
-def record(source, output, config_path, metadata_path, repo, source_name):
+def record(source, output, config_path, metadata_path, repo, source_name,
+           commands=False, clock=time.monotonic):
     """Log ``source`` until ``read`` returns b"" (end of session).
 
     ``source`` is any object with ``read(n) -> bytes``: an open file, or a
-    ``SerialSource`` (its ``describe()`` goes into the manifest).
+    ``SerialSource`` (its ``describe()`` goes into the manifest). With
+    ``commands`` the source also needs ``write(bytes)``; a fresh
+    ``command_inbox.jsonl`` is created in ``output`` and served by a
+    ``CommandDesk`` after every read, bytes or not (``on_idle``).
     """
     from software.data_io.packet_receiver import (
         LOGGER_VERSION, analyze_stream, render_outputs,
@@ -162,22 +182,42 @@ def record(source, output, config_path, metadata_path, repo, source_name):
               "session_metadata.json": metadata_bytes}
     for name, payload in inputs.items():
         _write(output, name, payload)
+    desk = journal = None
+    if commands:
+        from software.data_io.command_desk import CommandDesk
+
+        if not hasattr(source, "write"):
+            raise ValueError("Commands need a source that can be written to")
+        (output / COMMAND_FILES[0]).open("xb").close()
+        journal = (output / COMMAND_FILES[1]).open("x", encoding="utf-8", newline="\n")
+        desk = CommandDesk(output / COMMAND_FILES[0], journal, source.write, clock)
+        if hasattr(source, "on_idle"):
+            source.on_idle = desk.service
     started = datetime.now(timezone.utc).isoformat()
     origin = time.monotonic_ns()
     decoder, packets, chunks = StreamDecoder(config["wire_versions"]), [], []
-    with (output / "raw.bin").open("xb") as raw:
-        while True:
-            chunk = source.read(config["read_chunk_bytes"])
-            if not isinstance(chunk, bytes):
-                raise ValueError("Byte source must return bytes")
-            if not chunk:
-                break
-            received = time.monotonic_ns() - origin
-            raw.write(chunk)
-            chunks.append((len(chunks), decoder.bytes_seen, len(chunk), received))
-            packets += decoder.feed(chunk)
-        raw.flush()
-        os.fsync(raw.fileno())
+    try:
+        with (output / "raw.bin").open("xb") as raw:
+            while True:
+                chunk = source.read(config["read_chunk_bytes"])
+                if not isinstance(chunk, bytes):
+                    raise ValueError("Byte source must return bytes")
+                if not chunk:
+                    break
+                received = time.monotonic_ns() - origin
+                raw.write(chunk)
+                chunks.append((len(chunks), decoder.bytes_seen, len(chunk), received))
+                new = decoder.feed(chunk)
+                packets += new
+                if desk is not None:
+                    desk.observe([item.packet for item in new])
+                    desk.service()
+            raw.flush()
+            os.fsync(raw.fileno())
+    finally:
+        if desk is not None:
+            desk.close()
+            journal.close()
     packets += decoder.finish()
     ended = datetime.now(timezone.utc).isoformat()
     result, rows, samples = analyze_stream(packets, decoder, config, metadata)
@@ -196,13 +236,16 @@ def record(source, output, config_path, metadata_path, repo, source_name):
                      packet.seq, index, chunks[index][3]))
     files = {
         **outputs,
+        **({name: (output / name).read_bytes() for name in COMMAND_FILES}
+           if commands else {}),
         "rx_chunks.csv": _csv(("chunk", "stream_offset", "bytes", "t_rx_monotonic_ns"),
                               chunks),
         "t_rx_packets.csv": _csv(("stream_offset", "session_id", "channel_id", "seq",
                                   "chunk", "t_rx_monotonic_ns"), t_rx),
     }
     for name, payload in files.items():
-        _write(output, name, payload)
+        if name not in COMMAND_FILES:  # written during the recording
+            _write(output, name, payload)
     files.update(inputs)
 
     # A session that mixes versions appears once per version in the result.
@@ -238,6 +281,9 @@ def record(source, output, config_path, metadata_path, repo, source_name):
                 "sha256": outputs_sha256["raw.bin"]},
         "decode": result["decode"], "issue_counts": result["issue_counts"],
         "live_equals_offline_decode": True,
+        # Section 13: commands sent; the decode above depends on raw.bin only.
+        "commands": ({"inbox": COMMAND_FILES[0], "journal": COMMAND_FILES[1]}
+                     if commands else None),
         "inputs_sha256": input_hashes, "outputs_sha256": outputs_sha256,
         "provenance": _provenance(repo),
         "limitations": result["limitations"],
@@ -315,6 +361,10 @@ def main():
                                  help="Recording length for --port (Ctrl+C stops early)")
             command.add_argument("--baud", type=int, default=115200,
                                  help="Baud rate for --port (ignored by native USB)")
+            command.add_argument("--commands", action="store_true",
+                                 help="With --port: send commands written to the "
+                                      "recording's command_inbox.jsonl "
+                                      "(scripts/device_command.py)")
         else:
             command.add_argument("--raw", type=Path, required=True)
             command.add_argument("--expect", type=Path,
@@ -328,13 +378,15 @@ def main():
     args = parser.parse_args()
     if args.command == "record" and (args.port is None) != (args.duration_s is None):
         parser.error("--port and --duration-s go together")
+    if args.command == "record" and args.commands and args.port is None:
+        parser.error("--commands needs --port")
     try:
         if args.command == "record" and args.port is not None:
             port = open_serial(args.port, args.baud)
             try:
                 source = SerialSource(port, args.duration_s, args.port)
                 summary = record(source, args.output, args.config, args.metadata,
-                                 repo, args.port)
+                                 repo, args.port, commands=args.commands)
             finally:
                 port.close()
         elif args.command == "record":

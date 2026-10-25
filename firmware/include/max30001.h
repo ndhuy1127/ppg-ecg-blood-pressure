@@ -110,6 +110,13 @@ typedef struct {
 /* Decided V1-module configuration (see the file comment). */
 void max30001_v1_regs(max30001_regs_t *regs);
 
+/* The 8 register words of a 0xD2 packet (Packet Schema V0.2 section 12),
+ * address << 24 | 24-bit value: CNFG_GEN, CNFG_CAL, CNFG_EMUX, CNFG_ECG,
+ * MNGR_INT, MNGR_DYN, EN_INT, EN_INT2. Returns 8. */
+#define MAX30001_CONFIG_WORDS 8u
+unsigned max30001_config_words(const max30001_regs_t *regs,
+                               uint32_t out[MAX30001_CONFIG_WORDS]);
+
 /* The same configuration with the internal calibration source on both inputs
  * (bipolar 0.5 mV square wave at 1 Hz, inputs disconnected, p. 50-51): a
  * bring-up self test without a person or a signal generator. */

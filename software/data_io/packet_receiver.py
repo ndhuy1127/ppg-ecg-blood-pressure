@@ -15,6 +15,8 @@ from collections import Counter
 from fractions import Fraction
 
 from software.data_io.packet_wire import (
+    AFE_CONFIG_CHANNEL, AFE_CONFIG_LAYOUT, AFES, COMMAND_ACK_CHANNEL,
+    COMMAND_ACK_LAYOUT, COMMAND_NAMES, COMMAND_RESULTS,
     CHANNELS, DEVICE_INFO_CHANNEL, DEVICE_INFO_COUNT, DEVICE_INFO_LAYOUT, ECG_CHANNEL,
     EVENT_CHANNEL, IMU_CHANNELS, MAX_SAMPLE_COUNT, PPG_CHANNELS, SAMP_ANCHOR_BIT,
     STATUS_BITS, TEMP_CHANNEL, TEMP_FS_MHZ, WIRE_VERSION, WIRE_VERSION_V02,
@@ -51,7 +53,13 @@ ORDINAL_CHANNELS = {
     EVENT_CHANNEL: ("events_lost_before_send", "event_ordinal_inconsistent"),
     DEVICE_INFO_CHANNEL: ("device_info_lost_before_send",
                           "device_info_ordinal_inconsistent"),
+    AFE_CONFIG_CHANNEL: ("afe_config_lost_before_send",
+                         "afe_config_ordinal_inconsistent"),
+    COMMAND_ACK_CHANNEL: ("command_ack_lost_before_send",
+                          "command_ack_ordinal_inconsistent"),
 }
+# Channels that carry no samples and need no metadata entry (V0.2 sections 12-13).
+CONTROL_CHANNELS = (AFE_CONFIG_CHANNEL, COMMAND_ACK_CHANNEL)
 CONFIG_FIELDS = {
     "schema_version", "packet_schemas", "status", "wire_versions",
     "anchor_tolerance_samples", "anchor_tolerance_extra_us",
@@ -304,7 +312,7 @@ def analyze_stream(decoded, decoder, config, metadata):
 
     result_sessions, samples = [], []
     for (session_id, version), channels in sessions.items():
-        summaries, events, firsts, identities = {}, [], {}, []
+        summaries, events, firsts, records = {}, [], {}, {}
         for channel_id in sorted(channels):
             summary, channel_events, channel_samples, first, info = _check_channel(
                 session_id, version, channel_id, channels[channel_id], config,
@@ -313,14 +321,15 @@ def analyze_stream(decoded, decoder, config, metadata):
             summaries[channel_key(channel_id)] = summary
             events += channel_events
             samples += channel_samples
-            identities += info
+            records[channel_id] = info
             if first is not None:
                 firsts[channel_id] = first
         # A declared data channel with no decoded packet at all in this session
         # (a dead AFE, say) would otherwise leave no trace. Events may be absent;
         # device info has its own check below.
         missing = [key for key in sorted(metadata["channels"])
-                   if int(key, 16) not in (EVENT_CHANNEL, DEVICE_INFO_CHANNEL)
+                   if int(key, 16) not in (EVENT_CHANNEL, DEVICE_INFO_CHANNEL,
+                                           *CONTROL_CHANNELS)
                    and int(key, 16) not in channels]
         for key in missing:
             issue("channel_missing", session_id=session_id, version=version,
@@ -328,8 +337,12 @@ def analyze_stream(decoded, decoder, config, metadata):
         result_sessions.append({
             "session_id": session_id, "packet_schema": PACKET_SCHEMAS[version],
             "channels": summaries, "channels_missing": missing, "events": events,
-            "device_info": _session_device_info(session_id, version, identities,
-                                                metadata, issue),
+            "device_info": _session_device_info(
+                session_id, version, records.get(DEVICE_INFO_CHANNEL, []), metadata,
+                issue),
+            **_session_control(session_id, version,
+                               records.get(AFE_CONFIG_CHANNEL, []),
+                               records.get(COMMAND_ACK_CHANNEL, []), metadata, issue),
             "channel_offset": _channel_offset(session_id, firsts, config, metadata,
                                               issue),
         })
@@ -375,6 +388,21 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
         if seq in conflicts:
             rows[seq]["disposition"] = "conflicting_duplicate"
     present = [seq for seq in seqs if seq not in conflicts]
+    if channel_id in CONTROL_CHANNELS:
+        # V0.2 sections 12-13: no samples, no metadata entry, no anchor check.
+        summary = {
+            "name": CHANNELS[channel_id], "packets_received": len(seqs),
+            "conflicting_duplicates": len(conflicts), "missing_packets": missing,
+            "first_seq": seqs[0], "last_seq": seqs[-1],
+            "status_bit_counts": _status_counts((received[s].packet for s in seqs),
+                                                version, channel_id),
+        }
+        decode = (decode_afe_config if channel_id == AFE_CONFIG_CHANNEL
+                  else decode_command_ack)
+        valid = _check_control(channel_id, decode, present, received, rows, where,
+                               issue)
+        summary["valid_packets"] = len(valid)
+        return summary, [], [], None, valid
     # V0.2 section 11.2: a 0xB1 header outside its contract is not trusted.
     untrusted = set()
     if channel_id == TEMP_CHANNEL:
@@ -593,6 +621,136 @@ def _check_device_info(present, received, rows, where, issue):
         else:
             identities.append((seq, identity))
     return identities
+
+
+def decode_afe_config(packet):
+    """Payload of a V0.2 0xD2 packet (section 12) as ``(config, problem)``."""
+    data = [word & 0xFFFFFFFF for word in packet.data]
+    if packet.fs_nominal_mhz != 0 or packet.t_first_us != packet.t_anchor_us:
+        return None, "header"
+    if packet.status & ~MCU_BUFFER_BIT:
+        return None, "status"
+    if len(data) < 5:
+        return None, "sample_count"
+    layout, afe, source, state, generation = data[:5]
+    words = data[5:]
+    if layout != AFE_CONFIG_LAYOUT:
+        return None, "layout"
+    if afe not in AFES:
+        return None, "afe"
+    if source not in (0, 1) or state not in (0, 1):
+        return None, "source_or_state"
+    name, _, addresses, bits = AFES[afe]
+    configured = source == 1 and state == 1
+    if (source == 0 and generation != 0) or (configured and generation < 1):
+        return None, "generation"
+    if not configured:
+        if words:
+            return None, "registers"
+        registers = {}
+    else:
+        if [w >> 24 for w in words] != list(addresses) or any(
+            (w & 0xFFFFFF) >> bits for w in words
+        ):
+            return None, "registers"
+        width = bits // 4
+        registers = {f"0x{w >> 24:02X}": f"0x{w & 0xFFFFFF:0{width}X}" for w in words}
+    return {"afe": name, "source": "chip" if source else "fake",
+            "configured": bool(state), "generation": generation,
+            "registers": registers}, None
+
+
+def decode_command_ack(packet):
+    """Payload of a V0.2 0xD3 packet (section 13) as ``(ack, problem)``."""
+    data = [word & 0xFFFFFFFF for word in packet.data]
+    if packet.fs_nominal_mhz != 0 or packet.t_first_us != packet.t_anchor_us:
+        return None, "header"
+    if packet.status & ~MCU_BUFFER_BIT:
+        return None, "status"
+    if len(data) != 5:
+        return None, "sample_count"
+    layout, cmd_id, cmd_seq, result, generation = data
+    if layout != COMMAND_ACK_LAYOUT:
+        return None, "layout"
+    if cmd_id > 0xFF or cmd_seq > 0xFFFF or result not in COMMAND_RESULTS:
+        return None, "range"
+    set_led_done = COMMAND_NAMES.get(cmd_id) == "set_ppg_led" and result == 0
+    if (generation >= 1) != set_led_done:
+        return None, "generation"
+    return {"cmd_id": cmd_id, "cmd": COMMAND_NAMES.get(cmd_id), "cmd_seq": cmd_seq,
+            "result": COMMAND_RESULTS[result], "generation": generation}, None
+
+
+def _check_control(channel_id, decode, present, received, rows, where, issue):
+    """0xD2 / 0xD3: ordinal against SEQ, then payload; valid ones as
+    ``(seq, t_anchor_us, payload)`` in SEQ order."""
+    _ordinals(channel_id, present, received, where, issue)
+    code = "afe_config" if channel_id == AFE_CONFIG_CHANNEL else "command_ack"
+    valid = []
+    for seq in present:
+        packet = received[seq].packet
+        payload, problem = decode(packet)
+        rows[seq]["disposition"] = code if problem is None else f"{code}_invalid"
+        if problem is not None:
+            issue(f"{code}_invalid", **where, seq=seq, problem=problem)
+        else:
+            valid.append((seq, packet.t_anchor_us, payload))
+    return valid
+
+
+def _session_control(session_id, version, configs, acks, metadata, issue):
+    """Session ``afe_config`` and ``commands`` (V0.2 sections 12-13); V0.1: None."""
+    if version < WIRE_VERSION_V02:
+        return {"afe_config": None, "commands": None}
+    where = {"session_id": session_id}
+    by_afe, highest, images = {}, {}, {}
+    for seq, t_anchor, config in configs:
+        name = config["afe"]
+        epochs = by_afe.setdefault(name, [])
+        state = {k: config[k] for k in ("source", "configured", "generation",
+                                        "registers")}
+        # Generations only go up, and one generation has one register image,
+        # whatever came between (a down state, say).
+        if config["generation"] < highest.get(name, 0):
+            issue("afe_config_generation_backwards", **where, afe=name, seq=seq)
+        highest[name] = max(highest.get(name, 0), config["generation"])
+        if config["source"] == "chip" and config["configured"]:
+            known = images.setdefault((name, config["generation"]),
+                                      config["registers"])
+            if known != config["registers"]:
+                issue("afe_config_changed_in_generation", **where, afe=name, seq=seq)
+        if not epochs or {k: epochs[-1][k] for k in state} != state:
+            epochs.append({"first_seq": seq, "t_anchor_us": t_anchor, **state,
+                           "packets": 0})
+        epochs[-1]["packets"] += 1
+    if metadata["source_type"] == "DEVICE":
+        declared = {int(key, 16) for key in metadata["channels"]}
+        for afe_id, (name, channels, _, _) in sorted(AFES.items()):
+            if not declared & set(channels):
+                continue
+            epochs = by_afe.get(name, [])
+            if not epochs:
+                issue("afe_config_missing", **where, afe=name)
+            for epoch in epochs:
+                if epoch["source"] == "fake":
+                    issue("afe_fake_source", **where, afe=name, seq=epoch["first_seq"])
+                elif not epoch["configured"]:
+                    issue("afe_not_configured", **where, afe=name,
+                          seq=epoch["first_seq"])
+    generations = {e["generation"] for e in by_afe.get(AFES[2][0], [])
+                   if e["configured"]}
+    commands = []
+    for seq, t_anchor, ack in acks:
+        if ack["generation"] >= 1 and ack["generation"] not in generations:
+            issue("command_ack_without_config", **where, seq=seq,
+                  generation=ack["generation"])
+        if ack["result"] != "ok":
+            issue("command_failed", **where, seq=seq, cmd_id=ack["cmd_id"],
+                  cmd_seq=ack["cmd_seq"], result=ack["result"])
+        commands.append({"seq": seq, "t_anchor_us": t_anchor, **ack})
+    return {"afe_config": {name: by_afe.get(name, [])
+                           for name, _, _, _ in AFES.values()},
+            "commands": commands}
 
 
 def _session_device_info(session_id, version, identities, metadata, issue):

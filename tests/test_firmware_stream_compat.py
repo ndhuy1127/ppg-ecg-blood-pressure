@@ -7,7 +7,9 @@ three slots every 5000 us read 8 at a time and sharing one anchor, fake IMU
 with six axes every 10 000 us read 10 at a time and sharing one anchor (no
 read stalls: those are in test_firmware_imu_plan.py), fake die temperature 0xB1
 once per 1 s tick (started at the next 5 ms PPG wake, 29 ms conversion, read
-out at the wake after; V0.2 section 11, no bit 4), t0 event
+out at the wake after; V0.2 section 11, no bit 4), AFE configuration 0xD2 of the
+three fake sources (source fake, generation 0) at start and every 10 s (V0.2
+section 12), t0 event
 packets, device info packets 0xD1 at start and every 10 s with an ordinal that
 counts dropped ones, SEQ assigned at send per channel, STATUS bit 4 on data
 packets, bit 1 after an MCU queue drop, bits 0, 1 and 5 of a dropped or
@@ -101,6 +103,14 @@ def produced(duration_us, seed=7, isr_losses=(), ppg_delay=False):
             channel_id=TEMP, first_sample_index=tick, t_anchor_us=anchor,
             t_first_us=anchor, fs_nominal_mhz=1000, status=0,
             data=(value_of(TEMP, tick),))))
+    ordinal = 0
+    for t in range(0, duration_us, INFO_PERIOD_US):
+        # The control task: each fake AFE's state since boot, at start and every 10 s.
+        for afe in (1, 2, 3):
+            items.append((t, dict(channel_id=0xD2, first_sample_index=ordinal,
+                                  t_anchor_us=0, t_first_us=0, fs_nominal_mhz=0,
+                                  status=0, data=(1, afe, 0, 1, 0))))
+            ordinal += 1
     for ordinal, t in enumerate(range(0, duration_us, INFO_PERIOD_US)):
         # t = 0 sorts before every data packet: sent right after USB starts.
         items.append((t - 1, dict(channel_id=INFO, first_sample_index=ordinal,
@@ -222,9 +232,9 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
                      usb_losses={ecg[5001], ppg2[3000]})
     result, _, samples = analyze(payload)
     assert result["issue_counts"] == {"missing_packets": 2, "skipped_bytes": 1}
-    # docs/protocol/packet_logger.md: 100 866 packets (60 of them 0xD1, 36 000
-    # IMU, 600 0xB1), 1 027 792 samples.
-    assert result["decode"]["packets_decoded"] == 100_866
+    # docs/protocol/packet_logger.md: 101 046 packets (60 of them 0xD1, 36 000
+    # IMU, 600 0xB1, 180 0xD2), 1 027 792 samples.
+    assert result["decode"]["packets_decoded"] == 101_046
     assert len(samples) == 1_027_792
     skipped = [i for i in result["issues"] if i["code"] == "skipped_bytes"]
     assert skipped == [{"code": "skipped_bytes", "offset": 0,
@@ -238,6 +248,10 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
         assert channels[key]["packets_accepted"] == 6000 and not channels[key]["gaps"]
     assert channels["0xB1"]["packets_accepted"] == 600 and not channels["0xB1"]["gaps"]
     assert channels["0xB1"]["status_bit_counts"] == {}
+    configs = result["sessions"][0]["afe_config"]
+    assert {name: [(e["source"], e["packets"]) for e in epochs]
+            for name, epochs in configs.items()} == {
+        "MAX30001": [("fake", 60)], "MAX30101": [("fake", 60)], "BMI270": [("fake", 60)]}
     assert all(not c.get("packets_quarantined") for c in channels.values())
     info = result["sessions"][0]["device_info"]
     assert info["valid_packets"] == 60  # at 0, 10, ..., 590 s

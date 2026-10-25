@@ -56,6 +56,23 @@ void bmi270_v1_regs(bmi270_regs_t *r)
     r->pwr_ctrl = 0x06u;
 }
 
+unsigned bmi270_config_words(const bmi270_regs_t *r, uint32_t out[BMI270_CONFIG_WORDS])
+{
+    const uint8_t pairs[BMI270_CONFIG_WORDS][2] = {
+        {BMI270_ACC_CONF, r->acc_conf},          {BMI270_ACC_RANGE, r->acc_range},
+        {BMI270_GYR_CONF, r->gyr_conf},          {BMI270_GYR_RANGE, r->gyr_range},
+        {BMI270_FIFO_DOWNS, r->fifo_downs},      {BMI270_FIFO_WTM_0, r->fifo_wtm[0]},
+        {BMI270_FIFO_WTM_1, r->fifo_wtm[1]},     {BMI270_FIFO_CONFIG_0, r->fifo_config[0]},
+        {BMI270_FIFO_CONFIG_1, r->fifo_config[1]}, {BMI270_INT1_IO_CTRL, r->int1_io_ctrl},
+        {BMI270_INT_LATCH, r->int_latch},        {BMI270_INT_MAP_DATA, r->int_map_data},
+        {BMI270_PWR_CONF, r->pwr_conf},          {BMI270_PWR_CTRL, r->pwr_ctrl},
+    };
+    for (unsigned i = 0; i < BMI270_CONFIG_WORDS; i++) {
+        out[i] = (uint32_t)pairs[i][0] << 24 | pairs[i][1];
+    }
+    return BMI270_CONFIG_WORDS;
+}
+
 bmi270_err_t bmi270_write(const bmi270_bus_t *bus, uint8_t reg, const uint8_t *data, size_t n)
 {
     if (n == 0 || n + 1u > XFER_MAX) {

@@ -575,10 +575,12 @@ def test_invalid_device_info_is_reported_and_not_counted(sim, logger, change,
 def test_device_info_missing_mismatch_and_ordinal(sim, logger):
     base = only(session_metadata(sim, "valid", "0" * 64), "0xF1", "0xD1")
     device = {**base, "source_type": "DEVICE", "simulation": None}
-    # A V0.2 DEVICE session without device info, whatever the metadata says.
+    # A V0.2 DEVICE session without device info, whatever the metadata says (and,
+    # since 2026-10-25, without the 0xD2 configuration of its MAX30101).
     result, _, _ = analyze(restream([ppg(0, 0), ppg(1, 4)]), sim, logger,
                            metadata=device)
-    assert result["issue_counts"] == {"device_info_missing": 1}
+    assert result["issue_counts"] == {"device_info_missing": 1,
+                                      "afe_config_missing": 1}
     # V0.1 sessions have no device info at all.
     result, _, _ = analyze(restream([ppg(0, 0, version=1)]), sim, logger,
                            metadata=device)
@@ -590,7 +592,8 @@ def test_device_info_missing_mismatch_and_ordinal(sim, logger):
                                if k != "firmware_version"}}
     packets = [ppg(0, 0), info_packet(0, 0), info_packet(1, 1)]
     result, _, _ = analyze(restream(packets), sim, logger, metadata=stated)
-    assert result["issue_counts"] == {"firmware_metadata_mismatch": 1}
+    assert result["issue_counts"] == {"firmware_metadata_mismatch": 1,
+                                      "afe_config_missing": 1}
     # An info packet dropped in the MCU queue: ordinal jumps, SEQ does not.
     packets = [ppg(0, 0), info_packet(0, 0), info_packet(1, 2)]
     result, _, _ = analyze(restream(packets), sim, logger, metadata=device)

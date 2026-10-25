@@ -47,6 +47,22 @@ void max30101_set_currents(max30101_regs_t *regs, uint8_t green, uint8_t red, ui
     regs->led_pa[3] = green; /* LED4: the slot 011 drives LED3 and LED4 (p. 22) */
 }
 
+unsigned max30101_config_words(const max30101_regs_t *r, uint32_t out[MAX30101_CONFIG_WORDS])
+{
+    const uint8_t pairs[MAX30101_CONFIG_WORDS][2] = {
+        {MAX30101_FIFO_CONFIG, r->fifo_config}, {MAX30101_SPO2_CONFIG, r->spo2_config},
+        {MAX30101_LED1_PA, r->led_pa[0]},       {MAX30101_LED1_PA + 1u, r->led_pa[1]},
+        {MAX30101_LED1_PA + 2u, r->led_pa[2]},  {MAX30101_LED1_PA + 3u, r->led_pa[3]},
+        {MAX30101_MULTI_LED1, r->multi_led[0]}, {MAX30101_MULTI_LED2, r->multi_led[1]},
+        {MAX30101_INT_ENABLE1, r->int_enable[0]}, {MAX30101_INT_ENABLE2, r->int_enable[1]},
+        {MAX30101_MODE_CONFIG, MAX30101_MODE_MULTI_LED},
+    };
+    for (unsigned i = 0; i < MAX30101_CONFIG_WORDS; i++) {
+        out[i] = (uint32_t)pairs[i][0] << 24 | pairs[i][1];
+    }
+    return MAX30101_CONFIG_WORDS;
+}
+
 int max30101_write_reg(const max30101_bus_t *bus, uint8_t reg, uint8_t value)
 {
     return bus->write(bus->ctx, reg, &value, 1);

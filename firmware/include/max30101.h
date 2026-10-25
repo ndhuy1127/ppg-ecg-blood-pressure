@@ -115,6 +115,13 @@ void max30101_v1_regs(max30101_regs_t *regs, unsigned pulse_width_us);
  * (p. 22), so the total green current is twice the code's value. */
 void max30101_set_currents(max30101_regs_t *regs, uint8_t green, uint8_t red, uint8_t ir);
 
+/* The 11 register words of a 0xD2 packet (Packet Schema V0.2 section 12),
+ * address << 24 | value: FIFO_CONFIG, SPO2_CONFIG, LED1-4_PA, MULTI_LED1-2,
+ * INT_ENABLE1-2, MODE_CONFIG (multi-LED). Returns 11. */
+#define MAX30101_CONFIG_WORDS 11u
+unsigned max30101_config_words(const max30101_regs_t *regs,
+                               uint32_t out[MAX30101_CONFIG_WORDS]);
+
 int max30101_write_reg(const max30101_bus_t *bus, uint8_t reg, uint8_t value);
 int max30101_read_reg(const max30101_bus_t *bus, uint8_t reg, uint8_t *value);
 

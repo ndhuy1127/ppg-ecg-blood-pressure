@@ -34,6 +34,8 @@
 #define PKT_CH_GYR_Z 0xA6u
 #define PKT_CH_DEVICE_INFO 0xD1u
 #define PKT_CH_DIE_TEMP 0xB1u
+#define PKT_CH_AFE_CONFIG 0xD2u
+#define PKT_CH_COMMAND_ACK 0xD3u
 
 /* STATUS bits, V0.1 section 9 and V0.2 sections 4 and 7; bits 9..15 are
  * reserved and sent as 0. Bit 8 is for ECG only. */
@@ -98,6 +100,31 @@ uint64_t pkt_t_first_us(uint64_t t_anchor_us, uint16_t n, uint32_t fs_nominal_mh
  */
 bool pkt_device_info_data(const uint8_t elf_sha256[32], const char *app_version,
                           const char *idf_version, int32_t out[PKT_DEVICE_INFO_COUNT]);
+
+/* V0.2 section 12: AFE ids, sources and the layout of a 0xD2 packet. */
+#define PKT_AFE_MAX30001 1u
+#define PKT_AFE_MAX30101 2u
+#define PKT_AFE_BMI270 3u
+#define PKT_AFE_SOURCE_FAKE 0u
+#define PKT_AFE_SOURCE_CHIP 1u
+#define PKT_AFE_CONFIG_LAYOUT 1
+#define PKT_AFE_MAX_REGS 27u /* 5 + 27 = PKT_MAX_SAMPLES */
+#define PKT_COMMAND_ACK_LAYOUT 1
+#define PKT_COMMAND_ACK_COUNT 5u
+
+/*
+ * DATA of a 0xD2 packet: layout, AFE, source, state (1 configured), generation,
+ * then `n` register words (address << 24 | value) only for a configured chip.
+ * Returns SAMPLE_COUNT, or 0 if n is above PKT_AFE_MAX_REGS.
+ */
+uint16_t pkt_afe_config_data(uint8_t afe, uint8_t source, bool configured, uint32_t generation,
+                             const uint32_t *regs, uint16_t n,
+                             int32_t out[PKT_MAX_SAMPLES]);
+
+/* DATA of a 0xD3 packet (V0.2 section 13): layout, CMD_ID, CMD_SEQ, result,
+ * generation. */
+void pkt_command_ack_data(uint8_t cmd_id, uint16_t cmd_seq, uint8_t result,
+                          uint32_t generation, int32_t out[PKT_COMMAND_ACK_COUNT]);
 
 /*
  * Boot self-test against packet_kat.h: CRC, T_FIRST_US, an ECG packet with

@@ -8,12 +8,15 @@
  * IMU, and the ECG SAMP edges from the fake ECG source unless the capture is in.
  */
 #include <inttypes.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "bmi270.h"
 #include "bmi270_config.h"
 #include "bmi270_esp.h"
 #include "board_v1_module.h"
+#include "cmd_exec.h"
+#include "cmd_wire.h"
 #include "bootloader_random.h"
 #include "die_temp.h"
 #include "driver/gpio.h"
@@ -37,13 +40,14 @@
 #include "samp_capture.h"
 #include "samp_edges.h"
 #include "samp_map.h"
+#include "stim_plan.h"
 
 static const char *TAG = "fw";
 
 #define TX_QUEUE_LEN 64
 #define TX_TIMEOUT_MS 20
 #define USB_TX_BUFFER_BYTES 8192
-#define USB_RX_BUFFER_BYTES 256
+#define USB_RX_BUFFER_BYTES 1024 /* commands, read continuously (V0.2 section 13) */
 #define EVENT_QUEUE_LEN 8
 #define T0_LOCKOUT_US 200000
 #define T0_CONFIRM_MS 20
@@ -139,17 +143,24 @@ static const fake_afe_config_t IMU_FAKE = {
 #define FAKE_PPG_DELAY 0
 #endif
 #define PPG_DELAY_PERIOD_US 10000000LL
+
+/* A chip that fails to start at boot is tried AFE_START_TRIES times,
+ * AFE_START_RETRY_MS apart (its start begins with a reset), before its reader
+ * gives up and sends no packets of it (decided 2026-10-25). */
+#define AFE_START_TRIES 10
+#define AFE_START_RETRY_MS 100
 #define PPG_DELAY_MS 12
 
 enum {
     CH_ECG, CH_PPG1, CH_PPG2, CH_PPG3, CH_PPG4, CH_EVENT, CH_DEVICE_INFO,
-    CH_ACC_X, CH_ACC_Y, CH_ACC_Z, CH_GYR_X, CH_GYR_Y, CH_GYR_Z, CH_DIE_TEMP, CH_COUNT
+    CH_ACC_X, CH_ACC_Y, CH_ACC_Z, CH_GYR_X, CH_GYR_Y, CH_GYR_Z, CH_DIE_TEMP,
+    CH_AFE_CONFIG, CH_COMMAND_ACK, CH_COUNT
 };
 static const uint8_t CHANNEL_IDS[CH_COUNT] = {
     PKT_CH_ECG, PKT_CH_PPG_SLOT1, PKT_CH_PPG_SLOT2, PKT_CH_PPG_SLOT3,
     PKT_CH_PPG_SLOT4, PKT_CH_EVENT, PKT_CH_DEVICE_INFO, PKT_CH_ACC_X,
     PKT_CH_ACC_Y, PKT_CH_ACC_Z, PKT_CH_GYR_X, PKT_CH_GYR_Y, PKT_CH_GYR_Z,
-    PKT_CH_DIE_TEMP,
+    PKT_CH_DIE_TEMP, PKT_CH_AFE_CONFIG, PKT_CH_COMMAND_ACK,
 };
 
 typedef struct {
@@ -163,10 +174,12 @@ typedef struct {
  * 5 marks the re-anchor that the next packet continues (V0.2 section 5). */
 #define CARRY_BITS (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_MCU_BUFFER_OVERFLOW                     | PKT_STATUS_INDEX_REANCHORED)
 
-/* One t0 edge from the ISR, with the edges its queue dropped just before it. */
+/* One event edge (the t0 button, or a sync stimulus pulse), with the edges of
+ * its source that the queue dropped just before it. */
 typedef struct {
     int64_t t_us;
     uint32_t lost_before;
+    uint8_t code; /* PKT_EVENT_T0 or PKT_EVENT_SYNC_PULSE */
 } t0_edge_t;
 
 static QueueHandle_t s_tx_queue;
@@ -240,6 +253,65 @@ static void tx_task(void *arg)
         }
     }
 }
+
+/*
+ * AFE states for 0xD2 (V0.2 section 12). Each reader publishes every change of
+ * its AFE's state (fake source at start; chip configured, waiting for
+ * reconfiguration, given up) through s_afe_queue, so no transition is
+ * overwritten before it is sent; only the control task makes 0xD2 packets. A
+ * transition the full queue refused marks the AFE in s_afe_lost: its next 0xD2
+ * carries STATUS bit 1. The generation counts successful configurations since
+ * boot.
+ */
+typedef struct {
+    uint8_t afe, source;
+    bool configured;
+    uint32_t generation;
+    uint16_t n;
+    uint32_t words[PKT_AFE_MAX_REGS];
+    int64_t since_us; /* T_ANCHOR_US: when this state began */
+} afe_state_t;
+
+#define AFE_QUEUE_LEN 8
+static QueueHandle_t s_afe_queue;
+static volatile uint32_t s_afe_lost; /* bit (afe - 1): a transition was not queued */
+static portMUX_TYPE s_afe_lock = portMUX_INITIALIZER_UNLOCKED;
+
+static void afe_publish(uint8_t afe, uint8_t source, bool configured, uint32_t generation,
+                        const uint32_t *words, uint16_t n)
+{
+    afe_state_t s = {
+        .afe = afe,
+        .source = source,
+        .configured = configured,
+        .generation = generation,
+        .n = words != NULL ? (n > PKT_AFE_MAX_REGS ? PKT_AFE_MAX_REGS : n) : 0u,
+        .since_us = esp_timer_get_time(),
+    };
+    if (s.n > 0) {
+        memcpy(s.words, words, s.n * sizeof(uint32_t));
+    }
+    if (xQueueSend(s_afe_queue, &s, 0) != pdTRUE) {
+        taskENTER_CRITICAL(&s_afe_lock);
+        s_afe_lost |= 1u << (afe - 1u);
+        taskEXIT_CRITICAL(&s_afe_lock);
+    }
+}
+
+/* PPG side of the LED command (V0.2 section 13): the control task asks, the PPG
+ * reader (owner of the I2C bus) answers with the request's token, so a late
+ * answer can never be taken for another request's. */
+typedef struct {
+    uint32_t token;
+    uint8_t green, red, ir;
+} led_request_t;
+typedef struct {
+    uint32_t token;
+    uint8_t result;
+    uint32_t generation;
+} led_reply_t;
+static QueueHandle_t s_led_request, s_led_reply;
+static volatile cmd_ppg_state_t s_ppg_cmd_state = CMD_PPG_NONE;
 
 /*
  * Die temperature 0xB1 (V0.2 section 11), read in the PPG reader task: one value
@@ -319,9 +391,23 @@ static void ppg_temp_service(die_temp_t *t)
     }
 }
 
+static uint32_t s_ppg_generation; /* successful configurations since boot */
+
+/* State for 0xD2 and for the LED command: configured with s_ppg_regs, or not. */
+static void ppg_publish(bool configured)
+{
+    uint32_t words[MAX30101_CONFIG_WORDS];
+    unsigned n = max30101_config_words(&s_ppg_regs, words);
+    afe_publish(PKT_AFE_MAX30101, PKT_AFE_SOURCE_CHIP, configured, s_ppg_generation, words,
+                (uint16_t)n);
+    s_ppg_cmd_state = configured ? CMD_PPG_READY : CMD_PPG_BUSY;
+}
+
 static void ppg_give_up(const char *what, int err)
 {
     ESP_LOGE(TAG, "MAX30101 %s failed (%d): no PPG packets", what, err);
+    s_ppg_cmd_state = CMD_PPG_NONE;
+    afe_publish(PKT_AFE_MAX30101, PKT_AFE_SOURCE_CHIP, false, s_ppg_generation, NULL, 0);
     max30101_write_reg(&s_ppg_bus, MAX30101_INT_ENABLE1, 0); /* best effort */
     max30101_esp_stop();
     for (;;) {
@@ -338,12 +424,21 @@ static void ppg_reader_task(void *arg)
                                       xTaskGetCurrentTaskHandle()));
     max30101_v1_regs(&s_ppg_regs, BOARD_PPG_LED_PW_US);
     uint8_t rev = 0;
-    max30101_err_t err = max30101_start(&s_ppg_bus, &s_ppg_regs, &rev);
+    max30101_err_t err = MAX30101_ERR_BUS;
+    for (int i = 0; i < AFE_START_TRIES && err != MAX30101_OK; i++) {
+        if (i > 0) {
+            vTaskDelay(pdMS_TO_TICKS(AFE_START_RETRY_MS));
+        }
+        err = max30101_start(&s_ppg_bus, &s_ppg_regs, &rev);
+    }
     ESP_LOGI(TAG, "MAX30101 REV_ID 0x%02X, LED_PW %u us, start %d", rev,
              (unsigned)BOARD_PPG_LED_PW_US, (int)err);
     if (err != MAX30101_OK) {
         ppg_give_up("start", (int)err);
     }
+    s_ppg_generation = 1;
+    ppg_publish(true);
+    bool published_down = false;
     const uint16_t batch = BOARD_PPG_READ_PERIOD_MS > 0 ? 1 : PPG_BATCH;
     ppg_read_t ppg;
     ppg_read_init(&ppg);
@@ -359,6 +454,41 @@ static void ppg_reader_task(void *arg)
             /* A timeout also looks at the FIFO, whatever INT does. */
             ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(PPG_POLL_MS));
         }
+        led_request_t req;
+        if (xQueueReceive(s_led_request, &req, 0) == pdTRUE) {
+            /* V0.2 section 13: new LED currents through a full reconfiguration
+             * (RESET empties the FIFO), so the next packet re-anchors (bit 5) and
+             * no chain mixes old and new currents. The old currents stay in
+             * s_ppg_regs until the new ones are verified. */
+            led_reply_t reply = {.token = req.token, .result = CMD_RESULT_BUSY};
+            if (!ppg.needs_reconfigure) {
+                max30101_regs_t staged = s_ppg_regs;
+                max30101_set_currents(&staged, req.green, req.red, req.ir);
+                die_temp_abort(&temp);
+                ppg.index.reanchor = true;
+                err = max30101_start(&s_ppg_bus, &staged, &rev);
+                if (err == MAX30101_OK) {
+                    s_ppg_regs = staged;
+                    s_ppg_generation++;
+                    ppg_publish(true);
+                    reply.result = CMD_RESULT_OK;
+                    reply.generation = s_ppg_generation;
+                    ESP_LOGW(TAG, "MAX30101 LED codes green %u (per sink), red %u, IR %u",
+                             req.green, req.red, req.ir);
+                } else {
+                    /* Back to the old currents through the reconfiguration path. */
+                    ESP_LOGE(TAG, "MAX30101 LED change failed (%d)", (int)err);
+                    imu_index_read_failed(&ppg.index);
+                    ppg.needs_reconfigure = true;
+                    next_reconfigure_us = 0;
+                    ppg_publish(false);
+                    published_down = true;
+                    reply.result = CMD_RESULT_CHIP_ERROR;
+                }
+            }
+            xQueueSend(s_led_reply, &reply, 0);
+            continue;
+        }
         max30101_latch_t latch = {0};
         if (!ppg.needs_reconfigure) {
             max30101_latch(&s_ppg_bus, &latch);
@@ -372,12 +502,19 @@ static void ppg_reader_task(void *arg)
                                              PPG_FS_NOMINAL_MHZ, PKT_STATUS_LATENCY_UNMEASURED);
         if (plan.reconfigure) {
             die_temp_abort(&temp); /* before any RESET: TEMP_EN then reads 0 */
+            if (!published_down) {
+                ppg_publish(false);
+                published_down = true;
+            }
         }
         if (plan.reconfigure && esp_timer_get_time() >= next_reconfigure_us) {
             next_reconfigure_us = esp_timer_get_time() + PPG_RECONFIGURE_MS * 1000LL;
             err = max30101_start(&s_ppg_bus, &s_ppg_regs, &rev);
             if (err == MAX30101_OK) {
                 ppg_read_reconfigured(&ppg);
+                s_ppg_generation++;
+                ppg_publish(true);
+                published_down = false;
                 ESP_LOGW(TAG, "MAX30101 configured again after a brownout or read failure");
             } else {
                 ESP_LOGE(TAG, "MAX30101 reconfiguration failed (%d), retrying", (int)err);
@@ -451,6 +588,7 @@ static void ppg_reader_task(void *arg)
     const fake_afe_config_t *cfg = &PPG_FAKE;
     fake_afe_t *afe;
     ESP_ERROR_CHECK(fake_afe_start(cfg, xTaskGetCurrentTaskHandle(), &afe));
+    afe_publish(PKT_AFE_MAX30101, PKT_AFE_SOURCE_FAKE, true, 0, NULL, 0);
     die_temp_t temp;
     int64_t temp_started = 0;
     die_temp_init(&temp, esp_timer_get_time());
@@ -558,9 +696,12 @@ static void ecg_mapping_start(void *arg)
     samp_map_restart(&s_samp, esp_timer_get_time());
 }
 
+static uint32_t s_ecg_generation; /* successful configurations since boot */
+
 static void ecg_give_up(const char *what, int err)
 {
     ESP_LOGE(TAG, "MAX30001 %s failed (%d): no ECG packets", what, err);
+    afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_CHIP, false, s_ecg_generation, NULL, 0);
     max30001_write(&s_ecg_bus, MAX30001_EN_INT, 0); /* best effort: quiet INTB */
     max30001_esp_stop();
     /* Suspend rather than delete: an INTB ISR already running on the other
@@ -580,10 +721,23 @@ static void ecg_reader_task(void *arg)
                                       xTaskGetCurrentTaskHandle()));
     max30001_v1_regs(&s_ecg_regs);
     uint32_t info = 0;
-    max30001_err_t err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+    max30001_err_t err = MAX30001_ERR_BUS;
+    for (int i = 0; i < AFE_START_TRIES && err != MAX30001_OK; i++) {
+        if (i > 0) {
+            vTaskDelay(pdMS_TO_TICKS(AFE_START_RETRY_MS));
+        }
+        err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+    }
     ESP_LOGI(TAG, "MAX30001 INFO 0x%06" PRIx32 ", start %d", info, (int)err);
     if (err != MAX30001_OK) {
         ecg_give_up("start", (int)err);
+    }
+    {
+        uint32_t words[MAX30001_CONFIG_WORDS];
+        unsigned n = max30001_config_words(&s_ecg_regs, words);
+        s_ecg_generation = 1;
+        afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_CHIP, true, s_ecg_generation, words,
+                    (uint16_t)n);
     }
     if (BOARD_SAMP_CAPTURE) {
         ESP_ERROR_CHECK(samp_capture_start(BOARD_ECG_INT2B_GPIO, BOARD_SAMP_RISING_EDGE));
@@ -693,6 +847,7 @@ static void ecg_reader_task(void *arg)
     samp_map_restart(&s_samp, esp_timer_get_time());
     fake_afe_t *afe;
     ESP_ERROR_CHECK(fake_afe_start(cfg, xTaskGetCurrentTaskHandle(), &afe));
+    afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_FAKE, true, 0, NULL, 0);
     uint16_t restart_bits = 0;
     for (;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -766,14 +921,13 @@ static void ecg_reader_task(void *arg)
  * bmi270_check makes sure the chip was not reset or broken; if it was, the chip
  * is started again every IMU_RESTART_MS until that works, with no packet and
  * no INT1 interrupt meanwhile, and the next read re-anchors (bits 3 and 5). The
- * first start is tried IMU_START_TRIES times before giving up.
+ * first start is tried AFE_START_TRIES times before giving up.
  */
 #define IMU_FS_NOMINAL_MHZ 100000u
 #define IMU_WATERMARK_FRAMES 10u
 #define IMU_POLL_MS 20
 #define IMU_CHECK_MS 1000
 #define IMU_RESTART_MS 100
-#define IMU_START_TRIES 10
 
 static const uint8_t IMU_CHANNELS[BMI270_AXES] = {
     PKT_CH_ACC_X, PKT_CH_ACC_Y, PKT_CH_ACC_Z, PKT_CH_GYR_X, PKT_CH_GYR_Y, PKT_CH_GYR_Z};
@@ -781,9 +935,20 @@ static const uint8_t IMU_CHANNELS[BMI270_AXES] = {
 static bmi270_bus_t s_imu_bus;
 static bmi270_regs_t s_imu_regs;
 
+static uint32_t s_imu_generation; /* successful configurations since boot */
+
+static void imu_publish(bool configured)
+{
+    uint32_t words[BMI270_CONFIG_WORDS];
+    unsigned n = bmi270_config_words(&s_imu_regs, words);
+    afe_publish(PKT_AFE_BMI270, PKT_AFE_SOURCE_CHIP, configured, s_imu_generation, words,
+                (uint16_t)n);
+}
+
 static void imu_give_up(int err)
 {
     ESP_LOGE(TAG, "BMI270 start failed (%d): no IMU packets", err);
+    imu_publish(false);
     bmi270_esp_stop();
     for (;;) {
         vTaskSuspend(NULL); /* keep the handle valid for an ISR in flight */
@@ -797,9 +962,9 @@ static void imu_reader_task(void *arg)
                                     xTaskGetCurrentTaskHandle()));
     bmi270_v1_regs(&s_imu_regs);
     bmi270_err_t err = BMI270_ERR_BUS;
-    for (int i = 0; i < IMU_START_TRIES && err != BMI270_OK; i++) {
+    for (int i = 0; i < AFE_START_TRIES && err != BMI270_OK; i++) {
         if (i > 0) {
-            vTaskDelay(pdMS_TO_TICKS(IMU_RESTART_MS));
+            vTaskDelay(pdMS_TO_TICKS(AFE_START_RETRY_MS));
         }
         err = bmi270_start(&s_imu_bus, &s_imu_regs, bmi270_config_file);
     }
@@ -807,6 +972,8 @@ static void imu_reader_task(void *arg)
     if (err != BMI270_OK) {
         imu_give_up((int)err);
     }
+    s_imu_generation = 1;
+    imu_publish(true);
     bmi270_esp_int_enable(true);
     imu_index_t index;
     imu_index_init(&index, 0);
@@ -825,6 +992,7 @@ static void imu_reader_task(void *arg)
                 ESP_LOGE(TAG, "BMI270 check failed (%d): starting it again", (int)err);
                 imu_index_read_failed(&index);
                 bmi270_esp_int_enable(false);
+                imu_publish(false);
                 restart = true;
             }
         }
@@ -839,6 +1007,8 @@ static void imu_reader_task(void *arg)
                 continue;
             }
             ESP_LOGW(TAG, "BMI270 started again");
+            s_imu_generation++;
+            imu_publish(true);
             bmi270_esp_int_enable(true);
             restart = false;
             next_check = esp_timer_get_time() + IMU_CHECK_MS * 1000LL;
@@ -865,6 +1035,7 @@ static void imu_reader_task(void *arg)
             if (bmi270_flush(&s_imu_bus) != BMI270_OK) {
                 ESP_LOGE(TAG, "BMI270 FIFO flush failed: starting it again");
                 bmi270_esp_int_enable(false);
+                imu_publish(false);
                 restart = true;
             }
             continue;
@@ -905,6 +1076,7 @@ static void imu_reader_task(void *arg)
     const fake_afe_config_t *cfg = &IMU_FAKE;
     fake_afe_t *imu;
     ESP_ERROR_CHECK(fake_afe_start(cfg, xTaskGetCurrentTaskHandle(), &imu));
+    afe_publish(PKT_AFE_BMI270, PKT_AFE_SOURCE_FAKE, true, 0, NULL, 0);
     imu_index_t index;
     imu_index_init(&index, 0);
     imu_chunk_t chunks[IMU_MAX_CHUNKS];
@@ -971,7 +1143,8 @@ static void t0_isr(void *arg)
         return;
     }
     last_us = now;
-    const t0_edge_t edge = {.t_us = now, .lost_before = lost_since_queued};
+    const t0_edge_t edge = {.t_us = now, .lost_before = lost_since_queued,
+                            .code = PKT_EVENT_T0};
     BaseType_t woken = pdFALSE;
     if (xQueueSendFromISR(s_event_queue, &edge, &woken) == pdTRUE) {
         lost_since_queued = 0;
@@ -987,9 +1160,10 @@ static void t0_isr(void *arg)
 /*
  * Event packet 0xC1 (schema section 10): SAMPLE_COUNT 1, DATA[0] the event
  * code, T_ANCHOR_US = T_FIRST_US = edge time, FIRST_SAMPLE_INDEX counts the
- * confirmed events of the session, FS_NOMINAL_MHZ 0, STATUS bit 4 off. An
- * edge the ISR queue dropped was never debounced, so it does not take an
- * ordinal; the next event packet sets bit 1 instead (possible lost press).
+ * confirmed events of the session (every code), FS_NOMINAL_MHZ 0, STATUS bit 4
+ * off. An edge the queue dropped was never confirmed, so it does not take an
+ * ordinal; the next event packet sets bit 1 instead (possible lost event). The
+ * t0 button is debounced; a sync pulse (code 3) is the MCU's own edge.
  */
 static void event_task(void *arg)
 {
@@ -1001,9 +1175,11 @@ static void event_task(void *arg)
         if (edge.lost_before > 0) {
             edges_lost = true; /* kept until an event is sent, even past a bounce */
         }
-        vTaskDelay(pdMS_TO_TICKS(T0_CONFIRM_MS));
-        if (gpio_get_level(BOARD_T0_GPIO) != 0) {
-            continue; /* released again: bounce, not a press */
+        if (edge.code == PKT_EVENT_T0) {
+            vTaskDelay(pdMS_TO_TICKS(T0_CONFIRM_MS));
+            if (gpio_get_level(BOARD_T0_GPIO) != 0) {
+                continue; /* released again: bounce, not a press */
+            }
         }
         pkt_t p = {
             .channel_id = PKT_CH_EVENT,
@@ -1014,12 +1190,231 @@ static void event_task(void *arg)
             .fs_nominal_mhz = 0,
             .sample_count = 1,
             .status = edges_lost ? PKT_STATUS_MCU_BUFFER_OVERFLOW : 0,
-            .data = {PKT_EVENT_T0},
+            .data = {edge.code},
         };
         edges_lost = false;
         enqueue(&p);
-        ESP_LOGI(TAG, "t0 event %" PRIu32 " at %" PRId64 " us", p.first_sample_index,
-                 edge.t_us);
+        if (edge.code == PKT_EVENT_T0) {
+            ESP_LOGI(TAG, "t0 event %" PRIu32 " at %" PRId64 " us", p.first_sample_index,
+                     edge.t_us);
+        }
+    }
+}
+
+#if BOARD_STIM
+/*
+ * Sync stimulus (hardware/test_reports/sync_10min_test_plan.md sections 3-4):
+ * GPIO6 (J3) goes high at scheduled times STIM_PERIOD_US + U[0, STIM_JITTER_US)
+ * apart (stim_plan.c, seeded with the SESSION_ID) and low STIM_WIDTH_US later;
+ * the first edge comes STIM_FIRST_US after the start. Each rising edge becomes an
+ * event packet with code 3 whose T_ANCHOR_US is esp_timer read right after the
+ * pin was set. The schedule follows target times, so callback latency does not
+ * add up. Callbacks run in the esp_timer task.
+ */
+static esp_timer_handle_t s_stim_rise, s_stim_fall;
+static stim_plan_t s_stim_plan;
+static int64_t s_stim_next_us;
+
+static void stim_fall(void *arg)
+{
+    (void)arg;
+    gpio_set_level(BOARD_STIM_GPIO, 0);
+}
+
+static void stim_rise(void *arg)
+{
+    (void)arg;
+    static uint32_t lost_since_queued;
+    gpio_set_level(BOARD_STIM_GPIO, 1);
+    int64_t now = esp_timer_get_time(); /* right after the edge */
+    esp_timer_start_once(s_stim_fall, STIM_WIDTH_US);
+    const t0_edge_t edge = {.t_us = now, .lost_before = lost_since_queued,
+                            .code = PKT_EVENT_SYNC_PULSE};
+    if (xQueueSend(s_event_queue, &edge, 0) == pdTRUE) {
+        lost_since_queued = 0;
+    } else {
+        lost_since_queued++;
+        s_events_lost++;
+    }
+    s_stim_next_us += stim_next_interval_us(&s_stim_plan);
+    int64_t wait = s_stim_next_us - esp_timer_get_time();
+    esp_timer_start_once(s_stim_rise, wait > 0 ? (uint64_t)wait : 1u);
+}
+
+static void stim_start(void)
+{
+    const gpio_config_t out = {
+        .pin_bit_mask = 1ULL << BOARD_STIM_GPIO,
+        .mode = GPIO_MODE_OUTPUT,
+    };
+    ESP_ERROR_CHECK(gpio_set_level(BOARD_STIM_GPIO, 0));
+    ESP_ERROR_CHECK(gpio_config(&out));
+    stim_plan_init(&s_stim_plan, s_session_id);
+    const esp_timer_create_args_t rise = {.callback = stim_rise, .name = "stim_rise"};
+    const esp_timer_create_args_t fall = {.callback = stim_fall, .name = "stim_fall"};
+    ESP_ERROR_CHECK(esp_timer_create(&rise, &s_stim_rise));
+    ESP_ERROR_CHECK(esp_timer_create(&fall, &s_stim_fall));
+    s_stim_next_us = esp_timer_get_time() + STIM_FIRST_US;
+    ESP_ERROR_CHECK(esp_timer_start_once(s_stim_rise, STIM_FIRST_US));
+    ESP_LOGW(TAG, "sync stimulus on GPIO%d: %u us + U[0, %u) us, %u us wide, seed "
+                  "SESSION_ID", BOARD_STIM_GPIO, (unsigned)STIM_PERIOD_US,
+             (unsigned)STIM_JITTER_US, (unsigned)STIM_WIDTH_US);
+}
+#endif /* BOARD_STIM */
+
+/*
+ * Control task (V0.2 sections 12-13): the only producer of 0xD2 and 0xD3. It
+ * reads commands from the USB Serial/JTAG port continuously (CTL_RX_MS reads),
+ * drops a partial frame idle for CTL_PARTIAL_US, and answers each frame
+ * (cmd_exec.c decides). An LED change is handed to the PPG reader and answered
+ * when its reply with the same token comes, without blocking this loop; a retry
+ * of that request meanwhile is ignored, another LED request gets BUSY. A request
+ * the PPG reader has not taken after LED_TAKE_US is withdrawn (BUSY: not done);
+ * one it took is waited for, never given a made-up result. Each AFE's 0xD2 goes
+ * out on every state transition and every AFE_CONFIG_PERIOD_US.
+ */
+#define CTL_RX_MS 10
+#define CTL_PARTIAL_US 100000LL
+#define AFE_CONFIG_PERIOD_US 10000000LL
+#define LED_TAKE_US 2000000LL
+
+typedef struct {
+    cmd_exec_t exec;
+    uint32_t ack_ordinal;
+    bool inflight; /* an LED request handed to the PPG reader */
+    cmd_frame_t inflight_frame;
+    uint32_t token;
+    int64_t inflight_since_us;
+} ctl_t;
+
+static bool same_frame(const cmd_frame_t *a, const cmd_frame_t *b)
+{
+    return a->id == b->id && a->seq == b->seq && a->len == b->len
+           && memcmp(a->params, b->params, a->len) == 0;
+}
+
+static void ctl_ack(ctl_t *c, const cmd_frame_t *f, uint8_t result, uint32_t generation)
+{
+    int64_t now = esp_timer_get_time();
+    pkt_t p = {
+        .channel_id = PKT_CH_COMMAND_ACK,
+        .session_id = s_session_id,
+        .first_sample_index = c->ack_ordinal++,
+        .t_anchor_us = (uint64_t)now,
+        .t_first_us = (uint64_t)now,
+        .fs_nominal_mhz = 0,
+        .sample_count = PKT_COMMAND_ACK_COUNT,
+        .status = 0,
+    };
+    pkt_command_ack_data(f->id, f->seq, result, generation, p.data);
+    enqueue(&p);
+}
+
+static void ctl_on_frame(void *ctx, const cmd_frame_t *f)
+{
+    ctl_t *c = ctx;
+    if (c->inflight && same_frame(f, &c->inflight_frame)) {
+        return; /* a retry of the request being applied: answered when it is done */
+    }
+    cmd_action_t a = cmd_exec_decide(&c->exec, f, s_session_id,
+                                     c->inflight ? CMD_PPG_BUSY : s_ppg_cmd_state);
+    if (a.apply_led) {
+        const led_request_t req = {.token = ++c->token, .green = a.green, .red = a.red,
+                                   .ir = a.ir};
+        if (xQueueSend(s_led_request, &req, 0) == pdTRUE) {
+            c->inflight = true;
+            c->inflight_frame = *f;
+            c->inflight_since_us = esp_timer_get_time();
+            return;
+        }
+        a.result = CMD_RESULT_BUSY;
+        a.generation = 0;
+    }
+    if (!a.repeat) {
+        cmd_exec_done(&c->exec, f, a.result, a.generation);
+    }
+    ctl_ack(c, f, a.result, a.generation);
+}
+
+/* The PPG reader's answer to the request in flight, or its withdrawal. */
+static void ctl_led_progress(ctl_t *c, int64_t now)
+{
+    led_reply_t reply;
+    while (c->inflight && xQueueReceive(s_led_reply, &reply, 0) == pdTRUE) {
+        if (reply.token != c->token) {
+            continue; /* not the request in flight */
+        }
+        c->inflight = false;
+        cmd_exec_done(&c->exec, &c->inflight_frame, reply.result, reply.generation);
+        ctl_ack(c, &c->inflight_frame, reply.result, reply.generation);
+    }
+    led_request_t untaken;
+    if (c->inflight && now - c->inflight_since_us > LED_TAKE_US
+        && xQueueReceive(s_led_request, &untaken, 0) == pdTRUE) {
+        c->inflight = false; /* never taken: not done */
+        ctl_ack(c, &c->inflight_frame, CMD_RESULT_BUSY, 0);
+    }
+}
+
+static void ctl_send_config(const afe_state_t *s, uint32_t *ordinal)
+{
+    uint32_t bit = 1u << (s->afe - 1u);
+    taskENTER_CRITICAL(&s_afe_lock);
+    bool lost = (s_afe_lost & bit) != 0;
+    s_afe_lost &= ~bit;
+    taskEXIT_CRITICAL(&s_afe_lock);
+    pkt_t p = {
+        .channel_id = PKT_CH_AFE_CONFIG,
+        .session_id = s_session_id,
+        .first_sample_index = (*ordinal)++,
+        .t_anchor_us = (uint64_t)s->since_us,
+        .t_first_us = (uint64_t)s->since_us,
+        .fs_nominal_mhz = 0,
+        .status = lost ? PKT_STATUS_MCU_BUFFER_OVERFLOW : 0,
+    };
+    p.sample_count = pkt_afe_config_data(s->afe, s->source, s->configured, s->generation,
+                                         s->words, s->n, p.data);
+    enqueue(&p);
+}
+
+static void ctl_task(void *arg)
+{
+    (void)arg;
+    static ctl_t c;
+    static afe_state_t latest[3];
+    static bool known[3];
+    cmd_exec_init(&c.exec);
+    cmd_parser_t parser;
+    cmd_parser_init(&parser);
+    uint32_t config_ordinal = 0;
+    uint8_t rx[64];
+    int64_t last_rx = 0;
+    int64_t next_all = esp_timer_get_time() + AFE_CONFIG_PERIOD_US;
+    for (;;) {
+        int n = usb_serial_jtag_read_bytes(rx, sizeof(rx), pdMS_TO_TICKS(CTL_RX_MS));
+        int64_t now = esp_timer_get_time();
+        if (n > 0) {
+            last_rx = now;
+            cmd_parser_feed(&parser, rx, (size_t)n, ctl_on_frame, &c);
+        } else if (parser.n > 0 && now - last_rx > CTL_PARTIAL_US) {
+            parser.n = 0; /* a frame that never finished */
+            parser.dropped++;
+        }
+        ctl_led_progress(&c, now);
+        static afe_state_t s;
+        while (xQueueReceive(s_afe_queue, &s, 0) == pdTRUE) {
+            latest[s.afe - 1u] = s;
+            known[s.afe - 1u] = true;
+            ctl_send_config(&s, &config_ordinal);
+        }
+        if (now >= next_all) {
+            next_all = now + AFE_CONFIG_PERIOD_US;
+            for (unsigned i = 0; i < 3u; i++) {
+                if (known[i]) {
+                    ctl_send_config(&latest[i], &config_ordinal);
+                }
+            }
+        }
     }
 }
 
@@ -1132,13 +1527,18 @@ void app_main(void)
 
     s_tx_queue = xQueueCreate(TX_QUEUE_LEN, sizeof(pkt_t));
     s_event_queue = xQueueCreate(EVENT_QUEUE_LEN, sizeof(t0_edge_t));
-    if (s_tx_queue == NULL || s_event_queue == NULL) {
+    s_led_request = xQueueCreate(1, sizeof(led_request_t));
+    s_led_reply = xQueueCreate(2, sizeof(led_reply_t));
+    s_afe_queue = xQueueCreate(AFE_QUEUE_LEN, sizeof(afe_state_t));
+    if (s_tx_queue == NULL || s_event_queue == NULL || s_led_request == NULL
+        || s_led_reply == NULL || s_afe_queue == NULL) {
         ESP_LOGE(TAG, "cannot create queues");
         abort();
     }
     if (xTaskCreate(tx_task, "pkt_tx", 4096, NULL, 5, NULL) != pdPASS
         || xTaskCreate(device_info_task, "dev_info", 3072, NULL, 4, NULL) != pdPASS
-        || xTaskCreate(event_task, "t0_event", 3072, NULL, 6, NULL) != pdPASS) {
+        || xTaskCreate(event_task, "t0_event", 3072, NULL, 6, NULL) != pdPASS
+        || xTaskCreate(ctl_task, "ctl", 4096, NULL, 5, NULL) != pdPASS) {
         ESP_LOGE(TAG, "cannot create tasks");
         abort();
     }
@@ -1152,6 +1552,9 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_config(&t0));
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BOARD_T0_GPIO, t0_isr, NULL));
+#if BOARD_STIM
+    stim_start();
+#endif
 
     if (xTaskCreate(ecg_reader_task, "ecg_reader", 4096, NULL, 6, NULL) != pdPASS
         || xTaskCreate(ppg_reader_task, "ppg_reader", 4096, NULL, 6, NULL) != pdPASS

@@ -30,18 +30,43 @@ DEVICE_INFO_CHANNEL = 0xD1
 TEMP_CHANNEL = 0xB1
 TEMP_FS_MHZ = 1000
 TEMP_STATUS_BITS = (1 << 1) | (1 << 3)
+# V0.2 sections 12-13 (2026-10-25): AFE configuration and command acknowledgement.
+AFE_CONFIG_CHANNEL = 0xD2
+COMMAND_ACK_CHANNEL = 0xD3
 CHANNELS = {
     ECG_CHANNEL: "ECG", 0xF1: "PPG_SLOT1", 0xF2: "PPG_SLOT2",
     0xF3: "PPG_SLOT3", 0xF4: "PPG_SLOT4", EVENT_CHANNEL: "EVENT",
     0xA1: "ACC_X", 0xA2: "ACC_Y", 0xA3: "ACC_Z",
     0xA4: "GYRO_X", 0xA5: "GYRO_Y", 0xA6: "GYRO_Z",
     DEVICE_INFO_CHANNEL: "DEVICE_INFO", TEMP_CHANNEL: "DIE_TEMP",
+    AFE_CONFIG_CHANNEL: "AFE_CONFIG", COMMAND_ACK_CHANNEL: "COMMAND_ACK",
 }
 # CHANNEL_ID registry per wire VERSION; the decoder drops other channels.
 VERSION_CHANNELS = {
     WIRE_VERSION: frozenset((ECG_CHANNEL, *PPG_CHANNELS, EVENT_CHANNEL)),
     WIRE_VERSION_V02: frozenset((ECG_CHANNEL, *PPG_CHANNELS, EVENT_CHANNEL,
-                                 *IMU_CHANNELS, DEVICE_INFO_CHANNEL, TEMP_CHANNEL)),
+                                 *IMU_CHANNELS, DEVICE_INFO_CHANNEL, TEMP_CHANNEL,
+                                 AFE_CONFIG_CHANNEL, COMMAND_ACK_CHANNEL)),
+}
+# Section 12, layout 1: per AFE id, its name, the data channels it feeds and the
+# exact register addresses of a configured chip, in order (8-bit values except
+# the 24-bit MAX30001 words).
+AFE_CONFIG_LAYOUT = 1
+AFES = {
+    1: ("MAX30001", (ECG_CHANNEL,),
+        (0x10, 0x12, 0x14, 0x15, 0x04, 0x05, 0x02, 0x03), 24),
+    2: ("MAX30101", (*PPG_CHANNELS, TEMP_CHANNEL),
+        (0x08, 0x0A, 0x0C, 0x0D, 0x0E, 0x0F, 0x11, 0x12, 0x02, 0x03, 0x09), 8),
+    3: ("BMI270", IMU_CHANNELS,
+        (0x40, 0x41, 0x42, 0x43, 0x45, 0x46, 0x47, 0x48, 0x49, 0x53, 0x55, 0x58, 0x7C,
+         0x7D), 8),
+}
+# Section 13: acknowledgement layout 1, five words; command and result names.
+COMMAND_ACK_LAYOUT = 1
+COMMAND_NAMES = {0x01: "ping", 0x02: "set_ppg_led"}
+COMMAND_RESULTS = {
+    0: "ok", 1: "unknown_command", 2: "bad_length", 3: "no_chip", 4: "busy",
+    5: "chip_error", 6: "request_reused", 7: "wrong_session", 8: "out_of_range",
 }
 # Schema section 9; bits 7 and 8 exist from V0.2 on. Reserved bits must be sent as 0.
 STATUS_BITS = {
