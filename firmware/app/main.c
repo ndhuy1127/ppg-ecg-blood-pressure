@@ -3,8 +3,9 @@
  * packets and device info packets in Packet Schema V0.2
  * (configs/hardware/Packet_Schema_V0.2.md), sent as binary on the native USB
  * Serial/JTAG port. Text logs go to UART0 only, so the packet port carries
- * packets alone (schema section 13). No AFE driver yet: every ECG/PPG/IMU value
- * comes from fake_afe, and the ECG SAMP edges from the fake ECG source.
+ * packets alone (schema section 13). ECG comes from a MAX30001 when built with
+ * BOARD_ECG_REAL=1 (not run on a chip yet), otherwise from fake_afe like PPG and
+ * IMU, and the ECG SAMP edges from the fake ECG source unless the capture is in.
  */
 #include <inttypes.h>
 #include <stdlib.h>
@@ -21,7 +22,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "ecg_read.h"
 #include "imu_plan.h"
+#include "max30001.h"
+#include "max30001_esp.h"
 #include "packet_wire.h"
 #include "samp_capture.h"
 #include "samp_edges.h"
@@ -313,6 +317,155 @@ static void fake_samp_edge(uint64_t index, int64_t t_us)
     samp_edges_push(t_us);
 }
 
+#if BOARD_ECG_REAL
+/*
+ * ECG from a MAX30001 (drivers/max30001.c; not run on a chip yet). The reader
+ * wakes on an INTB edge, or every ECG_POLL_MS when INTB is still low (a missed
+ * edge; the FIFO has about 31 ms of room after EFIT). It reads the FIFO in one
+ * burst up to the EOF word, takes the FIFO-read anchor right after it (V0.1
+ * section 5.2), reads STATUS, and ecg_read_plan decides the packet, the FIFO
+ * reset and the SAMP mapping error (see ecg_read.h). DATA is the raw 24-bit
+ * FIFO word, tags included (V0.1 section 8). A mapping restart is a SYNCH
+ * (max30001_restart); only a successful one starts a new epoch at index 0.
+ *
+ * Bit 8 needs BOARD_SAMP_VERIFIED: until bring-up shows that the first SAMP
+ * edge after SYNCH belongs to the first FIFO sample (V0.2 section 7.2), a
+ * constant one-sample offset would pass every interval check, so packets keep
+ * the FIFO-read anchor. The mapping still runs, and the stats log the spread of
+ * (FIFO read - edge of the packet's last sample) for that check.
+ */
+#ifndef BOARD_SAMP_VERIFIED
+#define BOARD_SAMP_VERIFIED 0
+#endif
+#define ECG_FS_NOMINAL_MHZ 512000u
+#define ECG_POLL_MS 10
+#define ECG_PLL_TIMEOUT_MS 1000
+
+static max30001_bus_t s_ecg_bus;
+static max30001_regs_t s_ecg_regs;
+static int64_t s_ecg_lag_min_us = INT64_MAX, s_ecg_lag_max_us = INT64_MIN;
+
+static void ecg_mapping_start(void *arg)
+{
+    (void)arg;
+    samp_edges_clear();
+    samp_map_restart(&s_samp, esp_timer_get_time());
+}
+
+static void ecg_give_up(const char *what, int err)
+{
+    ESP_LOGE(TAG, "MAX30001 %s failed (%d): no ECG packets", what, err);
+    max30001_write(&s_ecg_bus, MAX30001_EN_INT, 0); /* best effort: quiet INTB */
+    max30001_esp_stop();
+    /* Suspend rather than delete: an INTB ISR already running on the other
+     * core may still notify this task, so its handle must stay valid. */
+    for (;;) {
+        vTaskSuspend(NULL);
+    }
+}
+
+static void ecg_reader_task(void *arg)
+{
+    (void)arg;
+    const int64_t period_us = (1000000000LL + ECG_FS_NOMINAL_MHZ / 2) / ECG_FS_NOMINAL_MHZ;
+    samp_map_init(&s_samp, ECG_FS_NOMINAL_MHZ, SAMP_TOLERANCE_NS, SAMP_REMAP_HOLDOFF_US,
+                  SAMP_REMAP_MIN_GAP_US);
+    ESP_ERROR_CHECK(max30001_esp_init(&s_ecg_bus, BOARD_ECG_SPI_HZ,
+                                      xTaskGetCurrentTaskHandle()));
+    max30001_v1_regs(&s_ecg_regs);
+    uint32_t info = 0;
+    max30001_err_t err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+    ESP_LOGI(TAG, "MAX30001 INFO 0x%06" PRIx32 ", start %d", info, (int)err);
+    if (err != MAX30001_OK) {
+        ecg_give_up("start", (int)err);
+    }
+    if (BOARD_SAMP_CAPTURE) {
+        ESP_ERROR_CHECK(samp_capture_start(BOARD_ECG_INT2B_GPIO, BOARD_SAMP_RISING_EDGE));
+    } else {
+        ESP_LOGW(TAG, "no SAMP capture: ECG anchors from FIFO reads only");
+    }
+    if (!BOARD_SAMP_VERIFIED) {
+        ESP_LOGW(TAG, "SAMP alignment not verified: ECG bit 8 off (bring-up section 7)");
+    }
+    err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
+    if (err != MAX30001_OK) {
+        ecg_give_up("SYNCH", (int)err);
+    }
+    ecg_read_t ecg;
+    ecg_read_init(&ecg, false);
+    for (;;) {
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ECG_POLL_MS)) == 0
+            && !max30001_esp_intb_low()) {
+            continue; /* no edge and INTB high: below the threshold */
+        }
+        max30001_fifo_t f;
+        uint32_t st = 0;
+        bool bus_ok = max30001_read_fifo(&s_ecg_bus, &f) == MAX30001_OK;
+        uint64_t t_read = esp_timer_get_time(); /* right after the EOF word, if any */
+        bus_ok = bus_ok && max30001_read(&s_ecg_bus, MAX30001_STATUS, &st) == 0;
+        ecg_read_plan_t plan = ecg_read_plan(&ecg, &f, bus_ok, st, t_read,
+                                             ECG_FS_NOMINAL_MHZ,
+                                             PKT_STATUS_LATENCY_UNMEASURED);
+        if (plan.fifo_reset && max30001_command(&s_ecg_bus, MAX30001_FIFO_RST) != 0) {
+            imu_index_read_failed(&ecg.index);
+            plan.mapping_error = true;
+            plan.cause = SAMP_AFE;
+        }
+        if (plan.mapping_error) {
+            samp_map_error(&s_samp, plan.cause, esp_timer_get_time());
+        }
+        if (plan.send) {
+            imu_chunk_t *c = &plan.chunk;
+            uint64_t anchor = t_read;
+            int64_t deadline = (int64_t)t_read + SAMP_WAIT_PERIODS * period_us;
+            if (s_samp.state != SAMP_ERROR) {
+                samp_edges_wait(c->first_index + c->count - 1u, deadline);
+            }
+            int64_t edge_us;
+            if (samp_map_packet(&s_samp, c->first_index, c->count, samp_edges_lookup, NULL,
+                                deadline, esp_timer_get_time(), &edge_us) == SAMP_OK) {
+                if (!(c->status & PKT_STATUS_AFE_FIFO_OVERFLOW)) {
+                    /* Only drains that ended on EOF have a bounded read time. */
+                    int64_t lag = (int64_t)t_read - edge_us;
+                    s_ecg_lag_min_us = lag < s_ecg_lag_min_us ? lag : s_ecg_lag_min_us;
+                    s_ecg_lag_max_us = lag > s_ecg_lag_max_us ? lag : s_ecg_lag_max_us;
+                }
+                if (BOARD_SAMP_VERIFIED) {
+                    anchor = (uint64_t)edge_us;
+                    c->status |= PKT_STATUS_ANCHOR_SAMP;
+                }
+            }
+            pkt_t p = {
+                .channel_id = PKT_CH_ECG,
+                .session_id = s_session_id,
+                .first_sample_index = c->first_index,
+                .t_anchor_us = anchor,
+                .t_first_us = pkt_t_first_us(anchor, c->count, ECG_FS_NOMINAL_MHZ),
+                .fs_nominal_mhz = ECG_FS_NOMINAL_MHZ,
+                .sample_count = c->count,
+                .status = c->status,
+            };
+            for (uint16_t i = 0; i < c->count; i++) {
+                p.data[i] = (int32_t)f.word[i];
+            }
+            enqueue(&p);
+        }
+        if (samp_map_restart_due(&s_samp, esp_timer_get_time())) {
+            err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
+            if (err == MAX30001_OK) {
+                ecg_read_init(&ecg, true);
+            } else {
+                /* Unknown whether SYNCH ran: keep the index, re-anchor it by
+                 * time, and keep the mapping in error until the next try. */
+                ESP_LOGE(TAG, "MAX30001 SYNCH failed during a mapping restart (%d)", (int)err);
+                imu_index_read_failed(&ecg.index);
+                samp_map_error(&s_samp, SAMP_AFE, esp_timer_get_time());
+            }
+            ESP_LOGW(TAG, "SAMP mapping restarted (%" PRIu32 " so far)", s_samp.remaps);
+        }
+    }
+}
+#else
 /*
  * ECG reads with the SAMP anchor (V0.2 section 7.3). The anchor is the FIFO
  * read time unless samp_map_packet accepts the edges up to the packet's last
@@ -385,6 +538,8 @@ static void ecg_reader_task(void *arg)
         }
     }
 }
+
+#endif /* BOARD_ECG_REAL */
 
 /*
  * IMU reads (V0.2 sections 3-5), with the fake source in place of a BMI270.
@@ -567,10 +722,19 @@ static void log_stats(void)
     ESP_LOGI(TAG, "SAMP %s: packets bit 8 %" PRIu32 ", FIFO-read %" PRIu32 "; errors: "
                   "missed/overwritten %" PRIu32 ", extra %" PRIu32 ", edge missing %" PRIu32
                   ", late %" PRIu32 ", index %" PRIu32 ", FIFO overflow %" PRIu32
-                  "; restarts %" PRIu32,
+                  ", AFE %" PRIu32 "; restarts %" PRIu32,
              STATES[s_samp.state], s_samp.packets_samp, s_samp.packets_fifo, r[SAMP_LONG],
              r[SAMP_SHORT], r[SAMP_EDGE_MISSING], r[SAMP_LATE], r[SAMP_INDEX],
-             r[SAMP_OVERFLOW], s_samp.remaps);
+             r[SAMP_OVERFLOW], r[SAMP_AFE], s_samp.remaps);
+#if BOARD_ECG_REAL
+    if (s_ecg_lag_min_us <= s_ecg_lag_max_us) {
+        /* Bring-up check of the SAMP alignment (V0.2 section 7.2): with the right
+         * edge, the FIFO read follows it by 0 .. about one period plus the read. */
+        ESP_LOGI(TAG, "ECG FIFO read - SAMP edge of the last sample: %" PRId64 " .. %" PRId64
+                      " us%s", s_ecg_lag_min_us, s_ecg_lag_max_us,
+                 BOARD_SAMP_VERIFIED ? "" : " (bit 8 off until verified)");
+    }
+#endif
     if (BOARD_SAMP_CAPTURE) {
         samp_capture_stats_t c = samp_capture_stats();
         ESP_LOGI(TAG, "SAMP clock pairs %" PRIu32 ", rejected %" PRIu32 ", max error %" PRId64
@@ -643,9 +807,10 @@ void app_main(void)
         ESP_LOGE(TAG, "cannot create reader tasks");
         abort();
     }
-    ESP_LOGI(TAG, "streaming FAKE data: ECG 0xE1 %u us x %u, PPG 0xF1-0xF3 %u us x %u, "
+    ESP_LOGI(TAG, "streaming %s ECG 0xE1 %u us x %u, FAKE PPG 0xF1-0xF3 %u us x %u, "
                   "IMU 0xA1-0xA6 %u us x %u%s, t0 on GPIO%d",
-             (unsigned)ECG_FAKE.period_us, (unsigned)ECG_FAKE.batch, (unsigned)PPG_FAKE.period_us,
+             BOARD_ECG_REAL ? "MAX30001" : "FAKE", (unsigned)ECG_FAKE.period_us,
+             (unsigned)ECG_FAKE.batch, (unsigned)PPG_FAKE.period_us,
              (unsigned)PPG_FAKE.batch, (unsigned)IMU_FAKE.period_us, (unsigned)IMU_FAKE.batch,
              FAKE_IMU_STALLS ? " with read stalls" : "", BOARD_T0_GPIO);
     if (BOARD_PPG_READ_PERIOD_MS > 0) {

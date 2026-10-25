@@ -174,7 +174,7 @@ def test_period_and_valid_packets(m):
         assert m.packet(k, 16) == (OK, times[k + 15], 1)
     samp, fifo, remaps, period, results = m.counters()
     assert (samp, fifo, remaps, period) == (4, 0, 0, 1_953_125)
-    assert results == [0] * 8
+    assert results == [0] * 9  # one counter per samp_result_t, SAMP_AFE included
 
 
 @pytest.mark.parametrize("late,expected", [(0, OK), (1, LATE)])

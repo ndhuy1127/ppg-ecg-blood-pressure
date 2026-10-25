@@ -25,6 +25,13 @@
 #define BOARD_ECG_MISO_GPIO 17
 #define BOARD_ECG_INTB_GPIO 21
 #define BOARD_ECG_INT2B_GPIO 47
+/* 1 reads a MAX30001 (drivers/max30001.c, not run on a chip yet) instead of the
+ * fake ECG source; it needs the SAMP capture too (BOARD_SAMP_CAPTURE 1). SPI
+ * clock 4 MHz (custom_board_proposal.md A.2). */
+#ifndef BOARD_ECG_REAL
+#define BOARD_ECG_REAL 0
+#endif
+#define BOARD_ECG_SPI_HZ 4000000
 /* SAMP on INT2B (Packet Schema V0.2 section 7.1): 1 builds in the MCPWM capture
  * (samp_capture.c, not run on a chip yet) instead of the fake ECG edges. The
  * edge polarity is measured at bring-up; falling until then. */

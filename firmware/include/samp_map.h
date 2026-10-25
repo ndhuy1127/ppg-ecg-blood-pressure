@@ -35,6 +35,7 @@ typedef enum {
     SAMP_LONG,         /* above T + tolerance: a missed or overwritten edge */
     SAMP_OVERFLOW,     /* the ECG FIFO overflowed (ETAG 111) */
     SAMP_LATE,         /* the last sample's edge came after the bounded wait */
+    SAMP_AFE,          /* the AFE read failed or its PLL unlocked (MAX30001) */
     SAMP_RESULTS,
 } samp_result_t;
 
