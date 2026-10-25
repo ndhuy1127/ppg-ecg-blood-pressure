@@ -70,6 +70,21 @@ tốc và con quay, `fifo_stop_on_full = 1`, ngưỡng watermark 10 frame. Một
 Driver phải ánh xạ đúng thứ tự frame sang `0xA1`–`0xA6`. File cấu hình microcode
 nạp lúc khởi động và giá trị từng thanh ghi ghi vào metadata (mục 8).
 
+**Giá trị thanh ghi (chốt 2026-10-25, driver `firmware/drivers/bmi270.c`, datasheet
+rev 1.6):** `ACC_CONF` 0xA8, `ACC_RANGE` 0x01, `GYR_CONF` 0xE8 (`gyr_filter_perf` và
+`gyr_noise_perf` đều ở chế độ hiệu năng), `GYR_RANGE` 0x02, `FIFO_DOWNS` 0x88,
+`FIFO_WTM` 0x0078, `FIFO_CONFIG_0` 0x01 (`fifo_time_en` = 0: không frame sensortime),
+`FIFO_CONFIG_1` 0xC0, `INT1_IO_CTRL` 0x0A (push-pull, mức cao), `INT_LATCH` 0x00 (INT1
+theo điều kiện watermark), `INT_MAP_DATA` 0x02, `PWR_CONF` 0x02 (advanced power save
+tắt), `PWR_CTRL` 0x06 (không bật cảm biến nhiệt của BMI270). Microcode: mảng
+`bmi270_config_file` của Bosch BMI270_SensorAPI v2.86.1 (commit `41129fc`, BSD-3-Clause,
+SHA-256 `2d75e68e…78db`), chép nguyên vào repo. Driver kiểm sức khỏe chip mỗi 1 s
+(`EVENT.por_detected`, `ERR_REG.fatal_err`, `INTERNAL_STATUS`, đọc lại cấu hình); sai
+thì khởi động lại và lần đọc sau neo lại với bit 3 và 5 (bước 3). Sau một lượt đọc
+frame lỗi, driver xóa FIFO (`CMD` 0xB0) trước khi đọc tiếp, giữ bit 0 nếu FIFO đầy:
+frame còn lại từ trước khoảng mất không được nằm chung lượt với frame sau nó, vì
+neo lại theo thời gian chỉ sửa được khoảng trống giữa hai lượt.
+
 **Mỗi lần đọc** (sau ngắt watermark trên INT1):
 
 1. Đọc `FIFO_LENGTH`, ghi `esp_timer` ngay lúc đó: đây là `T_ANCHOR_US` = A.
@@ -107,7 +122,10 @@ nào thì ghi timing là chưa xác định.
 ## 5. FIFO đầy, mất mẫu không biết số lượng, bit 5
 
 **Phát hiện đầy:** FIFO được coi là đầy khi độ dài đã chốt không còn chỗ cho thêm
-một frame (độ dài + 12 byte > dung lượng hữu dụng của cấu hình). Không dùng riêng
+một frame (độ dài + 12 byte > dung lượng hữu dụng của cấu hình). Driver BMI270
+(2026-10-25) dùng ngưỡng bảo thủ hơn: còn dưới 21 byte trống (độ dài + 21 > 2 048),
+vì khi dừng lúc đầy chip có thể bỏ frame mới nhất khi chỗ trống nhỏ hơn frame lớn
+nhất (datasheet mục 4.7.2), mà frame lớn nhất mọi chế độ là 21 byte. Không dùng riêng
 `FIFO_LENGTH == dung lượng` (chip có thể bỏ frame khi chỗ trống nhỏ hơn một frame),
 và không dùng ngắt FIFO-full làm bằng chứng mất mẫu (ngắt này báo sớm).
 
@@ -437,8 +455,9 @@ sau.
    firmware nạp lại ở lần thứ ba) qua record và replay, manifest đúng `device_info`
    từng phiên; và output `decode.json`, `packets.csv`, `samples.csv` giống từng byte
    khi đọc nguồn theo khối 1 byte, khối lẫn lộn hay 4 096 byte.
-4. **Sau khi có bo:** driver BMI270 thật (nạp microcode, cấu hình mục 3), đo `L` và
-   kiểm dấu trục trên bench. Driver MAX30001/MAX30101 thật: kiểm xung `SAMP` đầu
+4. **Sau khi có bo** (driver MAX30001, MAX30101 và BMI270 đã viết 2026-10-25, chưa
+   chạy trên chip): chạy driver BMI270 (nạp microcode, cấu hình mục 3), đo `L` và
+   kiểm dấu trục trên bench. Driver MAX30001/MAX30101: kiểm xung `SAMP` đầu
    tiên ứng với mẫu đầu tiên của FIFO, cực tính và độ rộng xung, `PPG_RDY` ở chế độ
    ba khe; đo `L_ECG,SAMP` với kích thích quét pha (mục 7.5).
 

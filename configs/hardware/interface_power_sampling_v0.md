@@ -62,7 +62,7 @@ Ghi chú giao tiếp theo bảng A.7:
 | MAX30001 INT2B | 47 | Xung `SAMP` ở tốc độ dữ liệu ECG (tr. 42, tr. 44): đánh dấu lúc mẫu vào FIFO, không phải lúc lấy mẫu analog (`Packet_Schema_V0.1.md` mục 5.2). Chạy 3,3 V với module WROOM-1-N16R8/N8R8 (A.6 mục 4) |
 | I²C bus 1, MAX30101 (SDA, SCL) | 8, 9 | Bus riêng, tối đa 400 kHz; địa chỉ ghi/đọc 0xAE/0xAF (MAX30101 Rev 2, Bảng 17, tr. 30). Kéo lên trên bo SparkFun (A.4) |
 | MAX30101 INT | 18 | Open-drain, tích cực mức thấp; bo SparkFun kéo lên 4,7 kΩ lên 3,3 V (A.4) |
-| SPI bus 2, BMI270 (SCK, MOSI, MISO, CS) | 12, 11, 13, 10 | Bus riêng, bắt đầu 1 MHz, lên 2 MHz sau khi đo scope (A.2); điện trở 33 Ω nối tiếp trên SCK, MOSI, CS |
+| SPI bus 2, BMI270 (SCK, MOSI, MISO, CS) | 12, 11, 13, 10 | Bus riêng, bắt đầu 1 MHz, lên 2 MHz sau khi đo scope (A.2); điện trở 33 Ω nối tiếp trên SCK, MOSI, CS. Firmware dùng `SPI3_HOST` có DMA (đọc 170 frame trong một giao dịch), chế độ 0, CS phần cứng (chốt 2026-10-25) |
 | BMI270 INT1 | 14 | |
 | Nút `t0`, LED trạng thái | 4, 5 | Nút tích cực mức thấp, kéo lên 10 kΩ và 100 nF trên bo đế |
 

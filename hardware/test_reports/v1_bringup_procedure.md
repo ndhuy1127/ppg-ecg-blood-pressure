@@ -186,6 +186,10 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
      (0x59) = 0x00, ghi file cấu hình của Bosch vào `INIT_DATA` (0x5E), `INIT_CTRL`
      = 0x01, rồi kiểm trạng thái khởi tạo theo datasheet;
    - chụp SCK tại TP5 (phía cáp): dội nhiều thì chỉnh R9–R11; ổn mới lên 2 MHz (A.2).
+   Driver BMI270 làm các việc này khi khởi động (từ 2026-10-25, chưa chạy trên chip):
+   build `pio run -d firmware -e esp32s3_devkitc_imu_real`, log UART0 in
+   `BMI270 start` và tốc độ SPI ([firmware/README.md](../../firmware/README.md) mục
+   "Driver BMI270"). Lên 2 MHz bằng `-DBOARD_IMU_SPI_HZ=2000000`.
    Từ bước 4, driver MAX30101 làm các việc này khi khởi động (từ 2026-10-25, chưa
    chạy trên chip): build `pio run -d firmware -e esp32s3_devkitc_ppg_real`, log UART0
    in `REV_ID` và kết quả khởi động ([firmware/README.md](../../firmware/README.md)

@@ -12,7 +12,8 @@
 > lý. MCPWM capture thật đã viết nhưng tắt và chưa chạy. Từ 2026-10-25 có driver
 > MAX30001 (mục "Driver MAX30001"), bật bằng bản build `esp32s3_devkitc_ecg_real`;
 > **chưa chạy trên chip**. Driver MAX30101 (mục "Driver MAX30101") bật bằng
-> `esp32s3_devkitc_ppg_real`, cũng chưa chạy trên chip. Chưa có driver BMI270.
+> `esp32s3_devkitc_ppg_real`, cũng chưa chạy trên chip. Driver BMI270 (mục "Driver
+> BMI270") bật bằng `esp32s3_devkitc_imu_real`, cũng chưa chạy trên chip.
 
 - **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị, đọc
   IMU, đọc ECG có mốc `SAMP`), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet
@@ -24,7 +25,10 @@
   `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`).
 - **drivers/**: `max30001.c` (driver MAX30001 lõi, C thuần, không phụ thuộc
   ESP-IDF), `max30001_esp.c` (SPI và ngắt INTB trên ESP32-S3); `max30101.c` (driver
-  MAX30101 lõi, C thuần), `max30101_esp.c` (I²C và ngắt INT);
+  MAX30101 lõi, C thuần), `max30101_esp.c` (I²C và ngắt INT); `bmi270.c` (driver
+  BMI270 lõi, C thuần), `bmi270_config.c` (microcode 8 KB của Bosch, BSD-3-Clause,
+  xem [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)), `bmi270_esp.c` (SPI có DMA
+  và ngắt INT1);
   `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101/BMI270
   (FIFO có độ sâu cấu hình được, đầy thì giữ nội dung và bỏ mẫu mới; ECG giả phát
   xung `SAMP`); `samp_edges.c`, bộ đệm vòng 64 cạnh `SAMP`; `samp_capture.c`, MCPWM
@@ -414,10 +418,73 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
   Các byte thanh ghi so với giá trị tính tay từ bảng tr. 11–23. Mô phỏng do dự án
   viết, nên chip thật kiểm ở bring-up mục 8.
 
+## Driver BMI270 (2026-10-25, chưa chạy trên chip)
+
+Bật bằng `pio run -d firmware -e esp32s3_devkitc_imu_real` (`BOARD_IMU_REAL=1`); ECG
+và PPG vẫn là nguồn giả. Dùng ở bring-up mục 8, bước 5. Datasheet BMI270
+BST-BMI270-DS000-08 rev 1.6 (3/2026, SHA-256
+`f68ce3c74f011a80bbe4b0279c4abe9609a71a5dcda75a951381d77112e005fb`).
+
+- **Bus:** SPI bus 2 của V1-module (GPIO10 CS phần cứng, 11 MOSI, 12 SCK, 13 MISO),
+  `SPI3_HOST` có DMA nên đọc 170 frame trong một giao dịch, chế độ 0, 1 MHz
+  (`BOARD_IMU_SPI_HZ`, lên 2 MHz sau khi đo scope). Chip khởi động ở I²C; cạnh lên
+  của CSB chuyển sang SPI sau 200 µs, lại như vậy sau soft reset; mỗi lần đọc có
+  một byte giả trước dữ liệu (datasheet mục 6.3–6.4). Sau mỗi lần ghi chờ 450 µs,
+  sau mỗi lần đọc 2 µs (Table 19).
+- **Khởi động** (`bmi270_start`): đọc giả để chuyển SPI, soft reset, đọc giả lần
+  nữa, kiểm `CHIP_ID = 0x24`; tắt advanced power save, tải microcode 8 KB của Bosch
+  vào `INIT_DATA` theo 32 lượt 256 byte (`INIT_ADDR` = offset / 2), `INIT_CTRL = 1`,
+  chờ `INTERNAL_STATUS = init_ok` (mục 4.4); ghi cấu hình, đọc lại, kiểm
+  `EVENT.error_code`; bật cảm biến, chờ 80 ms cho con quay khởi động (45 ms điển
+  hình) rồi xóa FIFO. Lần khởi động đầu thử tối đa 10 lần cách nhau 100 ms rồi mới
+  bỏ (không có packet IMU). Ngắt INT1 chỉ bật khi chip đã cấu hình xong (sau reset
+  INT1 không được lái; GPIO14 có pull-down): kiểu ngắt để `GPIO_INTR_DISABLE` tới
+  lúc đó, vì `gpio_isr_handler_add` của ESP-IDF tự bật lại ngắt của chân.
+- **Cấu hình V1** (`bmi270_v1_regs`, Packet Schema V0.2 mục 3, giá trị chốt
+  2026-10-25): `ACC_CONF` 0xA8, `ACC_RANGE` 0x01 (±4 g), `GYR_CONF` 0xE8 (lọc và
+  nhiễu ở chế độ hiệu năng), `GYR_RANGE` 0x02 (±500 °/s), `FIFO_DOWNS` 0x88, watermark
+  120 byte (10 frame), `FIFO_CONFIG_0` 0x01 (dừng khi đầy, không frame sensortime),
+  `FIFO_CONFIG_1` 0xC0 (con quay và gia tốc, không header), `INT1_IO_CTRL` 0x0A
+  (push-pull, mức cao), `INT_LATCH` 0 (không chốt), `INT_MAP_DATA` 0x02 (watermark lên
+  INT1), `PWR_CONF` 0x02, `PWR_CTRL` 0x06 (không bật cảm biến nhiệt của BMI270).
+- **Mỗi lần đọc** (task `imu_reader` trong `main.c`, V0.2 mục 3–5):
+  - Thức theo cạnh lên của INT1, và cứ 20 ms không có cạnh thì vẫn xem FIFO (INT1
+    không chốt, giữ mức cao khi FIFO còn trên watermark nên đọc trễ không có cạnh
+    mới).
+  - Đọc `FIFO_LENGTH`, lấy `T_ANCHOR_US` ngay sau đó; khi có ít nhất 10 frame (hoặc
+    FIFO đầy) đọc **đúng** số frame đã chốt trong một lượt `FIFO_DATA`; frame đến sau
+    nằm lại cho lần sau (frame đọc trọn mới bị xóa, mục 4.7.2). Độ dài không phải
+    bội của 12 hay lớn hơn 2 040 byte (MISO treo mức cao đọc ra 0x3FFF) không phải
+    mức FIFO, vì FIFO không header chỉ chứa frame trọn và bộ đếm nhảy theo frame
+    trọn (mục 4.7.1, 5.2.36): lần đọc hỏng và kiểm sức khỏe chip ở lần thức kế
+    tiếp (trong 20 ms).
+  - Lượt đọc frame lỗi có thể đã lấy ra một phần frame: xóa FIFO (`CMD` 0xB0) trước
+    khi đọc tiếp, để frame còn lại từ trước khoảng mất không nằm chung lượt với frame
+    sau nó; giữ bit 0 nếu FIFO lúc đó đầy. Xóa cũng lỗi thì khởi động lại chip (bước
+    khởi động kết thúc bằng xóa FIFO).
+  - FIFO coi là đầy khi còn dưới 21 byte trống: khi dừng lúc đầy, chip có thể bỏ
+    frame mới nhất lúc chỗ trống nhỏ hơn frame lớn nhất (mục 4.7.2); 21 byte là frame
+    lớn nhất mọi chế độ (1 + 8 + 6 + 6), nên cờ là bảo thủ (V0.2 mục 5).
+  - `imu_plan_read` cho chỉ số, các phần tối đa 32 frame (bit 7), bit 0 khi đầy và
+    neo lại sau đó (bit 5); đọc lỗi thì không gửi, lần sau neo lại (bit 3 và 5).
+  - Frame không header 12 byte: con quay X, Y, Z rồi gia tốc X, Y, Z, byte thấp trước
+    (mục 4.7.1); packet `0xA1`–`0xA6` là gia tốc X, Y, Z rồi con quay X, Y, Z.
+- **Kiểm sức khỏe** mỗi 1 s (`bmi270_check`): `CHIP_ID`, `EVENT.por_detected` (bật
+  sau mỗi lần reset, khởi động đã xóa nó), `ERR_REG.fatal_err`, `INTERNAL_STATUS` và
+  đọc lại cấu hình. Sai thì khởi động lại chip, thử lại mỗi 100 ms tới khi được,
+  **không** gửi packet trong lúc đó; packet đầu sau đó neo lại (bit 3 và 5). Sụt
+  nguồn làm BMI270 về I²C và chưa khởi tạo, không còn dữ liệu, nên chỉ kiểm này bắt
+  được.
+- **Test** [tests/test_firmware_bmi270.py](../tests/test_firmware_bmi270.py): biên
+  dịch `drivers/bmi270.c` với microcode, chạy với một BMI270 mô phỏng ở mức SPI thô
+  (chuyển I²C → SPI, byte giả, soft reset, `INIT_ADDR`/`INIT_DATA`, FIFO lấy ra từng
+  frame trọn và gửi lại frame đọc dở, lỗi bus trước hoặc sau khi đã lấy dữ liệu,
+  `EVENT` xóa khi đọc), và kiểm SHA-256 của microcode. Vòng đọc trong `main.c`
+  (ngắt, kiểm định kỳ, khởi động lại) không chạy trên máy tính. Mô phỏng do dự án
+  viết, nên chip thật kiểm ở bring-up.
+
 ## Chưa có
 
-- Driver BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và gọi
-  `imu_index_read_failed` khi đọc lỗi).
 - Ghi cấu hình AFE vào metadata phiên (kể cả `afe_config` của `0xB1` và nguồn của
   từng kênh khi env trộn nguồn thật và giả).
 - Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
