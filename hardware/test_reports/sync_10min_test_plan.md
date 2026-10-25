@@ -6,7 +6,7 @@
 
 ## 1. Mục tiêu
 
-Trên thiết bị V0 đã bring-up, đo trong 10 phút liên tục:
+Trên thiết bị V1 (PCB V1-module) đã qua bring-up, đo trong 10 phút liên tục:
 
 1. Tốc độ lấy mẫu **thực** của từng kênh so với tốc độ danh định.
 2. Drift: tốc độ thực của mỗi kênh lệch bao nhiêu so với clock MCU, và hai kênh
@@ -40,8 +40,11 @@ ghi lại:
   50 ms.
   MCU gửi packet sự kiện mã `3` với `T_ANCHOR_US` tại cạnh lên.
 - **Firmware (chốt 2026-10-25, chưa chạy trên chip):** bản build
-  `pio run -d firmware -e esp32s3_devkitc_sync10` (ba chip thật, capture `SAMP`, xung
-  bật bằng `BOARD_STIM=1`). Cạnh lên đầu tiên 2 s sau khi khởi động; các cạnh sau
+  `pio run -d firmware -e esp32s3_devkitc_sync10` (ba chip thật, capture `SAMP` có
+  bit 8 nhờ `BOARD_SAMP_VERIFIED=1`, xung bật bằng `BOARD_STIM=1`). Chỉ nạp bản này sau
+  khi bring-up mục 7 đã xác nhận cạnh `SAMP` đầu tiên ứng với mẫu đầu tiên của FIFO;
+  chưa xác nhận thì packet ECG mang bit 8 sai mốc (sửa 2026-10-25: bản trước thiếu cờ
+  này nên không có bit 8, không đo được `L_ECG,SAMP`). Cạnh lên đầu tiên 2 s sau khi khởi động; các cạnh sau
   cách nhau 1 000 000 µs cộng độ lệch đều trong [0; 1 953) µs (`stim_plan.c`,
   xorshift32), lịch tính theo thời điểm đích nên độ trễ callback không cộng dồn;
   độ rộng 50 000 µs. `T_ANCHOR_US` của packet mã 3 là `esp_timer` đọc **ngay sau**

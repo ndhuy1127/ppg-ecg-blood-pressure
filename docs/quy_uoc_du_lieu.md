@@ -8,7 +8,7 @@ Tài liệu này quy định chuẩn quản lý, đặt tên và cấu trúc d�
 
 Dữ liệu dự án được phân chia nghiêm ngặt theo 3 cấp độ, cộng một thư mục riêng cho kết quả chạy. Cả bốn thư mục đều bị Git bỏ qua (`.gitignore`):
 
-* `data/raw/`: Dữ liệu gốc thu thập từ thiết bị đo. Tuyệt đối **KHÔNG** chỉnh sửa hay xóa file trong thư mục này.
+* `data/raw/`: Dữ liệu gốc thu thập từ thiết bị đo. Tuyệt đối **KHÔNG** chỉnh sửa, ghi đè hay xóa file trong thư mục này để "làm sạch" kết quả. Ngoại lệ duy nhất: xóa toàn bộ raw của một mã người tham gia khi người đó rút lui, theo [kế hoạch quản lý dữ liệu](ethics/data_management_plan_v0.1.md) mục 4, và ghi nhật ký xóa (mã, ngày, người làm, không kèm danh tính). Ngoại lệ thêm ngày 2026-10-26, chờ Huy duyệt.
 * `data/interim/`: Dữ liệu thô đã qua xử lý sơ bộ (lọc nhiễu ban đầu, cắt bớt đoạn nhiễu nặng, định dạng lại timestamp).
 * `data/processed/`: Dữ liệu hoàn chỉnh đã trích xuất đặc trưng (features), đồng bộ PPG/ECG và nhãn SBP/DBP, sẵn sàng cho huấn luyện mô hình ML/DL.
 * `runs/` (ở gốc repository, ngoài `data/`): Kết quả chạy mô hình (dự đoán, model, metrics, provenance). Runner `scripts/run_b0_pulsedb_csv.py` và `scripts/run_b3_pulsedb.py` mặc định ghi vào `runs/` và từ chối ghi đè output đã có. File dự đoán theo dòng chứa `subject_id`, nên không commit.

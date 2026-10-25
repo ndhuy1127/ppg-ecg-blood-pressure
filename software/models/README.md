@@ -59,7 +59,9 @@ B0 giữ một cặp hằng số trong `_constant`; B1 giữ các cặp hằng s
 trong `_constants`. Đây là dữ liệu trong bộ nhớ, không phải model artifact
 được ghi ra đĩa; file `.py` không chứa dữ liệu người tham gia.
 
-B0 hiện dùng trung bình đều theo dòng train. B1 dùng trung bình đều các dòng
+B0 mặc định dùng trung bình đều theo dòng train; truyền `sample_weight` 1/n_s (như
+`b3-pipeline-v1`, 2026-10-25) thì thành trung bình của các trung bình theo người
+([quy ước Tuần 3](../../docs/protocol/week_03_baselines_metrics.md)). B1 dùng trung bình đều các dòng
 hiệu chuẩn của từng người và thuộc kịch bản cá nhân hóa có hiệu chuẩn. Caller
 phải xác minh split, không trùng record/event và calibration có trước evaluation;
 API không nhận metadata để tự chứng minh các điều kiện đó. Quy tắc dataset thật

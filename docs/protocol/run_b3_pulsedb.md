@@ -59,10 +59,12 @@ trưng, tính trên toàn bộ đoạn (1.250 mẫu, 10 s theo provenance):
 | `<kênh>_range` | `max - min` |
 | `<kênh>_rms` | `sqrt(mean(x^2))` |
 
-`<kênh>` là `ecg` và `ppg`. Đơn vị là đơn vị biên độ của nguồn; đơn vị và cách
-chuẩn hóa `ECG_F`/`PPG_F` **chưa được xác minh**. Nếu kênh đã chuẩn hóa theo
-đoạn, vài đặc trưng có thể là hằng số; runner liệt kê chúng trong
-`constant_train_features`.
+`<kênh>` là `ecg` và `ppg`, đơn vị tùy ý. Kiểm trên raw ngày 2026-10-25: `ECG_F` và
+`PPG_F` đã được chuẩn hóa min-max theo từng đoạn về [0, 1]
+([provenance](../pulsedb_provenance.md) mục 6). Vì vậy `min` của cả hai kênh là hằng
+số 0 trên train và runner liệt kê chúng trong `constant_train_features`; `max` và
+`range` chỉ lệch tới 1 ulp quanh 1 nên không bị liệt kê, nhưng cũng không mang thông
+tin.
 
 Hàm chỉ nhận vector ECG và PPG, không nhận ABP, nhãn BP, ID người hay hash.
 Không impute: NaN/Inf, vector rỗng hoặc masked array gây `ValueError`. PAT và

@@ -208,12 +208,12 @@ True chỉ để có feature. Runner fixture không tải/đọc dataset:
 & '.venv/Scripts/python.exe' -m pytest -q 'tests/test_week04_features.py' 'tests/test_subject_bootstrap.py'
 ```
 
-Runner sinh JSON, CSV fixture và SVG theo đường dẫn báo cáo Tuần 4, ghi raw fixture/
-config/code/figure/table SHA256, seed, commit và dirty. Đường dẫn `--output`,
-`--figure` có thể đổi; runner chủ động tạo lại output được chỉ định, không dùng
-cho raw. Khác với các runner khác trong `scripts/` (từ chối ghi đè), runner này
-**ghi đè** output mặc định trong `reports/`; muốn giữ bản cũ thì truyền
-`--output`/`--figure` tới thư mục mới. SVG được lưu không kèm ngày giờ và với
+Runner sinh JSON, CSV fixture và SVG, mặc định trong `runs/demo_week04_huy/`
+(không vào Git), ghi raw fixture/config/code/figure/table SHA256, seed, commit và
+dirty. Đường dẫn `--output`, `--figure` có thể đổi; CSV nằm cạnh JSON. Như các
+runner khác trong `scripts/`, runner **từ chối ghi đè** (sửa 2026-10-25: trước đó
+mặc định ghi đè bản ghi Tuần 4 trong `reports/`): nếu JSON, CSV hay SVG đã có thì
+dừng trước khi tính gì. SVG được lưu không kèm ngày giờ và với
 `svg.hashsalt` cố định, nên `figure_sha256` giống nhau giữa các lần chạy trong
 cùng môi trường. Không đưa bảng fixture vào bảng baseline công khai.
 CSV và JSON được ghi với LF; `config_sha256` và `code_sha256` tính trên nội dung

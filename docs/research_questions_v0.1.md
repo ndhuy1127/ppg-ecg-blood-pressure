@@ -95,8 +95,8 @@ Tính riêng cho ΔSBP và ΔDBP:
 - **PEP thay đổi giữa các phiên** (căng thẳng, tư thế, nhiệt độ) làm PAT thay đổi mà BP không đổi.
 - **PAT ở cổ tay chịu ảnh hưởng của co cơ trơn mạch ngoại vi**, độc lập với mức BP (Mukkamala et al., 2023).
 - **ΔBP giữa các phiên nhỏ** ở người trẻ khỏe mạnh đo lúc nghỉ, làm zero-change khó bị vượt và giảm độ nhạy của so sánh.
-- **ECG ngón tay–cổ tay có biên độ nhỏ hơn ECG ngực và dễ nhiễu khi chạm không ổn định**, gây sai lệch R-peak. Lần đo mất ECG không ngẫu nhiên có thể làm lệch tập đánh giá; vì vậy phải so trên cùng tập (mục C).
-- **Độ phân giải thời gian:** ở 500 Hz mỗi mẫu là 2 ms; sai số định vị mốc và đồng bộ hai kênh cộng trực tiếp vào PAT.
+- **ECG đạo trình I giữa hai cổ tay (điện cực dán, chốt 2026-10-23) có biên độ nhỏ hơn ECG ngực và dễ nhiễu khi một trong hai tay cử động**, gây sai lệch R-peak. Lần đo mất ECG không ngẫu nhiên có thể làm lệch tập đánh giá; vì vậy phải so trên cùng tập (mục C).
+- **Độ phân giải thời gian:** ECG 512 sps (khoảng 1,95 ms mỗi mẫu) và PPG 200 sps mỗi khe (5 ms mỗi mẫu; chốt 2026-10-24); sai số định vị mốc, nhất là chân sóng PPG, và đồng bộ hai kênh cộng trực tiếp vào PAT.
 
 ### G. Dữ liệu tối thiểu và tính khả thi
 
@@ -147,7 +147,7 @@ Báo cáo ΔMAE với CI theo người, riêng SBP và DBP. Mức suy giảm 40%
 
 ### G. Dữ liệu và tính khả thi
 
-- **Phần (a), làm được ngay:** PulseDB (phần VitalDB trên Kaggle) với reader, inventory và split theo người `pulsedb-split-v2` đã có, cùng pipeline B0/B3 trên split này (mục 7; mới kiểm tra bằng dữ liệu SYNTHETIC, chưa chạy trên raw PulseDB). Cần thêm: một hàm chia ngẫu nhiên theo đoạn (chỉ cho đối chứng A). Một lựa chọn khác cần nhóm cân nhắc là dùng chính các tập của PulseDB: tập kiểm thử có hiệu chuẩn (CalBased) chứa người đã có trong tập huấn luyện, còn tập không hiệu chuẩn (CalFree) chứa người mới. Theo Bảng 4 của bài báo PulseDB (Wang et al., 2023), phần VitalDB có 1.293 người ở cả Train và CalBased Test, 144 người ở CalFree Test; các con số 2.506 và 279 là tổng MIMIC-III + VitalDB.
+- **Phần (a), làm được ngay:** PulseDB (phần VitalDB trên Kaggle) với reader, inventory và split theo người `pulsedb-split-v2` đã có, cùng pipeline B0/B3 trên split này (mục 7; đã chạy trên raw PulseDB VitalDB Train 400 người ngày 2026-10-25, chỉ chấm val; [báo cáo](../reports/weekly/week_05/pulsedb_b3_v1/README.md)). Cần thêm: một hàm chia ngẫu nhiên theo đoạn (chỉ cho đối chứng A). Một lựa chọn khác cần nhóm cân nhắc là dùng chính các tập của PulseDB: tập kiểm thử có hiệu chuẩn (CalBased) chứa người đã có trong tập huấn luyện, còn tập không hiệu chuẩn (CalFree) chứa người mới. Theo Bảng 4 của bài báo PulseDB (Wang et al., 2023), phần VitalDB có 1.293 người ở cả Train và CalBased Test, 144 người ở CalFree Test; các con số 2.506 và 279 là tổng MIMIC-III + VitalDB.
 - **Phần (b):** cần dữ liệu prototype có cấu trúc `subject_id → session_id → event_id → window_id`, tối thiểu khoảng 30–40 phiên trên ít nhất 15 người, có biến thiên BP tự nhiên giữa các phiên.
 
 ---
@@ -213,7 +213,7 @@ Lưu ý: "coverage" ở đây là **tỷ lệ quan sát được giữ lại**, 
 |---|---|---|---|
 | — | **B0** `PopulationMeanBaseline` (trung bình nhãn train) | BP tuyệt đối, người mới; dùng cho RQ2 | Đã cài, đã chạy sơ bộ trên CSV PulseDB (Tuần 3) |
 | **Zero-change** | **B1** `PersonalMeanBaseline`, khi $`\text{BP}_0`$ là trung bình các lần cuff hiệu chuẩn | $`\widehat{\text{BP}} = \text{BP}_0`$, tương đương $`\Delta\widehat{\text{BP}} = 0`$; RQ1 | Đã cài, mới kiểm tra bằng dữ liệu giả lập |
-| — | **B3** `XGBoostBaseline` (`software/models/xgboost_baseline.py`), đặc trưng `pulsedb-simple-stats-v0`; pipeline `software/pulsedb/pipeline.py`, runner `scripts/run_b3_pulsedb.py` | BP tuyệt đối (không phải ΔBP) trên PulseDB; RQ2 | Đã cài: fit trên train, chỉ đánh giá val (không trích đặc trưng tập test); mới kiểm tra bằng dữ liệu SYNTHETIC, chưa chạy trên raw PulseDB |
+| — | **B3** `XGBoostBaseline` (`software/models/xgboost_baseline.py`), đặc trưng `pulsedb-simple-stats-v0`; pipeline `software/pulsedb/pipeline.py`, runner `scripts/run_b3_pulsedb.py` | BP tuyệt đối (không phải ΔBP) trên PulseDB; RQ2 | Đã cài: fit trên train, chỉ đánh giá val (không trích đặc trưng tập test); đã chạy trên raw PulseDB ngày 2026-10-25 (val 40 người), chưa chấm test |
 | PAT-only, PPG-only, PPG + PAT | Chưa có | ΔBP; RQ1 | Chưa triển khai, cần dữ liệu prototype |
 | Không từ chối / ngẫu nhiên / SQI / SQI + độ bất định | Cờ SQI `features-sqi-v1` có trong `week04.py`; chưa có cơ chế từ chối | RQ3 | Mới có cờ SQI, chưa có ngưỡng khóa |
 

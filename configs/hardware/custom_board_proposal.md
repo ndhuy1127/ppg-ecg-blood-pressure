@@ -352,14 +352,15 @@ kênh/khe một packet):
 | Kênh | Giả định | Tốc độ ghi |
 | --- | --- | ---: |
 | ECG | 512 sps, N = 16 (106 B/packet) | ≈ 3,4 kB/s |
-| PPG | 200 sps, 3 khe (xanh + đỏ + IR), N = 16 (106 B/packet) | ≈ 4,0 kB/s |
+| PPG | 200 sps, 3 khe (xanh + đỏ + IR), N = 8 (74 B/packet) | ≈ 5,6 kB/s |
 | IMU | Packet schema V0.2: 6 trục 100 Hz, N = 10 (82 B/packet) | ≈ 4,9 kB/s |
 
-ECG + PPG theo schema ≈ 7,4 kB/s, nên W25Q128 (16 MiB) chứa khoảng **38 phút**
-ghi thô; thêm IMU (≈ 12,3 kB/s) thì khoảng **23 phút**. Nếu ghi theo định dạng nén
+ECG + PPG theo schema ≈ 9,0 kB/s, nên W25Q128 (16 MiB) chứa khoảng **31 phút**
+ghi thô; thêm IMU (≈ 13,9 kB/s) thì khoảng **20 phút**. Nếu ghi theo định dạng nén
 3 B mỗi mẫu, không có header từng packet, thì thời lượng khoảng gấp đôi. Với đo theo
-cửa sổ vài chục giây, tổng thời gian ghi mỗi buổi thường dưới mức này. `N` mỗi
-packet còn mở; tính lại khi chốt `N` và khi bản hoàn chỉnh chốt có giữ IMU không.
+cửa sổ vài chục giây, tổng thời gian ghi mỗi buổi thường dưới mức này. `N` là số
+firmware V1 dùng (ECG 16, PPG 8, IMU 10; cập nhật 2026-10-25); tính lại nếu bản hoàn
+chỉnh đổi `N` hay bỏ IMU.
 
 Bản hoàn chỉnh (Phần B) dự kiến truyền qua BLE hoặc ghi flash, nên mục 13 "Truyền
 USB/Serial" của packet schema sẽ cần cập nhật khi làm bản này. V1-module (Phần A)

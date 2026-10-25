@@ -4,7 +4,7 @@
 
 Logger đọc luồng byte theo [Packet Schema V0.1](../../configs/hardware/Packet_Schema_V0.1.md)
 (mục 6), làm các kiểm tra ở mục 12 theo **từng phiên và từng kênh**, ghi raw bất
-biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger-v1`
+biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger-v2`
 (config `configs/hardware/packet_logger.json` cùng version).
 
 - **Đã có (2026-10-21):** decoder, kiểm tra, runner `record`/`replay`, test với
@@ -30,6 +30,18 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
   Metadata phiên (`packet-session-metadata-v0`) không đổi tên version; nhận thêm khóa
   kênh của V0.2. Config đổi trường `packet_schema` thành `packet_schemas`. Phiên ghi bằng v0 vẫn đọc được manifest; replay bằng v1 so với
   manifest v0 có thể lệch hash và manifest ghi rõ `logger_version` của mỗi bên.
+- **`packet-logger-v2` (2026-10-25, chờ Huy duyệt):** output và config đổi so với
+  v1, nên nâng version:
+  - đọc mục 12–13 của Packet Schema V0.2 (`0xD2`, `0xD3`; trước đó đã thêm dưới tên
+    v1 cùng ngày, cùng `0xB1` mục 11);
+  - thêm `channel_holes` của phiên, `channel_silent`, `channel_timing_unknown`;
+  - kiểm pha nhịp tim `0xD1` (`device_info_anchor_inconsistent`);
+  - config có thêm hai khóa bắt buộc `channel_silence_tolerance_us` và
+    `device_info_anchor_tolerance_us`, nên config v1 đã lưu bị từ chối vì khác
+    `schema_version`, không phải vì thiếu khóa.
+
+  Replay một phiên ghi bằng v1 thì dùng config v2; manifest ghi rõ `logger_version`
+  của mỗi bên.
 - **Đọc cổng serial trực tiếp** (2026-10-24, `pyserial==3.5` được duyệt):
   `record --port ... --duration-s ...` (mục Nguồn byte). **Chờ:** chạy 10 phút với
   firmware khung trên bo thật.
@@ -112,6 +124,46 @@ không có packet nào giải mã được thì báo `channel_missing` và liệ
 Metadata vì vậy chỉ khai báo các kênh dự kiến chạy. Không có packet `0xC1` thì không
 báo (buổi bench có thể không bấm t0). Luồng không giải mã được packet nào thì không
 có phiên để báo. Packet sự kiện: xem R1.
+
+**Kênh im lặng (từ 2026-10-25):** `channel_missing` không thấy một kênh dừng giữa phiên
+(AFE bị reset, chẳng hạn), bắt đầu muộn hay ngắt một quãng. Chỉ thời điểm tin được mới
+tính:
+
+- anchor của packet dữ liệu được chấp nhận **và đã so khớp với một anchor khác cùng
+  chuỗi** ở bước 6 (chuỗi, với ECG V0.2 là từng nguồn anchor trong chuỗi, còn từ hai
+  anchor trở lên sau khi cách ly; không tính packet
+  bit 0/7, packet bị cách ly, hay packet đứng một mình trong chuỗi, như packet duy nhất
+  sau một lần neo lại, vì nó không được so với gì). Hai anchor cùng chuỗi lệch cùng một
+  lượng thì vẫn qua: kiểm này không bắt được cả chuỗi bị dịch;
+- nhịp tim `0xD1`, để khoảng phiên vẫn kéo dài khi kênh dữ liệu duy nhất dừng.
+  Firmware gửi `0xD1` mỗi 10 s (V0.2 mục 6) với số thứ tự ở `FIRST_SAMPLE_INDEX`, nên
+  pha `T_ANCHOR_US − số thứ tự × 10 s` như nhau. Chỉ tính các packet hợp lệ có pha nằm
+  trong một cửa sổ `device_info_anchor_tolerance_us` (1 000 000 µs, tạm, chốt
+  2026-10-26; bản 2026-10-25 là 50 000 µs, quá chặt vì task gửi `0xD1` có ưu tiên thấp
+  nhất và có thể chạy trễ) cùng ít nhất một packet khác (nhóm đông nhất); packet lệch
+  pha báo `device_info_anchor_inconsistent` và không tính (sửa 2026-10-25 theo review:
+  trước đó một `0xD1` mang timestamp sai kéo dài được phiên). **Giới hạn đã biết:**
+  hai `0xD1` sai cùng một độ lệch thắng một `0xD1` đúng (nhóm đông hơn), và cả nhóm
+  lệch cùng lượng thì không thấy; chỉ xảy ra khi firmware tạo timestamp sai, nên không
+  thêm logic.
+
+Khoảng phiên chạy từ thời điểm tin được đầu tới cuối (cùng đồng hồ MCU). Mỗi kênh dữ
+liệu (không tính `0xC1`, `0xD1`, `0xD2`, `0xD3`) mà các anchor tin được của nó, cùng hai
+đầu khoảng phiên, để lại một quãng dài hơn `channel_silence_tolerance_us`
+(3 000 000 µs, tạm: kênh chậm nhất là `0xB1` 1 Hz) thì ghi vào `channel_holes` của
+phiên (`channel`, `kind` = `late_start`, `gap`, `ended_early`, hay `whole_span` khi kênh
+có packet mà không có anchor tin được nào, `from_us`, `to_us`, `packets_inside`,
+`dropped_before_seq`). `packets_inside` là số `SEQ` của kênh nằm trong quãng, giữa
+`SEQ` nhận được đầu và cuối của kênh: packet nhận được và packet mất sau khi có `SEQ`,
+ở cả hai đầu (sửa 2026-10-25: trước đó ở hai đầu chỉ đếm packet nhận được);
+`dropped_before_seq` là có packet trong quãng hay packet đóng quãng mang bit 1 (packet
+bị bỏ trước khi có `SEQ`). `packets_inside` = 0 và không có bit 1: kênh không gửi gì,
+báo `channel_silent`.
+Ngược lại kênh vẫn sống nhưng không biết lúc nào, có thể vẫn im phần lớn quãng: báo
+`channel_timing_unknown` (sửa 2026-10-25 theo review: trước đó một packet không kiểm
+anchor nằm trong quãng là đủ để bỏ qua cả quãng, dù quãng dài bao nhiêu). Luồng của
+generator (metadata `simulation` khác null) không kiểm (`channel_holes` = null), vì
+generator cố ý cho các kênh dài khác nhau.
 
 **Dung sai mặc định (chưa kiểm chứng trên phần cứng):** 1 chu kỳ mẫu + 500 µs, cộng
 phần do tốc độ mẫu thật lệch tới ±3 % so với danh định (`anchor_rate_tolerance_ppm` =
@@ -253,7 +305,10 @@ Config `wire_versions` = `[1, 2]`, `packet_schemas` = `["packet-v0.1", "packet-v
   metadata, không thuộc `channel_missing`. Packet sai báo `afe_config_invalid` kèm
   `problem` (`header`, `status`, `sample_count`, `layout`, `afe`, `source_or_state`,
   `generation`, `registers`: đúng bộ và thứ tự thanh ghi của từng chip, giá trị 8 bit
-  với MAX30101 và BMI270). Số thứ tự so với `SEQ` như `0xD1`. Mỗi phiên có
+  với MAX30101 và BMI270). Số thứ tự so với `SEQ` đếm packet mất
+  (`afe_config_lost_before_send`); khác `0xD1`, bit 1 **không** tính vào đó vì ba AFE dùng
+  chung kênh: bit 1 thuộc riêng AFE của packet (một `0xD2` hay bước chuyển trước đó của
+  nó bị mất) và được báo `afe_config_transition_lost` kèm tên AFE. Mỗi phiên có
   `afe_config`: theo từng AFE, các trạng thái khác nhau (`first_seq`, `t_anchor_us`,
   nguồn, đang chạy hay không, thế hệ, thanh ghi dạng hex, số packet). Báo
   `afe_config_generation_backwards`, `afe_config_changed_in_generation`; với phiên
@@ -343,8 +398,14 @@ hành điền tay trước phiên; không có giá trị thì để `null` kèm 
 
 Với firmware khung (`firmware/README.md`), lấy các giá trị sau:
 
-- `firmware_version`: phiên bản và ELF SHA-256 in trên log UART0 lúc khởi động;
-  `firmware_commit`: commit đã build. `SESSION_ID` cũng in trên log UART0.
+- `firmware_version`: **chỉ** phiên bản ứng dụng (`esp_app_desc_t.version`, ví dụ
+  `v0.2.0-12-gabc1234`), không ghép ELF SHA-256 (Packet Schema V0.2 mục 6). Phiên bản
+  này và ELF SHA-256 đã nằm trong packet `0xD1` của luồng raw (`decode.json` →
+  `sessions[].device_info.identities[]`), nên không cần cáp thứ hai đọc log UART0: để
+  `null` kèm lý do nếu chưa biết trước phiên, rồi so với `device_info` sau khi ghi.
+  Ghi khác phiên bản ứng dụng trong `0xD1` thì logger báo
+  `firmware_metadata_mismatch`. `firmware_commit`: commit đã build. `SESSION_ID` có
+  trong mọi packet.
 - `electrode_placement`: theo protocol v0.2 mục 5.2 (LA cổ tay trái, RA cổ tay
   phải, RL cẳng tay trái).
 - Mỗi kênh trong luồng phải có mục trong `channels`, kể cả `0xC1`; thiếu thì logger
@@ -430,7 +491,8 @@ firmware"); D8 và D10 chờ bench.
   kế bật bit 1 (đúng giả định của R3); nếu packet mang bit 0 hoặc 1 bị bỏ ở hàng
   đợi hoặc firmware gửi thất bại (driver USB không nhận trong 20 ms), các bit đó
   chuyển sang packet gửi được kế tiếp (bit 0 từ
-  2026-10-23). Firmware khung chưa sinh bit 5.**
+  2026-10-23). Firmware sinh bit 5 khi neo lại (từ 2026-10-24: ECG khởi động lại,
+  IMU và PPG đọc lại; xem `firmware/README.md`).**
 - **D4.** Bit 4 bật từ khi nào và tắt khi nào (theo từng cấu hình sau bench)?
   Có bật cho `0xC1` không? → **Bật trên mọi packet ECG/PPG cho tới khi đo xong
   `L` của cấu hình; không bật cho `0xC1`.**

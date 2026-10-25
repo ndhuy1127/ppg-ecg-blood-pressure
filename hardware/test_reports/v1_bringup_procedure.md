@@ -202,7 +202,8 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    độ.
 7. Dây cáp và dây điện cực không kéo hay đè bo PPG khi đặt cẳng tay lên bàn, đo
    trên bench (protocol v0.2 mục 5.4, K5).
-8. Nguồn và tín hiệu khi cả hệ chạy (`custom_board_proposal.md` mục 7, ý 14), với
+8. Nguồn và tín hiệu khi cả hệ chạy (`custom_board_proposal.md` mục A.3, đoạn rà
+   soát đi dây V1-draft3: 3V3 dùng chung cho xung LED PPG và breakout ECG), với
    cáp dài nhất:
    - 3V3 tại DevKitC, VDD/1,8 V của breakout và 3V3 tại M1 khi LED PPG chạy xung
      cao nhất (và radio nếu có bật);

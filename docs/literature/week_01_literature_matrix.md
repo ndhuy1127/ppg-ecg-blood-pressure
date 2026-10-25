@@ -56,7 +56,7 @@ Ma trận tập trung vào sáu khía cạnh:
 
 $$\text{PAT} = \text{PEP} + \text{PTT}$$
 
-- **PEP (pre-ejection period):** từ khởi đầu khử cực thất (thường lấy mốc Q/khởi đầu QRS) đến khi van động mạch chủ mở. Dự án đo PAT từ **đỉnh R**, không phải từ Q, nên phần "trước tống máu" trong PAT của dự án không trùng hoàn toàn với PEP. Yamashita et al. (2015, abstract hội nghị trên 6 con lợn) cho thấy PEP tính từ R và từ Q tương quan chặt nhưng lệch nhau một hằng số đáng kể. ECG + PPG chỉ đo được PAT, không tách được PEP và PTT ([glossary](../protocol/week_02_sample_label_glossary.md)).
+- **PEP (pre-ejection period):** từ khởi đầu khử cực thất (thường lấy mốc Q/khởi đầu QRS) đến khi van động mạch chủ mở. Dự án đo PAT từ **đỉnh R**, không phải từ Q, nên phần "trước tống máu" trong PAT của dự án không trùng hoàn toàn với PEP. Yamashita et al. (2015, abstract hội nghị trên 6 con lợn) cho thấy PEP tính từ R và từ Q tương quan chặt nhưng lệch nhau có hệ thống, không phải một hằng số: hồi quy trong abstract có hệ số góc 0,82 ([S13](literature_update_2026-10-14.md); sửa 2026-10-25). ECG + PPG chỉ đo được PAT, không tách được PEP và PTT ([glossary](../protocol/week_02_sample_label_glossary.md)).
 - **PTT (pulse transit time):** thời gian sóng áp lực truyền từ gốc động mạch chủ đến vị trí đo ngoại vi. Theo Moens–Korteweg/Hughes, PTT liên hệ với độ cứng thành mạch và BP (#1).
 - **Bằng chứng về ảnh hưởng của PEP:**
   - Payne 2006 (#3): PEP chiếm 12–35% khoảng R → xung ngón tay và thay đổi theo thuốc; DBP/MAP gần như không giải thích được bằng PAT (R² 0,02/0,08) cho tới khi trừ PEP.

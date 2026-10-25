@@ -59,7 +59,7 @@ cell 4 notebook EDA in đường dẫn file này; cell 3 notebook Tuần 3 đọ
 | File | SHA-256 | Bằng chứng | Giới hạn |
 | --- | --- | --- | --- |
 | `VitalDB_AAMI_Cal_Subset.mat` | `bc68fc239d3809f20cda01bb55eeae7aee88912f8143e0c4cde18d9c4384dcde` | Output cell 15 notebook EDA (Kaggle, kernel Python 3.11). Commit `acc8b8b` ghi cùng giá trị khi chạy `shasum -a 256 data/pulsedb_data/VitalDB_AAMI_Cal_Subset.mat` trên macOS | Lần tính trên Kaggle **không phải** phiên tạo CSV Tuần 3; cell tổng kết in lại giá trị gõ cứng. Lần tính trên macOS chưa có log lệnh, kích thước file hay version gói Kaggle đi kèm |
-| `data/processed/linh_week03/pulsedb_manifest_1000.csv` | `ed630151680665cdc4ede92189880aec95ee54e35d8a3f14c81b918fc0eb9d60` | `configs/data/b0_pulsedb_validation.json`; tính lại ngày 2026-10-15 cho cùng giá trị | Bản sao `notebooks/pulsedb_manifest_1000.csv` có nội dung giống hệt và **đang được Git theo dõi** |
+| `data/processed/linh_week03/pulsedb_manifest_1000.csv` | `ed630151680665cdc4ede92189880aec95ee54e35d8a3f14c81b918fc0eb9d60` | `configs/data/b0_pulsedb_validation.json`; tính lại ngày 2026-10-15 cho cùng giá trị | Bản sao `notebooks/pulsedb_manifest_1000.csv` có nội dung giống hệt; đã gỡ khỏi Git ở commit `9e4921f` (2026-10-24) nhưng vẫn còn trong lịch sử Git |
 
 **Các file tải ngày 2026-10-25** (Kaggle version 4; `.mat` giải nén từ `.mat.zip`
 tải về; kích thước `.mat` khớp danh sách file của Kaggle):

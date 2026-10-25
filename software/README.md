@@ -36,7 +36,11 @@ chứa `__init__.py`.
 | [evaluation/subject_bootstrap.py](evaluation/subject_bootstrap.py) | CI bootstrap percentile lấy mẫu theo người; đánh giá bảng dự đoán theo manifest | Dự đoán + manifest/inventory → metrics và CI |
 | [data_io/packet_simulation.py](data_io/packet_simulation.py) | Sinh/replay packet ECG/PPG SYNTHETIC `synthetic-packet-v2` với 6 case lỗi | Config/seed → packet → timeline, gap, offset |
 | [data_io/packet_wire.py](data_io/packet_wire.py) | Codec byte Packet Schema V0.1: CRC-16/CCITT-FALSE, đóng gói, decoder dò `SYNC` theo luồng | Byte (từng đoạn bất kỳ) → packet đã kiểm CRC/header + log lỗi, byte bị bỏ |
-| [data_io/packet_receiver.py](data_io/packet_receiver.py) | Kiểm tra mục 12 của schema V0.1/V0.2 theo từng phiên/kênh (`packet-logger-v1`), metadata phiên | Packet theo thứ tự đến → issue, gap, bảng packet/mẫu có `chain_id` |
+| [data_io/packet_receiver.py](data_io/packet_receiver.py) | Kiểm tra mục 12 của schema V0.1/V0.2 theo từng phiên/kênh (`packet-logger-v2`), metadata phiên | Packet theo thứ tự đến → issue, gap, bảng packet/mẫu có `chain_id` |
+| [data_io/command_wire.py](data_io/command_wire.py), [data_io/command_desk.py](data_io/command_desk.py) | Khung lệnh PC → thiết bị (V0.2 mục 13) và hàng lệnh trong lúc `record`: một lệnh chờ một lúc, gửi lại cùng `CMD_SEQ`, ghi nhật ký | Dòng JSON trong `command_inbox.jsonl` → byte gửi cổng serial; packet `0xD3` → nhật ký |
+| [pulsedb/h5_reader.py](pulsedb/h5_reader.py) | Đọc từng phần file Subset PulseDB (HDF5) bằng `h5py`: chỉ cột ID hay chỉ các dòng cần, theo khối; cùng giá trị như `reader.py` | File `.mat` v7.3 → `PulseSegment` của các dòng yêu cầu |
+| [pulsedb/visualizer.py](pulsedb/visualizer.py) | Vẽ đoạn tín hiệu PulseDB để xem bằng mắt (notebook) | `PulseSegment` → hình matplotlib |
+| [evaluation/fiducial_gate.py](evaluation/fiducial_gate.py) | Cổng nghiệm thu mốc R/foot đăng ký trước (Tuần 5): nhóm chọn, nhóm xác nhận chỉ chấm phương pháp thắng; độ lặp lại của người đánh dấu | Bảng so khớp mốc tự động/tay → pass/fail theo ngưỡng trong config |
 | [data_io/packet_simulation_v3.py](data_io/packet_simulation_v3.py) | Sinh luồng byte SYNTHETIC `synthetic-packet-v3` đúng layout V0.1, 13 case lỗi | Config/seed → `stream.bin` + metadata phiên |
 
 Chi tiết đầu vào/đầu ra nằm trong [README models](models/README.md) và

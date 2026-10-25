@@ -26,10 +26,13 @@ Không giả định hai kênh dùng chung một tần số lấy mẫu hay mộ
 
 Ước lượng để lập kế hoạch lưu trữ, không phải số đo:
 
-- Giả định: 500 mẫu/s, mỗi mẫu một dòng CSV, khoảng 48 byte mỗi dòng
-  (timestamp, ECG, PPG, sequence, status dạng text).
-- Kết quả: 500 × 60 × 48 byte ≈ 1,44 MB mỗi phút CSV raw.
+- Giả định (cập nhật 2026-10-25): raw là luồng packet nhị phân `raw.bin` của logger
+  ([packet schema V0.1](../configs/hardware/Packet_Schema_V0.1.md) và V0.2), mỗi packet
+  42 byte header/CRC cộng 4 byte mỗi mẫu; số mẫu mỗi packet như firmware V1 hiện dùng:
+  ECG 512 sps, 16 mẫu (106 B); PPG 3 khe × 200 sps, 8 mẫu (74 B); IMU 6 trục × 100 Hz,
+  10 mẫu (82 B); nhiệt độ 1 Hz; `0xD1`/`0xD2` mỗi 10 s.
+- Kết quả: khoảng 3,4 + 5,6 + 4,9 kB/s ≈ 14 kB/s, tức khoảng 0,84 MB mỗi phút hay
+  50 MB mỗi giờ `raw.bin`. `packets.csv` và `samples.csv` logger sinh ra lớn hơn
+  vài lần; chúng sinh lại được từ raw.
 
-Tính lại khi đã chốt tần số lấy mẫu của thiết bị và định dạng file của logger.
-Packet nhị phân (xem [packet schema V0.1](../configs/hardware/Packet_Schema_V0.1.md))
-nhỏ hơn vài lần.
+Tính lại khi đổi số mẫu mỗi packet hay tốc độ lấy mẫu.

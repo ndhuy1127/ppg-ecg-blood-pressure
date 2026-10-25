@@ -1,7 +1,7 @@
 # Packet Schema V0.1 – ECG/PPG Data Acquisition
 
 > Chưa kiểm chứng trên thiết bị. PPG AFE đã chốt là MAX30101 (2026-10-22); chế
-> độ LED và tốc độ lấy mẫu chưa chốt.
+> độ LED và tốc độ lấy mẫu của V1 chốt 2026-10-24 (ba khe, 200 sps mỗi khe, mục 7).
 >
 > **Datasheet đã đối chiếu** (trích dẫn dạng "MAX30001 tr. 26, Bảng 4"):
 > MAX30001 Rev 3 (1/23), MAX30101 Rev 3 (6/20), MAX30102 Rev 1 (10/18). Danh
@@ -219,8 +219,10 @@ Phân biệt **số khe** và **loại LED**:
 `FIRST_SAMPLE_INDEX` và `T_ANCHOR_US`, nhưng **không** cùng thời điểm phát LED:
 khoảng cách cạnh lên giữa hai khe liên tiếp là 427 / 525 / 720 / 1 107 µs với độ
 rộng xung 69 / 118 / 215 / 411 µs (MAX30102 tr. 25, Bảng 14; MAX30101 tr. 22,
-Bảng 11). Khe thứ j lệch khoảng (j−1) lần giá trị này so với khe 1; receiver cộng
-độ lệch này khi dựng thời gian từng khe.
+Bảng 11). Khe thứ j lệch khoảng (j−1) lần giá trị này so với khe 1. Logger hiện
+không dựng thời gian từng khe (`samples.csv` chỉ có chỉ số mẫu), nên chưa cộng độ
+lệch này; cộng ở bước nào và theo quy ước nào chờ Huy duyệt (sửa 2026-10-25: bản
+trước ghi receiver đã cộng).
 
 ## 8. Dữ liệu và đơn vị
 

@@ -155,9 +155,10 @@ làm tròn (Python `round`, làm tròn nửa về số chẵn). `T_FIRST_US` =
 
 ECG DATA là mẫu 18 bit bù hai căn trái trong word 24 bit, ETAG/PTAG = 0. PPG
 DATA là số 18 bit không dấu. Cả hai là số ngẫu nhiên tái lập, không phải hình
-thái sinh lý. Packet `0xC1` dùng giá trị tạm: `FIRST_SAMPLE_INDEX` = thứ tự sự
-kiện, `FS_NOMINAL_MHZ` = 0, `T_FIRST_US` = `T_ANCHOR_US`. Logger bỏ qua các trường
-này (quy tắc R1 trong [logger](packet_logger.md)).
+thái sinh lý. Packet `0xC1`: `FIRST_SAMPLE_INDEX` = thứ tự sự kiện, `FS_NOMINAL_MHZ` = 0,
+`T_FIRST_US` = `T_ANCHOR_US`. Logger ghi lại `FS_NOMINAL_MHZ` và `T_FIRST_US` mà không
+diễn giải, còn thứ tự sự kiện thì kiểm so với `SEQ` từ 2026-10-23 (quy tắc R1 trong
+[logger](packet_logger.md)).
 
 Lỗi chèn vào kênh `0xF1`, packet thứ tự 2 (đếm từ 0), trừ `session_restart` và
 `timestamp_first` (packet thứ tự 0). Lỗi chỉ chèn vào **một** kênh để đáp án dễ

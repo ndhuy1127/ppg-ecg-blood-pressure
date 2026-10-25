@@ -8,7 +8,7 @@
 
 **Changelog v0.2 (2026-10-21, Huy):**
 
-- Mục 5 viết lại theo thiết bị V1-module (Phần A của `custom_board_proposal.md`): bo cổ tay MAX30101/BMI270, bo đế ESP32-S3 + MAX30001, USB tới laptop chạy pin, điện cực dán Ag/AgCl đạo trình I cổ tay–ngón tay. Bỏ cấu hình ngón tay chạm điện cực mặt trên của v0.1.
+- Mục 5 viết lại theo thiết bị V1-module (Phần A của `custom_board_proposal.md`): bo cổ tay MAX30101/BMI270, bo đế ESP32-S3 + MAX30001, USB tới laptop chạy pin, điện cực dán Ag/AgCl đạo trình I giữa hai cổ tay (chốt 2026-10-23; bản nháp đầu của v0.2 ghi cổ tay–ngón tay). Bỏ cấu hình ngón tay chạm điện cực mặt trên của v0.1.
 - Thêm bảng phân bổ tay/điện cực (5.2), chi dùng cho từng nghiệm pháp và kiểm tra xung đột có kết quả (5.4).
 - 6.2: thêm nút `t0`. 6.3: cập nhật AFE V1-module và lệch có hệ thống giữa các phương án foot.
 - Thêm 6.4 nghiệm pháp tạo ΔBP (có nguồn hướng thay đổi) và 6.5 tiêu chí biên độ ΔBP cho pilot (đề xuất, khóa trước pilot).
@@ -402,7 +402,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 | ECG đạo trình I nhiễu, SNR thấp | Cao | Cao | Điện cực dán Ag/AgCl đạo trình I qua hai tay (LA mặt lòng cổ tay trái, RA mặt lòng cổ tay phải, RL cẳng tay trái; mục 5.2); thiết kế lọc dải thông khoảng $0.5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn); so sánh điện cực khô với Ag/AgCl dùng gel theo [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md). |
 | Nhiễu trôi đường nền PPG do lỏng dây đeo | Trung bình | Trung bình | Bổ sung cơ chế hiển thị SQI trực quan trên giao diện thu thập; hướng dẫn kỹ thuật viên siết chặt vòng vừa đủ trước khi bắt đầu đếm ngược 60 giây. |
 | Biên độ biến thiên huyết áp tự nhiên giữa các phiên quá nhỏ ($< 5\text{ mmHg}$) | Trung bình | Cao | Nghiệm pháp ở mục 6.4 và tiêu chí kiểm ở pilot (6.5), chỉ khi đã được duyệt đạo đức. |
-| Người tham gia cử động tay trong khi đo | Cao | Trung bình | Tích hợp thuật toán tự động hủy lượt đo và yêu cầu đo lại nếu SQI tụt dưới ngưỡng cho phép. |
+| Người tham gia cử động tay trong khi đo | Cao | Trung bình | Hiển thị SQI và cờ cử động (`motion-sqi-v0`) cho người vận hành; khi có cử động trong cửa sổ trước cuff, người vận hành đánh dấu (sự kiện mã 4) và có thể đo lại sau thời gian nghỉ theo quy tắc an toàn. Mọi lượt, kể cả lượt cử động, vẫn giữ trong raw kèm cờ; việc loại khỏi phân tích dùng ngưỡng SQI khóa trước, không quyết lúc đang đo, để RQ3 có dữ liệu SQI kém (sửa 2026-10-26; bản trước ghi tự động hủy lượt đo, chờ Huy duyệt). |
 
 ---
 

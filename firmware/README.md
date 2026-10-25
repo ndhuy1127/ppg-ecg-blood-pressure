@@ -93,8 +93,10 @@ pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0
 Bo chính hãng có hai cổng Micro-USB: theo
 [hướng dẫn DevKitC-1 v1.1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html),
 cổng USB-to-UART (nhãn UART) đi qua chip cầu, cổng còn lại (nhãn USB) là USB native
-của ESP32-S3. **Chưa kiểm trên bo**: đọc nhãn in cạnh cổng khi nhận hàng. Ghi ELF
-SHA-256 và `SESSION_ID` từ log UART0 vào metadata phiên (schema mục 11).
+của ESP32-S3. **Chưa kiểm trên bo**: đọc nhãn in cạnh cổng khi nhận hàng. Không cần
+đọc log UART0 để điền metadata phiên: phiên bản ứng dụng và ELF SHA-256 đi trong packet
+`0xD1`, `SESSION_ID` trong mọi packet; `firmware_version` của metadata chỉ là phiên bản
+ứng dụng ([packet_logger.md](../docs/protocol/packet_logger.md), mục Metadata phiên).
 
 Khi khởi động, firmware kiểm encoder với `packet_kat.h` (`pkt_self_test`): CRC
 `"123456789"` = `0x29B1`, `T_FIRST_US`, packet ECG mẫu 50 byte (packet mẫu V0.1 của
@@ -148,8 +150,10 @@ USB chậm; khi đó bit 1 báo như thường.
 
 `PPG_RDY` giữ chân INT ở mức thấp tới khi đọc `Interrupt Status 1` (0x00), và mẫu
 đến khi cờ chưa xóa không tạo cạnh mới, nên driver phải đọc 0x00 sau **mỗi** ngắt
-(spec mục 7.6; việc của driver MAX30101 thật, chưa viết: nguồn giả chỉ báo đúng một
-lần cho mỗi mẫu được lưu, không mô phỏng chân INT giữ mức thấp). Ngắt chỉ đánh thức
+(spec mục 7.6). Driver MAX30101 thật làm việc này: `max30101_latch` đọc 0x00 ở mỗi
+lần thức dậy, trước khi đọc con trỏ FIFO (có từ 2026-10-25, chưa chạy trên chip).
+Nguồn giả chỉ báo đúng một lần cho mỗi mẫu được lưu, không mô phỏng chân INT giữ mức
+thấp. Ngắt chỉ đánh thức
 task; số mẫu đang chờ lấy từ con trỏ FIFO (`fake_afe_waiting`), không từ số ngắt
 đã đếm, nên ngắt bị nuốt hay ngắt còn tồn sau một lần đọc trễ không làm lệch các lần
 đọc sau. Khi có 8 mẫu thì chốt con trỏ, lấy `T_ANCHOR_US` và đọc **hết** số mẫu có
@@ -215,7 +219,7 @@ Trả lời các câu hỏi D trong [hướng dẫn logger](../docs/protocol/pac
 | --- | --- |
 | D1 | `CRC16` little-endian như các trường khác |
 | D2 | `VERSION` luôn `0x02` từ 2026-10-24 (Packet Schema V0.2; bản firmware trước gửi `0x01`). Đổi layout hoặc ý nghĩa trường thì tăng `VERSION` cùng bản firmware mới; không trộn hai version trong một phiên |
-| D3 | `SEQ` gán **lúc gửi**, khi lấy packet ra khỏi hàng đợi MCU. Thiếu `SEQ`: packet mất sau hàng đợi (USB không nhận trong 20 ms). Hàng đợi MCU đầy: packet bị bỏ trước khi có `SEQ`; packet kế của kênh đó bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy, `SEQ` vẫn liên tục. FIFO AFE tràn: bit 0 bật ở packet đọc lúc phát hiện, khoảng mất nằm sau mẫu cuối của packet đó, packet kế có `FIRST_SAMPLE_INDEX` nhảy. Nếu packet mang bit 0, 1 hoặc 5 bị bỏ ở hàng đợi, hoặc firmware gửi thất bại (driver USB không nhận đủ packet trong 20 ms), các bit đó chuyển sang packet gửi được kế tiếp của kênh (sửa 2026-10-23; trước đó chỉ chuyển bit 1 và chỉ khi gửi thất bại; bit 5 thêm 2026-10-24 theo V0.2 mục 5), để bước nhảy index vẫn có lời giải thích theo R2 và packet kế vẫn mở chuỗi mới. Packet đã vào bộ đệm driver mà sau đó mất trên đường USB thì firmware không biết, nên không chuyển bit; logger vẫn thấy khoảng `SEQ`. Firmware khung chưa sinh bit 5 |
+| D3 | `SEQ` gán **lúc gửi**, khi lấy packet ra khỏi hàng đợi MCU. Thiếu `SEQ`: packet mất sau hàng đợi (USB không nhận trong 20 ms). Hàng đợi MCU đầy: packet bị bỏ trước khi có `SEQ`; packet kế của kênh đó bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy, `SEQ` vẫn liên tục. FIFO AFE tràn: bit 0 bật ở packet đọc lúc phát hiện, khoảng mất nằm sau mẫu cuối của packet đó, packet kế có `FIRST_SAMPLE_INDEX` nhảy. Nếu packet mang bit 0, 1 hoặc 5 bị bỏ ở hàng đợi, hoặc firmware gửi thất bại (driver USB không nhận đủ packet trong 20 ms), các bit đó chuyển sang packet gửi được kế tiếp của kênh (sửa 2026-10-23; trước đó chỉ chuyển bit 1 và chỉ khi gửi thất bại; bit 5 thêm 2026-10-24 theo V0.2 mục 5), để bước nhảy index vẫn có lời giải thích theo R2 và packet kế vẫn mở chuỗi mới. Packet đã vào bộ đệm driver mà sau đó mất trên đường USB thì firmware không biết, nên không chuyển bit; logger vẫn thấy khoảng `SEQ`. Firmware sinh bit 5 khi neo lại (ECG khởi động lại, IMU và PPG đọc lại; các mục dưới) |
 | D4 | Bit 4 bật trên mọi packet ECG/PPG cho tới khi đo xong độ trễ hiệu dụng `L` của cấu hình; không bật trên `0xC1` |
 | D5 | `SEQ` (riêng từng kênh) và `FIRST_SAMPLE_INDEX` bắt đầu từ 0 ở mỗi phiên. `SESSION_ID` là số ngẫu nhiên 32 bit lấy lúc khởi động. `0xD1`: `FIRST_SAMPLE_INDEX` là số thứ tự packet thông tin, đếm cả packet bị bỏ ở hàng đợi; `STATUS` = 0, có thể có bit 1 |
 | D6 | `0xC1`: `SEQ` đếm riêng; `FIRST_SAMPLE_INDEX` = số thứ tự sự kiện trong phiên (0, 1, …); `FS_NOMINAL_MHZ` = 0; `T_ANCHOR_US` = `T_FIRST_US` = thời điểm cạnh xuống đầu tiên của nút |
@@ -241,7 +245,8 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
 Cho phép đo đồng bộ 10 phút
 ([sync_10min_test_plan.md](../hardware/test_reports/sync_10min_test_plan.md) mục
 3–4). Bật bằng `BOARD_STIM=1`; bản build `esp32s3_devkitc_sync10` bật cùng lúc ba chip
-thật, capture `SAMP` và xung.
+thật, capture `SAMP` có bit 8 (`BOARD_SAMP_VERIFIED=1`) và xung. Chỉ nạp bản này sau
+khi bring-up mục 7 đã xác nhận cạnh `SAMP` khớp mẫu đầu tiên của FIFO.
 
 - GPIO6 (J3 chân 1) lên mức cao 2 s sau khi khởi động, rồi cứ 1 s cộng độ lệch đều
   trong [0; 1 953) µs (một chu kỳ mẫu ECG), xuống sau 50 ms. Hai one-shot
@@ -321,6 +326,18 @@ breakout đã cắm vào bo đế.
   `EN_INT = 0`, gỡ ngắt INTB, rồi **tạm dừng** task chứ không xóa. Logger thấy kênh
   không có packet nào (`channel_missing` nếu metadata khai báo). Một ngắt INTB đang chạy ở lõi kia vẫn
   có thể báo vào task, nên handle phải còn hợp lệ.
+- **Kiểm sức khỏe khi đang chạy (2026-10-25):** mỗi 1 s, bất kể INTB, `max30001_check`
+  đọc `INFO` và đọc lại 8 thanh ghi cấu hình (cùng mặt nạ như lúc khởi động). Quá
+  40 ms không có mẫu thì vẫn đọc FIFO (INTB kẹt mức cao; FIFO 32 mẫu chỉ chứa 62,5 ms ở
+  512 sps); quá 2 s không có mẫu thì coi
+  là chip im lặng. Kiểm lỗi hay chip im lặng: khởi động lại (reset, cấu hình, PLL,
+  `SYNCH`) mỗi 100 ms tới khi được, không gửi packet trong lúc đó; chỉ số bắt đầu lại từ
+  0 với bit 5 và `0xD2` báo thế hệ mới. Trước đó, chip bị reset do sụt nguồn nằm im
+  với INTB mức cao và ECG dừng mà không ai biết. Khi tới lúc khởi động lại ánh xạ
+  `SAMP`, vòng đó luôn đọc FIFO trước rồi mới `SYNCH` (`SYNCH` xóa FIFO, nên không bỏ
+  mất khoảng 16 mẫu còn trong đó; sửa 2026-10-25). Các quyết định thời điểm nằm trong
+  `app/ecg_loop.c` (C thuần), test bằng
+  [tests/test_firmware_ecg_loop.py](../tests/test_firmware_ecg_loop.py).
 - **Đọc FIFO** (`max30001_read_fifo`):
   - đọc burst `0x20` trong **một** khung CS (CS điều khiển bằng GPIO), dừng ở word EOF
     (`010`/`011`), word rỗng (`110`), word tràn (`111`), tag không dùng (`10x`) hoặc
@@ -518,9 +535,11 @@ Packet Schema V0.2 mục 12–13. Thiết kế chờ Huy duyệt.
 - **`0xD2`:** mỗi task đọc công bố từng bước chuyển trạng thái của AFE của nó
   (`afe_publish`, qua hàng đợi 8 phần tử): nguồn giả lúc khởi động; chip khi cấu hình
   xong (thế hệ tăng), khi chờ cấu hình lại, khi bị bỏ. Task điều khiển gửi mỗi bước
-  chuyển và nhắc lại trạng thái mới nhất của mọi AFE mỗi 10 s; hàng đợi đầy thì `0xD2`
-  kế tiếp của AFE đó mang bit 1. Thanh ghi lấy từ `max30001_config_words`,
-  `max30101_config_words`, `bmi270_config_words`.
+  chuyển và nhắc lại trạng thái mới nhất của mọi AFE mỗi 10 s; hàng đợi đầy thì nó gửi
+  trạng thái mới nhất của AFE đó kèm bit 1. Chọn gửi gì, kèm bit 1 hay không là
+  `afe_order.c` (C thuần, Packet Schema V0.2 mục 12): không gửi trạng thái cũ sau trạng
+  thái mới, mất mát được giữ tới khi một `0xD2` mang bit 1, số thứ tự 64 bit. Thanh ghi
+  lấy từ `max30001_config_words`, `max30101_config_words`, `bmi270_config_words`.
 - **`PING` và `SET_PPG_LED`:** `cmd_exec.c` (C thuần) quyết định: kiểm `SESSION_ID`
   đích, giới hạn mã 127 (`CMD_LED_CODE_MAX`, tạm), trạng thái chip; nhớ yêu cầu gần
   nhất nên gửi lại cùng byte được trả lại kết quả cũ mà không chạm chip. Task PPG (chủ
@@ -530,8 +549,11 @@ Packet Schema V0.2 mục 12–13. Thiết kế chờ Huy duyệt.
   sau 2 s được rút lại (kết quả 4). Bản build PPG giả trả "không có chip".
 - **Test:** [tests/test_firmware_cmd_wire.py](../tests/test_firmware_cmd_wire.py) (tách
   khung, so với bộ mã hóa Python), [tests/test_firmware_control.py](../tests/test_firmware_control.py)
-  (`DATA` của `0xD2` qua bộ kiểm của receiver; quyết định lệnh). Task điều khiển, hàng
-  đợi và cổng USB trong `main.c` chỉ kiểm bằng build.
+  (`DATA` của `0xD2` qua bộ kiểm của receiver; quyết định lệnh),
+  [tests/test_firmware_afe_order.py](../tests/test_firmware_afe_order.py) (thứ tự và
+  bit 1 của `0xD2`, gồm hàng đợi đầy rồi im, mất mát thấy sau khi trạng thái mới đã đi,
+  số thứ tự quá 32 bit). Task điều khiển, hàng đợi và cổng USB trong `main.c` chỉ kiểm
+  bằng build.
 
 ## Chưa có
 

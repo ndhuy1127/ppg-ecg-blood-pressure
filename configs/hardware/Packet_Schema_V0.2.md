@@ -401,7 +401,7 @@ trên chip thật ở bring-up.
   hoặc `packet-v0.2`), không ghi cứng `packet-v0.1`, và chép `device_info` theo từng
   `SESSION_ID` khi một raw có nhiều lần khởi động lại. Bản sao metadata đầu vào giữ
   nguyên, không ghi đè.
-- Logger giữ `packet-logger-v1` (chưa phát hành bản nào khác).
+- Logger giữ `packet-logger-v1` (chưa phát hành bản nào khác); từ 2026-10-25 là `packet-logger-v2` (`docs/protocol/packet_logger.md`).
 - Kênh nhiệt độ `0xB1` (mục 11.2): khóa metadata `0xB1`, `latency_l_us` và
   `latency_source` null kèm lý do.
 
@@ -451,7 +451,8 @@ sau.
      giả báo ngắt mỗi mẫu; env `esp32s3_devkitc_ppg_delay` trễ 12 ms mỗi 10 s để `N`
      lớn hơn 8); lúc đọc do số mẫu trong FIFO quyết định, ngắt chỉ để đánh thức; chế
      độ đọc theo timer `BOARD_PPG_READ_PERIOD_MS` dành cho trường hợp `PPG_RDY` không
-     chạy. Việc đọc 0x00 để nhả chân INT thuộc driver MAX30101 thật (chưa viết).
+     chạy. Việc đọc 0x00 để nhả chân INT do driver MAX30101 thật làm
+     (`max30101_latch`, 2026-10-25, chưa chạy trên chip).
 3. **Tích hợp record/replay (làm 2026-10-24):** manifest theo phiên và `device_info`,
    nhiều lần khởi động lại, hash output xác định. Code đã có từ bước 1; bước này thêm
    test: một raw ba lần khởi động (chữ ROM giữa các phiên, packet cuối bị reset cắt,
@@ -580,7 +581,9 @@ của Codex cùng ngày (thiết kế, rồi code).
   `0xB1`. Config V0.2 mặc định **không** đổi (thêm kênh 1 Hz sẽ kéo dài dòng thời
   gian từ khoảng 1,8 s lên 8 s và đổi fixture); có config riêng
   `packet_simulation_v3_v02_temp.json`. Ca lỗi của `0xB1` thử bằng packet dựng tay.
-- Không đổi `packet-logger-v1` (thêm khóa bắt buộc `temp_anchor_tolerance_us` vào
+- Không đổi `packet-logger-v1` lúc đó (cùng ngày lên `packet-logger-v2` với mục 12–13
+  và `channel_holes`, xem `docs/protocol/packet_logger.md`; thêm khóa bắt buộc
+  `temp_anchor_tolerance_us` vào
   config, như `samp_anchor_tolerance_us` ngày 2026-10-24; config cũ thiếu khóa này
   không còn hợp lệ, chấp nhận vì logger v1 chưa phát hành và chưa có bản ghi thiết
   bị) và `synthetic-packet-v3`.
@@ -601,7 +604,7 @@ báo cấu hình quan sát được riêng, không ghi đè metadata.
 | `T_ANCHOR_US` = `T_FIRST_US` | `esp_timer` lúc trạng thái đó bắt đầu có hiệu lực (cấu hình xong, hay chip bị bỏ) |
 | `FS_NOMINAL_MHZ` | 0 |
 | `SAMPLE_COUNT` | 5 + R |
-| `STATUS` | 0; cho phép bit 1: một packet `0xD2` trước đó của **AFE này** không gửi được (hàng đợi MCU hay hàng đợi trạng thái đầy), nên có thể đã mất một bước chuyển |
+| `STATUS` | 0; cho phép bit 1: một packet `0xD2` trước đó của **chính AFE này** bị bỏ trước khi có `SEQ` (hàng đợi MCU đầy), hay một bước chuyển của nó không vào được hàng đợi trạng thái, nên có thể đã mất một bước chuyển (sửa 2026-10-25: bit 1 không còn chuyển theo kênh, vì ba AFE dùng chung `0xD2`; packet mất sau khi có `SEQ` thì logger thấy qua khoảng trống `SEQ`) |
 
 | `DATA` | Nội dung |
 | --- | --- |
@@ -634,8 +637,15 @@ ELF SHA-256 của `0xD1` cùng mã nguồn ở commit firmware (SHA-256 của m�
 trạng thái hiện tại của mọi AFE đã biết mỗi 10 s (để logger bắt đầu giữa phiên vẫn nhận
 được, không phải bảo đảm tới nơi). Một task điều khiển duy nhất tạo `0xD2` và `0xD3`;
 task đọc của từng chip chỉ công bố từng bước chuyển qua một hàng đợi (8 phần tử), nên
-hai bước chuyển liền nhau không ghi đè nhau; hàng đợi đầy thì `0xD2` kế tiếp của AFE đó
-mang bit 1.
+hai bước chuyển liền nhau không ghi đè nhau, và luôn ghi trạng thái mới nhất vào một bảng
+riêng; hàng đợi đầy thì task điều khiển gửi trạng thái mới nhất của AFE đó kèm bit 1,
+và lần nhắc lại 10 s luôn lấy từ bảng trạng thái mới nhất (sửa 2026-10-25: bản trước có
+thể nhắc lại trạng thái cũ). Quy tắc theo từng AFE (`firmware/app/afe_order.c`, sửa
+2026-10-25 theo review): không bao giờ gửi trạng thái cũ hơn trạng thái mới nhất đã gửi;
+gửi lại đúng trạng thái đó chỉ khi nhắc lại 10 s hoặc để mang bit 1; lần nhắc lại chờ
+khi trạng thái mới nhất còn trong hàng đợi; một bước chuyển bị mất được giữ lại tới khi
+một `0xD2` của AFE đó mang bit 1, kể cả khi trạng thái mới hơn đã đi trước (khi đó trạng
+thái ấy được gửi lại kèm bit 1). Số thứ tự trạng thái là 64 bit, không quay vòng.
 
 **Logger:**
 
@@ -645,8 +655,10 @@ mang bit 1.
   chỉ, thứ tự, độ rộng giá trị), còn lại R = 0. Sai thì `afe_config_invalid` kèm
   `problem`; packet sai không được tính.
 - Số thứ tự so với `SEQ` như `0xD1` (`afe_config_lost_before_send`,
-  `afe_config_ordinal_inconsistent`). Không kiểm anchor, không vào `samples.csv`, không
-  thuộc `channel_missing`, không cần khóa metadata.
+  `afe_config_ordinal_inconsistent`), nhưng chỉ bằng số thứ tự: bit 1 thuộc riêng AFE của
+  packet và được báo `afe_config_transition_lost` kèm tên AFE (sửa 2026-10-25). Không
+  kiểm anchor, không vào `samples.csv`, không thuộc `channel_missing`, không cần khóa
+  metadata.
 - Mỗi phiên có `afe_config`: theo từng AFE, các trạng thái khác nhau theo thứ tự `SEQ`
   (`first_seq`, `t_anchor_us`, nguồn, trạng thái, thế hệ, thanh ghi dạng hex, số
   packet). Thế hệ lùi trong một phiên báo `afe_config_generation_backwards`; cùng thế hệ

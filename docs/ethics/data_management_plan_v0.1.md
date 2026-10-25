@@ -34,7 +34,9 @@ Không thu: họ tên, số điện thoại, email, mã sinh viên, CCCD, ngày 
 
 ## 3. Lưu trữ và quyền truy cập
 
-- Raw bất biến; mỗi phiên có manifest và SHA-256 khi ghi (logger của Linh, Tuần 5).
+- Raw bất biến: không sửa, không ghi đè, không xóa để làm sạch kết quả; mỗi phiên có
+  manifest và SHA-256 khi ghi (logger của Linh, Tuần 5). Ngoại lệ duy nhất là xóa theo
+  yêu cầu rút lui, có nhật ký (mục 4; thêm 2026-10-26).
   Dẫn xuất có version và truy về raw, config, commit.
 - Nơi lưu: [ổ nghiên cứu của phòng thí nghiệm / máy trạm có mật khẩu — chờ chốt],
   có bản sao lưu [nơi, tần suất — chờ chốt].

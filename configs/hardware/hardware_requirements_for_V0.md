@@ -163,7 +163,7 @@ Dữ liệu thô phải được giữ lại để phục vụ các bước xử
 ## 7. Yêu cầu về nguồn và an toàn thử nghiệm
 Prototype V1-module phải ưu tiên sử dụng nguồn pin khi thực hiện phép đo có tiếp xúc với cơ thể.
 Yêu cầu:
-Thiết bị prototype sử dụng nguồn pin phù hợp.
+Thiết bị prototype V1 không có pin riêng: lấy 5 V từ USB của laptop chạy pin, rút sạc, rồi LDO 3,3 V của DevKitC cấp cho cả hai bo (protocol v0.2 mục 5).
 Khi thu ECG trên người, laptop phải hoạt động bằng pin.
 Không sử dụng trực tiếp nguồn điện lưới cho hệ thống đang kết nối với điện cực trên cơ thể.
 Kiểm tra hệ thống trước khi thử nghiệm trên người.

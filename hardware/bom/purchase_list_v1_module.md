@@ -77,7 +77,7 @@ Kiểm đồ có sẵn ở lab trước, chỉ mua phần thiếu; chưa tra gi�
 | --- | --- | --- |
 | Breadboard 830 lỗ | 1 | Dựng mạch kích thích (chia áp, LED) |
 | Dây cắm breadboard | Vài sợi | Nối GPIO phát xung với mạch kích thích |
-| Điện trở chân cắm 1 MΩ và 1 kΩ | Vài cái mỗi loại | Mạch chia áp đưa xung GPIO 3,3 V xuống vài mV vào đầu vào ECG |
+| Điện trở chân cắm 10 MΩ và 3,3 kΩ | Vài cái mỗi loại | Mạch chia áp đưa xung GPIO 3,3 V xuống khoảng 1 mV vi sai vào đầu vào ECG ([kế hoạch đo 10 phút](../test_reports/sync_10min_test_plan.md) mục 3; sửa 2026-10-26, bản trước ghi 1 MΩ và 1 kΩ) |
 | LED 5 mm và điện trở hạn dòng | 2 | Kích thích quang trên cửa sổ MAX30101 |
 | Dây kẹp cá sấu | 4 | Nối mạch chia áp vào đầu bấm của cáp ECG |
 | Hộp tối nhỏ | 1 | Che MAX30101 khi đo |

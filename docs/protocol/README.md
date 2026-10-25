@@ -7,7 +7,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 
 - [Khung protocol nghiên cứu thực nghiệm v0.2](protocol_outline_v0.2.md): bản
   hiện hành (2026-10-21). Phân bổ tay/điện cực theo V1-module, kiểm tra xung đột,
-  nghiệm pháp tạo ΔBP và tiêu chí pilot; mục 5 và 6.4–6.5 chờ Đức Anh xác nhận.
+  nghiệm pháp tạo ΔBP và tiêu chí pilot; mục 5.1–5.2 đã xác nhận về phần cứng ngày
+  2026-10-23, nghiệm pháp 6.4–6.5 chưa được hội đồng đạo đức duyệt.
 - [Khung protocol nghiên cứu thực nghiệm v0.1](protocol_outline_v0.1.md): bản
   lịch sử; thiết kế đo lặp nhiều phiên, quy trình đo đối chứng bằng cuff, ghép
   cửa sổ tín hiệu và kế hoạch phân tích thống kê.

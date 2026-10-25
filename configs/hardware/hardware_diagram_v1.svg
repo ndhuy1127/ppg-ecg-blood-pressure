@@ -63,20 +63,22 @@
   <text x="672" y="200" fill="#0d47a1">Đồng hồ chung: esp_timer µs</text>
   <text x="672" y="220" fill="#0d47a1">Chốt số mẫu FIFO rồi ghi</text>
   <text x="672" y="238" fill="#0d47a1">T_ANCHOR_US (schema mục 5)</text>
-  <text x="672" y="260" fill="#0d47a1">Đóng packet V0.1 theo kênh:</text>
-  <text x="672" y="278" fill="#0d47a1">0xE1 ECG, 0xF1–F3 PPG,</text>
-  <text x="672" y="296" fill="#0d47a1">0xC1 sự kiện t0</text>
-  <text x="672" y="318" fill="#0d47a1">LDO 3,3 V của DevKitC cấp</text>
-  <text x="672" y="336" fill="#0d47a1">cho cả hai bo</text>
-  <text x="672" y="358" fill="#0d47a1">Lắp vào 2 socket 1×22,</text>
-  <text x="672" y="376" fill="#0d47a1">hai hàng cách 22,86 mm</text>
-  <text x="672" y="398" fill="#0d47a1">Không có pin LiPo ở V1</text>
+  <text x="672" y="260" fill="#0d47a1">Đóng packet V0.2 theo kênh:</text>
+  <text x="672" y="277" font-size="11" fill="#0d47a1">0xE1 ECG, 0xF1–F3 PPG, 0xA1–A6 IMU,</text>
+  <text x="672" y="292" font-size="11" fill="#0d47a1">0xB1 nhiệt độ, 0xC1 sự kiện,</text>
+  <text x="672" y="307" font-size="11" fill="#0d47a1">0xD1–D3 thông tin, cấu hình, lệnh</text>
+  <text x="672" y="328" fill="#0d47a1">LDO 3,3 V của DevKitC cấp</text>
+  <text x="672" y="345" fill="#0d47a1">cho cả hai bo</text>
+  <text x="672" y="366" fill="#0d47a1">Lắp vào 2 socket 1×22,</text>
+  <text x="672" y="383" fill="#0d47a1">hai hàng cách 22,86 mm</text>
+  <text x="672" y="404" fill="#0d47a1">Không có pin LiPo ở V1</text>
 
   <!-- t0 button -->
-  <rect x="360" y="336" width="250" height="70" rx="8" fill="#fff3e0" stroke="#ef6c00"/>
-  <text x="372" y="358" font-weight="bold" fill="#e65100">Nút t0 (SW1) và LED D1</text>
-  <text x="372" y="378" fill="#e65100">SW1 → GPIO4 (kéo lên 10 kΩ,</text>
-  <text x="372" y="396" fill="#e65100">100 nF); D1 ← GPIO5 qua 1 kΩ</text>
+  <rect x="360" y="336" width="250" height="88" rx="8" fill="#fff3e0" stroke="#ef6c00"/>
+  <text x="372" y="358" font-weight="bold" fill="#e65100">Nút t0 (SW1), LED D1, J3</text>
+  <text x="372" y="376" fill="#e65100">SW1 → GPIO4 (kéo lên 10 kΩ,</text>
+  <text x="372" y="394" fill="#e65100">100 nF); D1 ← GPIO5 qua 1 kΩ</text>
+  <text x="372" y="412" font-size="11" fill="#e65100">J3: GPIO6 xung STIM (đo 10 phút), GND</text>
 
   <!-- J2 -->
   <rect x="360" y="430" width="250" height="110" rx="8" fill="#f5f5f5" stroke="#616161"/>
@@ -150,7 +152,7 @@
   <line x1="974" y1="776" x2="1024" y2="776" stroke="#616161" stroke-width="3" stroke-dasharray="9 4"/>
   <text x="1034" y="780" fill="#37474f">Cáp dẹt 16 dây</text>
   <text x="972" y="808" fill="#37474f">Số GPIO theo bảng A.7.</text>
-  <text x="972" y="826" fill="#37474f">Packet: Packet_Schema_V0.1.md.</text>
+  <text x="972" y="826" fill="#37474f">Packet: Packet_Schema_V0.2.md.</text>
   <text x="972" y="844" fill="#37474f">Bring-up: v1_bringup_procedure.md.</text>
 
   <!-- Electrodes -> MAX30001 -->
@@ -170,7 +172,7 @@
 
   <!-- t0 -> ESP32 -->
   <path d="M610,372 L658,372" stroke="#1565c0" stroke-width="2" fill="none" marker-start="url(#a-sig)" marker-end="url(#a-sig)"/>
-  <text x="614" y="364" font-size="11" fill="#1565c0">GPIO4/5</text>
+  <text x="614" y="364" font-size="11" fill="#1565c0">GPIO4–6</text>
 
   <!-- J2 <-> ESP32 -->
   <path d="M610,470 L782,470 L782,420" stroke="#1565c0" stroke-width="2" fill="none" marker-start="url(#a-sig)" marker-end="url(#a-sig)"/>
@@ -201,5 +203,5 @@
   <path d="M958,300 L906,300" stroke="#c62828" stroke-width="2" fill="none" marker-end="url(#a-pwr)"/>
   <text x="922" y="292" font-size="10" fill="#c62828">5 V</text>
   <text x="922" y="316" font-size="10" fill="#c62828">USB</text>
-  <text x="972" y="340" font-size="11" fill="#2e7d32">USB native: packet V0.1; UART0: log chữ</text>
+  <text x="972" y="340" font-size="11" fill="#2e7d32">USB native: packet V0.2; UART0: log chữ</text>
 </svg>
