@@ -119,7 +119,9 @@ Lưu ý khi chốt:
 - **ECG 512 sps** (FMSTR 00, đúng tần số dao động trên breakout; chốt 2026-10-23,
   `custom_board_proposal.md` A.2). Không đổi sang 500 sps (FMSTR 01) chỉ để hạ về
   125 Hz theo hệ số nguyên. 256 sps chỉ xét nếu bench cho thấy MCU đọc FIFO ECG
-  không kịp: FIFO 32 mẫu chứa khoảng 62,5 ms ở 512 sps.
+  không kịp: FIFO 32 mẫu chứa khoảng 62,5 ms ở 512 sps. Gain 20 V/V, lọc thông thấp
+  số 40,96 Hz, tắt lọc thông cao số, phát hiện rời điện cực DC 10 nA, ±400 mV (chốt
+  2026-10-25, `custom_board_proposal.md` A.2).
 - **PPG 200 sps mỗi khe**, multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR),
   `SMP_AVE = 1` (chốt 2026-10-24, A.6 mục 3); độ rộng xung (411 hay 215 µs) còn mở
   (mục 6). Lý do:

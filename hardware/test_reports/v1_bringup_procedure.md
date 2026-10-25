@@ -123,14 +123,17 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 
 ## 7. MAX30001 trên bo đế
 
-Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
+Bước 2–5 dùng driver MAX30001 (từ 2026-10-25, chưa chạy trên chip): build
+`pio run -d firmware -e esp32s3_devkitc_ecg_real`; log UART0 in `INFO` và kết quả
+khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX30001").
 
 1. Rút cả hai cáp USB, cắm breakout vào socket SV1, bắt vít vào lỗ NPTH 3,2 mm.
    Cấp nguồn lại qua USB tester, theo dõi dòng như mục 6: 3V3 vẫn khoảng 3,3 V;
    đầu ra LDO 1,8 V của breakout (AP2112K-1.8) khoảng 1,8 V.
 2. Đọc thanh ghi `INFO` (0x0F): nửa byte cao bằng `0x5`, như thư viện ProtoCentral
    dùng để nhận chip (`protocentral_max30001_arduino_library`, `src/protocentral_max30001.cpp`).
-3. Cấu hình theo A.2: 512 sps, gain và bộ lọc cố định, `EN_BIOZ = 0`, **tắt lead
+3. Cấu hình theo A.2: 512 sps, gain 20 V/V, `ECG_DLPF` 40,96 Hz, tắt `ECG_DHPF`,
+   lead-off DC 10 nA ±400 mV (chốt 2026-10-25), `EN_BIOZ = 0`, **tắt lead
    bias nội** (cấu hình 3 điện cực, VCM qua R3), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
    và `EN_INT2`, `EFIT = 15`, `SAMP_IT = 00` (xung `SAMP` mỗi mẫu), `CLR_SAMP = 1`,
    chỉ `SAMP` ra INT2B (chốt 2026-10-24, Packet Schema V0.2 mục 7). Đọc lại từng thanh ghi đã ghi.
@@ -144,6 +147,10 @@ Bước 2–5 cần driver MAX30001, chưa có trong firmware khung.
      được; UART0 in số cặp đọc kẹp nhận/bị loại và sai số quy đổi, ngân sách dưới
      5 µs, [firmware/README.md](../../firmware/README.md) mục "Mốc `SAMP`"); kiểm xung
      đầu tiên sau `SYNCH` ứng với mẫu đầu tiên của FIFO (Packet Schema V0.2 mục 7.2).
+     Bản build `esp32s3_devkitc_ecg_real` tắt bit 8 cho tới bước này. Đọc dòng log
+     "ECG FIFO read - SAMP edge of the last sample": khớp đúng thì khoảng này nằm
+     trong 0 tới khoảng 2 ms; lệch một mẫu thì dịch 1,953 ms. Kiểm qua nhiều lần
+     khởi động lại ánh xạ, rồi mới build với `-DBOARD_SAMP_VERIFIED=1`.
 5. Tín hiệu nhân tạo qua cáp ECG (mạch chia áp ở
    [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Nút
    tham chiếu của mạch chia áp là sleeve (RL → R3 → VCM), không phải GND (chốt

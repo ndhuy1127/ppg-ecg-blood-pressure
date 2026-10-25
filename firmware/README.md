@@ -7,9 +7,11 @@
 > 2c: mốc `SAMP` của ECG với bit 8, xung lấy từ nguồn ECG giả; bước 2d: PPG thức
 > theo ngắt `PPG_RDY`, đọc hết FIFO khi có 8 mẫu). Build được (2026-10-24, RAM 4,9 %,
 > flash 20,4 % của phân vùng 1 MB) nhưng **chưa chạy trên bo** (chưa có phần cứng).
-> Chưa có driver AFE hay BMI270: mọi giá trị ECG/PPG/IMU và mọi xung `SAMP` là dữ
-> liệu **giả**, chỉ để kiểm đường packet MCU → USB → logger, không phải tín hiệu sinh
-> lý. MCPWM capture thật đã viết nhưng tắt và chưa chạy.
+> Bản build mặc định: mọi giá trị ECG/PPG/IMU và mọi xung `SAMP` là dữ liệu
+> **giả**, chỉ để kiểm đường packet MCU → USB → logger, không phải tín hiệu sinh
+> lý. MCPWM capture thật đã viết nhưng tắt và chưa chạy. Từ 2026-10-25 có driver
+> MAX30001 (mục "Driver MAX30001"), bật bằng bản build `esp32s3_devkitc_ecg_real`;
+> **chưa chạy trên chip**. Chưa có driver MAX30101 và BMI270.
 
 - **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị, đọc
   IMU, đọc ECG có mốc `SAMP`), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet
@@ -19,14 +21,17 @@
   `packet_wire.c` (encoder Packet Schema V0.2, đóng gói payload `0xD1` và phép tự
   kiểm lúc khởi động; C thuần, không phụ thuộc ESP-IDF; tên giống codec Python
   `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`).
-- **drivers/**: `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101/BMI270
+- **drivers/**: `max30001.c` (driver MAX30001 lõi, C thuần, không phụ thuộc
+  ESP-IDF), `max30001_esp.c` (SPI và ngắt INTB trên ESP32-S3);
+  `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101/BMI270
   (FIFO có độ sâu cấu hình được, đầy thì giữ nội dung và bỏ mẫu mới; ECG giả phát
   xung `SAMP`); `samp_edges.c`, bộ đệm vòng 64 cạnh `SAMP`; `samp_capture.c`, MCPWM
   capture thật trên GPIO47 và quy đổi sang `esp_timer` (chưa chạy trên chip).
 - **boards/**: `board_v1_module.h`, GPIO theo bảng A.7 của
   [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md).
 - **include/**: `packet_wire.h`, `imu_plan.h`, `samp_map.h`, `samp_edges.h`,
-  `samp_capture.h`, `fake_afe.h`, `packet_kat.h` (known-answer V0.2 của encoder).
+  `samp_capture.h`, `fake_afe.h`, `max30001.h`, `max30001_esp.h`, `packet_kat.h`
+  (known-answer V0.2 của encoder).
 - **tests/**: chưa có test chạy trên bo. Known-answer của encoder được dựng lại
   độc lập (Python `struct` và `binascii.crc_hqx`) và đối chiếu với codec Python bằng
   [tests/test_firmware_packet_kat.py](../tests/test_firmware_packet_kat.py) (không
@@ -249,10 +254,92 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
    packet PPG mỗi khe có khoảng 10 mẫu, logger không báo gì.
 5. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 
+## Driver MAX30001 (2026-10-25, chưa chạy trên chip)
+
+Bật bằng `pio run -d firmware -e esp32s3_devkitc_ecg_real` (`BOARD_ECG_REAL=1`,
+`BOARD_SAMP_CAPTURE=1`); PPG và IMU vẫn là nguồn giả. Dùng ở bring-up mục 7, khi
+breakout đã cắm vào bo đế.
+
+- **Cấu hình** (`max30001_v1_regs`, theo A.2 của
+  [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md), chốt
+  2026-10-23 tới 2026-10-25):
+  - 512 sps (`FMSTR 00`); gain 20 V/V; `ECG_DLPF` 40,96 Hz; tắt `ECG_DHPF`;
+  - lead-off DC 10 nA, VMID ± 400 mV; fast recovery tự động; tắt lead bias nội;
+  - BioZ, PACE và bộ dò R của chip đều tắt;
+  - INTB = `EINT` (`EFIT = 15`), INT2B = `SAMP` mỗi mẫu, tự xóa; cả hai ra CMOS.
+
+  Giá trị từng thanh ghi và trang datasheet ghi trong `max30001.c`. Khi khởi động:
+  reset mềm, bỏ lần đọc đầu (datasheet tr. 47), kiểm `INFO`, ghi rồi đọc lại từng
+  thanh ghi (bỏ các bit không dùng), chờ PLL khóa (hai lần đọc `STATUS` liên tiếp
+  không có `PLLINT`, tối đa 1 s).
+- **Bắt đầu bản ghi** (`max30001_restart`): tắt `SAMP` trên INT2B, xóa bộ đệm cạnh và
+  khởi động lại ánh xạ, gửi `SYNCH`, bật lại `SAMP`. Trình tự này **chưa đảm bảo**
+  cạnh đầu tiên sau `SYNCH` là của mẫu FIFO đầu tiên. Tắt `SAMP` chỉ chặn đường ra,
+  không dừng chuyển đổi (tr. 43). Chuyển đổi chạy lại từ cạnh clock kế sau `SYNCH`
+  (tr. 46), và lệnh bật lại `SAMP` là một giao dịch SPI có thể bị chen ngang. Nếu
+  lỡ cạnh đầu thì mọi mốc lệch cố định một mẫu, và phép kiểm khoảng cách không phát
+  hiện được (Codex review 2026-10-25). Vì vậy **bit 8 tắt** cho tới khi bring-up
+  xác nhận trên chip thật và build với `BOARD_SAMP_VERIFIED=1`:
+  - ánh xạ vẫn chạy;
+  - log UART0 in khoảng (thời điểm đọc FIFO − cạnh `SAMP` của mẫu cuối packet),
+    chỉ tính các lần đọc kết thúc ở EOF;
+  - khớp đúng thì khoảng này nằm trong 0 tới khoảng một chu kỳ mẫu cộng thời gian
+    đọc; lệch một mẫu thì cả khoảng dịch đi 1,953 ms.
+
+  Chỉ một lần `SYNCH` thành công mới mở bản ghi mới (chỉ số về 0, bit 5). Các cờ
+  chưa kịp gửi (bit 0, 2, 3) được giữ sang packet đầu của bản ghi mới. Lỗi thì giữ
+  chỉ số, neo lại theo thời gian (bit 3 và bit 5) và giữ ánh xạ ở `LỖI`.
+- **Khởi động lỗi** (`INFO`, đọc lại, PLL hay `SYNCH`): ghi `EN_INT = 0`, gỡ ngắt
+  INTB, rồi **tạm dừng** task chứ không xóa. Một ngắt INTB đang chạy ở lõi kia vẫn
+  có thể báo vào task, nên handle phải còn hợp lệ.
+- **Đọc FIFO** (`max30001_read_fifo`):
+  - đọc burst `0x20` trong **một** khung CS (CS điều khiển bằng GPIO), dừng ở word EOF
+    (`010`/`011`), word rỗng (`110`), word tràn (`111`), tag không dùng (`10x`) hoặc
+    32 word; không bao giờ đọc quá word EOF (tr. 64);
+  - mốc đọc FIFO lấy ngay sau word EOF (V0.1 mục 5.2);
+  - `DATA` là nguyên word 24 bit, giữ ETAG/PTAG (V0.1 mục 8).
+- **Mỗi lần đọc** (task `ecg_reader` trong `main.c`):
+  - Thức theo cạnh xuống của INTB. Cứ 10 ms nếu INTB vẫn ở mức thấp thì đọc luôn, phòng
+    khi lỡ cạnh; sau ngưỡng `EFIT` FIFO chỉ còn khoảng 31 ms trống.
+  - Đọc FIFO, lấy mốc, đọc `STATUS`. Quyết định do `ecg_read_plan` (`app/ecg_read.c`,
+    C thuần) đưa ra:
+    - `DCLOFFINT` → bit 2; mất khóa PLL → bit 3 và ánh xạ `LỖI`. Hai cờ này được giữ
+      tới packet kế tiếp được gửi, kể cả qua các lần đọc rỗng.
+    - Tràn (`111` hoặc `EOVF`): dữ liệu hỏng (tr. 41, 64–65), nên **bỏ cả lần đọc**,
+      gửi `FIFO_RST`, packet kế tiếp neo lại theo thời gian với bit 0 và bit 5 (V0.1
+      mục 9).
+    - Tag lạ (`10x`) hoặc đọc SPI lỗi: không gửi gì, packet kế tiếp có bit 3 và bit 5
+      (tag lạ thì gửi thêm `FIFO_RST`; tag lạ cùng lúc với `EOVF` vẫn giữ bit 0).
+    - Nguyên nhân lỗi ánh xạ được đếm riêng trong log: tràn FIFO, chỉ số neo lại,
+      lỗi AFE (SPI, PLL, `SYNCH` hay `FIFO_RST` thất bại; `SAMP_AFE`).
+    - Đọc đủ 32 word mà không gặp EOF: mẫu vẫn hợp lệ nhưng mốc đọc FIFO không còn
+      giới hạn sai số, nên gửi như lần đọc FIFO đầy (bit 0), packet kế neo lại
+      (bit 5).
+    - Chỉ số theo `imu_plan_read`. Mọi lần neo lại theo thời gian đều chuyển ánh xạ
+      `SAMP` sang `LỖI`, rồi khởi động lại bằng `SYNCH` theo chính sách 1 s / 10 s.
+- **Tự kiểm không cần người** (`max30001_cal_regs`): nguồn hiệu chuẩn nội lưỡng cực
+  0,5 mV, 1 Hz vào hai đầu vào đã ngắt khỏi chân, lead-off tắt (tr. 50–51). Chưa nối
+  vào lệnh nào; dùng ở bring-up.
+- **Test** [tests/test_firmware_ecg_read.py](../tests/test_firmware_ecg_read.py):
+  biên dịch `app/ecg_read.c` (cùng `imu_plan.c`, `packet_wire.c`) và kiểm các quy tắc
+  trên với đáp án lấy từ Packet Schema (gồm công thức neo lại của V0.2 mục 5).
+  Không chạy task, SPI hay chip.
+- **Test** [tests/test_firmware_max30001.py](../tests/test_firmware_max30001.py):
+  biên dịch `drivers/max30001.c` trên máy tính và chạy với một MAX30001 mô phỏng
+  (khung SPI 32 clock, lệnh = địa chỉ << 1 | R/W, ghi thực thi ở clock 32, lần đọc
+  đầu sau reset không hợp lệ, `PLLINT` chốt, FIFO burst).
+  - Các word thanh ghi so với giá trị tính tay từ bảng thanh ghi tr. 43–53.
+  - Kiểm: thứ tự khởi động, từ chối `INFO` sai, đọc lại sai, PLL không khóa, dừng
+    đúng ở EOF và không đọc thêm, các tag rỗng/tràn/fast/lạ, thứ tự `SYNCH`.
+  - Mô phỏng do chính dự án viết, nên không bắt được chi tiết datasheet mà cả hai
+    cùng hiểu sai; chip thật kiểm ở bring-up mục 7.
+- Chưa có: đo độ trễ hiệu dụng `L` (bit 4 vẫn bật), lệnh chạy tự kiểm từ PC, ghi
+  cấu hình thanh ghi vào metadata phiên.
+
 ## Chưa có
 
-- Driver MAX30001, MAX30101, BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và
-  gọi `imu_index_read_failed` khi đọc lỗi).
+- Driver MAX30101, BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và gọi
+  `imu_index_read_failed` khi đọc lỗi).
 - Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
   INT2B của MAX30001); kiểm `PPG_RDY` ở chế độ ba khe của MAX30101 thật.
 - Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.
