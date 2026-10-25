@@ -25,18 +25,23 @@ EVENT_CHANNEL = 0xC1
 # V0.2: BMI270 accelerometer X/Y/Z then gyroscope X/Y/Z, and device info.
 IMU_CHANNELS = (0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6)
 DEVICE_INFO_CHANNEL = 0xD1
+# V0.2 section 11 (2026-10-25): MAX30101 die temperature, 1/16 degC, 1 Hz, one
+# value per packet; only STATUS bits 1 and 3 are defined on it.
+TEMP_CHANNEL = 0xB1
+TEMP_FS_MHZ = 1000
+TEMP_STATUS_BITS = (1 << 1) | (1 << 3)
 CHANNELS = {
     ECG_CHANNEL: "ECG", 0xF1: "PPG_SLOT1", 0xF2: "PPG_SLOT2",
     0xF3: "PPG_SLOT3", 0xF4: "PPG_SLOT4", EVENT_CHANNEL: "EVENT",
     0xA1: "ACC_X", 0xA2: "ACC_Y", 0xA3: "ACC_Z",
     0xA4: "GYRO_X", 0xA5: "GYRO_Y", 0xA6: "GYRO_Z",
-    DEVICE_INFO_CHANNEL: "DEVICE_INFO",
+    DEVICE_INFO_CHANNEL: "DEVICE_INFO", TEMP_CHANNEL: "DIE_TEMP",
 }
 # CHANNEL_ID registry per wire VERSION; the decoder drops other channels.
 VERSION_CHANNELS = {
     WIRE_VERSION: frozenset((ECG_CHANNEL, *PPG_CHANNELS, EVENT_CHANNEL)),
     WIRE_VERSION_V02: frozenset((ECG_CHANNEL, *PPG_CHANNELS, EVENT_CHANNEL,
-                                 *IMU_CHANNELS, DEVICE_INFO_CHANNEL)),
+                                 *IMU_CHANNELS, DEVICE_INFO_CHANNEL, TEMP_CHANNEL)),
 }
 # Schema section 9; bits 7 and 8 exist from V0.2 on. Reserved bits must be sent as 0.
 STATUS_BITS = {
@@ -53,6 +58,8 @@ SAMP_ANCHOR_BIT = 1 << 8
 
 def status_reserved_mask(version, channel_id):
     """Reserved STATUS bits of a packet of this VERSION and channel."""
+    if channel_id == TEMP_CHANNEL:
+        return 0xFFFF & ~TEMP_STATUS_BITS
     mask = STATUS_RESERVED_MASKS[version]
     return mask if channel_id == ECG_CHANNEL else mask | SAMP_ANCHOR_BIT
 # V0.2 device info payload (section 6): layout 1, 25 words.

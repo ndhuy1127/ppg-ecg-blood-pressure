@@ -25,7 +25,7 @@ from software.data_io.packet_wire import Packet, device_info_data, encode_packet
 
 ROOT = Path(__file__).resolve().parents[1]
 IMU = (0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6)
-CHANNELS = (0xE1, 0xF1, 0xF2, 0xF3, 0xF4, 0xC1, *IMU, 0xD1)
+CHANNELS = (0xE1, 0xF1, 0xF2, 0xF3, 0xF4, 0xC1, *IMU, 0xD1, 0xB1)
 INT32 = (-(1 << 31), (1 << 31) - 1)
 INT16 = (-(1 << 15), (1 << 15) - 1)
 UNTOUCHED = 0x5A5A5A5A  # device info words the harness presets before a call
@@ -248,6 +248,10 @@ def test_c_encoder_header_extremes_and_t_first_underflow(harness):
         (Packet(2, 0xE1, 1, 1, 1, 60_546, 0, 512_000, 0, (7,) * 32), 512),
         # Offset 31 * 1e9 / 100000 = 310 000 us = T_ANCHOR_US.
         (Packet(2, 0xA1, 1, 1, 1, 310_000, 0, 100_000, 0, INT16 * 16), 512),
+        # Die temperature (V0.2 section 11): one signed value, the 1/16 degC
+        # limits, T_FIRST_US = T_ANCHOR_US.
+        (Packet(2, 0xB1, 1, 2, 7, 8_031_000, 0, 1000, 8, (-2048,)), 512),
+        (Packet(2, 0xB1, 1, 3, 8, 9_029_000, 0, 1000, 0, (2047,)), 512),
     ]
     results = _run(harness, cases)
     for (packet, _), (size, buf, t_first) in zip(cases, results):
@@ -256,7 +260,8 @@ def test_c_encoder_header_extremes_and_t_first_underflow(harness):
                                             packet.fs_nominal_mhz)
     # fs 0 keeps the anchor; 31 * 1e9 / (2**32 - 1) rounds to 7 us; underflow
     # gives 0, not a wrapped value.
-    assert [t_first for _, _, t_first in results] == [0, u64 - 7, 0, 0]
+    assert [t_first for _, _, t_first in results] == [0, u64 - 7, 0, 0, 8_031_000,
+                                                      9_029_000]
 
 
 def test_c_encoder_refuses_bad_count_and_small_buffer(harness):

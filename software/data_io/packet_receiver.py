@@ -17,12 +17,14 @@ from fractions import Fraction
 from software.data_io.packet_wire import (
     CHANNELS, DEVICE_INFO_CHANNEL, DEVICE_INFO_COUNT, DEVICE_INFO_LAYOUT, ECG_CHANNEL,
     EVENT_CHANNEL, IMU_CHANNELS, MAX_SAMPLE_COUNT, PPG_CHANNELS, SAMP_ANCHOR_BIT,
-    STATUS_BITS, WIRE_VERSION, WIRE_VERSION_V02, status_reserved_mask,
+    STATUS_BITS, TEMP_CHANNEL, TEMP_FS_MHZ, WIRE_VERSION, WIRE_VERSION_V02,
+    status_reserved_mask,
 )
 
 # v1 (2026-10-23): channel_missing, event ordinal check, FS 0 never an index
 # reference, rate (not period) tolerance; Packet Schema V0.2 (2026-10-24), with
-# its section 7 (SAMP anchor, bit 8) the same day. v0 was committed in 250139d.
+# its section 7 (SAMP anchor, bit 8) the same day and section 11 (die temperature
+# 0xB1) on 2026-10-25. v0 was committed in 250139d.
 LOGGER_VERSION = "packet-logger-v1"
 PACKET_SCHEMAS = {WIRE_VERSION: "packet-v0.1", WIRE_VERSION_V02: "packet-v0.2"}
 METADATA_VERSION = "packet-session-metadata-v0"
@@ -38,10 +40,12 @@ MCU_BUFFER_BIT = 1 << 1
 KNOWN_GAP_BITS = AFE_OVERFLOW_BIT | MCU_BUFFER_BIT
 REANCHOR_BIT = 1 << 5
 BACKLOG_BIT = 1 << 7  # V0.2: backlog chunk, the anchor belongs to a later chunk
-# Accepted DATA range [low, high) per channel; IMU words are signed int16.
+# Accepted DATA range [low, high) per channel; IMU words are signed int16, the
+# die temperature TINT * 16 + TFRAC (signed 8-bit TINT, 1/16 degC).
 DATA_LIMITS = {ECG_CHANNEL: (0, 1 << 24),
                **{channel: (0, 1 << 18) for channel in PPG_CHANNELS},
-               **{channel: (-(1 << 15), 1 << 15) for channel in IMU_CHANNELS}}
+               **{channel: (-(1 << 15), 1 << 15) for channel in IMU_CHANNELS},
+               TEMP_CHANNEL: (-(1 << 11), 1 << 11)}
 EVENT_CODES = (1, 2, 3, 4)
 ORDINAL_CHANNELS = {
     EVENT_CHANNEL: ("events_lost_before_send", "event_ordinal_inconsistent"),
@@ -52,7 +56,8 @@ CONFIG_FIELDS = {
     "schema_version", "packet_schemas", "status", "wire_versions",
     "anchor_tolerance_samples", "anchor_tolerance_extra_us",
     "anchor_rate_tolerance_ppm", "ecg_anchor_rate_tolerance_ppm",
-    "samp_anchor_tolerance_us", "channel_offset_tolerance_us", "read_chunk_bytes",
+    "samp_anchor_tolerance_us", "temp_anchor_tolerance_us",
+    "channel_offset_tolerance_us", "read_chunk_bytes",
 }
 TEXT_FIELDS = (
     "clock_id", "firmware_version", "firmware_commit", "device_id", "operator",
@@ -148,6 +153,9 @@ def validate_config(config):
              0, 10 ** 5)
     _integer(config["samp_anchor_tolerance_us"], "samp_anchor_tolerance_us", 0,
              10 ** 6)
+    # Below one period, so that a window of phases keeps anchors increasing.
+    _integer(config["temp_anchor_tolerance_us"], "temp_anchor_tolerance_us", 0,
+             10 ** 6 - 1)
     _integer(config["channel_offset_tolerance_us"], "channel_offset_tolerance_us",
              0, 10 ** 6)
     _integer(config["read_chunk_bytes"], "read_chunk_bytes", 1, 1 << 20)
@@ -367,6 +375,16 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
         if seq in conflicts:
             rows[seq]["disposition"] = "conflicting_duplicate"
     present = [seq for seq in seqs if seq not in conflicts]
+    # V0.2 section 11.2: a 0xB1 header outside its contract is not trusted.
+    untrusted = set()
+    if channel_id == TEMP_CHANNEL:
+        for seq in present:
+            packet = received[seq].packet
+            if (len(packet.data) != 1 or packet.fs_nominal_mhz != TEMP_FS_MHZ
+                    or packet.t_first_us != packet.t_anchor_us
+                    or packet.status & reserved):
+                issue("temp_header_invalid", **where, seq=seq)
+                untrusted.add(seq)
     spec = metadata["channels"].get(key)
     if spec is None:
         issue("channel_without_metadata", **where)
@@ -391,7 +409,9 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
         summary["fs_nominal_mhz"] != [spec["fs_nominal_mhz"]]
     ):
         issue("fs_metadata_mismatch", **where)
-    index, quarantine, jumps = _index_pass(present, received, where, issue, version)
+    index, quarantine, jumps = _index_pass(present, received, where, issue, version,
+                                           untrusted, channel_id == TEMP_CHANNEL)
+    quarantine.update(dict.fromkeys(untrusted, "temp_header_invalid"))
     chain_of, chains = _chains(present, received, quarantine, jumps, where, issue)
     # Bit 0: the FIFO was full, so the samples are older than the anchor. V0.2
     # bit 7: a backlog chunk, whose anchor is that of a later chunk. Keep the
@@ -411,6 +431,10 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
              if by_source and received[seq].packet.status & SAMP_ANCHOR_BIT}
     for chain in chains:
         checked = [seq for seq in chain if seq not in untimed]
+        if channel_id == TEMP_CHANNEL:
+            _phase_pass(checked, received, index, quarantine,
+                        config["temp_anchor_tolerance_us"], where, issue)
+            continue
         if not by_source:
             _timing_pass(checked, received, index, quarantine, fifo_read, where, issue)
             continue
@@ -597,11 +621,16 @@ def _session_device_info(session_id, version, identities, metadata, issue):
                             "packets": d["packets"]} for d in distinct]}
 
 
-def _index_pass(present, received, where, issue, version=WIRE_VERSION):
+def _index_pass(present, received, where, issue, version=WIRE_VERSION,
+                untrusted=(), counted=False):
     """Schema step 4: FIRST_SAMPLE_INDEX continuity, cross-checked with STATUS.
 
-    A packet with FS 0 is quarantined as ``fs_invalid`` later; its header is not
-    trusted, so it gets an index for its row but never becomes the reference.
+    A packet with FS 0 is quarantined as ``fs_invalid`` later, one in
+    ``untrusted`` by the caller; its header is not trusted, so it gets an index
+    for its row but never becomes the reference. ``counted``: the index counts
+    ticks (V0.2 section 11, 0xB1), so a forward jump of at least the number of
+    missing packets is a gap of known length (``sample_gap_counted``) that keeps
+    the chain.
     V0.1 (R2): bit 5 on either packet next to an index jump marks a re-anchor.
     V0.2 (section 5): bit 5 is only on the first packet after the gap; that
     packet always re-anchors, even with a continuous index, before any overlap
@@ -614,11 +643,12 @@ def _index_pass(present, received, where, issue, version=WIRE_VERSION):
     pending = 0
     for seq in present:
         packet = received[seq].packet
-        if packet.fs_nominal_mhz == 0:
+        if packet.fs_nominal_mhz == 0 or seq in untrusted:
             index[seq] = packet.first_sample_index if previous is None else _unwrap(
                 packet.first_sample_index,
                 index[previous] + len(received[previous].packet.data))
-            pending |= packet.status
+            if seq not in untrusted:
+                pending |= packet.status
             continue
         own, pending = packet.status | pending, 0
         if previous is None:
@@ -638,6 +668,11 @@ def _index_pass(present, received, where, issue, version=WIRE_VERSION):
         if reanchored:
             issue("sample_index_reanchored", **detail)
             jumps[seq] = "reanchored"
+        elif counted and lost >= absent:
+            if lost > absent:
+                issue("sample_gap_counted", **detail, absent_packets=absent,
+                      lost_samples=lost)
+                jumps[seq] = "counted_gap"
         elif lost < 0:
             issue("sample_index_overlap", **detail)
             quarantine[seq] = "index_overlap"
@@ -763,6 +798,38 @@ def _timing_pass(chain, received, index, quarantine, tolerance, where, issue,
                   steps=steps, **named)
 
 
+def _phase_pass(chain, received, index, quarantine, window_us, where, issue):
+    """Schema step 6 for one 0xB1 chain (V0.2 section 11.2).
+
+    The phase ``T_ANCHOR_US - index * T`` is the readout delay after tick k plus
+    the tick epoch. The ticks run on the same esp_timer as the anchors, so the
+    phases of a whole chain must fit in one window of ``window_us``; a pairwise
+    check would let the delay drift a little at every packet. The window that
+    keeps the most packets wins (the earliest on a tie); the others are
+    quarantined. A window below one period keeps anchors increasing.
+    """
+    if not chain:
+        return
+    period = Fraction(10 ** 9, received[chain[0]].packet.fs_nominal_mhz)
+    phase = {seq: received[seq].packet.t_anchor_us - index[seq] * period
+             for seq in chain}
+    order = sorted(chain, key=lambda seq: (phase[seq], seq))
+    best, start = (0, 0), 0
+    for end, seq in enumerate(order):
+        while phase[seq] - phase[order[start]] > window_us:
+            start += 1
+        if end - start + 1 > best[1] - best[0]:
+            best = (start, end + 1)
+    reference = order[best[0]]
+    kept = set(order[best[0]:best[1]])
+    for seq in chain:
+        if seq not in kept:
+            issue("timestamp_anomaly", **where, seq=seq, kind="phase",
+                  deviation_us=str(phase[seq] - phase[reference]),
+                  reference_seq=reference)
+            quarantine[seq] = "timestamp_anomaly"
+
+
 def _gaps(seqs, accepted, received, index, quarantine, conflicts, jumps):
     """Holes in the accepted sample stream; lost_samples is null after a re-anchor."""
     gaps = []
@@ -811,8 +878,9 @@ def _channel_offset(session_id, firsts, config, metadata, issue):
 
     offsets = {}
     # Only accepted packets reach here, and FS 0 is quarantined (fs_invalid).
+    # The 0xB1 anchor is a readout time, not a sample time (V0.2 section 11.2).
     for channel_id in sorted(firsts):
-        if channel_id == ECG_CHANNEL:
+        if channel_id in (ECG_CHANNEL, TEMP_CHANNEL):
             continue
         offset = epoch(channel_id) - epoch(ECG_CHANNEL)
         offsets[channel_key(channel_id)] = str(offset)

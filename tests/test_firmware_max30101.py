@@ -21,7 +21,7 @@ import pytest
 from tests.test_firmware_c_encoder import _compiler
 
 ROOT = Path(__file__).resolve().parents[1]
-OK, ERR_BUS, ERR_PART_ID, ERR_RESET, ERR_READBACK, ERR_BUSY = range(6)
+OK, ERR_BUS, ERR_PART_ID, ERR_RESET, ERR_READBACK, ERR_BUSY, ERR_MODE = range(7)
 BIT0, BIT3, BIT4, BIT5, BIT6 = 1 << 0, 1 << 3, 1 << 4, 1 << 5, 1 << 6
 PPG_RDY, ALC_OVF, PWR_RDY = 1 << 6, 1 << 5, 1 << 0
 
@@ -212,9 +212,13 @@ int main(void)
             int err = max30101_temp_start(&bus);
             printf("%d\n", err);
             flush_log();
-        } else if (cmd[0] == 'G') {
+        } else if (cmd[0] == 'B') { /* brownout: registers back to reset values */
+            memset(s_reg, 0, 0x22);
+            printf("ok\n");
+        } else if (cmd[0] == 'G') { /* the mode the chip must still be in */
+            scanf("%x", &a);
             int32_t v = 0;
-            int err = max30101_temp_read(&bus, &v);
+            int err = max30101_temp_read(&bus, (uint8_t)a, &v);
             printf("%d %ld\n", err, (long)v);
             flush_log();
         } else if (cmd[0] == 'N') { /* ppg_read_count of a latch: waiting full batch */
@@ -391,9 +395,22 @@ def test_read_samples_takes_one_burst_and_keeps_18_bits_per_slot(chip):
 def test_die_temperature_in_sixteenths_and_busy_while_converting(chip, tint, tfrac, value):
     chip(f"T {tint} {tfrac} 1")
     assert chip("Q", 2) == ["0", "W21:01;"]
-    assert chip("G", 2)[0] == f"{ERR_BUSY} 0"  # TEMP_EN still set
-    assert chip("G", 2)[0] == f"{OK} {value}"
+    assert chip("G 0", 2)[0] == f"{ERR_BUSY} 0"  # TEMP_EN still set
+    assert chip("G 0", 2)[0] == f"{OK} {value}"
 
+
+def test_temperature_read_refuses_a_chip_reset_during_the_conversion(chip):
+    # V0.2 section 11.1: after a brownout TEMP_EN and the temperature registers
+    # read 0, which looks like a finished conversion at 0 degC; MODE_CONFIG,
+    # read after them, tells.
+    assert chip.start()[0] == OK
+    chip("T 19 3 1")
+    assert chip("Q", 2)[0] == "0"
+    assert chip("G 7", 2)[0] == f"{ERR_BUSY} 0"
+    assert chip("G 7", 2) == [f"{OK} {25 * 16 + 3}", "R21:1;R1f:2;R09:1;"]
+    assert chip("Q", 2)[0] == "0"
+    chip("B")
+    assert chip("G 7", 2)[0] == f"{ERR_MODE} 0"
 
 @pytest.mark.parametrize("waiting,full,batch,count", [
     (7, 0, 8, 0), (8, 0, 8, 8), (12, 0, 8, 12), (32, 1, 8, 32), (3, 0, 1, 3), (0, 0, 1, 0),

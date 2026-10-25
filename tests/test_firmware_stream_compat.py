@@ -5,7 +5,9 @@ firmware/drivers/fake_afe.c (change both together): Packet Schema V0.2 (VERSION
 2 on every packet), fake ECG every 1953 us read 16 at a time, fake PPG with
 three slots every 5000 us read 8 at a time and sharing one anchor, fake IMU
 with six axes every 10 000 us read 10 at a time and sharing one anchor (no
-read stalls: those are in test_firmware_imu_plan.py), t0 event
+read stalls: those are in test_firmware_imu_plan.py), fake die temperature 0xB1
+once per 1 s tick (started at the next 5 ms PPG wake, 29 ms conversion, read
+out at the wake after; V0.2 section 11, no bit 4), t0 event
 packets, device info packets 0xD1 at start and every 10 s with an ordinal that
 counts dropped ones, SEQ assigned at send per channel, STATUS bit 4 on data
 packets, bit 1 after an MCU queue drop, bits 0, 1 and 5 of a dropped or
@@ -30,7 +32,8 @@ CONFIG = json.loads((ROOT / "configs/hardware/packet_logger.json").read_bytes())
 ROM_TEXT = b"ESP-ROM:esp32s3-20210327\r\nrst:0x1 (POWERON),boot:0x8\r\n"
 BIT0, BIT1, BIT4, BIT5 = 1 << 0, 1 << 1, 1 << 4, 1 << 5
 CARRY_BITS = BIT0 | BIT1 | BIT5
-ECG, PPG, EVENT, INFO = 0xE1, (0xF1, 0xF2, 0xF3), 0xC1, 0xD1
+ECG, PPG, EVENT, INFO, TEMP = 0xE1, (0xF1, 0xF2, 0xF3), 0xC1, 0xD1, 0xB1
+BIT3 = 1 << 3
 IMU = (0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6)
 SOURCES = (((ECG,), 1953, 16, 512000), (PPG, 5000, 8, 200000),
            (IMU, 10000, 10, 100000))
@@ -50,6 +53,8 @@ def imu_value(index, slot):
 def value_of(channel, index):
     if channel == ECG:
         return ecg_word(index)
+    if channel == TEMP:
+        return 25 * 16 + index % 16  # firmware fake_temp_service
     if channel in IMU:
         return imu_value(index, IMU.index(channel))
     return ppg_count(index, PPG.index(channel))
@@ -87,6 +92,15 @@ def produced(duration_us, seed=7, isr_losses=(), ppg_delay=False):
                     t_first_us=anchor - offset, fs_nominal_mhz=fs, status=BIT4,
                     data=tuple(data))))
             first += count
+    for tick in range(duration_us // 1_000_000):
+        # Started at the first 5 ms PPG wake at or after the tick, read out at the
+        # first wake 29 ms or more later (firmware fake_temp_service).
+        start = tick * 1_000_000 + rng.randint(0, 4_999)
+        anchor = start + 29_000 + rng.randint(0, 4_999)
+        items.append((anchor, dict(
+            channel_id=TEMP, first_sample_index=tick, t_anchor_us=anchor,
+            t_first_us=anchor, fs_nominal_mhz=1000, status=0,
+            data=(value_of(TEMP, tick),))))
     for ordinal, t in enumerate(range(0, duration_us, INFO_PERIOD_US)):
         # t = 0 sorts before every data packet: sent right after USB starts.
         items.append((t - 1, dict(channel_id=INFO, first_sample_index=ordinal,
@@ -170,7 +184,8 @@ def stream(items, queue_drops=(), usb_losses=(), carry_bits=CARRY_BITS):
 def metadata():
     channels, reasons = {}, {}
     for channel, fs in ((ECG, 512000), *((c, 200000) for c in PPG),
-                        *((c, 100000) for c in IMU), (EVENT, None), (INFO, None)):
+                        *((c, 100000) for c in IMU), (TEMP, 1000), (EVENT, None),
+                        (INFO, None)):
         key = f"0x{channel:02X}"
         channels[key] = {"sensor": "SYN_fake_afe", "fs_nominal_mhz": fs,
                          "latency_l_us": None, "latency_source": None,
@@ -207,10 +222,10 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
                      usb_losses={ecg[5001], ppg2[3000]})
     result, _, samples = analyze(payload)
     assert result["issue_counts"] == {"missing_packets": 2, "skipped_bytes": 1}
-    # docs/protocol/packet_logger.md: 100 266 packets (60 of them 0xD1, 36 000
-    # IMU), 1 027 192 samples.
-    assert result["decode"]["packets_decoded"] == 100_266
-    assert len(samples) == 1_027_192
+    # docs/protocol/packet_logger.md: 100 866 packets (60 of them 0xD1, 36 000
+    # IMU, 600 0xB1), 1 027 792 samples.
+    assert result["decode"]["packets_decoded"] == 100_866
+    assert len(samples) == 1_027_792
     skipped = [i for i in result["issues"] if i["code"] == "skipped_bytes"]
     assert skipped == [{"code": "skipped_bytes", "offset": 0,
                         "length": len(ROM_TEXT)}]
@@ -221,6 +236,8 @@ def test_ten_minutes_with_queue_drop_and_usb_losses():
     assert channels["0xC1"]["events"] == 7
     for key in ("0xA1", "0xA6"):
         assert channels[key]["packets_accepted"] == 6000 and not channels[key]["gaps"]
+    assert channels["0xB1"]["packets_accepted"] == 600 and not channels["0xB1"]["gaps"]
+    assert channels["0xB1"]["status_bit_counts"] == {}
     assert all(not c.get("packets_quarantined") for c in channels.values())
     info = result["sessions"][0]["device_info"]
     assert info["valid_packets"] == 60  # at 0, 10, ..., 590 s
@@ -325,5 +342,27 @@ def test_late_ppg_reader_drains_more_than_eight():
     assert result["issue_counts"] == {"skipped_bytes": 1}
     ppg1 = result["sessions"][0]["channels"]["0xF1"]
     assert not ppg1["gaps"] and not ppg1.get("packets_quarantined")
+    for _, key, _, _, index, value, _ in samples:
+        assert value == value_of(int(key, 16), index)
+
+
+def test_die_temperature_drops_and_losses_keep_known_gaps():
+    items = produced(30_000_000)
+    temp = positions(items, TEMP)
+    # Tick 10 hits an I2C error (bit 3 on tick 11); tick 11 is then dropped in the
+    # MCU queue: tick 12 has bit 1, a counted gap of 2 ticks, and bit 3 is gone
+    # (not a carried bit, V0.2 section 11.1). Tick 19 is lost on USB.
+    items = [fields for i, fields in enumerate(items) if i != temp[10]]
+    temp = positions(items, TEMP)
+    items[temp[10]] = dict(items[temp[10]], status=BIT3)
+    result, _, samples = analyze(stream(items, queue_drops={temp[10]},
+                                        usb_losses={temp[18]}))
+    assert result["issue_counts"] == {"missing_packets": 1, "sample_gap_counted": 1,
+                                      "skipped_bytes": 1}
+    channel = result["sessions"][0]["channels"]["0xB1"]
+    assert channel["chains"] == 1 and channel["packets_accepted"] == 27
+    assert channel["status_bit_counts"] == {"mcu_buffer_overflow": 1}
+    assert [(g["index_from"], g["index_to"], g["lost_samples"])
+            for g in channel["gaps"]] == [(10, 12, 2), (19, 20, 1)]
     for _, key, _, _, index, value, _ in samples:
         assert value == value_of(int(key, 16), index)

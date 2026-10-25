@@ -12,6 +12,7 @@
 
 #include "board_v1_module.h"
 #include "bootloader_random.h"
+#include "die_temp.h"
 #include "driver/gpio.h"
 #include "driver/usb_serial_jtag.h"
 #include "esp_app_desc.h"
@@ -139,12 +140,13 @@ static const fake_afe_config_t IMU_FAKE = {
 
 enum {
     CH_ECG, CH_PPG1, CH_PPG2, CH_PPG3, CH_PPG4, CH_EVENT, CH_DEVICE_INFO,
-    CH_ACC_X, CH_ACC_Y, CH_ACC_Z, CH_GYR_X, CH_GYR_Y, CH_GYR_Z, CH_COUNT
+    CH_ACC_X, CH_ACC_Y, CH_ACC_Z, CH_GYR_X, CH_GYR_Y, CH_GYR_Z, CH_DIE_TEMP, CH_COUNT
 };
 static const uint8_t CHANNEL_IDS[CH_COUNT] = {
     PKT_CH_ECG, PKT_CH_PPG_SLOT1, PKT_CH_PPG_SLOT2, PKT_CH_PPG_SLOT3,
     PKT_CH_PPG_SLOT4, PKT_CH_EVENT, PKT_CH_DEVICE_INFO, PKT_CH_ACC_X,
     PKT_CH_ACC_Y, PKT_CH_ACC_Z, PKT_CH_GYR_X, PKT_CH_GYR_Y, PKT_CH_GYR_Z,
+    PKT_CH_DIE_TEMP,
 };
 
 typedef struct {
@@ -236,6 +238,34 @@ static void tx_task(void *arg)
     }
 }
 
+/*
+ * Die temperature 0xB1 (V0.2 section 11), read in the PPG reader task: one value
+ * per packet, T_FIRST_US = T_ANCHOR_US = right after the readout, no bit 4. A
+ * reading starts within 50 ms of its tick and is read out by 100 ms after it
+ * (die_temp.h), so the reader must look at least every 40 ms or so.
+ */
+#if BOARD_PPG_READ_PERIOD_MS > 40
+#error "BOARD_PPG_READ_PERIOD_MS above 40 ms breaks the die temperature timing (V0.2 11.1)"
+#endif
+static void send_die_temp(die_temp_packet_t tp, uint64_t anchor_us, int32_t sixteenths)
+{
+    if (!tp.send) {
+        return;
+    }
+    pkt_t p = {
+        .channel_id = PKT_CH_DIE_TEMP,
+        .session_id = s_session_id,
+        .first_sample_index = tp.index,
+        .t_anchor_us = anchor_us,
+        .t_first_us = anchor_us,
+        .fs_nominal_mhz = DIE_TEMP_FS_MHZ,
+        .sample_count = 1,
+        .status = tp.status,
+    };
+    p.data[0] = sixteenths;
+    enqueue(&p);
+}
+
 #if BOARD_PPG_REAL
 /*
  * PPG from a MAX30101 (drivers/max30101.c; not run on a chip yet), V0.2
@@ -259,6 +289,32 @@ static void tx_task(void *arg)
 
 static max30101_bus_t s_ppg_bus;
 static max30101_regs_t s_ppg_regs;
+
+/* Die temperature from the chip only: never a made-up value after a failure. */
+static void ppg_temp_service(die_temp_t *t)
+{
+    int64_t now = esp_timer_get_time();
+    switch (die_temp_next(t, now)) {
+    case DIE_TEMP_START:
+        die_temp_started(t, max30101_temp_start(&s_ppg_bus) == MAX30101_OK);
+        break;
+    case DIE_TEMP_POLL: {
+        int32_t value = 0;
+        /* Also checks that no brownout reset the chip since the start (the
+         * next latch would see PWR_RDY only after this readout). */
+        max30101_err_t err = max30101_temp_read(&s_ppg_bus, MAX30101_MODE_MULTI_LED,
+                                                &value);
+        int64_t anchor = esp_timer_get_time(); /* right after the readout */
+        die_temp_read_t result = err == MAX30101_OK         ? DIE_TEMP_READ_OK
+                                 : err == MAX30101_ERR_BUSY ? DIE_TEMP_READ_BUSY
+                                                            : DIE_TEMP_READ_ERROR;
+        send_die_temp(die_temp_polled(t, result, anchor), (uint64_t)anchor, value);
+        break;
+    }
+    default:
+        break;
+    }
+}
 
 static void ppg_give_up(const char *what, int err)
 {
@@ -288,6 +344,8 @@ static void ppg_reader_task(void *arg)
     const uint16_t batch = BOARD_PPG_READ_PERIOD_MS > 0 ? 1 : PPG_BATCH;
     ppg_read_t ppg;
     ppg_read_init(&ppg);
+    die_temp_t temp;
+    die_temp_init(&temp, esp_timer_get_time()); /* t0: kept across chip resets */
     TickType_t wake = xTaskGetTickCount();
     int64_t next_reconfigure_us = 0;
     for (;;) {
@@ -309,6 +367,9 @@ static void ppg_reader_task(void *arg)
                           || max30101_read_samples(&s_ppg_bus, count, &samples) == MAX30101_OK;
         ppg_read_plan_t plan = ppg_read_plan(&ppg, &latch, count, samples_ok, anchor,
                                              PPG_FS_NOMINAL_MHZ, PKT_STATUS_LATENCY_UNMEASURED);
+        if (plan.reconfigure) {
+            die_temp_abort(&temp); /* before any RESET: TEMP_EN then reads 0 */
+        }
         if (plan.reconfigure && esp_timer_get_time() >= next_reconfigure_us) {
             next_reconfigure_us = esp_timer_get_time() + PPG_RECONFIGURE_MS * 1000LL;
             err = max30101_start(&s_ppg_bus, &s_ppg_regs, &rev);
@@ -318,6 +379,9 @@ static void ppg_reader_task(void *arg)
             } else {
                 ESP_LOGE(TAG, "MAX30101 reconfiguration failed (%d), retrying", (int)err);
             }
+        }
+        if (!ppg.needs_reconfigure) {
+            ppg_temp_service(&temp); /* on every loop, not only with a PPG packet */
         }
         if (!plan.send) {
             continue;
@@ -354,11 +418,39 @@ static void ppg_reader_task(void *arg)
  * instead (if PPG_RDY does not work in the three-slot mode); the anchor may then
  * be late by up to one PPG period.
  */
+/*
+ * Fake die temperature (SYNTHETIC builds only): the conversion takes
+ * FAKE_TEMP_CONVERSION_US, the value is 25 degC plus a 1/16 degC sawtooth.
+ */
+#define FAKE_TEMP_CONVERSION_US 29000
+
+static void fake_temp_service(die_temp_t *t, int64_t *started_us)
+{
+    int64_t now = esp_timer_get_time();
+    switch (die_temp_next(t, now)) {
+    case DIE_TEMP_START:
+        *started_us = now;
+        die_temp_started(t, true);
+        break;
+    case DIE_TEMP_POLL:
+        if (now - *started_us >= FAKE_TEMP_CONVERSION_US) {
+            die_temp_packet_t tp = die_temp_polled(t, DIE_TEMP_READ_OK, now);
+            send_die_temp(tp, (uint64_t)now, 25 * 16 + (int32_t)(tp.index % 16u));
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 static void ppg_reader_task(void *arg)
 {
     const fake_afe_config_t *cfg = &PPG_FAKE;
     fake_afe_t *afe;
     ESP_ERROR_CHECK(fake_afe_start(cfg, xTaskGetCurrentTaskHandle(), &afe));
+    die_temp_t temp;
+    int64_t temp_started = 0;
+    die_temp_init(&temp, esp_timer_get_time());
     int64_t delay_at = PPG_DELAY_PERIOD_US;
     TickType_t wake = xTaskGetTickCount();
     for (;;) {
@@ -366,10 +458,11 @@ static void ppg_reader_task(void *arg)
             vTaskDelayUntil(&wake, pdMS_TO_TICKS(BOARD_PPG_READ_PERIOD_MS));
             ulTaskNotifyTake(pdTRUE, 0); /* the interrupts are not used */
         } else {
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            if (fake_afe_waiting(afe) < cfg->batch) {
-                continue;
-            }
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY); /* one per fake sample, 5 ms */
+        }
+        fake_temp_service(&temp, &temp_started);
+        if (BOARD_PPG_READ_PERIOD_MS == 0 && fake_afe_waiting(afe) < cfg->batch) {
+            continue;
         }
         if (FAKE_PPG_DELAY && esp_timer_get_time() >= delay_at) {
             delay_at += PPG_DELAY_PERIOD_US;

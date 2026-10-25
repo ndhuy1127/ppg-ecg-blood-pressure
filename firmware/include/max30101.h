@@ -68,6 +68,7 @@ typedef enum {
     MAX30101_ERR_RESET,    /* the RESET bit did not clear in time */
     MAX30101_ERR_READBACK, /* a configuration register reads back differently */
     MAX30101_ERR_BUSY,     /* a temperature conversion is still running */
+    MAX30101_ERR_MODE,     /* MODE_CONFIG lost its mode: the chip was reset */
 } max30101_err_t;
 
 typedef struct {
@@ -132,6 +133,10 @@ max30101_err_t max30101_read_samples(const max30101_bus_t *bus, uint16_t count,
                                      max30101_samples_t *out);
 
 /* Die temperature (p. 23): start one conversion; then read it in 1/16 degC
- * once TEMP_EN has cleared (MAX30101_ERR_BUSY while it runs). */
+ * once TEMP_EN has cleared (MAX30101_ERR_BUSY while it runs). After the readout
+ * MODE_CONFIG must still hold `mode` (MAX30101_ERR_MODE otherwise): a reset
+ * (brownout) during the conversion clears TEMP_EN and the temperature
+ * registers, which would read as a result of 0 degC. */
 max30101_err_t max30101_temp_start(const max30101_bus_t *bus);
-max30101_err_t max30101_temp_read(const max30101_bus_t *bus, int32_t *sixteenths);
+max30101_err_t max30101_temp_read(const max30101_bus_t *bus, uint8_t mode,
+                                  int32_t *sixteenths);

@@ -188,17 +188,22 @@ max30101_err_t max30101_temp_start(const max30101_bus_t *bus)
                : MAX30101_OK;
 }
 
-max30101_err_t max30101_temp_read(const max30101_bus_t *bus, int32_t *sixteenths)
+max30101_err_t max30101_temp_read(const max30101_bus_t *bus, uint8_t mode,
+                                  int32_t *sixteenths)
 {
-    uint8_t config, t[2];
+    uint8_t config, t[2], now_mode;
     if (max30101_read_reg(bus, MAX30101_TEMP_CONFIG, &config)) {
         return MAX30101_ERR_BUS;
     }
     if (config & MAX30101_TEMP_EN) {
         return MAX30101_ERR_BUSY; /* TEMP_EN clears itself when done (p. 23) */
     }
-    if (bus->read(bus->ctx, MAX30101_TEMP_INT, t, sizeof(t))) {
+    if (bus->read(bus->ctx, MAX30101_TEMP_INT, t, sizeof(t))
+        || max30101_read_reg(bus, MAX30101_MODE_CONFIG, &now_mode)) {
         return MAX30101_ERR_BUS;
+    }
+    if ((now_mode & 0x07u) != (mode & 0x07u)) {
+        return MAX30101_ERR_MODE; /* reset since the conversion started */
     }
     /* TINT two's complement in 1 degC, TFRAC 0..15 in 1/16 degC, always added. */
     int32_t whole = t[0] >= 128u ? (int32_t)t[0] - 256 : (int32_t)t[0];

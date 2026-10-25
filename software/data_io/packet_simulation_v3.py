@@ -12,9 +12,10 @@ V0.2 streams: the same channels plus optional BMI270 IMU axes (one FIFO read
 shared by the six axes, signed payload) and device info packets, with the V0.2
 cases ``V02_CASES``. In V0.2 the ECG anchor is the SAMP edge of the last sample
 (STATUS bit 8, V0.2 section 7) unless a case says otherwise; ``samp`` of the
-config sets its delay and jitter. Streams of a V0.1 config are byte for byte
-those of the code before V0.2 support (2026-10-24), except event STATUS
-(2026-10-23).
+config sets its delay and jitter. A V0.2 config may also hold the die
+temperature 0xB1 (V0.2 section 11: 1 Hz, one value per packet, signed, STATUS
+bit 4 off). Streams of a V0.1 config are byte for byte those of the code before
+V0.2 support (2026-10-24), except event STATUS (2026-10-23).
 """
 
 import random
@@ -24,8 +25,8 @@ from fractions import Fraction
 from software.data_io.packet_wire import (
     CHANNELS, DEVICE_INFO_CHANNEL, ECG_CHANNEL, EVENT_CHANNEL, IMU_CHANNELS,
     MAX_SAMPLE_COUNT, PPG_CHANNELS, SAMP_ANCHOR_BIT, STATUS_RESERVED_MASKS,
-    VERSION_CHANNELS, WIRE_VERSION, WIRE_VERSION_V02, Packet, device_info_data,
-    encode_packet,
+    TEMP_CHANNEL, TEMP_FS_MHZ, TEMP_STATUS_BITS, VERSION_CHANNELS, WIRE_VERSION,
+    WIRE_VERSION_V02, Packet, device_info_data, encode_packet,
 )
 
 VERSION = "synthetic-packet-v3"
@@ -47,7 +48,7 @@ CONFIG_FIELDS = {
     "fault_channel", "fault_index", "time_fault_us", "index_jump_samples",
     "reanchor_jump_samples", "byte_loss_count", "unsupported_version",
 }
-DATA_CHANNELS = (ECG_CHANNEL, *PPG_CHANNELS, *IMU_CHANNELS)
+DATA_CHANNELS = (ECG_CHANNEL, *PPG_CHANNELS, *IMU_CHANNELS, TEMP_CHANNEL)
 ORDER = (*DATA_CHANNELS, EVENT_CHANNEL, DEVICE_INFO_CHANNEL)
 DEVICE_INFO_FIELDS = {"elf_sha256", "app_version", "idf_version", "interval_us"}
 # SAMP anchor = sample time + edge_delay_us + jitter in [0, jitter_us].
@@ -104,14 +105,20 @@ def validate_config(config):
     for key, spec in channels.items():
         if _channel_id(key) not in DATA_CHANNELS:
             raise ValueError("channels holds data channels only; events are separate")
-        if _channel_id(key) in IMU_CHANNELS and not v02:
-            raise ValueError("IMU channels need wire_version 2 (Packet Schema V0.2)")
+        if _channel_id(key) in (*IMU_CHANNELS, TEMP_CHANNEL) and not v02:
+            raise ValueError("IMU and temperature channels need wire_version 2 "
+                             "(Packet Schema V0.2)")
         if not isinstance(spec, dict) or (
             set(spec) != {"fs_nominal_mhz", "sample_count"}
         ):
             raise ValueError("Channel needs fs_nominal_mhz and sample_count")
         _integer(spec["fs_nominal_mhz"], "fs_nominal_mhz", 1, UINT32)
         _integer(spec["sample_count"], "sample_count", 1, 32)
+        if _channel_id(key) == TEMP_CHANNEL and (
+            (spec["fs_nominal_mhz"], spec["sample_count"]) != (TEMP_FS_MHZ, 1)
+        ):
+            raise ValueError("0xB1 is 1000 mHz with one value per packet "
+                             "(V0.2 section 11)")
         if _channel_id(key) in PPG_CHANNELS:
             ppg.append((spec["fs_nominal_mhz"], spec["sample_count"]))
         if _channel_id(key) in IMU_CHANNELS:
@@ -121,9 +128,10 @@ def validate_config(config):
     if imu and (len(imu) != len(IMU_CHANNELS) or len(set(imu)) > 1):
         raise ValueError("IMU: all six axes, from one FIFO read (same fs and count)")
     if config["fault_channel"] in channels and (
-        _channel_id(config["fault_channel"]) in IMU_CHANNELS
+        _channel_id(config["fault_channel"]) in (*IMU_CHANNELS, TEMP_CHANNEL)
     ):
-        raise ValueError("fault_channel must be ECG or PPG; IMU faults are V0.2 cases")
+        raise ValueError("fault_channel must be ECG or PPG; IMU faults are V0.2 "
+                         "cases, temperature faults are built by hand")
     if v02:
         info = config["device_info"]
         if not isinstance(info, dict) or set(info) != DEVICE_INFO_FIELDS:
@@ -167,6 +175,8 @@ def _payload(rng, channel_id, count):
         # 18-bit two's complement sample left-aligned in a 24-bit word, ETAG/PTAG 0.
         return tuple((rng.randint(-(1 << 17), (1 << 17) - 1) & 0x3FFFF) << 6
                      for _ in range(count))
+    if channel_id == TEMP_CHANNEL:  # TINT * 16 + TFRAC, signed
+        return tuple(rng.randint(-(1 << 11), (1 << 11) - 1) for _ in range(count))
     return tuple(rng.randint(0, (1 << 18) - 1) for _ in range(count))
 
 
@@ -315,6 +325,8 @@ def _session(config, rng, case, session_id, packet_count, with_events):
         for ordinal in range(packet_count):
             first = config["index_start"] + ordinal * count
             status = config["status"]
+            if channel_id == TEMP_CHANNEL:
+                status &= TEMP_STATUS_BITS  # V0.2 section 11: no bit 4
             if channel_id == fault and ordinal > config["fault_index"]:
                 if case == "index_jump":
                     first += config["index_jump_samples"]

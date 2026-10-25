@@ -19,7 +19,7 @@
 #define PKT_MAX_SAMPLES 32u
 #define PKT_MAX_SIZE (PKT_HEADER_SIZE + 4u * PKT_MAX_SAMPLES + PKT_CRC_SIZE)
 
-/* CHANNEL_ID, V0.1 section 7 and V0.2 sections 2 and 6. */
+/* CHANNEL_ID, V0.1 section 7 and V0.2 sections 2, 6 and 11. */
 #define PKT_CH_ECG 0xE1u
 #define PKT_CH_PPG_SLOT1 0xF1u
 #define PKT_CH_PPG_SLOT2 0xF2u
@@ -33,6 +33,7 @@
 #define PKT_CH_GYR_Y 0xA5u
 #define PKT_CH_GYR_Z 0xA6u
 #define PKT_CH_DEVICE_INFO 0xD1u
+#define PKT_CH_DIE_TEMP 0xB1u
 
 /* STATUS bits, V0.1 section 9 and V0.2 sections 4 and 7; bits 9..15 are
  * reserved and sent as 0. Bit 8 is for ECG only. */

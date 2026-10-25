@@ -107,7 +107,7 @@ def test_firmware_header_constants_match_codec():
         "PKT_CH_PPG_SLOT3": 0xF3, "PKT_CH_PPG_SLOT4": 0xF4, "PKT_CH_EVENT": 0xC1,
         "PKT_CH_ACC_X": 0xA1, "PKT_CH_ACC_Y": 0xA2, "PKT_CH_ACC_Z": 0xA3,
         "PKT_CH_GYR_X": 0xA4, "PKT_CH_GYR_Y": 0xA5, "PKT_CH_GYR_Z": 0xA6,
-        "PKT_CH_DEVICE_INFO": 0xD1,
+        "PKT_CH_DEVICE_INFO": 0xD1, "PKT_CH_DIE_TEMP": 0xB1,
     }
     for name, value in channels.items():
         assert _int(defines[name]) == value, name

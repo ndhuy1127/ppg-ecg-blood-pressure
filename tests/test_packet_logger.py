@@ -642,6 +642,7 @@ def test_metadata_needs_reason_for_each_null(sim):
     ("schema_version", "packet-logger-v0"), ("read_chunk_bytes", 0),
     ("anchor_rate_tolerance_ppm", 10 ** 5 + 1),
     ("ecg_anchor_rate_tolerance_ppm", 10 ** 5 + 1), ("samp_anchor_tolerance_us", -1),
+    ("temp_anchor_tolerance_us", 10 ** 6),
 ])
 def test_logger_config_rejected(logger, field, value):
     logger[field] = value
