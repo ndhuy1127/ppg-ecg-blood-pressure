@@ -26,7 +26,10 @@
 #include "imu_plan.h"
 #include "max30001.h"
 #include "max30001_esp.h"
+#include "max30101.h"
+#include "max30101_esp.h"
 #include "packet_wire.h"
+#include "ppg_read.h"
 #include "samp_capture.h"
 #include "samp_edges.h"
 #include "samp_map.h"
@@ -233,6 +236,111 @@ static void tx_task(void *arg)
     }
 }
 
+#if BOARD_PPG_REAL
+/*
+ * PPG from a MAX30101 (drivers/max30101.c; not run on a chip yet), V0.2
+ * section 7.6. Every INT edge (PPG_RDY, one per sample), and every PPG_POLL_MS
+ * without one (INT stuck, or an exactly full FIFO that may raise no new
+ * PPG_RDY), or every BOARD_PPG_READ_PERIOD_MS in timer mode, the reader reads
+ * Interrupt Status 1 (clearing PPG_RDY) and the FIFO pointers, takes
+ * T_ANCHOR_US right after that burst, and once 8 samples wait (any, on a
+ * timer) reads every sample present at the latch. ppg_read_plan decides the
+ * index, STATUS (bit 0 full, bit 6 ALC_OVF, bits 3+5 after a failure) and a
+ * reconfiguration (brownout, failed Status 1 or sample read), retried every
+ * PPG_RECONFIGURE_MS until it succeeds, with no packet meanwhile.
+ * The three slots of a read share FIRST_SAMPLE_INDEX, T_ANCHOR_US and STATUS;
+ * DATA is the 18-bit ADC count. LED currents are the bring-up defaults until
+ * the per-subject calibration command exists (protocol v0.2 section 6.1).
+ */
+#define PPG_FS_NOMINAL_MHZ 200000u
+#define PPG_BATCH 8
+#define PPG_POLL_MS 10
+#define PPG_RECONFIGURE_MS 100
+
+static max30101_bus_t s_ppg_bus;
+static max30101_regs_t s_ppg_regs;
+
+static void ppg_give_up(const char *what, int err)
+{
+    ESP_LOGE(TAG, "MAX30101 %s failed (%d): no PPG packets", what, err);
+    max30101_write_reg(&s_ppg_bus, MAX30101_INT_ENABLE1, 0); /* best effort */
+    max30101_esp_stop();
+    for (;;) {
+        vTaskSuspend(NULL); /* keep the handle valid for an ISR in flight */
+    }
+}
+
+static void ppg_reader_task(void *arg)
+{
+    (void)arg;
+    static const uint8_t SLOT_CHANNELS[MAX30101_SLOTS] = {
+        PKT_CH_PPG_SLOT1, PKT_CH_PPG_SLOT2, PKT_CH_PPG_SLOT3};
+    ESP_ERROR_CHECK(max30101_esp_init(&s_ppg_bus, BOARD_PPG_I2C_HZ,
+                                      xTaskGetCurrentTaskHandle()));
+    max30101_v1_regs(&s_ppg_regs, BOARD_PPG_LED_PW_US);
+    uint8_t rev = 0;
+    max30101_err_t err = max30101_start(&s_ppg_bus, &s_ppg_regs, &rev);
+    ESP_LOGI(TAG, "MAX30101 REV_ID 0x%02X, LED_PW %u us, start %d", rev,
+             (unsigned)BOARD_PPG_LED_PW_US, (int)err);
+    if (err != MAX30101_OK) {
+        ppg_give_up("start", (int)err);
+    }
+    const uint16_t batch = BOARD_PPG_READ_PERIOD_MS > 0 ? 1 : PPG_BATCH;
+    ppg_read_t ppg;
+    ppg_read_init(&ppg);
+    TickType_t wake = xTaskGetTickCount();
+    int64_t next_reconfigure_us = 0;
+    for (;;) {
+        if (BOARD_PPG_READ_PERIOD_MS > 0) {
+            vTaskDelayUntil(&wake, pdMS_TO_TICKS(BOARD_PPG_READ_PERIOD_MS));
+            ulTaskNotifyTake(pdTRUE, 0); /* the interrupts are not used */
+        } else {
+            /* A timeout also looks at the FIFO, whatever INT does. */
+            ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(PPG_POLL_MS));
+        }
+        max30101_latch_t latch = {0};
+        if (!ppg.needs_reconfigure) {
+            max30101_latch(&s_ppg_bus, &latch);
+        }
+        uint64_t anchor = esp_timer_get_time(); /* right after the pointer burst */
+        uint16_t count = latch.pointers_ok ? ppg_read_count(&latch, batch) : 0;
+        static max30101_samples_t samples;
+        bool samples_ok = count == 0
+                          || max30101_read_samples(&s_ppg_bus, count, &samples) == MAX30101_OK;
+        ppg_read_plan_t plan = ppg_read_plan(&ppg, &latch, count, samples_ok, anchor,
+                                             PPG_FS_NOMINAL_MHZ, PKT_STATUS_LATENCY_UNMEASURED);
+        if (plan.reconfigure && esp_timer_get_time() >= next_reconfigure_us) {
+            next_reconfigure_us = esp_timer_get_time() + PPG_RECONFIGURE_MS * 1000LL;
+            err = max30101_start(&s_ppg_bus, &s_ppg_regs, &rev);
+            if (err == MAX30101_OK) {
+                ppg_read_reconfigured(&ppg);
+                ESP_LOGW(TAG, "MAX30101 configured again after a brownout or read failure");
+            } else {
+                ESP_LOGE(TAG, "MAX30101 reconfiguration failed (%d), retrying", (int)err);
+            }
+        }
+        if (!plan.send) {
+            continue;
+        }
+        for (unsigned slot = 0; slot < MAX30101_SLOTS; slot++) {
+            pkt_t p = {
+                .channel_id = SLOT_CHANNELS[slot],
+                .session_id = s_session_id,
+                .first_sample_index = plan.chunk.first_index,
+                .t_anchor_us = anchor,
+                .t_first_us = plan.chunk.t_first_us,
+                .fs_nominal_mhz = PPG_FS_NOMINAL_MHZ,
+                .sample_count = plan.chunk.count,
+                .status = plan.chunk.status,
+            };
+            for (uint16_t i = 0; i < plan.chunk.count; i++) {
+                p.data[i] = (int32_t)samples.value[i][slot];
+            }
+            enqueue(&p);
+        }
+    }
+}
+#else
 /*
  * PPG reads (V0.2 section 7.6). PPG_RDY holds INT low until Interrupt Status 1
  * (0x00) is read, and a sample that comes while the flag is set makes no new
@@ -294,6 +402,8 @@ static void ppg_reader_task(void *arg)
         }
     }
 }
+
+#endif /* BOARD_PPG_REAL */
 
 /*
  * SAMP edge of the fake ECG, from the esp_timer task: the sample's alarm time
@@ -807,10 +917,11 @@ void app_main(void)
         ESP_LOGE(TAG, "cannot create reader tasks");
         abort();
     }
-    ESP_LOGI(TAG, "streaming %s ECG 0xE1 %u us x %u, FAKE PPG 0xF1-0xF3 %u us x %u, "
+    ESP_LOGI(TAG, "streaming %s ECG 0xE1 %u us x %u, %s PPG 0xF1-0xF3 %u us x %u, "
                   "IMU 0xA1-0xA6 %u us x %u%s, t0 on GPIO%d",
              BOARD_ECG_REAL ? "MAX30001" : "FAKE", (unsigned)ECG_FAKE.period_us,
-             (unsigned)ECG_FAKE.batch, (unsigned)PPG_FAKE.period_us,
+             (unsigned)ECG_FAKE.batch, BOARD_PPG_REAL ? "MAX30101" : "FAKE",
+             (unsigned)PPG_FAKE.period_us,
              (unsigned)PPG_FAKE.batch, (unsigned)IMU_FAKE.period_us, (unsigned)IMU_FAKE.batch,
              FAKE_IMU_STALLS ? " with read stalls" : "", BOARD_T0_GPIO);
     if (BOARD_PPG_READ_PERIOD_MS > 0) {

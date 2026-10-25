@@ -49,7 +49,19 @@
 #define BOARD_PPG_READ_PERIOD_MS 0
 #endif
 
-/* MAX30101 on I2C bus 1. */
+/* MAX30101 on I2C bus 1. BOARD_PPG_REAL 1 reads it (drivers/max30101.c, not run
+ * on a chip yet) instead of the fake PPG source; 400 kHz, 100 kHz if the rising
+ * edges through the cable are too slow (custom_board_proposal.md A.2). LED pulse
+ * width 411 or 215 us, chosen at bring-up (A.6 section 3). */
+#ifndef BOARD_PPG_REAL
+#define BOARD_PPG_REAL 0
+#endif
+#ifndef BOARD_PPG_I2C_HZ
+#define BOARD_PPG_I2C_HZ 400000
+#endif
+#ifndef BOARD_PPG_LED_PW_US
+#define BOARD_PPG_LED_PW_US 411
+#endif
 #define BOARD_PPG_SDA_GPIO 8
 #define BOARD_PPG_SCL_GPIO 9
 #define BOARD_PPG_INT_GPIO 18
