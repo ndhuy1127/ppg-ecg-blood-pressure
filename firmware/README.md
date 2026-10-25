@@ -386,9 +386,25 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
     một mẫu sau nó hiện ra là đầy (`OVF_COUNTER = 1`), và lần xem kế tiếp sẽ thấy.
   - Ba khe của một lần đọc dùng chung `FIRST_SAMPLE_INDEX`, `T_ANCHOR_US` và
     `STATUS`; `DATA` là số đếm ADC 18 bit.
-- **Nhiệt độ trong chip:** `max30101_temp_start`/`max30101_temp_read` (đơn vị
-  1/16 °C, tr. 23). Kênh nhiệt độ trong Packet Schema (chốt 2026-10-25) là bước kế
-  tiếp; chưa gửi.
+- **Nhiệt độ trong chip, kênh `0xB1`** (Packet Schema V0.2 mục 11, chốt 2026-10-25):
+  - đo mỗi 1 s, mỗi packet một giá trị `TINT × 16 + TFRAC` (1/16 °C, có dấu), trong
+    task `ppg_reader` (cùng bus I²C) ở mọi vòng lặp, kể cả vòng không gửi PPG;
+  - máy trạng thái `app/die_temp.c` (C thuần): nhịp k ở t₀ + k s theo `esp_timer`
+    (t₀ giữ qua reset chip), `FIRST_SAMPLE_INDEX` = k; chỉ bắt đầu đo trong 50 ms sau
+    nhịp (muộn hơn thì bỏ nhịp đó); không bao giờ hai lần đo chồng nhau; kết quả phải
+    đọc xong trước nhịp + 100 ms, nếu không thì bỏ. Đọc theo timer thì
+    `BOARD_PPG_READ_PERIOD_MS` tối đa 40 (lớn hơn thì không build);
+  - `T_ANCHOR_US` = `T_FIRST_US` = ngay sau khi đọc ra; không bật bit 4, không dùng
+    bit 0/5 (mọi khoảng trống biết độ dài); bit 3 trên packet sau một lần đo lỗi,
+    quá hạn hay reset chip. `die_temp_abort` được gọi **trước** mọi lần cấu hình lại:
+    sau `RESET`, `TEMP_EN` đọc ra 0 và thanh ghi nhiệt độ về 0, trông như có kết quả.
+    `max30101_temp_read` đọc thêm `MODE_CONFIG` sau `TINT`/`TFRAC` để bắt sụt nguồn
+    giữa lần đọc `Status 1` và lần đọc nhiệt độ (`MAX30101_ERR_MODE`);
+  - env `ppg_real` chỉ gửi giá trị đọc từ chip, không bao giờ thay bằng giá trị giả.
+    Env toàn nguồn giả gửi 25 °C cộng răng cưa 1/16 °C (chuyển đổi giả 29 ms) qua cùng
+    máy trạng thái; dữ liệu đó là `SYNTHETIC`.
+- **Test** [tests/test_firmware_die_temp.py](../tests/test_firmware_die_temp.py):
+  `app/die_temp.c` trên máy tính (lưới nhịp, đo trễ, quá hạn, lỗi, reset chip).
 - **Test** [tests/test_firmware_max30101.py](../tests/test_firmware_max30101.py):
   biên dịch `drivers/max30101.c` và `app/ppg_read.c`, chạy với một MAX30101 mô
   phỏng:
@@ -402,7 +418,8 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
 
 - Driver BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và gọi
   `imu_index_read_failed` khi đọc lỗi).
-- Kênh nhiệt độ MAX30101 trong Packet Schema; ghi cấu hình AFE vào metadata phiên.
+- Ghi cấu hình AFE vào metadata phiên (kể cả `afe_config` của `0xB1` và nguồn của
+  từng kênh khi env trộn nguồn thật và giả).
 - Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
   INT2B của MAX30001); kiểm `PPG_RDY` ở chế độ ba khe của MAX30101 thật.
 - Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.

@@ -223,6 +223,15 @@ Config V0.1 sinh đúng từng byte như code trước khi có V0.2 (đã so SHA
 case cùng config ngày 2026-10-24); IMU và `0xD1` được rút số ngẫu nhiên sau các kênh
 V0.1. Test: `tests/test_packet_v02.py`.
 
+**Nhiệt độ `0xB1` (từ 2026-10-25, V0.2 mục 11):** config V0.2 có thể khai báo `0xB1`
+(bắt buộc 1 000 mHz và N = 1; không được làm `fault_channel`). Payload là số nguyên
+có dấu −2 048 … 2 047, bit 4 không bật. Config V0.2 mặc định không có `0xB1` (kênh 1 Hz
+sẽ kéo dòng thời gian lên 8 s và đổi fixture); dùng
+[packet_simulation_v3_v02_temp.json](../../configs/hardware/packet_simulation_v3_v02_temp.json)
+(ECG, PPG khe 1 và `0xB1`; 13 case V0.1 cho đáp án như với kênh khác, `0xB1` luôn sạch).
+Ca lỗi của `0xB1` (bỏ nhịp, header sai, dung sai anchor) dựng tay trong
+`tests/test_packet_temp.py`.
+
 Output là thư mục mới: `config.json`, `stream.bin`, `session_metadata.json`,
 `report.json` (seed, hash config/stream/metadata, commit/dirty, hash code,
 Python, số packet theo kênh, vị trí packet lỗi). Hai lần chạy cùng config/case

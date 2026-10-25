@@ -5,7 +5,9 @@
 > 2a (encoder V0.2, `0xD1`, chuyển bit 5), 2b (IMU giả, chia phần, neo lại), 2c
 > (ánh xạ `SAMP`, bit 8, với xung từ nguồn ECG giả; MCPWM capture thật chỉ mới build)
 > và 2d (PPG đọc theo `PPG_RDY` và con trỏ FIFO, đọc hết FIFO); bước 3 (record/replay
-> nhiều lần khởi động) có test. Còn bước 4, cần bo. Chưa kiểm chứng trên thiết bị.**
+> nhiều lần khởi động) có test. Còn bước 4, cần bo. Chưa kiểm chứng trên thiết bị.
+> Sửa đổi 2026-10-25: kênh nhiệt độ `0xB1` (mục 11), đã triển khai ở codec,
+> receiver, simulator và firmware (nguồn giả và driver MAX30101 chưa chạy trên chip).**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -31,7 +33,7 @@
   | VERSION | Mã kênh hợp lệ | Bit `STATUS` dự trữ (phải là 0) |
   | --- | --- | --- |
   | `0x01` | `0xE1`, `0xF1`–`0xF4`, `0xC1` | 7–15 |
-  | `0x02` | như V0.1, thêm `0xA1`–`0xA6` (IMU), `0xD1` (thông tin thiết bị) | 9–15 (bit 8: mốc `SAMP` của ECG, mục 7) |
+  | `0x02` | như V0.1, thêm `0xA1`–`0xA6` (IMU), `0xD1` (thông tin thiết bị), `0xB1` (nhiệt độ, mục 11) | 9–15 (bit 8: mốc `SAMP` của ECG, mục 7) |
 
 - Bảng mã kênh được kiểm ở **decoder, sau CRC**: mã không có trong bảng của
   version đó thì bỏ cả packet và báo `unknown_channel` (như V0.1).
@@ -379,6 +381,8 @@ trên chip thật ở bring-up.
   `SESSION_ID` khi một raw có nhiều lần khởi động lại. Bản sao metadata đầu vào giữ
   nguyên, không ghi đè.
 - Logger giữ `packet-logger-v1` (chưa phát hành bản nào khác).
+- Kênh nhiệt độ `0xB1` (mục 11.2): khóa metadata `0xB1`, `latency_l_us` và
+  `latency_source` null kèm lý do.
 
 ## 9. Kế hoạch triển khai và test
 
@@ -457,3 +461,104 @@ sau.
   nhận; PPG N = 8 cho 167 packet/s, 13,9 kB/s, hàng đợi chịu khoảng 0,38 s. Nguồn
   giả của firmware chạy PPG 200 sps, N = 8. Cần test burst, host ngừng đọc và
   timeout 20 ms.
+
+## 11. Kênh nhiệt độ `0xB1` (sửa đổi 2026-10-25)
+
+Quyết định của Huy ngày 2026-10-25: đọc nhiệt độ trong chip MAX30101 mỗi 1 s, gửi qua
+một kênh mới của V0.2, **mỗi packet một giá trị**. `VERSION` vẫn là `0x02`; dữ liệu
+V0.2 đã ghi không có `0xB1` vẫn hợp lệ. Đây là nhiệt độ của chip, không phải nhiệt độ
+da: chỉ dùng làm xu hướng (độ chính xác ±1 °C ở 25 °C, phân giải 0,0625 °C, thời gian
+chuyển đổi 29 ms; MAX30101 tr. 4, 23). Chi tiết dưới đây đã qua hai vòng phản biện
+của Codex cùng ngày (thiết kế, rồi code).
+
+| Trường | Giá trị |
+| --- | --- |
+| `CHANNEL_ID` | `0xB1`, chỉ hợp lệ khi `VERSION = 0x02` |
+| `SEQ` | Đếm riêng cho `0xB1`, từ 0 mỗi phiên |
+| `FIRST_SAMPLE_INDEX` | Số thứ tự k của nhịp 1 s mà lần đo thuộc về (mục 11.1) |
+| `T_ANCHOR_US` = `T_FIRST_US` | `esp_timer` ngay sau khi đọc xong (mục 11.1): thời điểm đọc ra, trễ hơn nhịp k một khoảng gồm trễ bắt đầu, 29 ms chuyển đổi và trễ hỏi lại, luôn trong [nhịp k, nhịp k + 100 ms] (không phải độ trễ 0) |
+| `FS_NOMINAL_MHZ` | 1 000 (1 Hz) |
+| `SAMPLE_COUNT` | 1 (packet 46 byte) |
+| `STATUS` | Chỉ được dùng bit 1 (như mọi kênh) và bit 3 (mục 11.1); bit 4 **không** bật (độ trễ AFE không áp dụng); các bit khác là dự trữ với `0xB1` |
+| `DATA[0]` | `TINT × 16 + TFRAC`, int32 có dấu, đơn vị 1/16 °C. `TINT` bù hai, `TFRAC` 0–15 luôn cộng dương (tr. 23). Receiver nhận −2 048 ≤ `DATA[0]` ≤ 2 047 |
+
+Đổi đơn vị: °C = `DATA[0]` / 16.
+
+### 11.1. Firmware
+
+- Đo trong task đọc PPG (cùng bus I²C, không tranh bus với lần đọc FIFO), bằng một
+  máy trạng thái C thuần (`die_temp.c`, test trên máy tính). Nhịp k ở thời điểm
+  t₀ + k · 1 s theo `esp_timer` (không cộng dồn trễ); t₀ là lúc chip PPG bắt đầu đo
+  lần đầu trong phiên và **giữ nguyên** qua các lần reset chip.
+- Vòng lặp đầu tiên tại hay sau nhịp k ghi `TEMP_EN`, nhưng chỉ khi chưa quá
+  **50 ms** sau nhịp; muộn hơn thì nhịp đó không có giá trị (không bật bit lỗi) và
+  chờ nhịp sau. Các vòng sau đọc `TEMP_CONFIG`; khi `TEMP_EN` tự xóa thì đọc `TINT`
+  và `TFRAC` (đọc `TFRAC` xóa `DIE_TEMP_RDY`; ngắt này không bật nên không ảnh hưởng
+  chân INT), rồi đọc `MODE_CONFIG`, lấy anchor, gửi packet chỉ số k. Kết quả phải
+  **đọc xong** trước nhịp k + **100 ms** (so bằng thời điểm sau lần đọc, không phải
+  lúc bắt đầu đọc), nên anchor luôn nằm trong [nhịp k, nhịp k + 100 ms]. Phần nhiệt
+  độ chạy ở **mọi** vòng lặp, kể cả vòng không gửi PPG (ít nhất mỗi 10 ms khi dùng
+  ngắt; khi đọc theo timer thì mỗi chu kỳ, và firmware từ chối build nếu
+  `BOARD_PPG_READ_PERIOD_MS` > 40).
+- Không bao giờ có hai lần đo chồng nhau.
+- Lần đo bị bỏ (nhịp đó không có giá trị) khi: lỗi I²C; quá hạn 100 ms (kể cả kết
+  quả đọc xong sau hạn); chip phải cấu hình lại (sụt nguồn, đọc lỗi). Lần đo đang
+  chạy được **hủy trước** mọi lần reset hay cấu hình lại: sau `RESET`, `TEMP_EN = 0`
+  và các thanh ghi nhiệt độ về 0, nên đọc tiếp sẽ ra 0 °C trông như thành công. Sụt
+  nguồn xảy ra **sau** lần đọc `Status 1` của vòng lặp thì chỉ vòng sau mới thấy
+  `PWR_RDY`; vì vậy `MODE_CONFIG` được đọc **sau** `TINT`/`TFRAC`: nếu không còn là
+  chế độ multi-LED thì chip đã bị reset và lần đo bị bỏ.
+- Chỉ số là số thứ tự nhịp, nên mọi khoảng trống đều **biết chính xác độ dài**:
+  không dùng bit 5 (không có lần neo lại nào) và cũng không dùng bit 0. Packet kế
+  tiếp sau một lần bỏ vì lỗi AFE hay I²C (kể cả cấu hình lại chip) bật **bit 3** để
+  ghi nguyên nhân. Bit 3 chỉ nằm trên packet đưa vào hàng đợi; nếu packet đó bị bỏ ở
+  hàng đợi hay mất trên USB thì nguyên nhân mất theo (bit 3 không nằm trong các bit
+  được chuyển sang packet sau), nhưng khoảng trống chỉ số vẫn còn và bit 1 vẫn báo
+  việc bỏ ở hàng đợi.
+- Nguồn gốc dữ liệu: env có chip thật (`BOARD_PPG_REAL=1`) chỉ gửi nhiệt độ đọc từ
+  chip, **không bao giờ** thay bằng giá trị giả khi chip lỗi. Env toàn nguồn giả gửi
+  `0xB1` với giá trị giả theo công thức trong code, qua cùng máy trạng thái, để
+  logger thử đường đi của kênh trước khi có bo; phiên đó có `source_type` là
+  `SYNTHETIC`. Env trộn nguồn thật và giả ghi nguồn của từng kênh trong `afe_config`.
+- Tải thêm 1 packet/s, 46 B/s (mục 10: 13,9 kB/s với PPG N = 8).
+
+### 11.2. Logger, metadata, simulator
+
+- Codec: `0xB1` tên `DIE_TEMP`, thêm vào bảng mã kênh của `VERSION 0x02`. Logger cũ
+  (trước sửa đổi này) bỏ `0xB1` với `unknown_channel`, và metadata có khóa `0xB1`
+  không qua được validator cũ: nâng logger và firmware cùng lúc.
+- Receiver, trước khi kiểm chỉ số và timing: packet `0xB1` phải có `SAMPLE_COUNT = 1`,
+  `FS_NOMINAL_MHZ = 1 000` và `T_FIRST_US = T_ANCHOR_US`; sai thì báo
+  `temp_header_invalid` và cách ly. Bit dự trữ (ngoài bit 1 và 3) báo
+  `status_reserved_bits` như mọi kênh, và packet cũng bị cách ly (`temp_header_invalid`).
+- Chỉ số: bước nhảy tới trước của `0xB1` lớn hơn số packet vắng là **khoảng trống đã
+  đếm** (báo `sample_gap_counted` với `lost_samples` = độ nhảy, `absent_packets` =
+  số packet vắng), không cắt chuỗi. Nếu độ nhảy đúng bằng số packet vắng (chỉ mất
+  trên USB) thì chỉ có `missing_packets`, như các kênh khác. Chỉ số lùi hay nhảy ít
+  hơn số packet vắng vẫn báo như các kênh khác.
+- Timing: thay cho phép so từng cặp của các kênh khác (ở 1 Hz, dung sai 1 chu kỳ +
+  500 µs nhận cả hai anchor cách nhau 1 ms), `0xB1` kiểm **pha** của cả chuỗi:
+  `T_ANCHOR_US` − k · 1 s của mọi packet phải nằm trong một cửa sổ rộng
+  `temp_anchor_tolerance_us` = 150 000 (150 ms; firmware giữ pha trong 100 ms, cộng
+  dư; dưới 1 s). Nhịp và anchor cùng là `esp_timer` nên pha không được trôi; so
+  từng cặp thì pha trôi dần 100 ms mỗi packet vẫn lọt. Cửa sổ giữ nhiều packet nhất
+  được chọn (sớm nhất nếu bằng nhau); packet ngoài cửa sổ báo `timestamp_anomaly`
+  (`kind` = `phase`) và bị cách ly. `0xB1` không tham gia `channel_offset` (anchor
+  là thời điểm đọc ra, không phải thời điểm mẫu).
+- Dải `DATA` như bảng trên; ngoài dải thì `data_out_of_range`. Không kiểm tính hợp lý
+  của nhiệt độ. `channel_missing` chỉ bắt kênh mất hoàn toàn: chỉ khai báo `0xB1`
+  trong metadata khi firmware đó có gửi.
+- Metadata (`packet-session-metadata-v0`) nhận khóa `0xB1`: `sensor` `"MAX30101"`,
+  `fs_nominal_mhz` 1 000, `latency_l_us` và `latency_source` null kèm lý do (không áp
+  dụng: anchor là thời điểm đọc ra), `unit_conversion` "°C = DATA / 16", `afe_config`
+  ghi chu kỳ 1 s, chuyển đổi 29 ms, hạn 100 ms, cách hỏi lại, ý nghĩa của anchor và
+  nguồn (chip hay giả).
+- Simulator v3: cho phép `0xB1` khi `wire_version: 2` (bắt buộc 1 000 mHz, N = 1,
+  không là `fault_channel`); payload có dấu trong dải trên; bit 4 không bật trên
+  `0xB1`. Config V0.2 mặc định **không** đổi (thêm kênh 1 Hz sẽ kéo dài dòng thời
+  gian từ khoảng 1,8 s lên 8 s và đổi fixture); có config riêng
+  `packet_simulation_v3_v02_temp.json`. Ca lỗi của `0xB1` thử bằng packet dựng tay.
+- Không đổi `packet-logger-v1` (thêm khóa bắt buộc `temp_anchor_tolerance_us` vào
+  config, như `samp_anchor_tolerance_us` ngày 2026-10-24; config cũ thiếu khóa này
+  không còn hợp lệ, chấp nhận vì logger v1 chưa phát hành và chưa có bản ghi thiết
+  bị) và `synthetic-packet-v3`.

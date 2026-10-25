@@ -97,8 +97,8 @@ giờ nối sang phiên khác.
 | Bước mục 12 | Cách làm | Issue |
 | --- | --- | --- |
 | 3. `SEQ` | Mở rộng uint32 qua mốc 2³² (giá trị gần nhất với `SEQ` lớn nhất đã nhận). Thiếu = mất. Lặp cùng nội dung = trùng (giữ bản đầu). Lặp khác nội dung = xung đột (cách ly **cả hai** bản). Nhỏ hơn giá trị lớn nhất đã nhận = đảo thứ tự (vẫn nhận, sắp lại offline) | `missing_packets` (một issue mỗi đoạn, kèm `count`), `duplicate`, `conflicting_duplicate`, `out_of_order` |
-| 4. `FIRST_SAMPLE_INDEX` | Mở rộng uint32 rồi so với `index + N` của packet trước. Packet `FS_NOMINAL_MHZ = 0` có header không tin được: có `sample_index_ext` trong `packets.csv` nhưng không bao giờ làm mốc cho packet sau (cách ly ở bước 6). Nhảy tiến khi `SEQ` liên tục: có bit 0 hoặc 1 thì biết số mẫu mất, không có bit nào là không giải thích được. Index nhảy kèm bit 5: neo lại, không biết số mẫu mất, chuỗi mới (`chain_id` + 1). Index lùi: cách ly packet. Báo bất nhất khi số mẫu mất ít hơn số packet vắng, hoặc nhiều hơn 32 × số packet vắng (`SAMPLE_COUNT` ≤ 32) mà không có bit 0/1 | `sample_gap_status`, `sample_gap_unexplained`, `sample_index_reanchored`, `sample_index_overlap`, `sample_index_inconsistent` |
-| 5. `STATUS` | Đếm từng bit theo kênh (`status_bit_counts`) và ghi `status` của từng packet trong `packets.csv`. Bit dự trữ khác 0 thì báo: V0.1 bit 7–15; V0.2 bit 9–15, và bit 8 ở mọi kênh trừ ECG `0xE1` (bit dự trữ không được đếm tên) | `status_reserved_bits` |
+| 4. `FIRST_SAMPLE_INDEX` | Mở rộng uint32 rồi so với `index + N` của packet trước. Packet `FS_NOMINAL_MHZ = 0` có header không tin được: có `sample_index_ext` trong `packets.csv` nhưng không bao giờ làm mốc cho packet sau (cách ly ở bước 6). Nhảy tiến khi `SEQ` liên tục: có bit 0 hoặc 1 thì biết số mẫu mất, không có bit nào là không giải thích được. Index nhảy kèm bit 5: neo lại, không biết số mẫu mất, chuỗi mới (`chain_id` + 1). Index lùi: cách ly packet. Báo bất nhất khi số mẫu mất ít hơn số packet vắng, hoặc nhiều hơn 32 × số packet vắng (`SAMPLE_COUNT` ≤ 32) mà không có bit 0/1. Kênh nhiệt độ `0xB1` (V0.2 mục 11): chỉ số là nhịp 1 s, nên nhảy tiến không ít hơn số packet vắng là khoảng trống đã đếm, không cắt chuỗi | `sample_gap_status`, `sample_gap_unexplained`, `sample_gap_counted`, `sample_index_reanchored`, `sample_index_overlap`, `sample_index_inconsistent` |
+| 5. `STATUS` | Đếm từng bit theo kênh (`status_bit_counts`) và ghi `status` của từng packet trong `packets.csv`. Bit dự trữ khác 0 thì báo: V0.1 bit 7–15; V0.2 bit 9–15, và bit 8 ở mọi kênh trừ ECG `0xE1`; ở `0xB1` mọi bit trừ bit 1 và 3 (bit dự trữ không được đếm tên) | `status_reserved_bits` |
 | 6. `T_ANCHOR_US` | Theo từng chuỗi (`chain_id`). Packet có `FS_NOMINAL_MHZ = 0` bị cách ly trước và không cắt chuỗi. Packet có bit 0 (FIFO AFE tràn) giữ mẫu nhưng anchor không được kiểm và không làm mốc, vì FIFO đã đầy nên anchor đến muộn so với mẫu cuối (`disposition` = `accepted_anchor_unreliable`, đếm ở `packets_anchor_unreliable`; từ 2026-10-23, trước đó cả packet bị cách ly `timestamp_anomaly`). Mỗi packet so với packet được giữ gần nhất trước nó: phải tăng cùng chiều với chỉ số mẫu, và \|Δk\|·T/(1 + r) − F ≤ ΔA ≤ \|Δk\|·T/(1 − r) + F (ΔA tính theo chiều của Δk), với T = 10⁹/`FS_NOMINAL_MHZ` µs, Δk là số mẫu tính từ mốc, r = `anchor_rate_tolerance_ppm`·10⁻⁶ (ECG: `ecg_anchor_rate_tolerance_ppm`) là dung sai của **tốc độ** mẫu (chu kỳ thật nằm trong [T/(1 + r), T/(1 − r)]) và F = `anchor_tolerance_samples`·T + `anchor_tolerance_extra_us`. `deviation_us` vẫn báo ΔA − Δk·T. Sai thì cách ly packet, mốc giữ nguyên. Phép kiểm chạy **xuôi và ngược**, giữ chiều cách ly ít packet hơn (bằng nhau thì giữ chiều xuôi). Chuỗi mới sau neo lại hoặc khi đổi FS. ECG V0.2: kiểm riêng từng nguồn mốc (mục "Packet Schema V0.2") | `timestamp_anomaly` (`kind` = `not_increasing`/`mismatch`, `deviation_us`, `reference_seq`), `fs_changed`, `fs_invalid` |
 | 7. Không nội suy | `gaps` liệt kê lỗ hổng chỉ số mẫu (`index_from`, `index_to`, `lost_samples`, lý do). `samples.csv` chỉ chứa mẫu của packet được nhận | — |
 | 8. Không ghép ECG–PPG | Không ghép theo chỉ số mẫu, không dịch kênh, không dùng PAT. Offset kênh chỉ tính ở mô phỏng (mục dưới) | `channel_offset` (chỉ SYNTHETIC) |
@@ -117,7 +117,10 @@ phần do tốc độ mẫu thật lệch tới ±3 % so với danh định (`an
 30 000). ECG có dung sai tốc độ riêng ±1 000 ppm (`ecg_anchor_rate_tolerance_ppm`),
 và mốc `SAMP` của ECG V0.2 có phần cố định riêng 200 µs (`samp_anchor_tolerance_us`);
 cả hai là giá trị tạm, chốt 2026-10-24 (Packet Schema V0.2 mục 7.5), chỉnh sau
-bring-up.
+bring-up. Kênh nhiệt độ `0xB1` không so từng cặp: pha `T_ANCHOR_US` − k · 1 s của
+cả chuỗi phải nằm trong một cửa sổ 150 ms (`temp_anchor_tolerance_us`, V0.2 mục 11.2,
+chốt 2026-10-25); ở 1 Hz, dung sai 1 chu kỳ + 500 µs nhận cả hai anchor cách nhau
+1 ms, và so từng cặp để pha trôi dần.
 
 - **Phần cố định:** theo mục 5.1–5.2, `0 ≤ δ < 10⁶/fs + d`, với d khoảng
   0,1–0,2 ms (I²C) hoặc 6 µs (SPI). Vì vậy hiệu δ giữa hai packet nằm trong
@@ -201,6 +204,16 @@ Config `wire_versions` = `[1, 2]`, `packet_schemas` = `["packet-v0.1", "packet-v
   `device_info_missing` (phiên V0.2 nguồn `DEVICE` không có `0xD1` hợp lệ) và
   `firmware_metadata_mismatch`. `0xD1` không vào `samples.csv` và không thuộc kiểm
   `channel_missing`.
+- **Nhiệt độ trong chip `0xB1` (V0.2 mục 11, từ 2026-10-25):** chỉ hợp lệ ở V0.2. Trước
+  bước 4, packet phải có `SAMPLE_COUNT = 1`, `FS_NOMINAL_MHZ = 1 000`,
+  `T_FIRST_US = T_ANCHOR_US` và chỉ bit 1, 3; sai thì `temp_header_invalid` và cách ly
+  (header không tin được: không làm mốc, bit `STATUS` của nó không áp cho packet sau).
+  Dữ liệu có dấu, nhận −2 048 … 2 047 (1/16 °C). Chỉ số nhảy nhiều hơn số packet
+  vắng là `sample_gap_counted` (khoảng trống biết độ dài, chuỗi giữ nguyên nên
+  timing vẫn được kiểm qua khoảng trống); nhảy đúng bằng số packet vắng chỉ có
+  `missing_packets`. Timing kiểm theo cửa sổ pha (`timestamp_anomaly` với `kind` =
+  `phase`). Không tham gia `channel_offset` (anchor là thời điểm đọc ra). Chỉ khai báo
+  `0xB1` trong metadata khi firmware có gửi.
 - **Mốc `SAMP` của ECG (bit 8, spec mục 7; từ 2026-10-24):** packet ECG bit 8 có
   `T_ANCHOR_US` là cạnh `SAMP` của mẫu cuối; không có bit 8 là mốc đọc FIFO như V0.1.
   Trong mỗi chuỗi, bước 6 chạy **riêng** cho từng nguồn: packet bit 8 chỉ so với
@@ -441,10 +454,11 @@ dựng luồng byte theo đúng quy ước của firmware khung trong 10 phút (
 2026-10-24): chữ ROM ở đầu, ECG giả 1 953 µs × 16 mẫu, PPG giả ba khe 5 000 µs × 8
 mẫu dùng chung mốc neo, IMU giả sáu trục 10 000 µs × 10 mẫu dùng chung mốc neo,
 task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, packet thông tin thiết bị `0xD1`
-mỗi 10 s, một lần tràn hàng đợi MCU kèm USB timeout của chính packet mang bit 1,
-một USB timeout ở PPG khe 2. Với config mặc định, logger nhận 100 266 packet (gồm
-60 packet `0xD1` và 36 000 packet IMU; trước khi có `0xD1` và IMU là 64 206), 1 027 192
-mẫu, tất cả đúng công thức `DATA` của firmware. Phần tồn đọng và FIFO IMU đầy được
+mỗi 10 s, nhiệt độ giả `0xB1` mỗi 1 s (đọc ra 29–39 ms sau nhịp), một lần tràn hàng
+đợi MCU kèm USB timeout của chính packet mang bit 1, một USB timeout ở PPG khe 2. Với
+config mặc định, logger nhận 100 866 packet (gồm 60 packet `0xD1`, 36 000 packet IMU
+và 600 packet `0xB1`; trước khi có `0xD1` và IMU là 64 206), 1 027 792 mẫu, tất cả
+đúng công thức `DATA` của firmware. Phần tồn đọng và FIFO IMU đầy được
 kiểm riêng trong `tests/test_firmware_imu_plan.py`. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
 `missing_packets`, cùng hai khoảng trống: ECG mất 32 mẫu (bit 1 đã chuyển sang
 packet kế), PPG khe 2 mất 8 mẫu. Không có `timestamp_anomaly`. Test thứ hai cho
