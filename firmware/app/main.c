@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "afe_order.h"
 #include "bmi270.h"
 #include "bmi270_config.h"
 #include "bmi270_esp.h"
@@ -29,6 +30,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "ecg_loop.h"
 #include "ecg_read.h"
 #include "imu_plan.h"
 #include "max30001.h"
@@ -208,16 +210,24 @@ static int channel_index(uint8_t channel_id)
  * the jump then also holds the samples lost in the AFE. So does bit 5: the
  * next packet still starts the new chain (V0.2 section 5).
  */
-static void enqueue(pkt_t *p)
+static bool enqueue(pkt_t *p)
 {
     int k = channel_index(p->channel_id);
-    p->status |= s_drop_bits[k];
+    /* 0xD2 interleaves three AFEs on one channel: the control task keeps bit 1
+     * per AFE itself (V0.2 section 12), so nothing is carried here. */
+    bool carries = p->channel_id != PKT_CH_AFE_CONFIG;
+    if (carries) {
+        p->status |= s_drop_bits[k];
+    }
     if (xQueueSend(s_tx_queue, p, 0) == pdTRUE) {
         s_drop_bits[k] = 0;
-    } else {
-        s_drop_bits[k] = (p->status & CARRY_BITS) | PKT_STATUS_MCU_BUFFER_OVERFLOW;
-        s_stats[k].queue_drop++;
+        return true;
     }
+    if (carries) {
+        s_drop_bits[k] = (p->status & CARRY_BITS) | PKT_STATUS_MCU_BUFFER_OVERFLOW;
+    }
+    s_stats[k].queue_drop++;
+    return false;
 }
 
 /*
@@ -249,7 +259,8 @@ static void tx_task(void *arg)
                 ESP_LOGE(TAG, "cannot encode packet on channel 0x%02X", p.channel_id);
             }
             s_stats[k].tx_timeout++;
-            carry[k] = p.status & CARRY_BITS;
+            /* Not for 0xD2 (one channel, three AFEs): its SEQ gap shows the loss. */
+            carry[k] = p.channel_id != PKT_CH_AFE_CONFIG ? p.status & CARRY_BITS : 0u;
         }
     }
 }
@@ -257,11 +268,12 @@ static void tx_task(void *arg)
 /*
  * AFE states for 0xD2 (V0.2 section 12). Each reader publishes every change of
  * its AFE's state (fake source at start; chip configured, waiting for
- * reconfiguration, given up) through s_afe_queue, so no transition is
- * overwritten before it is sent; only the control task makes 0xD2 packets. A
- * transition the full queue refused marks the AFE in s_afe_lost: its next 0xD2
- * carries STATUS bit 1. The generation counts successful configurations since
- * boot.
+ * reconfiguration, given up): into s_afe_latest, always, and through
+ * s_afe_queue, so no transition is overwritten before it is sent; only the
+ * control task makes 0xD2 packets. A transition the full queue refused leaves its
+ * order in s_afe_lost: the control task then sends that AFE's latest state with
+ * STATUS bit 1 (afe_order.h). The generation counts successful configurations
+ * since boot.
  */
 typedef struct {
     uint8_t afe, source;
@@ -270,11 +282,15 @@ typedef struct {
     uint16_t n;
     uint32_t words[PKT_AFE_MAX_REGS];
     int64_t since_us; /* T_ANCHOR_US: when this state began */
+    uint64_t order;   /* publication order of this AFE's states, from 1 */
 } afe_state_t;
 
 #define AFE_QUEUE_LEN 8
 static QueueHandle_t s_afe_queue;
-static volatile uint32_t s_afe_lost; /* bit (afe - 1): a transition was not queued */
+static afe_state_t s_afe_latest[3]; /* under s_afe_lock */
+static bool s_afe_known[3];          /* under s_afe_lock */
+static uint64_t s_afe_order[3];      /* under s_afe_lock */
+static uint64_t s_afe_lost[3];       /* under s_afe_lock: newest order not queued, or 0 */
 static portMUX_TYPE s_afe_lock = portMUX_INITIALIZER_UNLOCKED;
 
 static void afe_publish(uint8_t afe, uint8_t source, bool configured, uint32_t generation,
@@ -291,9 +307,16 @@ static void afe_publish(uint8_t afe, uint8_t source, bool configured, uint32_t g
     if (s.n > 0) {
         memcpy(s.words, words, s.n * sizeof(uint32_t));
     }
+    taskENTER_CRITICAL(&s_afe_lock);
+    s.order = ++s_afe_order[afe - 1u];
+    s_afe_latest[afe - 1u] = s;
+    s_afe_known[afe - 1u] = true;
+    taskEXIT_CRITICAL(&s_afe_lock);
+    /* The control task never sends a state older than one it already sent
+     * (`order`), so the latest-state sends below cannot be overtaken. */
     if (xQueueSend(s_afe_queue, &s, 0) != pdTRUE) {
         taskENTER_CRITICAL(&s_afe_lock);
-        s_afe_lost |= 1u << (afe - 1u);
+        s_afe_lost[afe - 1u] = s.order;
         taskEXIT_CRITICAL(&s_afe_lock);
     }
 }
@@ -672,6 +695,17 @@ static void fake_samp_edge(uint64_t index, int64_t t_us)
  * FIFO word, tags included (V0.1 section 8). A mapping restart is a SYNCH
  * (max30001_restart); only a successful one starts a new epoch at index 0.
  *
+ * Health (2026-10-25; timing in ecg_loop.h): every ECG_CHECK_US, whatever INTB
+ * does, max30001_check reads INFO and the configuration back; with no sample for
+ * ECG_STALL_US (less than the 62.5 ms the FIFO holds) the FIFO is read anyway, so
+ * a stuck-high INTB does not overflow it, and with none for ECG_DEAD_US the chip
+ * counts as silent. A failed check or a silent chip is started again (reset,
+ * configure, SYNCH) every ECG_RESTART_US until that works, with no packet
+ * meanwhile; the index then restarts at 0 with bit 5 and 0xD2 shows the new
+ * generation. Without this, a chip reset by a brownout stays silent with INTB
+ * high and the ECG stops unnoticed. A mapping restart (SYNCH) comes right after a
+ * FIFO read, so the samples still in the FIFO are sent first.
+ *
  * Bit 8 needs BOARD_SAMP_VERIFIED: until bring-up shows that the first SAMP
  * edge after SYNCH belongs to the first FIFO sample (V0.2 section 7.2), a
  * constant one-sample offset would pass every interval check, so packets keep
@@ -709,6 +743,32 @@ static void ecg_give_up(const char *what, int err)
     for (;;) {
         vTaskSuspend(NULL);
     }
+}
+
+/*
+ * The chip failed its check or went silent: start it again (reset, configure,
+ * PLL) and restart the mapping with SYNCH. The index restarts at 0 with bit 5
+ * (ecg_read_init restart), as after any SYNCH. 0xD2 gets the new generation.
+ */
+static bool ecg_start_again(ecg_read_t *ecg)
+{
+    uint32_t info = 0;
+    max30001_err_t err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+    if (err == MAX30001_OK) {
+        err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
+    }
+    if (err != MAX30001_OK) {
+        ESP_LOGE(TAG, "MAX30001 start failed (%d), retrying", (int)err);
+        return false;
+    }
+    ecg_read_init(ecg, true);
+    uint32_t words[MAX30001_CONFIG_WORDS];
+    unsigned n = max30001_config_words(&s_ecg_regs, words);
+    s_ecg_generation++;
+    afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_CHIP, true, s_ecg_generation, words,
+                (uint16_t)n);
+    ESP_LOGW(TAG, "MAX30001 started again");
+    return true;
 }
 
 static void ecg_reader_task(void *arg)
@@ -753,10 +813,35 @@ static void ecg_reader_task(void *arg)
     }
     ecg_read_t ecg;
     ecg_read_init(&ecg, false);
+    ecg_loop_t loop;
+    ecg_loop_init(&loop, esp_timer_get_time());
     for (;;) {
-        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ECG_POLL_MS)) == 0
-            && !max30001_esp_intb_low()) {
-            continue; /* no edge and INTB high: below the threshold */
+        bool woke = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ECG_POLL_MS)) != 0;
+        int64_t now = esp_timer_get_time();
+        if (loop.down) {
+            if (ecg_loop_start_due(&loop, now) && ecg_start_again(&ecg)) {
+                ecg_loop_up(&loop, esp_timer_get_time());
+            }
+            continue;
+        }
+        /* A reset chip (brownout) is silent with INTB high: only this sees it. */
+        bool dead;
+        if (ecg_loop_check_due(&loop, now, &dead)) {
+            err = max30001_check(&s_ecg_bus, &s_ecg_regs);
+            if (err != MAX30001_OK || dead) {
+                ESP_LOGE(TAG, "MAX30001 %s (%d): starting it again",
+                         err != MAX30001_OK ? "check failed" : "silent", (int)err);
+                imu_index_read_failed(&ecg.index);
+                samp_map_error(&s_samp, SAMP_AFE, now);
+                afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_CHIP, false, s_ecg_generation,
+                            NULL, 0);
+                ecg_loop_down(&loop, now);
+                continue;
+            }
+        }
+        bool synch = samp_map_restart_due(&s_samp, esp_timer_get_time());
+        if (!ecg_loop_read_due(&loop, now, woke, max30001_esp_intb_low(), synch)) {
+            continue; /* no edge, INTB high, samples recent, no SYNCH: wait */
         }
         max30001_fifo_t f;
         uint32_t st = 0;
@@ -809,8 +894,10 @@ static void ecg_reader_task(void *arg)
                 p.data[i] = (int32_t)f.word[i];
             }
             enqueue(&p);
+            ecg_loop_samples(&loop, (int64_t)t_read);
         }
-        if (samp_map_restart_due(&s_samp, esp_timer_get_time())) {
+        if (synch) {
+            /* After the read: SYNCH clears the FIFO, so it held nothing unsent. */
             err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
             if (err == MAX30001_OK) {
                 ecg_read_init(&ecg, true);
@@ -1356,37 +1443,61 @@ static void ctl_led_progress(ctl_t *c, int64_t now)
     }
 }
 
-static void ctl_send_config(const afe_state_t *s, uint32_t *ordinal)
+typedef struct {
+    uint32_t ordinal;
+    afe_order_t order;
+} ctl_config_t;
+
+/* One 0xD2 of state `s`, if afe_order.h allows it, with bit 1 as it says. */
+static void ctl_send_config(const afe_state_t *s, ctl_config_t *cc, bool repeat)
 {
-    uint32_t bit = 1u << (s->afe - 1u);
-    taskENTER_CRITICAL(&s_afe_lock);
-    bool lost = (s_afe_lost & bit) != 0;
-    s_afe_lost &= ~bit;
-    taskEXIT_CRITICAL(&s_afe_lock);
+    bool bit1;
+    if (!afe_order_decide(&cc->order, s->afe, s->order, repeat, &bit1)) {
+        return;
+    }
     pkt_t p = {
         .channel_id = PKT_CH_AFE_CONFIG,
         .session_id = s_session_id,
-        .first_sample_index = (*ordinal)++,
+        .first_sample_index = cc->ordinal++,
         .t_anchor_us = (uint64_t)s->since_us,
         .t_first_us = (uint64_t)s->since_us,
         .fs_nominal_mhz = 0,
-        .status = lost ? PKT_STATUS_MCU_BUFFER_OVERFLOW : 0,
+        .status = bit1 ? PKT_STATUS_MCU_BUFFER_OVERFLOW : 0,
     };
     p.sample_count = pkt_afe_config_data(s->afe, s->source, s->configured, s->generation,
                                          s->words, s->n, p.data);
-    enqueue(&p);
+    afe_order_sent(&cc->order, s->afe, s->order, enqueue(&p));
+}
+
+/* The latest state of each known AFE: the periodic `repeat`, or else only for an
+ * AFE with a lost transition that no state from the queue carried. */
+static void ctl_send_latest(ctl_config_t *cc, bool repeat)
+{
+    for (uint8_t afe = 1; afe <= 3u; afe++) {
+        static afe_state_t s;
+        bool known;
+        if (!repeat && !afe_order_pending(&cc->order, afe)) {
+            continue;
+        }
+        taskENTER_CRITICAL(&s_afe_lock);
+        s = s_afe_latest[afe - 1u];
+        known = s_afe_known[afe - 1u];
+        taskEXIT_CRITICAL(&s_afe_lock);
+        if (known) {
+            ctl_send_config(&s, cc, repeat);
+        }
+    }
 }
 
 static void ctl_task(void *arg)
 {
     (void)arg;
     static ctl_t c;
-    static afe_state_t latest[3];
-    static bool known[3];
+    static ctl_config_t cc;
+    afe_order_init(&cc.order);
     cmd_exec_init(&c.exec);
     cmd_parser_t parser;
     cmd_parser_init(&parser);
-    uint32_t config_ordinal = 0;
     uint8_t rx[64];
     int64_t last_rx = 0;
     int64_t next_all = esp_timer_get_time() + AFE_CONFIG_PERIOD_US;
@@ -1401,19 +1512,23 @@ static void ctl_task(void *arg)
             parser.dropped++;
         }
         ctl_led_progress(&c, now);
+        /* Lost transitions first, so a newer state from the queue carries bit 1. */
+        uint64_t lost[3];
+        taskENTER_CRITICAL(&s_afe_lock);
+        memcpy(lost, s_afe_lost, sizeof(lost));
+        memset(s_afe_lost, 0, sizeof(s_afe_lost));
+        taskEXIT_CRITICAL(&s_afe_lock);
+        for (uint8_t afe = 1; afe <= 3u; afe++) {
+            afe_order_lost(&cc.order, afe, lost[afe - 1u]);
+        }
         static afe_state_t s;
         while (xQueueReceive(s_afe_queue, &s, 0) == pdTRUE) {
-            latest[s.afe - 1u] = s;
-            known[s.afe - 1u] = true;
-            ctl_send_config(&s, &config_ordinal);
+            ctl_send_config(&s, &cc, false);
         }
+        ctl_send_latest(&cc, false);
         if (now >= next_all) {
             next_all = now + AFE_CONFIG_PERIOD_US;
-            for (unsigned i = 0; i < 3u; i++) {
-                if (known[i]) {
-                    ctl_send_config(&latest[i], &config_ordinal);
-                }
-            }
+            ctl_send_latest(&cc, true);
         }
     }
 }

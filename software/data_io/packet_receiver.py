@@ -26,8 +26,10 @@ from software.data_io.packet_wire import (
 # v1 (2026-10-23): channel_missing, event ordinal check, FS 0 never an index
 # reference, rate (not period) tolerance; Packet Schema V0.2 (2026-10-24), with
 # its section 7 (SAMP anchor, bit 8) the same day and section 11 (die temperature
-# 0xB1) on 2026-10-25. v0 was committed in 250139d.
-LOGGER_VERSION = "packet-logger-v1"
+# 0xB1) on 2026-10-25. v0 was committed in 250139d. v2 (2026-10-25): sections 12-13
+# (0xD2, 0xD3), channel_holes with two new required config keys, 0xD1 phase check.
+LOGGER_VERSION = "packet-logger-v2"
+DEVICE_INFO_PERIOD_US = 10_000_000  # V0.2 section 6: one 0xD1 every 10 s
 PACKET_SCHEMAS = {WIRE_VERSION: "packet-v0.1", WIRE_VERSION_V02: "packet-v0.2"}
 METADATA_VERSION = "packet-session-metadata-v0"
 SOURCE_TYPES = ("SYNTHETIC", "DEVICE")
@@ -65,7 +67,8 @@ CONFIG_FIELDS = {
     "anchor_tolerance_samples", "anchor_tolerance_extra_us",
     "anchor_rate_tolerance_ppm", "ecg_anchor_rate_tolerance_ppm",
     "samp_anchor_tolerance_us", "temp_anchor_tolerance_us",
-    "channel_offset_tolerance_us", "read_chunk_bytes",
+    "channel_offset_tolerance_us", "channel_silence_tolerance_us",
+    "device_info_anchor_tolerance_us", "read_chunk_bytes",
 }
 TEXT_FIELDS = (
     "clock_id", "firmware_version", "firmware_commit", "device_id", "operator",
@@ -138,10 +141,16 @@ def _integer(value, name, minimum=0, maximum=None):
 
 
 def validate_config(config):
-    if not isinstance(config, dict) or set(config) != CONFIG_FIELDS:
+    # Version first: a config of another logger version has other keys, and the
+    # error should name the version, not the keys.
+    if not isinstance(config, dict):
+        raise ValueError("Logger config must be a JSON object")
+    if config.get("schema_version") != LOGGER_VERSION:
+        raise ValueError(f"Unsupported logger config version "
+                         f"{config.get('schema_version')!r}; this logger is "
+                         f"{LOGGER_VERSION}")
+    if set(config) != CONFIG_FIELDS:
         raise ValueError("Logger config has missing or unsupported fields")
-    if config["schema_version"] != LOGGER_VERSION:
-        raise ValueError("Unsupported logger config version")
     if not isinstance(config["status"], str) or not config["status"]:
         raise ValueError("status must be nonempty text")
     versions = config["wire_versions"]
@@ -166,6 +175,11 @@ def validate_config(config):
              10 ** 6 - 1)
     _integer(config["channel_offset_tolerance_us"], "channel_offset_tolerance_us",
              0, 10 ** 6)
+    _integer(config["channel_silence_tolerance_us"], "channel_silence_tolerance_us",
+             1, 10 ** 8)
+    # Below half a period, so that one window never holds two ordinals' phases.
+    _integer(config["device_info_anchor_tolerance_us"],
+             "device_info_anchor_tolerance_us", 0, DEVICE_INFO_PERIOD_US // 2 - 1)
     _integer(config["read_chunk_bytes"], "read_chunk_bytes", 1, 1 << 20)
     return True
 
@@ -334,9 +348,11 @@ def analyze_stream(decoded, decoder, config, metadata):
         for key in missing:
             issue("channel_missing", session_id=session_id, version=version,
                   channel=key)
+        holes = _channel_holes(session_id, version, channels, config, metadata, issue)
         result_sessions.append({
             "session_id": session_id, "packet_schema": PACKET_SCHEMAS[version],
-            "channels": summaries, "channels_missing": missing, "events": events,
+            "channels": summaries, "channels_missing": missing,
+            "channel_holes": holes, "events": events,
             "device_info": _session_device_info(
                 session_id, version, records.get(DEVICE_INFO_CHANNEL, []), metadata,
                 issue),
@@ -457,20 +473,25 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
     by_source = version >= WIRE_VERSION_V02 and channel_id == ECG_CHANNEL
     edges = {seq for seq in present
              if by_source and received[seq].packet.status & SAMP_ANCHOR_BIT}
+    # Anchors that passed a comparison with another one (for _channel_holes).
+    verified = state["verified"] = set()
     for chain in chains:
         checked = [seq for seq in chain if seq not in untimed]
         if channel_id == TEMP_CHANNEL:
-            _phase_pass(checked, received, index, quarantine,
-                        config["temp_anchor_tolerance_us"], where, issue)
+            verified |= _phase_pass(checked, received, index, quarantine,
+                                    config["temp_anchor_tolerance_us"], where, issue)
             continue
         if not by_source:
-            _timing_pass(checked, received, index, quarantine, fifo_read, where, issue)
+            verified |= _timing_pass(checked, received, index, quarantine, fifo_read,
+                                     where, issue)
             continue
-        _timing_pass([seq for seq in checked if seq in edges], received, index,
-                     quarantine, (0, config["samp_anchor_tolerance_us"], rate_ppm),
-                     where, issue, "samp")
-        _timing_pass([seq for seq in checked if seq not in edges], received, index,
-                     quarantine, fifo_read, where, issue, "fifo_read")
+        verified |= _timing_pass([seq for seq in checked if seq in edges], received,
+                                 index, quarantine,
+                                 (0, config["samp_anchor_tolerance_us"], rate_ppm),
+                                 where, issue, "samp")
+        verified |= _timing_pass([seq for seq in checked if seq not in edges], received,
+                                 index, quarantine, fifo_read, where, issue,
+                                 "fifo_read")
     if edges:
         # Section 7.2: SAMP comes back only after a mapping restart (SYNCH), whose
         # first packet has bit 5 (or gets it from FS-0 packets just before, as in
@@ -526,7 +547,7 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
     return summary, [], samples, first, []
 
 
-def _ordinals(channel_id, present, received, where, issue):
+def _ordinals(channel_id, present, received, where, issue, bit1_means_loss=True):
     """Ordinal (FIRST_SAMPLE_INDEX) against SEQ for 0xC1 and 0xD1; ``{seq: ordinal}``.
 
     SEQ is assigned at send time, so between two received packets the ordinal
@@ -553,7 +574,7 @@ def _ordinals(channel_id, present, received, where, issue):
                   previous_ordinal=previous[1])
         elif lost > 0:
             issue(lost_code, **detail, lost=lost)
-        elif packet.status & MCU_BUFFER_BIT:
+        elif bit1_means_loss and packet.status & MCU_BUFFER_BIT:
             issue(lost_code, **detail, lost=None)
         previous = ordinals[seq] = (seq, ordinal)
     return {seq: ordinal for seq, (_, ordinal) in ordinals.items()}
@@ -683,9 +704,15 @@ def decode_command_ack(packet):
 
 def _check_control(channel_id, decode, present, received, rows, where, issue):
     """0xD2 / 0xD3: ordinal against SEQ, then payload; valid ones as
-    ``(seq, t_anchor_us, payload)`` in SEQ order."""
-    _ordinals(channel_id, present, received, where, issue)
-    code = "afe_config" if channel_id == AFE_CONFIG_CHANNEL else "command_ack"
+    ``(seq, t_anchor_us, payload)`` in SEQ order.
+
+    On 0xD2 the ordinal alone counts lost packets: bit 1 belongs to one AFE (its
+    own earlier 0xD2 or transition was lost, V0.2 section 12), since three AFEs
+    share the channel, and is reported per AFE (``afe_config_transition_lost``).
+    """
+    is_config = channel_id == AFE_CONFIG_CHANNEL
+    _ordinals(channel_id, present, received, where, issue, bit1_means_loss=not is_config)
+    code = "afe_config" if is_config else "command_ack"
     valid = []
     for seq in present:
         packet = received[seq].packet
@@ -693,8 +720,10 @@ def _check_control(channel_id, decode, present, received, rows, where, issue):
         rows[seq]["disposition"] = code if problem is None else f"{code}_invalid"
         if problem is not None:
             issue(f"{code}_invalid", **where, seq=seq, problem=problem)
-        else:
-            valid.append((seq, packet.t_anchor_us, payload))
+            continue
+        if is_config and packet.status & MCU_BUFFER_BIT:
+            issue("afe_config_transition_lost", **where, seq=seq, afe=payload["afe"])
+        valid.append((seq, packet.t_anchor_us, payload))
     return valid
 
 
@@ -751,6 +780,96 @@ def _session_control(session_id, version, configs, acks, metadata, issue):
     return {"afe_config": {name: by_afe.get(name, [])
                            for name, _, _, _ in AFES.values()},
             "commands": commands}
+
+
+def _channel_holes(session_id, version, channels, config, metadata, issue):
+    """Data channels with no trusted time for longer than
+    ``channel_silence_tolerance_us``.
+
+    ``channel_missing`` only sees a channel with no packet at all; a channel that
+    stops (an AFE reset, say), starts late or pauses would pass. Trusted times are
+    the anchors of accepted data packets that passed a comparison with another
+    anchor of their chain (a lone packet after a re-anchor is never compared), and
+    the device info heartbeat 0xD1, which keeps the session span going when the
+    only data channel stops. A heartbeat is sent every DEVICE_INFO_PERIOD_US
+    (V0.2 section 6) with its ordinal in FIRST_SAMPLE_INDEX, so ``anchor - ordinal
+    * period`` is the same for all; the valid ones whose phases fit in one window
+    of ``device_info_anchor_tolerance_us`` with at least one other count (the
+    largest such group), the others are reported (``device_info_anchor_inconsistent``)
+    and left out. The span runs from the first to the last trusted time; each data
+    channel's trusted anchors, with the span's ends, must not leave a hole above
+    the tolerance (``late_start``, ``gap``, ``ended_early``, or ``whole_span`` for
+    a channel with packets but no trusted anchor). ``packets_inside`` counts the
+    SEQ numbers of the channel inside the hole, between its first and last
+    received SEQ: received packets and those lost after a SEQ;
+    ``dropped_before_seq`` tells whether one of them, or the packet closing the
+    hole, has bit 1. With neither, the channel sent nothing: ``channel_silent``.
+    Otherwise it was alive but when is unknown, so it may still have been quiet
+    for most of the hole: ``channel_timing_unknown``. All anchors share the MCU
+    clock. Generator streams (metadata ``simulation`` set) give their channels
+    different lengths on purpose, so they are not checked (None).
+    """
+    if metadata["simulation"] is not None:
+        return None
+    tolerance = config["channel_silence_tolerance_us"]
+    timed = {}  # data channel -> [(seq, anchor)] of trusted packets, in SEQ order
+    for channel_id, state in channels.items():
+        if channel_id not in (EVENT_CHANNEL, DEVICE_INFO_CHANNEL, *CONTROL_CHANNELS):
+            timed[channel_id] = [(seq, state["received"][seq].packet.t_anchor_us)
+                                 for seq in sorted(state.get("verified", ()))]
+    heartbeat = _heartbeat(session_id, version, channels.get(DEVICE_INFO_CHANNEL),
+                           config, issue)
+    times = [a for points in timed.values() for _, a in points] + heartbeat
+    if not times:
+        return []
+    start, end = min(times), max(times)
+    holes = []
+    for channel_id, points in sorted(timed.items()):
+        received = channels[channel_id]["received"]
+        first_seq, last_seq = min(received), max(received)
+        bounds = [(None, start), *points, (None, end)]
+        for (s0, a), (s1, b) in zip(bounds, bounds[1:]):
+            if b - a <= tolerance:
+                continue
+            if s0 is None:  # whole_span: packets, but no trusted anchor at all
+                kind = "late_start" if s1 is not None else "whole_span"
+            else:
+                kind = "gap" if s1 is not None else "ended_early"
+            inside = [seq for seq in sorted(received)
+                      if (s0 is None or seq > s0) and (s1 is None or seq < s1)]
+            closing = [] if s1 is None else [s1]
+            low = first_seq if s0 is None else s0 + 1
+            high = last_seq if s1 is None else s1 - 1
+            entry = {
+                "channel": channel_key(channel_id), "kind": kind, "from_us": a,
+                "to_us": b, "packets_inside": max(0, high - low + 1),
+                "dropped_before_seq": any(received[seq].packet.status & MCU_BUFFER_BIT
+                                          for seq in inside + closing),
+            }
+            alive = entry["packets_inside"] or entry["dropped_before_seq"]
+            issue("channel_timing_unknown" if alive else "channel_silent",
+                  session_id=session_id, version=version, **entry)
+            holes.append(entry)
+    return holes
+
+
+def _heartbeat(session_id, version, info, config, issue):
+    """Trusted 0xD1 anchors (see _channel_holes), in SEQ order."""
+    if info is None:
+        return []
+    valid = [seq for seq in sorted(info["received"])
+             if info["rows"][seq].get("disposition") == "device_info"]
+    phase = {seq: info["received"][seq].packet.t_anchor_us
+             - info["received"][seq].packet.first_sample_index * DEVICE_INFO_PERIOD_US
+             for seq in valid}
+    reference, kept = _phase_window(phase, config["device_info_anchor_tolerance_us"])
+    for seq in valid:
+        if seq not in kept:
+            issue("device_info_anchor_inconsistent", session_id=session_id,
+                  version=version, channel=channel_key(DEVICE_INFO_CHANNEL), seq=seq,
+                  deviation_us=str(phase[seq] - phase[reference]), reference_seq=reference)
+    return [info["received"][seq].packet.t_anchor_us for seq in valid
+            if seq in kept and len(kept) > 1]
 
 
 def _session_device_info(session_id, version, identities, metadata, issue):
@@ -898,9 +1017,12 @@ def _timing_pass(chain, received, index, quarantine, tolerance, where, issue,
     ``anchor_rate_tolerance_ppm`` (r) of the nominal rate, so the true period is
     in [T/(1+r), T/(1-r)] and the allowed time grows with the number of samples
     since the reference (a gap of missing packets).
+
+    Returns the kept anchors when there are two or more: each was then compared
+    with a kept one next to it. A lone anchor was compared with nothing.
     """
     if not chain:
-        return
+        return set()
     # Microseconds per sample; FS_NOMINAL_MHZ is in millihertz.
     period = Fraction(10 ** 9, received[chain[0]].packet.fs_nominal_mhz)
     fixed = tolerance[0] * period + tolerance[1]
@@ -938,22 +1060,22 @@ def _timing_pass(chain, received, index, quarantine, tolerance, where, issue,
             issue("timestamp_anomaly", **where, seq=seq, kind=kind,
                   deviation_us=str(deviation), reference_seq=reference, **named)
             quarantine[seq] = "timestamp_anomaly"
-    if source != "samp":
-        return
-    if len(points) == 1:
-        issue("anchor_check_weak", **where, seq=points[0][0], reference_seq=None,
-              steps=None, **named)
     kept = [point for point in points if point[0] not in flagged]
-    # Kept packets were each checked against the kept packet next to them. An
-    # anchor one sample late comes at least (n + 1) * shortest - fixed after the
-    # reference (fastest rate, anchor error up to the fixed part); the check is
-    # weak when that fits under n * longest + fixed. One sample early can only
-    # pass where one sample late already does.
-    for (reference, before, _), (seq, last, _) in zip(kept, kept[1:]):
-        steps = abs(last - before)
-        if (steps + 1) * shortest - fixed <= steps * longest + fixed:
-            issue("anchor_check_weak", **where, seq=seq, reference_seq=reference,
-                  steps=steps, **named)
+    if source == "samp":
+        if len(points) == 1:
+            issue("anchor_check_weak", **where, seq=points[0][0], reference_seq=None,
+                  steps=None, **named)
+        # Kept packets were each checked against the kept packet next to them. An
+        # anchor one sample late comes at least (n + 1) * shortest - fixed after
+        # the reference (fastest rate, anchor error up to the fixed part); the
+        # check is weak when that fits under n * longest + fixed. One sample early
+        # can only pass where one sample late already does.
+        for (reference, before, _), (seq, last, _) in zip(kept, kept[1:]):
+            steps = abs(last - before)
+            if (steps + 1) * shortest - fixed <= steps * longest + fixed:
+                issue("anchor_check_weak", **where, seq=seq, reference_seq=reference,
+                      steps=steps, **named)
+    return {seq for seq, _, _ in kept} if len(kept) > 1 else set()
 
 
 def _phase_pass(chain, received, index, quarantine, window_us, where, issue):
@@ -964,28 +1086,37 @@ def _phase_pass(chain, received, index, quarantine, window_us, where, issue):
     phases of a whole chain must fit in one window of ``window_us``; a pairwise
     check would let the delay drift a little at every packet. The window that
     keeps the most packets wins (the earliest on a tie); the others are
-    quarantined. A window below one period keeps anchors increasing.
+    quarantined. A window below one period keeps anchors increasing. Returns the
+    kept anchors when there are two or more (a lone one was compared with nothing).
     """
     if not chain:
-        return
+        return set()
     period = Fraction(10 ** 9, received[chain[0]].packet.fs_nominal_mhz)
     phase = {seq: received[seq].packet.t_anchor_us - index[seq] * period
              for seq in chain}
-    order = sorted(chain, key=lambda seq: (phase[seq], seq))
-    best, start = (0, 0), 0
-    for end, seq in enumerate(order):
-        while phase[seq] - phase[order[start]] > window_us:
-            start += 1
-        if end - start + 1 > best[1] - best[0]:
-            best = (start, end + 1)
-    reference = order[best[0]]
-    kept = set(order[best[0]:best[1]])
+    reference, kept = _phase_window(phase, window_us)
     for seq in chain:
         if seq not in kept:
             issue("timestamp_anomaly", **where, seq=seq, kind="phase",
                   deviation_us=str(phase[seq] - phase[reference]),
                   reference_seq=reference)
             quarantine[seq] = "timestamp_anomaly"
+    return kept if len(kept) > 1 else set()
+
+
+def _phase_window(phase, window_us):
+    """The largest set of packets whose phases fit in one window (the earliest on
+    a tie), and the packet of its smallest phase: ``(reference, kept)``."""
+    if not phase:
+        return None, set()
+    order = sorted(phase, key=lambda seq: (phase[seq], seq))
+    best, start = (0, 0), 0
+    for end, seq in enumerate(order):
+        while phase[seq] - phase[order[start]] > window_us:
+            start += 1
+        if end - start + 1 > best[1] - best[0]:
+            best = (start, end + 1)
+    return order[best[0]], set(order[best[0]:best[1]])
 
 
 def _gaps(seqs, accepted, received, index, quarantine, conflicts, jumps):

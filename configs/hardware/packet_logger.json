@@ -1,5 +1,5 @@
 {
-  "schema_version": "packet-logger-v1",
+  "schema_version": "packet-logger-v2",
   "packet_schemas": ["packet-v0.1", "packet-v0.2"],
   "status": "NOT_HARDWARE_VALIDATED",
   "wire_versions": [1, 2],
@@ -10,5 +10,7 @@
   "samp_anchor_tolerance_us": 200,
   "temp_anchor_tolerance_us": 150000,
   "channel_offset_tolerance_us": 1000,
+  "channel_silence_tolerance_us": 3000000,
+  "device_info_anchor_tolerance_us": 1000000,
   "read_chunk_bytes": 4096
 }

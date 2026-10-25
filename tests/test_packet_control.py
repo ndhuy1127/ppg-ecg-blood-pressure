@@ -188,6 +188,18 @@ def test_configuration_ordinal_against_seq(sim, logger):
     assert [i["lost"] for i in lost] == [2]
 
 
+def test_bit1_is_per_afe_and_the_ordinal_counts_lost_packets(sim, logger):
+    # MAX30001 ordinal 1 dropped in the queue; MAX30101 ordinal 2 sent; the next
+    # MAX30001 (ordinal 3) carries bit 1 for its own lost state. One counted loss
+    # (ordinals), one per-AFE transition flag, never a second loss report.
+    packets = [ppg(0), ecg(0), afe(0, 0, 1), afe(1, 2, 2), afe(2, 3, 1, status=2)]
+    result, _, _ = analyze(packets, sim, logger, metadata(sim, "0xF1", "0xE1"))
+    lost = [i for i in result["issues"] if i["code"] == "afe_config_lost_before_send"]
+    assert [i["lost"] for i in lost] == [1]
+    flags = [i for i in result["issues"] if i["code"] == "afe_config_transition_lost"]
+    assert [(i["seq"], i["afe"]) for i in flags] == [(2, "MAX30001")]
+
+
 def test_acknowledgements(sim, logger):
     meta = metadata(sim, "0xF1")
     packets = [ppg(0), afe(0, 0, 2), afe(1, 1, 2, gen=2),

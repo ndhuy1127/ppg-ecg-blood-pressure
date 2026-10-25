@@ -643,11 +643,27 @@ def test_metadata_needs_reason_for_each_null(sim):
     ("anchor_rate_tolerance_ppm", 10 ** 5 + 1),
     ("ecg_anchor_rate_tolerance_ppm", 10 ** 5 + 1), ("samp_anchor_tolerance_us", -1),
     ("temp_anchor_tolerance_us", 10 ** 6),
+    ("channel_silence_tolerance_us", 0), ("device_info_anchor_tolerance_us", -1),
+    ("device_info_anchor_tolerance_us", 5_000_000),
 ])
 def test_logger_config_rejected(logger, field, value):
     logger[field] = value
     with pytest.raises(ValueError):
         validate_config(logger)
+
+
+def test_a_saved_v1_config_is_refused_by_its_version():
+    # configs/hardware/packet_logger.json as committed for packet-logger-v1: the
+    # error names the version, not the two keys v2 added.
+    v1 = {"schema_version": "packet-logger-v1",
+          "packet_schemas": ["packet-v0.1", "packet-v0.2"],
+          "status": "NOT_HARDWARE_VALIDATED", "wire_versions": [1, 2],
+          "anchor_tolerance_samples": 1, "anchor_tolerance_extra_us": 500,
+          "anchor_rate_tolerance_ppm": 30000, "ecg_anchor_rate_tolerance_ppm": 1000,
+          "samp_anchor_tolerance_us": 200, "temp_anchor_tolerance_us": 150000,
+          "channel_offset_tolerance_us": 1000, "read_chunk_bytes": 4096}
+    with pytest.raises(ValueError, match="packet-logger-v1.*packet-logger-v2"):
+        validate_config(v1)
 
 
 @pytest.mark.parametrize("field,value", [
@@ -688,7 +704,7 @@ def test_record_replay_identical_and_no_overwrite(tmp_path):
     result = replay(session / "raw.bin", replayed, LOGGER_CONFIG, metadata, ROOT,
                     session / "session_manifest.json")
     assert result["expected_manifest"]["mismatches"] == []
-    assert manifest["logger_version"] == result["logger_version"] == "packet-logger-v1"
+    assert manifest["logger_version"] == result["logger_version"] == "packet-logger-v2"
     # A manifest written by another logger version is named as a mismatch.
     older = tmp_path / "older_manifest.json"
     older.write_text(json.dumps({**manifest, "logger_version": "packet-logger-v0"}),

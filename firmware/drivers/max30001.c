@@ -112,14 +112,16 @@ static bool info_ok(uint32_t info)
     return ((info >> 20) & 0xFu) == 0x5u && ((info >> 12) & 0x3u) == 0x1u;
 }
 
-max30001_err_t max30001_start(const max30001_bus_t *bus, const max30001_regs_t *regs,
-                              uint32_t pll_timeout_ms, uint32_t *info)
+typedef struct {
+    uint8_t reg;
+    uint32_t value;
+    uint32_t mask;
+} config_word_t;
+
+/* Register words in write order, with the bits the datasheet defines. */
+static void config_table(const max30001_regs_t *regs, config_word_t out[8])
 {
-    const struct {
-        uint8_t reg;
-        uint32_t value;
-        uint32_t mask;
-    } writes[] = {
+    const config_word_t table[8] = {
         {MAX30001_CNFG_GEN, regs->cnfg_gen, MASK_CNFG_GEN},
         {MAX30001_CNFG_CAL, regs->cnfg_cal, MASK_CNFG_CAL},
         {MAX30001_CNFG_EMUX, regs->cnfg_emux, MASK_CNFG_EMUX},
@@ -129,6 +131,43 @@ max30001_err_t max30001_start(const max30001_bus_t *bus, const max30001_regs_t *
         {MAX30001_EN_INT, regs->en_int, MASK_EN_INT},
         {MAX30001_EN_INT2, regs->en_int2, MASK_EN_INT},
     };
+    memcpy(out, table, sizeof(table));
+}
+
+static max30001_err_t read_back(const max30001_bus_t *bus, const config_word_t *writes,
+                                size_t n)
+{
+    uint32_t value = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (max30001_read(bus, writes[i].reg, &value)) {
+            return MAX30001_ERR_BUS;
+        }
+        if ((value ^ writes[i].value) & writes[i].mask) {
+            return MAX30001_ERR_READBACK;
+        }
+    }
+    return MAX30001_OK;
+}
+
+max30001_err_t max30001_check(const max30001_bus_t *bus, const max30001_regs_t *regs)
+{
+    config_word_t writes[8];
+    config_table(regs, writes);
+    uint32_t info = 0;
+    if (max30001_read(bus, MAX30001_INFO, &info)) {
+        return MAX30001_ERR_BUS;
+    }
+    if (!info_ok(info)) {
+        return MAX30001_ERR_INFO;
+    }
+    return read_back(bus, writes, 8);
+}
+
+max30001_err_t max30001_start(const max30001_bus_t *bus, const max30001_regs_t *regs,
+                              uint32_t pll_timeout_ms, uint32_t *info)
+{
+    config_word_t writes[8];
+    config_table(regs, writes);
     uint32_t value = 0;
     if (max30001_command(bus, MAX30001_SW_RST)) {
         return MAX30001_ERR_BUS;
@@ -144,18 +183,14 @@ max30001_err_t max30001_start(const max30001_bus_t *bus, const max30001_regs_t *
     if (!info_ok(value)) {
         return MAX30001_ERR_INFO;
     }
-    for (size_t i = 0; i < sizeof(writes) / sizeof(writes[0]); i++) {
+    for (size_t i = 0; i < 8; i++) {
         if (max30001_write(bus, writes[i].reg, writes[i].value)) {
             return MAX30001_ERR_BUS;
         }
     }
-    for (size_t i = 0; i < sizeof(writes) / sizeof(writes[0]); i++) {
-        if (max30001_read(bus, writes[i].reg, &value)) {
-            return MAX30001_ERR_BUS;
-        }
-        if ((value ^ writes[i].value) & writes[i].mask) {
-            return MAX30001_ERR_READBACK;
-        }
+    max30001_err_t err = read_back(bus, writes, 8);
+    if (err != MAX30001_OK) {
+        return err;
     }
     /* PLLINT is latched until a STATUS read (p. 42): two clear reads in a row
      * mean the PLL is locked now, not only that an old flag was cleared. */

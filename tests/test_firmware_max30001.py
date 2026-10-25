@@ -186,6 +186,13 @@ int main(void)
             scanf("%x", &a);
             s_fifo[s_fifo_n++] = a;
             printf("ok\n");
+        } else if (cmd[0] == 'H') { /* max30001_check */
+            int err = max30001_check(&bus, &v1);
+            printf("%d\n", err);
+            flush_log();
+        } else if (cmd[0] == 'Z') { /* power-on reset, not commanded */
+            memset(s_regs, 0, sizeof(s_regs));
+            printf("ok\n");
         } else if (cmd[0] == 'S') {
             scanf("%u", &a);
             uint32_t info = 0;
@@ -347,6 +354,24 @@ def test_start_detects_a_wrong_read_back_but_ignores_dont_care_bits(chip, harnes
     other = Chip(harness)
     other("C 15 000100")  # D8 of CNFG_ECG is a don't-care bit.
     assert other.start()[0] == ERR_OK
+    other.close()
+
+
+def test_check_reads_info_and_every_register_back(chip, harness):
+    assert chip.start()[0] == ERR_OK
+    result, log = chip("H", 2)
+    assert result == str(ERR_OK)
+    # INFO, then the eight registers in write order; nothing is written.
+    assert log.rstrip(";").split(";") == ["R0f", "R10", "R12", "R14", "R15", "R04",
+                                          "R05", "R02", "R03"]
+    chip("C 03 000200")  # EN_SAMP of EN_INT2 reads back flipped
+    assert chip("H", 2)[0] == str(ERR_READBACK)
+    other = Chip(harness)
+    assert other.start()[0] == ERR_OK
+    other("Z")  # a brownout: registers back to 0, the chip silent
+    assert other("H", 2)[0] == str(ERR_READBACK)
+    other("I 000000")
+    assert other("H", 2)[0] == str(ERR_INFO)
     other.close()
 
 

@@ -129,6 +129,12 @@ int max30001_read(const max30001_bus_t *bus, uint8_t reg, uint32_t *value);
  * up to `pll_timeout_ms` for the PLL to lock (PLLINT clear on two successive
  * STATUS reads). Conversions run after this but the record starts with
  * max30001_restart. `info` (optional) gets the INFO word. */
+/* While running: INFO still says MAX30001 and every register written at start
+ * reads back the same on its defined bits. A reset (brownout) leaves the
+ * registers at their defaults and the ECG silent with INTB high, so only this
+ * check notices it. Reads only; the FIFO is not touched. */
+max30001_err_t max30001_check(const max30001_bus_t *bus, const max30001_regs_t *regs);
+
 max30001_err_t max30001_start(const max30001_bus_t *bus, const max30001_regs_t *regs,
                               uint32_t pll_timeout_ms, uint32_t *info);
 

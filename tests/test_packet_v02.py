@@ -89,7 +89,7 @@ def ecg(seq, first, samp=True, late_us=0, version=2, n=16):
 
 def info_packet(seq, ordinal, data=None, version=2, **fields):
     data = data or device_info_data(ELF, "0.2.0-sim", "v5.5.3")
-    t = 1_000_000 + 300_000 * ordinal
+    t = 1_000_000 + 10_000_000 * ordinal  # one every 10 s (section 6)
     packet = Packet(version, 0xD1, 1, seq, ordinal, t, t, 0, 0, data)
     return replace(packet, **fields)
 
@@ -592,8 +592,10 @@ def test_device_info_missing_mismatch_and_ordinal(sim, logger):
                                if k != "firmware_version"}}
     packets = [ppg(0, 0), info_packet(0, 0), info_packet(1, 1)]
     result, _, _ = analyze(restream(packets), sim, logger, metadata=stated)
+    # The heartbeats span 10 s around one lone PPG packet: its time is unknown.
     assert result["issue_counts"] == {"firmware_metadata_mismatch": 1,
-                                      "afe_config_missing": 1}
+                                      "afe_config_missing": 1,
+                                      "channel_timing_unknown": 1}
     # An info packet dropped in the MCU queue: ordinal jumps, SEQ does not.
     packets = [ppg(0, 0), info_packet(0, 0), info_packet(1, 2)]
     result, _, _ = analyze(restream(packets), sim, logger, metadata=device)
