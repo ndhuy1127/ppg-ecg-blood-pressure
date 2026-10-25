@@ -11,7 +11,8 @@
 > **giả**, chỉ để kiểm đường packet MCU → USB → logger, không phải tín hiệu sinh
 > lý. MCPWM capture thật đã viết nhưng tắt và chưa chạy. Từ 2026-10-25 có driver
 > MAX30001 (mục "Driver MAX30001"), bật bằng bản build `esp32s3_devkitc_ecg_real`;
-> **chưa chạy trên chip**. Chưa có driver MAX30101 và BMI270.
+> **chưa chạy trên chip**. Driver MAX30101 (mục "Driver MAX30101") bật bằng
+> `esp32s3_devkitc_ppg_real`, cũng chưa chạy trên chip. Chưa có driver BMI270.
 
 - **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị, đọc
   IMU, đọc ECG có mốc `SAMP`), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet
@@ -22,7 +23,8 @@
   kiểm lúc khởi động; C thuần, không phụ thuộc ESP-IDF; tên giống codec Python
   `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`).
 - **drivers/**: `max30001.c` (driver MAX30001 lõi, C thuần, không phụ thuộc
-  ESP-IDF), `max30001_esp.c` (SPI và ngắt INTB trên ESP32-S3);
+  ESP-IDF), `max30001_esp.c` (SPI và ngắt INTB trên ESP32-S3); `max30101.c` (driver
+  MAX30101 lõi, C thuần), `max30101_esp.c` (I²C và ngắt INT);
   `fake_afe.c`, nguồn mẫu giả thay cho MAX30001/MAX30101/BMI270
   (FIFO có độ sâu cấu hình được, đầy thì giữ nội dung và bỏ mẫu mới; ECG giả phát
   xung `SAMP`); `samp_edges.c`, bộ đệm vòng 64 cạnh `SAMP`; `samp_capture.c`, MCPWM
@@ -336,11 +338,73 @@ breakout đã cắm vào bo đế.
 - Chưa có: đo độ trễ hiệu dụng `L` (bit 4 vẫn bật), lệnh chạy tự kiểm từ PC, ghi
   cấu hình thanh ghi vào metadata phiên.
 
+## Driver MAX30101 (2026-10-25, chưa chạy trên chip)
+
+Bật bằng `pio run -d firmware -e esp32s3_devkitc_ppg_real` (`BOARD_PPG_REAL=1`); ECG
+và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 19-8453 Rev 2
+(bản do SparkFun lưu, SHA-256
+`f86d26404be5ab1ee9a0b149a9244f102cee039cdd5efca63f60b706418371a1`).
+
+- **Cấu hình** (`max30101_v1_regs`, theo A.3 của
+  [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md), chốt
+  2026-10-24/25):
+  - multi-LED: `SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR; 200 sps; `SMP_AVE = 1`;
+  - FIFO không ghi đè khi đầy; dải ADC 16 384 nA;
+  - độ rộng xung 411 µs (18 bit). Đổi bằng `-DBOARD_PPG_LED_PW_US=215`; giá trị cuối
+    chọn ở bring-up;
+  - ngắt `PPG_RDY` và `ALC_OVF`.
+
+  Dòng LED mặc định 7,2 mA mỗi màu, chỉ là điểm xuất phát: đỏ và IR mã `0x24`; xanh
+  mã `0x12` cho mỗi nhánh vì khe `011` bật cùng lúc LED3 và LED4 (tr. 22), tổng
+  7,2 mA. `max30101_set_currents` nhận mã **mỗi nhánh** xanh. Dòng LED sẽ hiệu chuẩn
+  theo người (protocol v0.2 mục 6.1) qua lệnh từ PC, **chưa có**; trước mắt có
+  `max30101_set_currents`. Khi khởi động: `RESET` rồi chờ tự xóa, kiểm `PART_ID =
+  0x15`, xóa cờ ngắt, ghi rồi đọc lại cấu hình, xóa ba con trỏ FIFO, vào chế độ
+  multi-LED **sau cùng** (datasheet tr. 15–19).
+- **Mỗi lần đọc** (task `ppg_reader` trong `main.c`, V0.2 mục 7.6):
+  - Thức theo cạnh xuống của INT, và cứ 10 ms không có cạnh nào thì vẫn xem FIFO, bất
+    kể INT ở mức nào (INT kẹt, hoặc FIFO đầy đúng 32 mẫu: chip không lưu thêm mẫu
+    nên có thể không có `PPG_RDY` mới). Ở chế độ đọc theo timer
+    (`BOARD_PPG_READ_PERIOD_MS > 0`) thì xem FIFO mỗi chu kỳ timer, không theo INT.
+  - Đọc `Interrupt Status 1` (xóa `PPG_RDY`), rồi ba con trỏ FIFO trong một lượt; lấy
+    `T_ANCHOR_US` ngay sau lượt đó (V0.1 mục 5.1). Cờ của `Status 1` đã đọc (nên đã
+    xóa) vẫn được xử lý dù lượt đọc con trỏ sau đó lỗi.
+  - Khi có ít nhất 8 mẫu (hay bất kỳ, nếu đọc theo timer) thì đọc **mọi** mẫu có lúc
+    chốt trong một lượt `FIFO_DATA`.
+  - `ppg_read_plan` (`app/ppg_read.c`, C thuần) quyết định:
+    - FIFO đầy (32 mẫu): bit 0, lần sau neo lại theo thời gian với bit 5, không dùng
+      `OVF_COUNTER` (V0.2 mục 7.6, sửa 2026-10-25);
+    - `ALC_OVF` → bit 6, giữ tới packet kế tiếp được gửi;
+    - lỗi I²C bất kỳ → không gửi gì, lần sau có bit 3 và bit 5;
+    - cấu hình lại chip (`max30101_start`, gồm `RESET`) khi: `PWR_RDY` giữa chừng (sụt
+      nguồn, chip đã tự reset); đọc `Status 1` lỗi (lượt đọc hỏng có thể đã xóa
+      `PWR_RDY`); đọc `FIFO_DATA` lỗi (chip đã lấy ra một phần mẫu; thêm bit 0 nếu
+      FIFO lúc đó đầy). Thử lại mỗi 100 ms tới khi thành công, **không** gửi packet
+      nào trong lúc đó. Chỉ lỗi đọc con trỏ thì không cần cấu hình lại.
+
+    Chỉ dùng con trỏ thì FIFO đầy đúng 32 mẫu mà chưa mất mẫu nào trông như rỗng;
+    một mẫu sau nó hiện ra là đầy (`OVF_COUNTER = 1`), và lần xem kế tiếp sẽ thấy.
+  - Ba khe của một lần đọc dùng chung `FIRST_SAMPLE_INDEX`, `T_ANCHOR_US` và
+    `STATUS`; `DATA` là số đếm ADC 18 bit.
+- **Nhiệt độ trong chip:** `max30101_temp_start`/`max30101_temp_read` (đơn vị
+  1/16 °C, tr. 23). Kênh nhiệt độ trong Packet Schema (chốt 2026-10-25) là bước kế
+  tiếp; chưa gửi.
+- **Test** [tests/test_firmware_max30101.py](../tests/test_firmware_max30101.py):
+  biên dịch `drivers/max30101.c` và `app/ppg_read.c`, chạy với một MAX30101 mô
+  phỏng:
+  - đọc/ghi tự tăng địa chỉ, riêng `FIFO_DATA` không tăng;
+  - `RESET` tự xóa; cờ ngắt xóa khi đọc; `TEMP_EN` tự xóa.
+
+  Các byte thanh ghi so với giá trị tính tay từ bảng tr. 11–23. Mô phỏng do dự án
+  viết, nên chip thật kiểm ở bring-up mục 8.
+
 ## Chưa có
 
-- Driver MAX30101, BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và gọi
+- Driver BMI270 (gồm phát hiện đầy theo độ dài FIFO thật và gọi
   `imu_index_read_failed` khi đọc lỗi).
+- Kênh nhiệt độ MAX30101 trong Packet Schema; ghi cấu hình AFE vào metadata phiên.
 - Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
   INT2B của MAX30001); kiểm `PPG_RDY` ở chế độ ba khe của MAX30101 thật.
 - Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.
-- Lệnh từ PC (bắt đầu/dừng, đổi cấu hình).
+- Lệnh từ PC (bắt đầu/dừng, đổi cấu hình, đặt dòng LED PPG theo người).
+

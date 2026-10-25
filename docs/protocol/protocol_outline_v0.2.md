@@ -199,6 +199,14 @@ Kết luận (trên giấy, 2026-10-22):
 1. Người tham gia đến phòng đo, ngồi nghỉ ngơi yên tĩnh trong môi trường nhiệt độ phòng ổn định ($24 - 26^\circ\text{C}$, đề xuất, chưa có nguồn) trong tối thiểu **10 phút**.
 2. Giải thích lại quy trình thao tác và kiểm tra độ vừa vặn của thiết bị.
 3. Không uống cà phê, trà, hút thuốc hoặc vận động mạnh trong vòng 2 giờ trước phiên đo (đề xuất, chưa có nguồn).
+4. **Dòng LED PPG theo người** (chốt 2026-10-25): ở buổi đầu của mỗi người, sau
+   khi đeo bo cổ tay, chỉnh dòng LED từng màu (xanh, đỏ, IR) để mức DC nằm khoảng
+   30–70% thang đo ADC (16 384 nA), không bão hòa và không tràn khử ánh sáng môi
+   trường; khóa giá trị đó cho người này ở **mọi buổi sau**, để biên độ PPG giữa các
+   buổi của cùng người còn so sánh được (ΔBP cross-session). Firmware không tự chỉnh
+   trong lúc ghi; giá trị dùng ghi vào metadata phiên. Cách chỉnh (quét tự động hay
+   tay) và lệnh từ PC xuống thiết bị **chưa có**, làm sau driver MAX30101. Khoảng
+   30–70% là đề xuất kỹ thuật, **chưa có nguồn**.
 
 ### 6.2. Trình tự một lượt đo (Measurement Event)
 Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, gồm 3 giai đoạn:

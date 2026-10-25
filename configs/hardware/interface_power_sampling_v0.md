@@ -124,7 +124,8 @@ Lưu ý khi chốt:
   2026-10-25, `custom_board_proposal.md` A.2).
 - **PPG 200 sps mỗi khe**, multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR),
   `SMP_AVE = 1` (chốt 2026-10-24, A.6 mục 3); độ rộng xung (411 hay 215 µs) còn mở
-  (mục 6). Lý do:
+  (mục 6). Dải ADC 16 384 nA; dòng LED hiệu chuẩn theo người ở buổi đầu rồi khóa
+  (chốt 2026-10-25, `custom_board_proposal.md` A.3). Lý do:
   - MAX3010x không có 500 sps; ba khe chạy tới mức 200 sps (A.6 mục 3).
   - `SMP_AVE = 1` không thêm trễ lấy trung bình vào PAT.
   - Ở 200 sps, nhấp nháy 100 Hz của đèn (điện lưới 50 Hz) nằm ở tần số Nyquist,

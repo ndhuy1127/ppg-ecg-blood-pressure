@@ -341,6 +341,13 @@ trên chip thật ở bring-up.
 - Datasheet chỉ mô tả `PPG_RDY` cho chế độ SpO2 và HR. Ở chế độ ba khe phải kiểm khi
   bring-up; không chạy thì đọc theo timer định kỳ (ví dụ 40 ms), vẫn đọc hết FIFO, và
   mốc có thể lệch tới một chu kỳ PPG (5 ms), dựa vào hồi quy offline.
+- **FIFO MAX30101 đầy (sửa quy tắc V0.1 mục 9, 2026-10-25):** driver thật không dùng
+  `OVF_COUNTER` để nhảy chỉ số. Lần đọc đầy bật bit 0; lần đọc kế tiếp neo lại theo
+  thời gian và bật bit 5 như IMU (mục 5). Lý do: `OVF_COUNTER` chỉ đếm mẫu mất tới lúc
+  chốt con trỏ; mẫu mất giữa lúc chốt và lúc lấy mẫu đầu tiên ra (lúc đó bộ đếm bị
+  xóa) không được đếm, nên nhảy "chính xác" có thể lệch một mẫu mà không ai biết.
+  Nguồn PPG giả vẫn nhảy chỉ số đúng số mẫu mất với bit 0 (nó biết đáp án); receiver
+  chấp nhận cả hai cách.
 
 ### 7.7. Theo dõi và thử
 

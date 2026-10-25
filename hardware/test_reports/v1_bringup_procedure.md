@@ -186,6 +186,10 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
      (0x59) = 0x00, ghi file cấu hình của Bosch vào `INIT_DATA` (0x5E), `INIT_CTRL`
      = 0x01, rồi kiểm trạng thái khởi tạo theo datasheet;
    - chụp SCK tại TP5 (phía cáp): dội nhiều thì chỉnh R9–R11; ổn mới lên 2 MHz (A.2).
+   Từ bước 4, driver MAX30101 làm các việc này khi khởi động (từ 2026-10-25, chưa
+   chạy trên chip): build `pio run -d firmware -e esp32s3_devkitc_ppg_real`, log UART0
+   in `REV_ID` và kết quả khởi động ([firmware/README.md](../../firmware/README.md)
+   mục "Driver MAX30101"). Lùi 100 kHz bằng `-DBOARD_PPG_I2C_HZ=100000`.
 6. Tốc độ PPG (A.6 mục 3): multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps,
    `SMP_AVE = 1`. Kiểm `PPG_RDY` có báo mỗi mẫu ở chế độ ba khe không (xóa bằng đọc
    0x00; không có thì firmware chuyển sang đọc theo timer, Packet Schema V0.2 mục 7.6).
