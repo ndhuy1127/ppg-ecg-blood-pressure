@@ -39,6 +39,15 @@ ghi lại:
   `custom_board_proposal.md` A.2), phát xung vuông, chu kỳ 1 s, độ rộng khoảng
   50 ms.
   MCU gửi packet sự kiện mã `3` với `T_ANCHOR_US` tại cạnh lên.
+- **Firmware (chốt 2026-10-25, chưa chạy trên chip):** bản build
+  `pio run -d firmware -e esp32s3_devkitc_sync10` (ba chip thật, capture `SAMP`, xung
+  bật bằng `BOARD_STIM=1`). Cạnh lên đầu tiên 2 s sau khi khởi động; các cạnh sau
+  cách nhau 1 000 000 µs cộng độ lệch đều trong [0; 1 953) µs (`stim_plan.c`,
+  xorshift32), lịch tính theo thời điểm đích nên độ trễ callback không cộng dồn;
+  độ rộng 50 000 µs. `T_ANCHOR_US` của packet mã 3 là `esp_timer` đọc **ngay sau**
+  khi đặt GPIO6 lên mức cao (sai số cỡ µs, gồm cả độ trễ ghi GPIO). Seed của dãy độ
+  lệch là `SESSION_ID`, có trong mọi packet: mỗi lần khởi động một dãy mới, tái lập
+  được. Số thứ tự sự kiện đếm chung với sự kiện t0 (Packet Schema V0.1 mục 10).
 - **Kênh ECG:** đưa xung qua mạch chia áp vào đầu vào điện cực của breakout
   MAX30001, để biên độ ở mức vài mV (đúng dải ECG). Nếu có ECG simulator có
   đầu vào trigger thì dùng simulator. Không nối GPIO trực tiếp vào đầu vào ECG.
@@ -100,12 +109,13 @@ kiểm tra độc lập cho ánh xạ đó.
 1. Khởi động MCU, ghi metadata phiên. Laptop chạy pin.
 2. Thu 1 phút để ổn định, bỏ khỏi phân tích (ghi lại, không xóa).
 3. Thu 10 phút liên tục với kích thích khoảng 1 Hz: khoảng 600 sự kiện. Mỗi xung
-   cách xung trước 1 s cộng một độ lệch ngẫu nhiên đều trong [0; 1 953) µs (seed ghi
-   vào metadata; thời điểm thật của từng xung đã có trong packet sự kiện), để pha của
+   cách xung trước 1 s cộng một độ lệch ngẫu nhiên đều trong [0; 1 953) µs (seed là
+   `SESSION_ID`, ghi lại vào metadata; thời điểm thật của từng xung đã có trong packet
+   sự kiện), để pha của
    xung phủ đều một chu kỳ mẫu ECG. Một chu kỳ cố định (ví dụ 1 000 049 µs) có thể
    khóa pha nếu tốc độ ECG thật lệch đúng khoảng −49 ppm. Khi phân tích, đo độ phủ pha
    so với cạnh `SAMP`; chỉ báo `L_ECG,SAMP` với độ phân giải dưới một mẫu khi độ phủ
-   đạt, nếu không thì đổi seed và đo lại.
+   đạt, nếu không thì khởi động lại MCU (`SESSION_ID` mới là seed mới) và đo lại.
 4. Lặp lại 3 lần cho mỗi cấu hình, khởi động lại MCU giữa các lần.
 5. Lưu: file packet nhị phân thô, file `t_rx` của PC, metadata JSON, sơ đồ đấu nối,
    SHA-256 của từng file, commit firmware và commit script phân tích.

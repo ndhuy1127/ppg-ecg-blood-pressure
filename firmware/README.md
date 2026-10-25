@@ -236,6 +236,26 @@ packet sự kiện gửi kế tiếp bật bit 1 (có thể đã mất một l�
 `events_lost_before_send` với số lượng không xác định). Packet sự kiện bị bỏ ở hàng
 đợi MCU thì đã có số thứ tự, nên logger đếm được số sự kiện mất.
 
+## Xung kích thích đồng bộ, sự kiện mã 3 (2026-10-25, chưa chạy trên chip)
+
+Cho phép đo đồng bộ 10 phút
+([sync_10min_test_plan.md](../hardware/test_reports/sync_10min_test_plan.md) mục
+3–4). Bật bằng `BOARD_STIM=1`; bản build `esp32s3_devkitc_sync10` bật cùng lúc ba chip
+thật, capture `SAMP` và xung.
+
+- GPIO6 (J3 chân 1) lên mức cao 2 s sau khi khởi động, rồi cứ 1 s cộng độ lệch đều
+  trong [0; 1 953) µs (một chu kỳ mẫu ECG), xuống sau 50 ms. Hai one-shot
+  `esp_timer`; lịch theo thời điểm đích nên trễ callback không cộng dồn.
+- Mỗi cạnh lên thành packet sự kiện `0xC1` mã `3`; `T_ANCHOR_US` = `esp_timer` ngay sau
+  khi đặt chân lên cao. Không lọc dội (cạnh do MCU tạo); số thứ tự sự kiện đếm chung
+  với nút t0; mất ở hàng đợi thì packet sự kiện sau có bit 1, như t0.
+- Seed của dãy độ lệch là `SESSION_ID` (`stim_plan.c`, xorshift32): mỗi lần khởi
+  động một dãy mới, tái lập được từ chính luồng dữ liệu.
+- **Test** [tests/test_firmware_stim_plan.py](../tests/test_firmware_stim_plan.py):
+  dãy khoảng cách khớp một xorshift32 viết độc lập bằng Python, luôn trong
+  [1 s; 1 s + 1 953 µs), và pha của 600 cạnh phủ đều chu kỳ mẫu ECG. Phần GPIO và
+  `esp_timer` trong `main.c` chỉ kiểm bằng build.
+
 ## Kiểm tra khi có bo (chưa làm)
 
 Đây là phần firmware của
@@ -295,8 +315,11 @@ breakout đã cắm vào bo đế.
   Chỉ một lần `SYNCH` thành công mới mở bản ghi mới (chỉ số về 0, bit 5). Các cờ
   chưa kịp gửi (bit 0, 2, 3) được giữ sang packet đầu của bản ghi mới. Lỗi thì giữ
   chỉ số, neo lại theo thời gian (bit 3 và bit 5) và giữ ánh xạ ở `LỖI`.
-- **Khởi động lỗi** (`INFO`, đọc lại, PLL hay `SYNCH`): ghi `EN_INT = 0`, gỡ ngắt
-  INTB, rồi **tạm dừng** task chứ không xóa. Một ngắt INTB đang chạy ở lõi kia vẫn
+- **Khởi động lỗi** (`INFO`, đọc lại, PLL hay `SYNCH`): `max30001_start` được thử tối
+  đa 10 lần cách nhau 100 ms (`AFE_START_TRIES`, `AFE_START_RETRY_MS`, chung cho cả ba
+  chip, chốt 2026-10-25; mỗi lần bắt đầu bằng reset chip); vẫn lỗi thì ghi
+  `EN_INT = 0`, gỡ ngắt INTB, rồi **tạm dừng** task chứ không xóa. Logger thấy kênh
+  không có packet nào (`channel_missing` nếu metadata khai báo). Một ngắt INTB đang chạy ở lõi kia vẫn
   có thể báo vào task, nên handle phải còn hợp lệ.
 - **Đọc FIFO** (`max30001_read_fifo`):
   - đọc burst `0x20` trong **một** khung CS (CS điều khiển bằng GPIO), dừng ở word EOF
@@ -360,11 +383,12 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
 
   Dòng LED mặc định 7,2 mA mỗi màu, chỉ là điểm xuất phát: đỏ và IR mã `0x24`; xanh
   mã `0x12` cho mỗi nhánh vì khe `011` bật cùng lúc LED3 và LED4 (tr. 22), tổng
-  7,2 mA. `max30101_set_currents` nhận mã **mỗi nhánh** xanh. Dòng LED sẽ hiệu chuẩn
-  theo người (protocol v0.2 mục 6.1) qua lệnh từ PC, **chưa có**; trước mắt có
-  `max30101_set_currents`. Khi khởi động: `RESET` rồi chờ tự xóa, kiểm `PART_ID =
+  7,2 mA. `max30101_set_currents` nhận mã **mỗi nhánh** xanh. Dòng LED hiệu chuẩn theo
+  người (protocol v0.2 mục 6.1) bằng lệnh `SET_PPG_LED` từ PC (mục "Cấu hình AFE `0xD2`
+  và lệnh từ PC" dưới đây). Khi khởi động: `RESET` rồi chờ tự xóa, kiểm `PART_ID =
   0x15`, xóa cờ ngắt, ghi rồi đọc lại cấu hình, xóa ba con trỏ FIFO, vào chế độ
-  multi-LED **sau cùng** (datasheet tr. 15–19).
+  multi-LED **sau cùng** (datasheet tr. 15–19). Lỗi thì thử lại tối đa 10 lần cách
+  nhau 100 ms như MAX30001, rồi mới dừng task.
 - **Mỗi lần đọc** (task `ppg_reader` trong `main.c`, V0.2 mục 7.6):
   - Thức theo cạnh xuống của INT, và cứ 10 ms không có cạnh nào thì vẫn xem FIFO, bất
     kể INT ở mức nào (INT kẹt, hoặc FIFO đầy đúng 32 mẫu: chip không lưu thêm mẫu
@@ -483,12 +507,35 @@ BST-BMI270-DS000-08 rev 1.6 (3/2026, SHA-256
   (ngắt, kiểm định kỳ, khởi động lại) không chạy trên máy tính. Mô phỏng do dự án
   viết, nên chip thật kiểm ở bring-up.
 
+## Cấu hình AFE `0xD2` và lệnh từ PC (2026-10-25, chưa chạy trên chip)
+
+Packet Schema V0.2 mục 12–13. Thiết kế chờ Huy duyệt.
+
+- **Task điều khiển** (`ctl_task` trong `main.c`) là nơi duy nhất tạo `0xD2` và `0xD3`
+  (một producer mỗi kênh). Nó đọc cổng USB Serial/JTAG liên tục (lượt 10 ms, bộ đệm RX
+  1 024 byte), bỏ khung dở quá 100 ms, tách khung bằng `cmd_wire.c`, và không bao giờ
+  đứng chờ task khác.
+- **`0xD2`:** mỗi task đọc công bố từng bước chuyển trạng thái của AFE của nó
+  (`afe_publish`, qua hàng đợi 8 phần tử): nguồn giả lúc khởi động; chip khi cấu hình
+  xong (thế hệ tăng), khi chờ cấu hình lại, khi bị bỏ. Task điều khiển gửi mỗi bước
+  chuyển và nhắc lại trạng thái mới nhất của mọi AFE mỗi 10 s; hàng đợi đầy thì `0xD2`
+  kế tiếp của AFE đó mang bit 1. Thanh ghi lấy từ `max30001_config_words`,
+  `max30101_config_words`, `bmi270_config_words`.
+- **`PING` và `SET_PPG_LED`:** `cmd_exec.c` (C thuần) quyết định: kiểm `SESSION_ID`
+  đích, giới hạn mã 127 (`CMD_LED_CODE_MAX`, tạm), trạng thái chip; nhớ yêu cầu gần
+  nhất nên gửi lại cùng byte được trả lại kết quả cũ mà không chạm chip. Task PPG (chủ
+  bus I²C) đổi dòng bằng `max30101_start` với dòng mới: `RESET` xóa FIFO, packet PPG kế
+  tiếp neo lại (bit 5); lỗi thì cấu hình lại bằng dòng cũ (kết quả 5). Yêu cầu và trả lời
+  mang token, nên trả lời muộn không bị gán cho yêu cầu khác; yêu cầu task PPG chưa nhận
+  sau 2 s được rút lại (kết quả 4). Bản build PPG giả trả "không có chip".
+- **Test:** [tests/test_firmware_cmd_wire.py](../tests/test_firmware_cmd_wire.py) (tách
+  khung, so với bộ mã hóa Python), [tests/test_firmware_control.py](../tests/test_firmware_control.py)
+  (`DATA` của `0xD2` qua bộ kiểm của receiver; quyết định lệnh). Task điều khiển, hàng
+  đợi và cổng USB trong `main.c` chỉ kiểm bằng build.
+
 ## Chưa có
 
-- Ghi cấu hình AFE vào metadata phiên (kể cả `afe_config` của `0xB1` và nguồn của
-  từng kênh khi env trộn nguồn thật và giả).
 - Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
   INT2B của MAX30001); kiểm `PPG_RDY` ở chế độ ba khe của MAX30101 thật.
-- Packet sự kiện mã `3` (xung kích thích) cho phép đo 10 phút.
-- Lệnh từ PC (bắt đầu/dừng, đổi cấu hình, đặt dòng LED PPG theo người).
+- Quét dòng LED tự động khi hiệu chuẩn; lệnh bắt đầu/dừng và đổi cấu hình khác.
 

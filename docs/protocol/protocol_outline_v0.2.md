@@ -204,9 +204,16 @@ Kết luận (trên giấy, 2026-10-22):
    30–70% thang đo ADC (16 384 nA), không bão hòa và không tràn khử ánh sáng môi
    trường; khóa giá trị đó cho người này ở **mọi buổi sau**, để biên độ PPG giữa các
    buổi của cùng người còn so sánh được (ΔBP cross-session). Firmware không tự chỉnh
-   trong lúc ghi; giá trị dùng ghi vào metadata phiên. Cách chỉnh (quét tự động hay
-   tay) và lệnh từ PC xuống thiết bị **chưa có**, làm sau driver MAX30101. Khoảng
-   30–70% là đề xuất kỹ thuật, **chưa có nguồn**.
+   trong lúc ghi; giá trị dùng ghi vào metadata phiên. Lệnh từ PC (2026-10-25, chờ
+   duyệt; Packet Schema V0.2 mục 13): `scripts/device_command.py set-ppg-led` trong lúc
+   `record --commands`, mã theo bước 0,2 mA (xanh là mã mỗi nhánh), tối đa 127 (giới
+   hạn tạm của firmware). Mỗi lệnh cấu hình lại chip nên tạo ranh giới chuỗi trong dữ
+   liệu; dòng thật đang dùng nằm trong packet `0xD2` của luồng raw. Đoạn hiệu chuẩn và
+   đoạn với dòng mặc định ngay sau khởi động **không** thuộc cửa sổ đo: chỉ bắt đầu
+   lượt đo sau khi `0xD3` báo xong với dòng đã khóa. Ở các buổi sau, PC gửi lại đúng
+   các mã đã khóa ngay đầu phiên (firmware không lưu qua lần khởi động). Cách chỉnh
+   (quét tự động hay tay) **chưa có**. Khoảng 30–70% là đề xuất kỹ thuật, **chưa có
+   nguồn**.
 
 ### 6.2. Trình tự một lượt đo (Measurement Event)
 Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, gồm 3 giai đoạn:

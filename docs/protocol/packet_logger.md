@@ -58,7 +58,8 @@ là hết phiên. CLI có hai nguồn:
   ghi `source = {kind: "serial", name, baudrate, duration_s, stopped_by, pyserial}`.
   Cổng được mở với DTR và RTS ở mức không kích hoạt, vì USB Serial/JTAG của
   ESP32-S3 khởi động lại chip với một số chuyển trạng thái DTR/RTS (như esptool
-  dùng); chưa kiểm trên bo thật. Cổng USB gốc bỏ qua baud. Decoder nhận byte
+  dùng); chưa kiểm trên bo thật. Cổng USB gốc bỏ qua baud. Ghi xuống cổng có
+  timeout 0,5 s (`record --commands`, mục "Lệnh xuống thiết bị"). Decoder nhận byte
 theo từng đoạn bất kỳ: test xác nhận kết quả giống hệt nhau với đoạn 1, 2, 41,
 4096 byte hoặc cả luồng.
 
@@ -248,6 +249,43 @@ Config `wire_versions` = `[1, 2]`, `packet_schemas` = `["packet-v0.1", "packet-v
     bắt được (spec mục 7.2); chỉ phép đo kích thích bắt được.
   - Một lệch phát sinh giữa chuỗi bị bắt, nhưng theo quy ước số đông logger cách ly
     phía ngắn hơn, có thể là phía đúng (ca mô phỏng `samp_shift`).
+- **Cấu hình AFE `0xD2` (spec mục 12, từ 2026-10-25):** không có mẫu, không cần khóa
+  metadata, không thuộc `channel_missing`. Packet sai báo `afe_config_invalid` kèm
+  `problem` (`header`, `status`, `sample_count`, `layout`, `afe`, `source_or_state`,
+  `generation`, `registers`: đúng bộ và thứ tự thanh ghi của từng chip, giá trị 8 bit
+  với MAX30101 và BMI270). Số thứ tự so với `SEQ` như `0xD1`. Mỗi phiên có
+  `afe_config`: theo từng AFE, các trạng thái khác nhau (`first_seq`, `t_anchor_us`,
+  nguồn, đang chạy hay không, thế hệ, thanh ghi dạng hex, số packet). Báo
+  `afe_config_generation_backwards`, `afe_config_changed_in_generation`; với phiên
+  `DEVICE`, theo từng AFE có kênh khai báo trong metadata: `afe_config_missing`,
+  `afe_not_configured`, `afe_fake_source`.
+- **Xác nhận lệnh `0xD3` (spec mục 13):** kiểm miền từng trường và quan hệ giữa kết
+  quả và thế hệ (`command_ack_invalid`); `SET_PPG_LED` xong mà phiên không có `0xD2` của
+  MAX30101 cùng thế hệ báo `command_ack_without_config`; kết quả khác 0 báo
+  `command_failed` kèm tên kết quả. Mỗi phiên có `commands`.
+
+## Lệnh xuống thiết bị (spec mục 13, từ 2026-10-25)
+
+`record --port ... --duration-s ... --commands` tạo `command_inbox.jsonl` (rỗng) trong
+thư mục output. Trong lúc ghi, người vận hành dùng:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/device_command.py --recording runs/packet_logger/<thư mục> ping
+.\.venv\Scripts\python.exe scripts/device_command.py --recording runs/packet_logger/<thư mục> set-ppg-led --green 18 --red 36 --ir 36
+```
+
+Mã dòng LED theo bước 0,2 mA, xanh là mã **mỗi nhánh** (LED3 và LED4); firmware từ chối
+mã > 127. "queued" chỉ nghĩa là đã ghi vào hộp thư. Vòng ghi xem hộp thư sau mỗi lần đọc
+cổng (kể cả khi không có byte), lấy `SESSION_ID` đích từ packet gần nhất, gửi một lệnh
+mỗi lần, chờ `0xD3` 500 ms, gửi lại cùng byte tối đa 3 lần, rồi ghi kết quả "không biết".
+Hai lần gửi bất kỳ (lệnh mới hay gửi lại) cách nhau ít nhất 0,5 s. `CMD_SEQ` không lặp
+trong một lần ghi: sau 65 536 lệnh, các lệnh sau bị từ chối. Dòng hộp thư dài quá
+1 024 byte bị bỏ tới hết ký tự xuống dòng.
+`SESSION_ID` đổi (MCU khởi động lại) thì lệnh đang chờ bị hủy. Mọi bước ghi vào
+`commands_sent.jsonl` (`queued`, `rejected`, `sent`, `acked`, `unknown`,
+`session_changed`, `inbox_truncated`, `not_sent`); hai file này có hash trong manifest
+(`commands`). `decode.json`, `packets.csv`, `samples.csv` chỉ phụ thuộc `raw.bin`, nên
+replay không cần nhật ký lệnh.
 
 ## Lệch kênh: chỉ có nghĩa trong mô phỏng
 
@@ -456,8 +494,9 @@ mẫu dùng chung mốc neo, IMU giả sáu trục 10 000 µs × 10 mẫu dùng 
 task đọc trễ ngẫu nhiên 20–400 µs, 7 sự kiện t0, packet thông tin thiết bị `0xD1`
 mỗi 10 s, nhiệt độ giả `0xB1` mỗi 1 s (đọc ra 29–39 ms sau nhịp), một lần tràn hàng
 đợi MCU kèm USB timeout của chính packet mang bit 1, một USB timeout ở PPG khe 2. Với
-config mặc định, logger nhận 100 866 packet (gồm 60 packet `0xD1`, 36 000 packet IMU
-và 600 packet `0xB1`; trước khi có `0xD1` và IMU là 64 206), 1 027 792 mẫu, tất cả
+config mặc định, logger nhận 101 046 packet (gồm 60 packet `0xD1`, 36 000 packet IMU,
+600 packet `0xB1` và 180 packet `0xD2`; trước khi có `0xD1` và IMU là 64 206), 1 027 792
+mẫu, tất cả
 đúng công thức `DATA` của firmware. Phần tồn đọng và FIFO IMU đầy được
 kiểm riêng trong `tests/test_firmware_imu_plan.py`. Chỉ có các issue đã cài: `skipped_bytes` (chữ ROM ở offset 0) và 2
 `missing_packets`, cùng hai khoảng trống: ECG mất 32 mẫu (bit 1 đã chuyển sang

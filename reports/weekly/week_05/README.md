@@ -156,7 +156,9 @@ Không đo trên người trong tuần này.
   và neo lại sau FIFO đầy; mốc `SAMP` với xung giả; PPG đọc khi FIFO có 8 mẫu. MCPWM
   capture thật đã viết nhưng tắt và chưa chạy trên chip. Ngoài bản thường có ba bản
   build cố ý tạo lỗi để kiểm khi có bo: dừng đọc IMU, lỗi xung `SAMP`, đọc PPG trễ.
-  Vẫn chưa có driver AFE thật và chưa chạy trên bo.
+  Vẫn chưa có driver AFE thật và chưa chạy trên bo. (Cập nhật 2026-10-25: driver
+  MAX30001, MAX30101, BMI270 và kênh nhiệt độ `0xB1` đã viết, test trên máy tính,
+  chưa chạy trên chip; xem mục 7.)
 
 ### Cập nhật ngày 2026-10-25
 
@@ -497,7 +499,9 @@ cứng, nên Tuần 6 ưu tiên việc mua hàng và đặt PCB, trước mọi 
 4. Các ô `[...]` trong hồ sơ đạo đức (dùng lại dữ liệu cho nghiên cứu sau, chia sẻ
    dữ liệu).
 
-**Việc phải chờ phần cứng:** driver thật cho MAX30001, MAX30101 và BMI270; bring-up
+**Việc phải chờ phần cứng:** chạy driver MAX30001, MAX30101 và BMI270 trên chip (đã
+viết 2026-10-25 trước khi có chip, mỗi chip có bản build riêng `ecg_real`, `ppg_real`,
+`imu_real`; [firmware/README.md](../../../firmware/README.md)); bring-up
 theo [trình tự V1-module](../../../hardware/test_reports/v1_bringup_procedure.md); đo
 đồng bộ 10 phút; chốt độ rộng xung LED; chọn cách đo dòng rò. Ngày giao hàng chưa
 có, nên chưa xếp được tuần cho các việc này.

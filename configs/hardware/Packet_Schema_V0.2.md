@@ -7,7 +7,10 @@
 > và 2d (PPG đọc theo `PPG_RDY` và con trỏ FIFO, đọc hết FIFO); bước 3 (record/replay
 > nhiều lần khởi động) có test. Còn bước 4, cần bo. Chưa kiểm chứng trên thiết bị.
 > Sửa đổi 2026-10-25: kênh nhiệt độ `0xB1` (mục 11), đã triển khai ở codec,
-> receiver, simulator và firmware (nguồn giả và driver MAX30101 chưa chạy trên chip).**
+> receiver, simulator và firmware (nguồn giả và driver MAX30101 chưa chạy trên chip).
+> Sửa đổi 2026-10-25: packet cấu hình AFE `0xD2` (mục 12), lệnh từ PC và xác nhận
+> `0xD3` (mục 13), đã triển khai ở codec, receiver, logger và firmware (chưa chạy trên
+> chip).**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -33,7 +36,7 @@
   | VERSION | Mã kênh hợp lệ | Bit `STATUS` dự trữ (phải là 0) |
   | --- | --- | --- |
   | `0x01` | `0xE1`, `0xF1`–`0xF4`, `0xC1` | 7–15 |
-  | `0x02` | như V0.1, thêm `0xA1`–`0xA6` (IMU), `0xD1` (thông tin thiết bị), `0xB1` (nhiệt độ, mục 11) | 9–15 (bit 8: mốc `SAMP` của ECG, mục 7) |
+  | `0x02` | như V0.1, thêm `0xA1`–`0xA6` (IMU), `0xD1` (thông tin thiết bị), `0xB1` (nhiệt độ, mục 11), `0xD2` (cấu hình AFE, mục 12), `0xD3` (xác nhận lệnh, mục 13) | 9–15 (bit 8: mốc `SAMP` của ECG, mục 7) |
 
 - Bảng mã kênh được kiểm ở **decoder, sau CRC**: mã không có trong bảng của
   version đó thì bỏ cả packet và báo `unknown_channel` (như V0.1).
@@ -581,3 +584,182 @@ của Codex cùng ngày (thiết kế, rồi code).
   config, như `samp_anchor_tolerance_us` ngày 2026-10-24; config cũ thiếu khóa này
   không còn hợp lệ, chấp nhận vì logger v1 chưa phát hành và chưa có bản ghi thiết
   bị) và `synthetic-packet-v3`.
+
+## 12. Packet cấu hình AFE `0xD2` (sửa đổi 2026-10-25)
+
+Quyết định ngày 2026-10-25 (chờ Huy duyệt; thiết kế đã qua phản biện của Codex): cấu
+hình thật của từng AFE đi **trong** luồng raw, như thông tin thiết bị `0xD1`, để biết
+chip đã chạy với thanh ghi nào và nguồn của từng kênh (chip thật hay nguồn giả) khi một
+bản build trộn hai loại. Metadata mục 8 do người vận hành viết vẫn giữ nguyên; logger
+báo cấu hình quan sát được riêng, không ghi đè metadata.
+
+| Trường | Giá trị |
+| --- | --- |
+| `CHANNEL_ID` | `0xD2`, chỉ hợp lệ khi `VERSION = 0x02` |
+| `SEQ` | Đếm riêng cho `0xD2`, từ 0 mỗi phiên |
+| `FIRST_SAMPLE_INDEX` | Số thứ tự packet `0xD2` firmware đã tạo trong phiên (mọi AFE, kể cả packet bị bỏ) |
+| `T_ANCHOR_US` = `T_FIRST_US` | `esp_timer` lúc trạng thái đó bắt đầu có hiệu lực (cấu hình xong, hay chip bị bỏ) |
+| `FS_NOMINAL_MHZ` | 0 |
+| `SAMPLE_COUNT` | 5 + R |
+| `STATUS` | 0; cho phép bit 1: một packet `0xD2` trước đó của **AFE này** không gửi được (hàng đợi MCU hay hàng đợi trạng thái đầy), nên có thể đã mất một bước chuyển |
+
+| `DATA` | Nội dung |
+| --- | --- |
+| `[0]` | Phiên bản layout = 1 |
+| `[1]` | AFE: 1 = MAX30001 (kênh `0xE1`), 2 = MAX30101 (`0xF1`–`0xF3`, `0xB1`), 3 = BMI270 (`0xA1`–`0xA6`) |
+| `[2]` | Nguồn: 0 = nguồn giả của firmware (dữ liệu SYNTHETIC), 1 = chip |
+| `[3]` | Trạng thái: 1 = đang chạy với cấu hình dưới đây; 0 = không chạy (chip khởi động lỗi và đã bỏ, hay đang chờ cấu hình lại) |
+| `[4]` | Thế hệ: số lần cấu hình thành công của AFE đó từ lúc MCU khởi động, tăng đơn điệu, không đặt lại khi chip lỗi; 0 = chưa lần nào. Nguồn giả luôn 0 |
+| `[5]` … | R word thanh ghi, chỉ khi nguồn chip và trạng thái 1 (R = 0 khi khác): uint32 `(địa chỉ << 24) | giá trị`, chở bằng đúng mẫu bit trong int32 |
+
+Layout 1 có **đúng** các thanh ghi sau, theo thứ tự (giá trị 24 bit với MAX30001; 8 bit,
+bit 8–23 bằng 0, với MAX30101 và BMI270):
+
+- MAX30001 (R = 8): `CNFG_GEN` 0x10, `CNFG_CAL` 0x12, `CNFG_EMUX` 0x14, `CNFG_ECG` 0x15,
+  `MNGR_INT` 0x04, `MNGR_DYN` 0x05, `EN_INT` 0x02, `EN_INT2` 0x03.
+- MAX30101 (R = 11): `FIFO_CONFIG` 0x08, `SPO2_CONFIG` 0x0A, `LED1_PA`–`LED4_PA`
+  0x0C–0x0F, `MULTI_LED_CTRL1`–`2` 0x11–0x12, `INT_ENABLE1`–`2` 0x02–0x03,
+  `MODE_CONFIG` 0x09.
+- BMI270 (R = 14): 0x40, 0x41, 0x42, 0x43, 0x45, 0x46, 0x47, 0x48, 0x49, 0x53, 0x55,
+  0x58, 0x7C, 0x7D (mục 3).
+
+Giá trị là cấu hình cuối đã ghi **và** đọc lại khớp trên các bit có định nghĩa (mặt nạ
+của driver); không gửi giá trị đọc lại thô vì các bit không định nghĩa trong đó không có
+nghĩa. Không gồm các lần ghi tạm khi reset hay khi tắt. Microcode BMI270 xác định qua
+ELF SHA-256 của `0xD1` cùng mã nguồn ở commit firmware (SHA-256 của mảng có trong
+`firmware/drivers/bmi270_config.c`).
+
+**Nhịp gửi:** một packet cho một AFE ngay khi trạng thái của nó đổi (nguồn giả lúc khởi
+động; chip: mỗi lần cấu hình xong, lúc bắt đầu chờ cấu hình lại, lúc bị bỏ), và nhắc lại
+trạng thái hiện tại của mọi AFE đã biết mỗi 10 s (để logger bắt đầu giữa phiên vẫn nhận
+được, không phải bảo đảm tới nơi). Một task điều khiển duy nhất tạo `0xD2` và `0xD3`;
+task đọc của từng chip chỉ công bố từng bước chuyển qua một hàng đợi (8 phần tử), nên
+hai bước chuyển liền nhau không ghi đè nhau; hàng đợi đầy thì `0xD2` kế tiếp của AFE đó
+mang bit 1.
+
+**Logger:**
+
+- Kiểm `FS_NOMINAL_MHZ = 0`, `T_FIRST_US = T_ANCHOR_US`, bit `STATUS` ngoài bit 1,
+  layout 1, AFE 1–3, nguồn 0–1, trạng thái 0–1, nguồn giả thì trạng thái 0 hoặc 1 nhưng
+  thế hệ 0 và R = 0, chip trạng thái 1 thì thế hệ ≥ 1 và đúng bộ thanh ghi của AFE (địa
+  chỉ, thứ tự, độ rộng giá trị), còn lại R = 0. Sai thì `afe_config_invalid` kèm
+  `problem`; packet sai không được tính.
+- Số thứ tự so với `SEQ` như `0xD1` (`afe_config_lost_before_send`,
+  `afe_config_ordinal_inconsistent`). Không kiểm anchor, không vào `samples.csv`, không
+  thuộc `channel_missing`, không cần khóa metadata.
+- Mỗi phiên có `afe_config`: theo từng AFE, các trạng thái khác nhau theo thứ tự `SEQ`
+  (`first_seq`, `t_anchor_us`, nguồn, trạng thái, thế hệ, thanh ghi dạng hex, số
+  packet). Thế hệ lùi trong một phiên báo `afe_config_generation_backwards`; cùng thế hệ
+  mà thanh ghi khác báo `afe_config_changed_in_generation`.
+- Theo từng AFE mà metadata có khai báo kênh của nó (phiên V0.2 nguồn `DEVICE`): không
+  có packet hợp lệ nào báo `afe_config_missing`; trạng thái 0 báo `afe_not_configured`
+  (kèm `seq`); nguồn giả báo `afe_fake_source` (kênh đó là dữ liệu SYNTHETIC trong một
+  phiên `DEVICE`).
+
+## 13. Lệnh từ PC và packet xác nhận `0xD3` (sửa đổi 2026-10-25)
+
+Quyết định ngày 2026-10-25 (chờ Huy duyệt; thiết kế đã qua phản biện của Codex): PC gửi
+lệnh xuống qua chính cổng USB Serial/JTAG của luồng packet. Mục đích trước hết là hiệu
+chuẩn dòng LED PPG theo người (protocol v0.2 mục 6.1): buổi đầu chỉnh rồi khóa, các
+buổi sau PC gửi lại đúng các mã đã khóa ngay đầu phiên. Firmware không lưu dòng LED qua
+lần khởi động (không ghi NVM).
+
+**Khung lệnh PC → thiết bị** (little-endian, không đổi layout packet thiết bị → PC):
+
+| Byte | Trường | Giá trị |
+| --- | --- | --- |
+| 0–1 | `SYNC` | `0xA5 0x5B` (khác `0xA5 0x5A` của packet) |
+| 2 | `CMD_VERSION` | `0x01` |
+| 3 | `CMD_ID` | Mã lệnh (bảng dưới) |
+| 4–5 | `CMD_SEQ` | uint16 do PC chọn; PC không dùng lại trong một phiên thiết bị |
+| 6 | `LEN` | Số byte tham số, 0 … 16 |
+| 7 … | Tham số | `LEN` byte |
+| cuối | CRC | CRC-16/CCITT-FALSE (như packet) trên byte 2 … hết tham số, uint16 |
+
+| `CMD_ID` | Lệnh | Tham số | Tác dụng |
+| --- | --- | --- | --- |
+| `0x01` | `PING` | không | Chỉ xác nhận; kiểm đường lệnh |
+| `0x02` | `SET_PPG_LED` | 7 byte: `SESSION_ID` đích (uint32), mã xanh **mỗi nhánh** (LED3 và LED4), mã đỏ, mã IR; bước 0,2 mA | Cấu hình lại MAX30101 với các dòng mới (mục dưới), tăng thế hệ, gửi `0xD2` |
+
+- Thiết bị bỏ qua (không xác nhận) khung có CRC sai, `CMD_VERSION` khác 1 hay
+  `LEN` > 16, và tìm `SYNC` lại từ byte sau byte `SYNC` đầu của khung đó; một khung dở
+  không có thêm byte nào trong 100 ms thì bị bỏ. Khung đúng CRC với `CMD_ID` không biết
+  được nhận trọn (không tìm lệnh bên trong) và xác nhận "không biết". Task điều khiển đọc
+  cổng liên tục (bộ đệm RX 1 024 byte).
+- **Ranh giới cấu hình:** `SET_PPG_LED` không ghi đè dòng LED lúc chip đang lấy mẫu mà
+  đi qua đường cấu hình lại có sẵn: `RESET`, cấu hình đầy đủ với dòng mới, đọc lại
+  (`max30101_start`). FIFO bị xóa, nên packet PPG kế tiếp neo lại (bit 5; không bật bit 3
+  vì đây không phải lỗi) và bắt đầu chuỗi mới trong logger: mẫu trước và sau lệnh không
+  nằm chung chuỗi. Lần cấu hình lỗi thì packet sau có bit 3 và 5 như mọi lỗi AFE. `T_ANCHOR_US` của
+  `0xD2` mới là lúc cấu hình xong. Lỗi thì cấu hình lại bằng dòng cũ đã chấp nhận (thử lại
+  mỗi 100 ms như sau sụt nguồn), kết quả 5. Mẫu lúc hiệu chuẩn và mẫu với dòng mặc định
+  sau khởi động không thuộc cửa sổ đo (protocol v0.2 mục 6.1).
+- **Lặp lại an toàn:** thiết bị nhớ yêu cầu gần nhất đã xong (`CMD_ID`, `CMD_SEQ`, tham
+  số, kết quả, thế hệ). Khung giống hệt nó được xác nhận lại với kết quả cũ, không chạm
+  phần cứng; cùng `CMD_SEQ` mà `CMD_ID` hay tham số khác bị từ chối (kết quả 6) và yêu
+  cầu đã nhớ vẫn giữ nguyên. Kết quả 4 (bận) nghĩa là **chưa làm** và không được nhớ:
+  lần thử sau dùng `CMD_SEQ` mới.
+- **Yêu cầu đang làm:** task điều khiển giao `SET_PPG_LED` cho task PPG kèm một token và
+  không đứng chờ (vẫn đọc cổng và gửi `0xD2`); xác nhận chỉ gửi khi có trả lời mang đúng
+  token đó. Trong lúc đó, khung giống hệt bị bỏ qua (xác nhận sẽ tới khi xong), yêu cầu
+  LED khác nhận kết quả 4. Task PPG chưa nhận yêu cầu sau 2 s thì yêu cầu được rút lại
+  (kết quả 4, chưa làm); đã nhận thì chờ tới khi có trả lời, không bao giờ tự đặt ra kết
+  quả khi quá hạn.
+- **Gắn với phiên:** `SET_PPG_LED` có `SESSION_ID` khác phiên hiện tại bị từ chối (kết
+  quả 7), nên lệnh gửi lại sau khi MCU khởi động lại không chạy nhầm.
+- **Giới hạn dòng LED (tạm):** mỗi mã ≤ `0x7F` (25,4 mA mỗi nhánh; xanh tổng 50,8 mA);
+  vượt thì kết quả 8, không làm gì. Đây là lớp chặn tạm, không phải bằng chứng an toàn;
+  xét lại sau khi đo trên bench (mức ADC 30–70 % thang đo ở cổ tay thường cần dưới mức
+  này). Độ rộng xung và tốc độ do bản build quyết định, không đổi được bằng lệnh.
+- PC (logger) gửi một lệnh mỗi lần, chờ xác nhận 500 ms, thử tối đa 3 lần cùng
+  `CMD_SEQ` (cùng byte), không quá 2 lần gửi mỗi giây; hết lượt thì kết quả là **không
+  biết**, không phải lỗi hay thành công. `SESSION_ID` đổi giữa chừng thì lệnh đang chờ
+  bị hủy.
+
+| Kết quả | Ý nghĩa |
+| --- | --- |
+| 0 | Xong |
+| 1 | `CMD_ID` không biết |
+| 2 | `LEN` sai cho lệnh đó |
+| 3 | Không có chip (bản build dùng PPG giả, hay chip đã bị bỏ) |
+| 4 | Bận: chip đang chờ cấu hình lại hay đang làm lệnh khác; chưa làm |
+| 5 | Cấu hình với dòng mới không xong; chip đang được cấu hình lại bằng dòng cũ đã chấp nhận (thử mỗi 100 ms), `0xD2` cho biết lúc xong |
+| 6 | `CMD_SEQ` đã dùng cho yêu cầu khác |
+| 7 | `SESSION_ID` không phải phiên hiện tại |
+| 8 | Mã dòng LED vượt giới hạn |
+
+**Packet xác nhận `0xD3`** (thiết bị → PC):
+
+| Trường | Giá trị |
+| --- | --- |
+| `CHANNEL_ID` | `0xD3`, chỉ hợp lệ khi `VERSION = 0x02` |
+| `SEQ` | Đếm riêng cho `0xD3` |
+| `FIRST_SAMPLE_INDEX` | Số thứ tự xác nhận firmware đã tạo trong phiên (mỗi xác nhận một lần, kể cả xác nhận lặp lại) |
+| `T_ANCHOR_US` = `T_FIRST_US` | `esp_timer` lúc lệnh xong |
+| `FS_NOMINAL_MHZ` | 0 |
+| `SAMPLE_COUNT` | 5 |
+| `STATUS` | 0; cho phép bit 1 |
+| `DATA` | `[0]` layout = 1; `[1]` `CMD_ID` (0 … 255); `[2]` `CMD_SEQ` (0 … 65 535); `[3]` kết quả (0 … 8); `[4]` thế hệ MAX30101 sau lệnh với `SET_PPG_LED` xong (≥ 1), 0 với mọi trường hợp khác |
+
+**Logger:**
+
+- `record` tạo một file hộp thư **mới** trong thư mục output (`command_inbox.jsonl`) lúc
+  bắt đầu. `scripts/device_command.py` ghi thêm một dòng JSON mỗi lệnh (`{"cmd":
+  "ping"}`, `{"cmd": "set_ppg_led", "green": 18, "red": 36, "ir": 36}`) bằng một lần ghi
+  rồi flush. Vòng ghi xem hộp thư sau mỗi lần đọc cổng, kể cả khi cổng không có byte nào
+  (timeout 0,1 s); giữ phần dòng chưa có ký tự xuống dòng; dòng dài quá 1 024 byte hay
+  sai kiểu bị ghi là bị từ chối; file bị cắt ngắn thì ngừng đọc hộp thư và ghi lại.
+  `SESSION_ID` đích lấy từ packet gần nhất; chưa có packet nào thì lệnh chờ.
+- Mọi bước ghi vào `commands_sent.jsonl` (thời điểm PC, dòng hộp thư, `CMD_SEQ`, phiên
+  đích, lần thử, byte gửi, ghi xong hay không, kết quả khớp được hay "không biết"). File
+  này và `command_inbox.jsonl` có hash trong manifest. `CMD_SEQ` bắt đầu từ một giá trị
+  ngẫu nhiên mỗi lần ghi.
+- `0xD3`: kiểm `SAMPLE_COUNT = 5`, layout 1, `FS_NOMINAL_MHZ = 0`,
+  `T_FIRST_US = T_ANCHOR_US`, bit `STATUS` ngoài bit 1, miền của từng trường, `PING` xong
+  thì thế hệ 0, `SET_PPG_LED` xong thì thế hệ ≥ 1 và có `0xD2` của MAX30101 cùng thế hệ
+  trong phiên (sai: `command_ack_invalid` / `command_ack_without_config`); số thứ tự so
+  với `SEQ` như `0xD1`; mỗi phiên có `commands` (các xác nhận hợp lệ theo `SEQ`); kết
+  quả khác 0 báo `command_failed` (kèm tên kết quả).
+- Raw chỉ có chiều thiết bị → PC. Kết quả giải mã (`decode.json`, `packets.csv`,
+  `samples.csv`) chỉ phụ thuộc raw, nên replay không cần nhật ký lệnh; việc khớp lệnh
+  với xác nhận nằm trong `commands_sent.jsonl`.
