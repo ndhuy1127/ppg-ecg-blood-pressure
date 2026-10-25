@@ -69,8 +69,11 @@ class MotionConfig:
 
 
 def _xyz(values, name):
+    # Checked before np.asarray, which drops the mask.
+    if np.ma.isMaskedArray(values):
+        raise ValueError(f"{name} must not be a masked array; masks are not imputed")
     values = np.asarray(values, dtype=float)
-    if np.ma.isMaskedArray(values) or values.ndim != 2 or values.shape[1] != 3:
+    if values.ndim != 2 or values.shape[1] != 3:
         raise ValueError(f"{name} must be an (n, 3) array")
     return values
 
@@ -196,7 +199,9 @@ def motion_window(acc_g, gyro_dps, window, bias_dps, config=MotionConfig()):
         branches["gyro"] = {"evaluable": False, "reasons": gyro_problems}
     else:
         bias = np.asarray(bias_dps, dtype=float)
-        if bias.shape != (3,) or not np.isfinite(bias).all():
+        if np.ma.isMaskedArray(bias_dps) or bias.shape != (3,) or (
+            not np.isfinite(bias).all()
+        ):
             raise ValueError("bias_dps must be three finite values")
         speed = np.linalg.norm(sosfiltfilt(low, gyro - bias, axis=0), axis=1)[span]
         branches["gyro"] = {"evaluable": True, "reasons": [],

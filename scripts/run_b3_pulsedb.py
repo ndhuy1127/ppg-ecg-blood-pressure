@@ -139,7 +139,8 @@ def run(raw_path, split_dir, config_path, output, repo):
             ("Train rows weighted 1/n_s (mean 1): every subject weighs the same"
              if v1 else
              "Train rows weighted equally; subjects with more segments weigh more"),
-            "ECG_F/PPG_F amplitude units and normalization are unverified",
+            ("ECG_F/PPG_F are min-max normalized per segment to [0, 1] (checked "
+             "2026-10-25): their min/max/range features carry no information"),
             "Hyperparameters are not tuned; no model selection has been done",
             "B1 not run: no chronology/calibration metadata",
         ],

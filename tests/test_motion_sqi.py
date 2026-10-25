@@ -145,3 +145,14 @@ def test_bad_inputs_are_rejected():
             motion_window(acc, gyro, window, BIAS)
     with pytest.raises(ValueError):
         motion_window(acc, gyro, WINDOW, [0.0, 0.0])
+    # Masked arrays are refused, not unmasked: np.asarray would drop the mask.
+    masked = np.ma.masked_array(acc, mask=np.zeros(acc.shape, bool))
+    masked[0, 0] = np.ma.masked
+    with pytest.raises(ValueError, match="masked"):
+        motion_window(masked, gyro, WINDOW, BIAS)
+    with pytest.raises(ValueError, match="masked"):
+        motion_window(acc, np.ma.masked_array(gyro), WINDOW, BIAS)
+    with pytest.raises(ValueError, match="masked"):
+        gyro_bias(np.ma.masked_array(gyro))
+    with pytest.raises(ValueError):
+        motion_window(acc, gyro, WINDOW, np.ma.masked_array(BIAS, mask=[1, 0, 0]))

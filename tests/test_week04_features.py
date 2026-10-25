@@ -220,6 +220,13 @@ def test_demo_saves_synthetic_outputs(tmp_path):
     assert report["summary"]["input_segments"] == 5
     assert report["summary"]["pat_segments"] == 1
     assert (tmp_path / "figure.svg").exists()
+    # Run again: every output exists now, and none may be overwritten.
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    new = tmp_path / "new"
+    for output, figure in [("report.json", new / "f.svg"), (new / "r.json", "figure.svg")]:
+        with pytest.raises(FileExistsError):
+            run(config, tmp_path / output, tmp_path / figure)
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
 
 
 def test_one_beat_config_never_produces_nonfinite_hr():
