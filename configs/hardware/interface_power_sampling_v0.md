@@ -1,17 +1,5 @@
 # Nguồn, mức logic, giao tiếp và cấu hình lấy mẫu — V1-module
 
-> Mọi thông số là thiết kế trên giấy, chưa đo trên phần cứng. Không dùng tài liệu
-> này để cấp nguồn hay nối dây khi chưa đối chiếu module thực tế nhận về.
->
-> Không làm bản V0 nối dây: dùng thẳng PCB V1-module (chốt 2026-10-24). Tên file
-> giữ `v0` để không đổi liên kết.
-
-Tài liệu gom các đầu ra Tuần 2 còn thiếu dạng văn bản: bảng nguồn và mức logic,
-giao tiếp, pin map và khả năng lấy mẫu của từng linh kiện.
-Nguồn thông số xem [datasheets/README.md](../../hardware/datasheets/README.md).
-Trích dẫn dạng "MAX30001 tr. 26, Bảng 4" là trang/bảng của datasheet gốc đã đọc;
-**[BRK]** là theo schematic breakout của ProtoCentral.
-
 ## 1. Sơ đồ khối
 
 Sơ đồ khối của V1-module (bo đế, bo cổ tay, cáp, bus, nguồn, điện cực):

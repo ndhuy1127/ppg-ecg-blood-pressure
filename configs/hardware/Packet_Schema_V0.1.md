@@ -1,8 +1,5 @@
 # Packet Schema V0.1 – ECG/PPG Data Acquisition
 
-> Chưa kiểm chứng trên thiết bị. PPG AFE đã chốt là MAX30101 (2026-10-22); chế
-> độ LED và tốc độ lấy mẫu của V1 chốt 2026-10-24 (ba khe, 200 sps mỗi khe, mục 7).
->
 > **Datasheet đã đối chiếu** (trích dẫn dạng "MAX30001 tr. 26, Bảng 4"):
 > MAX30001 Rev 3 (1/23), MAX30101 Rev 3 (6/20), MAX30102 Rev 1 (10/18). Danh
 > sách tại `hardware/datasheets/README.md`.

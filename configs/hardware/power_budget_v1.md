@@ -1,7 +1,6 @@
 # Ước lượng dòng V1-module so với cổng USB của laptop
 
-> **Ước lượng từ datasheet, không phải số đo.** Lập ngày 2026-10-26 (kế hoạch Tuần 6,
-> việc phần cứng số 4), chờ Huy duyệt. Phải đo lại trên bo thật ở bring-up. Hai
+> **Ước lượng từ datasheet, không phải số đo.** Phải đo lại trên bo thật ở bring-up. Hai
 > datasheet Maxim đọc từ bản mirror cũ hơn bản đang dùng trong
 > [hardware/datasheets/README.md](../../hardware/datasheets/README.md) (trang
 > analog.com chặn công cụ tải tự động), nên **số trang phải đối chiếu lại** với Rev 3.
@@ -9,7 +8,7 @@
 > từ trang hãng (sửa theo review: chế độ BMI270, số trang, dòng khởi động của boost,
 > giới hạn USB có điều kiện).
 
-## 1. Cấu hình đang dùng (đọc từ repo)
+## 1. Cấu hình đang dùng
 
 - ESP32-S3 chạy **160 MHz**: mặc định của ESP-IDF 5.5.3 cho ESP32-S3
   (`CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ`); `firmware/sdkconfig.defaults` không đặt tần số,

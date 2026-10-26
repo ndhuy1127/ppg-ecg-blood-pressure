@@ -15,8 +15,6 @@
 - **Chưa có phần cứng và chưa có phê duyệt đạo đức: không đo trên người.** Test của
   split PulseDB và CalFree chưa chấm; chỉ chấm khi model đã khóa.
 
-**Đầu vào kế thừa đã đối chiếu:** `dev/huy@4176d8b`, lập ngày 2026-10-25.
-
 | Hạng mục | Trạng thái khi lập kế hoạch |
 | --- | --- |
 | Baseline | B0/B3 trên val PulseDB Train 400 người, có CI bootstrap theo người (báo cáo Tuần 5 mục 6.4). B1 cần dữ liệu hiệu chuẩn theo người; B2, B4 chưa có |
