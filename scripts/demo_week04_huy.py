@@ -74,6 +74,12 @@ def fixture(ecg_fs=250, ppg_fs=125, pat_s=0.2):
 
 
 def run(config_path, output, figure):
+    # Like the other runners: never overwrite, so the Week 4 record in reports/
+    # (fixture_checks.json, not reproducible from Git blobs) stays as it was.
+    table = output.with_name("fixture_features.csv")
+    existing = [str(path) for path in (output, table, figure) if path.exists()]
+    if existing:
+        raise FileExistsError(f"Output already exists; refusing overwrite: {existing}")
     config_bytes = config_path.read_bytes()
     config = json.loads(config_bytes)
     signal = SignalConfig(**config["signal"])
@@ -132,7 +138,6 @@ def run(config_path, output, figure):
         "figure_sha256": hashlib.sha256(figure.read_bytes()).hexdigest(),
         "public_results": "N/A: no raw waveform/alignment evidence or B3 predictions handed over"}
     output.parent.mkdir(parents=True, exist_ok=True)
-    table = output.with_name("fixture_features.csv")
     with table.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=["source_type", "case", *rows[0]["features"], "flags"],
                                 lineterminator="\n")
@@ -155,7 +160,8 @@ def run(config_path, output, figure):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=ROOT / "configs/data/week04_huy.json")
-    parser.add_argument("--output", type=Path, default=ROOT / "reports/weekly/week_04/fixture_checks.json")
-    parser.add_argument("--figure", type=Path, default=ROOT / "reports/figures/week04_synthetic_fiducials.svg")
+    parser.add_argument("--output", type=Path, default=ROOT / "runs/demo_week04_huy/fixture_checks.json")
+    parser.add_argument("--figure", type=Path,
+                        default=ROOT / "runs/demo_week04_huy/week04_synthetic_fiducials.svg")
     args = parser.parse_args()
     run(args.config, args.output, args.figure)

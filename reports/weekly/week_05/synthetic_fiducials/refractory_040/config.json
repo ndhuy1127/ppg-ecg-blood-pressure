@@ -1,0 +1,55 @@
+{
+  "version": "fiducials-week05-v0",
+  "status": "NOT_TEST_TUNED",
+  "note": "SENSITIVITY VARIANT of configs/data/week05_huy.json: only signal.refractory_s changed 0.25 -> 0.4 (v1 value), to show the R comparison under both settings. Not a second proposal.",
+  "signal": {
+    "flat_std": 1e-08,
+    "min_beats": 3,
+    "refractory_s": 0.4,
+    "prominence_fraction": 0.2,
+    "foot_lookback_s": 0.5,
+    "pat_min_s": 0.08,
+    "pat_max_s": 0.4,
+    "gap_factor": 1.5,
+    "sampling_rtol": 0.05,
+    "sampling_atol_s": 1e-06,
+    "shape_min_correlation": 0.8,
+    "edge_s": 0.1,
+    "ecg_polarity": 1,
+    "ppg_polarity": 1,
+    "filter_mode": "none",
+    "ecg_band_hz": [
+      0.5,
+      40.0
+    ],
+    "ppg_band_hz": [
+      0.5,
+      8.0
+    ],
+    "filter_order": 2,
+    "r_method": "prominence",
+    "foot_method": "tangent",
+    "r_energy_window_s": 0.1
+  },
+  "pat_validity": {
+    "min_ms": 80.0,
+    "max_ms": 400.0,
+    "mad_k": 3.0,
+    "mad_floor_ms": 10.0,
+    "min_pairs": 3
+  },
+  "agreement": {
+    "tolerance_s": {
+      "ecg_r": 0.05,
+      "ppg_foot": 0.1
+    }
+  },
+  "sources": {
+    "refractory_s": "0.25 s (week04 used 0.4 s) so that HR up to 240 bpm is not cut by the refractory period; engineering choice, no source. It applies to ECG R AND PPG peaks: a PPG diastolic wave can then give false feet (docs/protocol/week05_fiducials_pat_validity.md section 7); a separate PPG value is pending Huy's decision.",
+    "pat_validity.min_ms/max_ms": "Same 80-400 ms window as features-sqi-v1 pairing, but in pat_beats it is a label, not a pairing gate (pair_between_r pairs within the R-R interval, then out-of-range beats are labelled). No source for these bounds (chua co nguon). Context only: Mukkamala 2015 (10.1109/TBME.2015.2441951, docs/literature/week_01_literature_matrix.md #1) reports finger PAT at rest about 180-260 ms; wrist PAT is not given there.",
+    "pat_validity.mad_k": "MAD outlier rule: Leys et al. 2013 (10.1016/j.jesp.2013.03.013), metadata verified, full text not read; k = 3 is an engineering choice (chua co nguon for the value).",
+    "pat_validity.mad_floor_ms": "Absolute floor so that a near-constant PAT does not turn sample quantization (8 ms at 125 Hz) into outliers; found by a SYNTHETIC test on 2026-10-21; engineering choice, no source.",
+    "agreement.tolerance_s": "Matching windows for manual-vs-automatic comparison; no source (chua co nguon). Report results at the chosen tolerance only, decided before marking.",
+    "r_energy_window_s": "Moving-average width for the derivative-energy envelope; engineering choice, no source."
+  }
+}

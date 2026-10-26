@@ -34,6 +34,52 @@ OPTIONAL_FIELDS = {
 }
 
 
+# Ba hàm dưới dùng chung với reader h5py (software/pulsedb/h5_reader.py) để
+# hai reader chuyển một ô dữ liệu thành cùng một giá trị.
+def extract_scalar(value):
+    """Trả số/chuỗi đơn khi ô có đúng một giá trị; nếu không thì trả mảng."""
+    value = np.asarray(value).squeeze()
+    if value.size == 1:
+        return value.item()
+    return value
+
+
+def subject_text(value, idx):
+    if isinstance(value, np.ndarray):
+        raise ValueError(
+            f"Subject của đoạn {idx} không phải một giá trị đơn: {value!r}"
+        )
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def normalize_gender(value):
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", errors="replace")
+
+    if value is None:
+        return "Unknown"
+    if isinstance(value, float) and math.isnan(value):
+        return "Unknown"
+
+    if isinstance(value, str):
+        normalized = value.strip().upper()
+        if normalized in {"M", "MALE"}:
+            return "M"
+        if normalized in {"F", "FEMALE"}:
+            return "F"
+        if normalized == "":
+            return "Unknown"
+
+    # PulseDB Subset lưu giới tính dạng ký tự 'M'/'F'. Mã số hoặc
+    # chuỗi khác cần bảng ánh xạ có tài liệu nguồn, không tự đoán.
+    raise ValueError(
+        f"Giá trị Gender không nhận dạng được: {value!r}; "
+        "cần bảng ánh xạ có nguồn trước khi đọc"
+    )
+
+
 class PulseDBReader:
     """Đọc một file Subset PulseDB (MATLAB v7.3) thành danh sách PulseSegment.
 
@@ -133,56 +179,15 @@ class PulseDBReader:
             else total_segments
         )
 
-        def extract_scalar(arr, idx):
-            value = np.asarray(arr[idx]).squeeze()
-            if value.size == 1:
-                return value.item()
-            return value
-
         def extract_float(arr, idx):
-            return float(extract_scalar(arr, idx))
-
-        def extract_subject(arr, idx):
-            value = extract_scalar(arr, idx)
-            if isinstance(value, np.ndarray):
-                raise ValueError(
-                    f"Subject của đoạn {idx} không phải một giá trị đơn: {value!r}"
-                )
-            if isinstance(value, bytes):
-                return value.decode("utf-8", errors="replace")
-            return str(value)
-
-        def normalize_gender(value):
-            if isinstance(value, bytes):
-                value = value.decode("utf-8", errors="replace")
-
-            if value is None:
-                return "Unknown"
-            if isinstance(value, float) and math.isnan(value):
-                return "Unknown"
-
-            if isinstance(value, str):
-                normalized = value.strip().upper()
-                if normalized in {"M", "MALE"}:
-                    return "M"
-                if normalized in {"F", "FEMALE"}:
-                    return "F"
-                if normalized == "":
-                    return "Unknown"
-
-            # PulseDB Subset lưu giới tính dạng ký tự 'M'/'F'. Mã số hoặc
-            # chuỗi khác cần bảng ánh xạ có tài liệu nguồn, không tự đoán.
-            raise ValueError(
-                f"Giá trị Gender không nhận dạng được: {value!r}; "
-                "cần bảng ánh xạ có nguồn trước khi đọc"
-            )
+            return float(extract_scalar(arr[idx]))
 
         segments = []
 
         for i in range(n_segments):
             segment = PulseSegment(
-                subject_id=extract_subject(fields["subject_id"], i),
-                gender=normalize_gender(extract_scalar(fields["gender"], i)),
+                subject_id=subject_text(extract_scalar(fields["subject_id"][i]), i),
+                gender=normalize_gender(extract_scalar(fields["gender"][i])),
                 age=extract_float(fields["age"], i),
                 height_cm=extract_float(fields["height_cm"], i),
                 weight_kg=extract_float(fields["weight_kg"], i),

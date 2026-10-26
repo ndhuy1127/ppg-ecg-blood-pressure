@@ -71,6 +71,36 @@ def test_pat_requires_verified_timing(case):
     assert result["features"]["ppg_hr_bpm"] is not None
 
 
+PAIRING_QUALITY = ("pat_pair_count", "pat_unmatched_r_count",
+                   "pat_unmatched_foot_count", "pat_edge_unpaired_r_count",
+                   "pat_edge_unpaired_foot_count", "pat_pair_fraction")
+
+
+def test_v2_says_pairing_was_not_attempted_instead_of_zero_pairs():
+    w, _ = fixture()
+    unverified = replace(w, alignment_verified=False)
+    v1 = extract_window(unverified, SignalConfig())
+    v2 = extract_window(unverified, SignalConfig(), version="features-sqi-v2")
+    # v1 reads as "no beat paired": 0 pairs, every beat unmatched.
+    assert v1["quality"]["pat_pair_fraction"] == 0.0
+    assert v1["quality"]["pat_unmatched_r_count"] > 0
+    assert "pat_quality_unavailable" not in v1["quality"]
+    assert v2["version"] == "features-sqi-v2"
+    assert all(v2["quality"][name] is None for name in PAIRING_QUALITY)
+    assert v2["quality"]["pat_quality_unavailable"] == "alignment_unverified"
+    assert v2["features"] == v1["features"] and v2["flags"] == v1["flags"]
+
+
+def test_v2_equals_v1_when_timing_is_verified():
+    w, _ = fixture()
+    v1 = extract_window(w, SignalConfig())
+    v2 = extract_window(w, SignalConfig(), version="features-sqi-v2")
+    assert v2["quality"].pop("pat_quality_unavailable") is None
+    assert {**v2, "version": v1["version"]} == v1
+    with pytest.raises(ValueError):
+        extract_window(w, SignalConfig(), version="features-sqi-v3")
+
+
 def test_missing_beats_and_ambiguous_or_invalid_pat():
     cfg = SignalConfig()
     pairs, missing = pair_pat([1, 2, 3], [1.2, 3.2], cfg)
@@ -190,6 +220,13 @@ def test_demo_saves_synthetic_outputs(tmp_path):
     assert report["summary"]["input_segments"] == 5
     assert report["summary"]["pat_segments"] == 1
     assert (tmp_path / "figure.svg").exists()
+    # Run again: every output exists now, and none may be overwritten.
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    new = tmp_path / "new"
+    for output, figure in [("report.json", new / "f.svg"), (new / "r.json", "figure.svg")]:
+        with pytest.raises(FileExistsError):
+            run(config, tmp_path / output, tmp_path / figure)
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
 
 
 def test_one_beat_config_never_produces_nonfinite_hr():

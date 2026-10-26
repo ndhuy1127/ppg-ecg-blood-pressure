@@ -8,17 +8,22 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from xgboost import XGBRegressor
 
+from scripts.build_pulsedb_split import run as build_split
 from scripts.run_b3_pulsedb import run
 from software.data_io.split_manifest import (
-    build_inventory, file_sha256, make_manifest, manifest_bytes,
+    build_inventory, file_sha256, make_manifest, manifest_bytes, read_manifest_bytes,
 )
+from software.models.constant_baselines import PopulationMeanBaseline
 from software.models.xgboost_baseline import XGBoostBaseline
 from software.pulsedb import features
+from software.pulsedb.h5_reader import PulseDBH5Reader
 from software.pulsedb.pipeline import (
-    baseline_table, load_config, run_baselines, verify_inputs,
+    baseline_table, load_config, run_baselines, subject_weights, verify_inputs,
 )
 from software.pulsedb.reader import PulseDBReader, PulseSegment
+from tests.pulsedb_h5_fixture import subsample_split_config, synthetic_rows
 
 REPO = Path(__file__).resolve().parents[1]
 CONFIG_PATH = REPO / "configs/models/b3_pulsedb_v0.json"
@@ -167,6 +172,29 @@ def test_val_and_test_labels_and_test_waveforms_do_not_change_predictions():
     assert before["evaluation"] != after["evaluation"]  # Val labels still matter.
 
 
+def test_feature_extraction_never_sees_test_segments(monkeypatch):
+    # Predictions alone cannot show this: test features could be computed and
+    # then dropped. Spy on the feature stage itself.
+    segments = make_segments()
+    manifest, inventory = make_split(segments)
+    seen = []
+    original = features.feature_matrix
+
+    def spy(batch):
+        batch = list(batch)
+        seen.extend(id(segment) for segment in batch)
+        return original(batch)
+
+    monkeypatch.setattr("software.pulsedb.pipeline.features.feature_matrix", spy)
+    run_baselines(segments, manifest, inventory, small_config())
+    by_split = {
+        split: {id(segments[i]) for i in manifest.raw_index[manifest.split == split]}
+        for split in ("train", "val", "test")
+    }
+    assert by_split["test"] and not by_split["test"] & set(seen)
+    assert set(seen) == by_split["train"] | by_split["val"]
+
+
 def test_rejects_subject_leakage_altered_hash_and_missing_row():
     segments = make_segments()
     manifest, inventory = make_split(segments)
@@ -286,3 +314,148 @@ def test_masked_inputs_are_rejected_not_unmasked():
     with pytest.raises(ValueError, match="masked"):
         XGBoostBaseline(seed=1).fit(np.ma.masked_array([[0.0], [1.0]], mask=[[0], [1]]),
                                     [[120, 80], [121, 81]])
+
+
+# --- v1: label QC and subject-balanced train weights ------------------------------
+
+CONFIG_V1 = REPO / "configs/models/b3_pulsedb_v1.json"
+
+
+def small_config_v1(repetitions=20):
+    config = load_config(CONFIG_V1.read_bytes())
+    config["bootstrap"]["repetitions"] = repetitions
+    return config
+
+
+def test_v1_config_names_its_rules_and_v0_refuses_them():
+    v1 = json.loads(CONFIG_V1.read_bytes())
+    v0 = json.loads(CONFIG_PATH.read_bytes())
+    assert load_config(CONFIG_V1.read_bytes())["train_weighting"] == "inverse_subject_rows"
+    # Only the version and the two rule fields differ from v0.
+    rules = ("schema_version", "label_qc", "train_weighting")
+    assert {k: v for k, v in v1.items() if k not in rules} == {
+        k: v for k, v in v0.items() if k != "schema_version"}
+    for bad in ({**v1, "label_qc": "pulse_pressure_below_20"},
+                {**v1, "train_weighting": "equal_rows"},
+                {k: v for k, v in v1.items() if k != "label_qc"},
+                {**v0, "label_qc": "exclude_dbp_ge_sbp"}):
+        with pytest.raises(ValueError):
+            load_config(json.dumps(bad).encode())
+
+
+def test_subject_weights_known_answer():
+    weights = subject_weights(np.array(["SYN_a"] * 3 + ["SYN_b"]))
+    # 1/3, 1/3, 1/3, 1 rescaled to mean 1 (x 4/2); each subject sums to 2.
+    assert weights == pytest.approx([2 / 3, 2 / 3, 2 / 3, 2])
+
+
+def impossible_label_split():
+    """One train row with DBP == SBP, one val and one test row with DBP > SBP."""
+    segments = make_segments()
+    first, _ = make_split(segments)
+    pick = {split: int(first.raw_index[first.split == split].iloc[0])
+            for split in ("train", "val", "test")}
+    for split, extra in (("train", 0.0), ("val", 5.0), ("test", 1.0)):
+        i = pick[split]
+        segments[i] = dataclasses.replace(segments[i], dbp=segments[i].sbp + extra)
+    manifest, inventory = make_split(segments)
+    return segments, manifest, inventory, pick
+
+
+def test_v1_drops_impossible_labels_from_fit_and_scoring_but_not_test():
+    segments, manifest, inventory, pick = impossible_label_split()
+    result = run_baselines(segments, manifest, inventory, small_config_v1())
+    qc = result["label_qc"]
+    assert qc["excluded_rows"] == {"train": 1, "val": 1, "test": None}
+    assert qc["train_pulse_pressure_before_qc"]["rows_le_0"] == 1
+    assert qc["train_pulse_pressure_before_qc"]["min"] == 0
+    scored = set(result["predictions"].sample_id)
+    assert f"{SOURCE_SHA}:{pick['val']}" not in scored
+    assert len(scored) == (manifest.split == "val").sum() - 1
+    assert result["counts"]["val"]["segments"] == len(scored)
+    assert result["counts"]["test"]["segments"] == (manifest.split == "test").sum()
+    # B0 = mean of subject means over the kept train rows, computed here directly.
+    kept = manifest[(manifest.split == "train") & (manifest.dbp < manifest.sbp)]
+    subject_means = kept.groupby("subject_id")[["sbp", "dbp"]].mean().mean()
+    assert result["b0_constant"]["SBP"] == pytest.approx(subject_means.sbp, abs=1e-9)
+    assert result["b0_constant"]["DBP"] == pytest.approx(subject_means.dbp, abs=1e-9)
+    assert abs(kept.sbp.mean() - subject_means.sbp) > 1e-6  # row mean differs
+    assert result["train_weighting"] == "inverse_subject_rows"
+
+
+def test_v1_passes_subject_weights_to_both_regressors_and_v0_does_not(monkeypatch):
+    captured = []
+    original = XGBRegressor.fit
+
+    def spy(self, x, y, *args, sample_weight=None, **kwargs):
+        captured.append(sample_weight)
+        return original(self, x, y, *args, sample_weight=sample_weight, **kwargs)
+
+    monkeypatch.setattr(XGBRegressor, "fit", spy)
+    segments, manifest, inventory, _ = impossible_label_split()
+    run_baselines(segments, manifest, inventory, small_config_v1())
+    kept = manifest[(manifest.split == "train") & (manifest.dbp < manifest.sbp)]
+    expected = subject_weights(kept.sort_values("raw_index").subject_id.to_numpy())
+    assert len(captured) == 2 and np.ptp(expected) > 0
+    assert all(np.array_equal(weights, expected) for weights in captured)
+    result = run_baselines(segments, manifest, inventory, small_config())
+    assert captured[2:] == [None, None]
+    assert result["label_qc"] is None and result["train_weighting"] == "equal_rows"
+
+
+@pytest.mark.parametrize("weights", [[1, 1, -1], [1, 1], [1, np.nan, 1],
+                                     [True, True, True], [True, 1, 1]])
+def test_sample_weights_are_validated(weights):
+    labels = [[120, 80], [121, 81], [122, 82]]
+    with pytest.raises(ValueError, match="sample_weight"):
+        PopulationMeanBaseline().fit(labels, sample_weight=weights)
+    with pytest.raises(ValueError, match="sample_weight"):
+        XGBoostBaseline(seed=1).fit([[0.0], [1.0], [2.0]], labels, sample_weight=weights)
+
+
+def test_v1_runner_reads_only_inventory_rows_end_to_end(tmp_path, monkeypatch):
+    split_config, raw = subsample_split_config(tmp_path)
+    build_split(split_config, tmp_path / "split")
+    config = tmp_path / "v1.json"
+    config.write_text(json.dumps(small_config_v1()))
+    reads = []
+    original = PulseDBH5Reader.lazy
+
+    def spy(self, rows=None):
+        reads.append(list(rows))
+        return original(self, rows)
+
+    def whole_file(*args, **kwargs):
+        raise AssertionError("v1 must not load the whole file with mat73")
+
+    monkeypatch.setattr(PulseDBH5Reader, "lazy", spy)
+    monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat", whole_file)
+    report, table = run(raw, tmp_path / "split", config, tmp_path / "out", REPO)
+    inventory = read_manifest_bytes((tmp_path / "split" / "inventory.csv").read_bytes())
+    assert reads == [inventory.raw_index.tolist()] and len(reads[0]) == 60
+    # The handover itself, rebuilt from the generated rows without any reader.
+    pool = synthetic_rows(n_subjects=30, per_subject=3)
+    independent = build_inventory({i: pool[i] for i in reads[0]}, "SYN_pool.mat",
+                                  file_sha256(raw))
+    assert manifest_bytes(independent) == manifest_bytes(inventory)
+    assert report["reader"] == "h5py, inventory rows only"
+    assert report["train_weighting"] == "inverse_subject_rows"
+    assert report["label_qc"]["excluded_rows"] == {"train": 0, "val": 0, "test": None}
+    assert report["split_counts"]["val"]["subjects"] == 2
+    saved = (tmp_path / "out" / "report.json").read_text(encoding="utf-8")
+    assert "SYN_" not in saved and "SYN_" not in table
+
+
+def test_v0_refuses_a_subsampled_split_before_reading_the_file(tmp_path, monkeypatch):
+    split_config, raw = subsample_split_config(tmp_path)
+    build_split(split_config, tmp_path / "split")
+    config = tmp_path / "v0.json"
+    config.write_text(json.dumps(small_config()))
+
+    def whole_file(*args, **kwargs):
+        raise AssertionError("v0 must refuse before loading the whole file")
+
+    monkeypatch.setattr("software.pulsedb.reader.mat73.loadmat", whole_file)
+    with pytest.raises(ValueError, match="b3-pipeline-v1"):
+        run(raw, tmp_path / "split", config, tmp_path / "out", REPO)
+    assert not (tmp_path / "out").exists()

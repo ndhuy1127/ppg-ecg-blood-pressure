@@ -60,10 +60,12 @@ prediction[j, k] = c_k
 
 `fit(train_labels)` chỉ nhận nhãn train; `predict(n_samples)` chỉ nhận số dòng
 cần dự đoán. Số dòng phải là số nguyên dương, không phải bool. Validation/test
-không tính lại hằng số. Bản triển khai dùng **trọng số đều theo dòng train**,
-phù hợp trung bình nhãn trong kế hoạch. Trọng số train theo người hoặc theo
-đơn vị quan sát của pool công khai còn cần nhóm thống nhất trước chạy thật;
-không tự chọn từ kết quả test. Trọng số fit khác trọng số báo cáo metrics.
+không tính lại hằng số. `fit` nhận thêm `sample_weight` tùy chọn. Không truyền thì
+trọng số đều theo dòng train, đúng công thức trên; `run_b0_pulsedb_csv.py` dùng cách
+này. Pipeline `b3-pipeline-v1` (2026-10-25) truyền trọng số 1/n_s cho mỗi dòng của
+người có n_s dòng (`inverse_subject_rows`), nên B0 ở đó là trung bình của các trung
+bình theo người ([run_b3_pulsedb.md](run_b3_pulsedb.md)). Không chọn cách trọng số từ
+kết quả test. Trọng số fit khác trọng số báo cáo metrics.
 
 ## 4. B1 — trung bình hiệu chuẩn riêng của từng người
 

@@ -1,5 +1,6 @@
 """Versioned, inventory-backed subject splits; no learned preprocessing."""
 
+from collections.abc import Mapping
 import csv
 import hashlib
 from fractions import Fraction
@@ -23,6 +24,9 @@ OPTIONAL_COLUMNS = ("record_id", "window_id")
 MISSING_SUBJECT_TOKENS = frozenset({"nan", "none", "null", "unknown"})
 # Splits whose BP labels may be summarised; test labels stay unread.
 LABEL_SUMMARY_SPLITS = ("train", "val")
+SUBSAMPLE_METHOD = (
+    "sorted unique subject IDs; random.Random(seed).shuffle; first n_subjects"
+)
 
 
 def canonical_json(value):
@@ -80,9 +84,36 @@ def waveform_hash(segment):
     return _hash_waveforms(segment, h)
 
 
-def _hash_waveforms(segment, h):
+def predictor_hash(segment):
+    """ECG + PPG fingerprint: what a model sees, without ABP, labels or IDs.
+
+    ``waveform_hash`` includes ABP, so two rows with identical ECG/PPG but a
+    different ABP are not matched by it. Not stored in the split-v2 manifest;
+    the split builder uses it to refuse identical predictors across splits.
+    """
+    h = hashlib.sha256(canonical_json({"version": VERSION, "kind": "predictors"}))
+    return _hash_waveforms(segment, h, ("ecg", "ppg"))
+
+
+def predictor_overlap(manifest, segments):
+    """Counts of identical ECG/PPG (``predictor_hash``) within and across splits.
+
+    ``segments`` is indexed by ``raw_index``. Returns ``{"across_splits": n,
+    "within_split": n}``: groups of identical predictors spanning more than one
+    split, and extra copies inside one split.
+    """
+    groups = {}
+    for raw_index, split in zip(manifest.raw_index, manifest.split):
+        key = predictor_hash(segments[int(raw_index)])
+        groups.setdefault(key, []).append(split)
+    across = sum(len(set(splits)) > 1 for splits in groups.values())
+    within = sum(len(splits) - len(set(splits)) for splits in groups.values())
+    return {"across_splits": across, "within_split": within}
+
+
+def _hash_waveforms(segment, h, channels=("ecg", "ppg", "abp")):
     lengths = []
-    for channel in ("ecg", "ppg", "abp"):
+    for channel in channels:
         values = np.asarray(getattr(segment, channel))
         if values.dtype.kind not in "iuf" or values.ndim != 1 or not values.size:
             raise ValueError("Waveforms must be nonempty numeric vectors")
@@ -102,14 +133,51 @@ def _hash_waveforms(segment, h):
     return h.hexdigest()
 
 
+def subsample_subjects(subject_ids, n_subjects, seed):
+    """Choose ``n_subjects`` subjects from their IDs alone (SUBSAMPLE_METHOD).
+
+    No label, demographic or signal is read. Sorting first makes the choice
+    independent of row order; it uses the same RNG as ``make_manifest`` but
+    should get its own seed. Returns the chosen IDs sorted.
+    """
+    for value, name in ((n_subjects, "n_subjects"), (seed, "seed")):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"{name} must be an integer")
+    pool = sorted({_text(value, "subject_id") for value in subject_ids})
+    if not 1 <= n_subjects <= len(pool):
+        raise ValueError("n_subjects must be between 1 and the number of subjects")
+    random.Random(seed).shuffle(pool)
+    return sorted(pool[:n_subjects])
+
+
+def subject_list_sha256(subject_ids):
+    """SHA-256 of the sorted ID list as canonical JSON, to record a subsample."""
+    return hashlib.sha256(canonical_json(sorted(subject_ids))).hexdigest()
+
+
 def build_inventory(segments, source, source_sha256, record_ids=None):
-    """Keep every reader row. raw_index is zero-based, not a session/record ID."""
+    """Keep every given reader row. raw_index is the zero-based file row.
+
+    ``segments`` is either every row of the file in order (raw_index = position)
+    or a ``{raw_index: segment}`` mapping when only some rows were read, e.g. the
+    rows of an explicit subject subsample. raw_index is not a session/record ID.
+    """
     _text(source, "source")
     _checksum(source_sha256)
-    if record_ids is not None and len(record_ids) != len(segments):
-        raise ValueError("record_ids must cover every raw row")
+    if isinstance(segments, Mapping):
+        if record_ids is not None:
+            raise ValueError("record_ids are not supported for a row mapping")
+        if any(isinstance(index, (bool, np.bool_)) or not isinstance(
+            index, (int, np.integer)) or index < 0 for index in segments):
+            raise ValueError("raw_index must be a nonnegative integer")
+        # Fetch in raw_index order, one at a time: a lazy mapping keeps memory low.
+        items = ((int(index), segments[index]) for index in sorted(segments))
+    else:
+        if record_ids is not None and len(record_ids) != len(segments):
+            raise ValueError("record_ids must cover every raw row")
+        items = enumerate(segments)
     rows = []
-    for index, segment in enumerate(segments):
+    for index, segment in items:
         row = {
             "sample_id": f"{source_sha256}:{index}",
             "subject_id": _text(segment.subject_id, "subject_id"),

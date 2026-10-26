@@ -3,7 +3,7 @@
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from software._bp_validation import bp_pairs, finite_result, subjects
+from software._bp_validation import bp_pairs, finite_result, sample_weights, subjects
 
 
 class PopulationMeanBaseline:
@@ -12,11 +12,20 @@ class PopulationMeanBaseline:
     def __init__(self) -> None:
         self._constant: NDArray[np.float64] | None = None
 
-    def fit(self, train_labels: ArrayLike) -> "PopulationMeanBaseline":
-        """Use equally weighted train rows, with columns [SBP, DBP]."""
+    def fit(
+        self, train_labels: ArrayLike, sample_weight: ArrayLike | None = None
+    ) -> "PopulationMeanBaseline":
+        """Mean of train rows [SBP, DBP]; equal row weights unless sample_weight.
+
+        With weights 1/n_s per subject the result is the mean of subject means.
+        """
         labels = bp_pairs(train_labels, "train_labels")
         with np.errstate(over="ignore", invalid="ignore"):
-            constant = finite_result(labels.mean(axis=0))
+            if sample_weight is None:
+                constant = finite_result(labels.mean(axis=0))
+            else:
+                weights = sample_weights(sample_weight, len(labels))
+                constant = finite_result(np.average(labels, axis=0, weights=weights))
         self._constant = constant
         return self
 

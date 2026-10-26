@@ -1,6 +1,7 @@
 # Phần cứng
 
-- **bom/**: danh mục linh kiện và phương án thay thế.
+- **bom/**: danh mục linh kiện và phương án thay thế;
+  [danh sách mua V1-module](bom/purchase_list_v1_module.md).
 - **datasheets/**: liên kết datasheet chính thức và mức độ đối chiếu thông số
   ([README](datasheets/README.md)); không lưu file PDF.
 - **kicad/**: thiết kế KiCad của V1-module, gồm `kicad/v1_module/base` (bo đế)
@@ -13,13 +14,18 @@
   `.gitkeep`; PCB của V1-module nằm ở `kicad/`.
 - **mechanical/**: thiết kế cơ khí và ràng buộc kích thước.
 - **test_reports/**: kế hoạch và báo cáo kiểm thử thiết bị:
+  - [v1_bringup_procedure.md](test_reports/v1_bringup_procedure.md): trình tự
+    kiểm khi nhận hàng, sửa module, hàn, cấp nguồn và kiểm từng khối của V1-module;
   - [sync_10min_test_plan.md](test_reports/sync_10min_test_plan.md): đo tốc độ
     thực, drift, jitter, độ trễ và lệch ECG–PPG trên bench.
 
-Tài liệu cấu hình liên quan ở `configs/hardware/`: yêu cầu V0, sơ đồ khối,
+Tài liệu cấu hình liên quan ở `configs/hardware/`: yêu cầu V0,
+[sơ đồ khối V1-module](../configs/hardware/hardware_diagram_v1.svg),
 [nguồn/giao tiếp/lấy mẫu](../configs/hardware/interface_power_sampling_v0.md),
+[ước lượng dòng so với cổng USB](../configs/hardware/power_budget_v1.md),
 [V1 dùng module và bản chip trần](../configs/hardware/custom_board_proposal.md) và
-[packet schema](../configs/hardware/Packet_Schema_V0.1.md).
+packet schema [V0.1](../configs/hardware/Packet_Schema_V0.1.md) và bản sửa đổi
+[V0.2](../configs/hardware/Packet_Schema_V0.2.md) mà firmware V1 dùng.
 
 Mọi quyết định mua linh kiện phải được duyệt. Tài liệu ở đây không chứng nhận
 thiết bị đạt chuẩn y tế.

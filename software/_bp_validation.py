@@ -45,6 +45,22 @@ def subjects(values: ArrayLike, n: int | None = None) -> NDArray[np.str_]:
     return array.astype(str)
 
 
+def sample_weights(values: ArrayLike, n: int) -> NDArray[np.float64]:
+    """Require one finite positive real weight per row; no booleans or masks."""
+    if np.ma.isMaskedArray(values):
+        raise ValueError("sample_weight must not be a masked array")
+    array = np.asarray(values)
+    if array.ndim != 1 or array.size != n or array.dtype.kind not in "iuf":
+        raise ValueError("sample_weight must be a 1-D real array, one weight per row")
+    if any(isinstance(value, (bool, np.bool_))
+           for value in np.asarray(values, dtype=object).flat):
+        raise ValueError("sample_weight must not contain booleans")
+    array = array.astype(np.float64)
+    if not np.isfinite(array).all() or (array <= 0).any():
+        raise ValueError("sample_weight must be finite and positive")
+    return array
+
+
 def finite_result(values: NDArray[np.float64]) -> NDArray[np.float64]:
     """Reject arithmetic overflow instead of returning invalid results."""
     if not np.isfinite(values).all():

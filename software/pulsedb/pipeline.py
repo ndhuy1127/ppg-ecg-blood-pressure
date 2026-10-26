@@ -2,7 +2,9 @@
 
 Pure functions: the caller reads raw/manifest files and writes outputs. Test
 rows are checked for conservation/leakage but never featurized, fitted or
-scored; test evaluation needs a locked model and is not supported in v0.
+scored; test evaluation needs a locked model and is not supported here.
+v1 (planned 2026-10-24, docs/protocol/run_b3_pulsedb.md) adds a label QC rule
+and subject-balanced train weights; v0 keeps its behaviour.
 """
 
 import json
@@ -10,8 +12,9 @@ import json
 import numpy as np
 import pandas as pd
 
+from software._bp_validation import subjects
 from software.data_io.split_manifest import (
-    COLUMNS, build_inventory, manifest_bytes, validate_manifest,
+    COLUMNS, LABEL_SUMMARY_SPLITS, build_inventory, manifest_bytes, validate_manifest,
 )
 from software.evaluation.subject_bootstrap import (
     BootstrapConfig, evaluate_prediction_table,
@@ -21,9 +24,15 @@ from software.models.xgboost_baseline import XGBoostBaseline
 from software.pulsedb import features
 
 VERSION = "b3-pipeline-v0"
+VERSION_V1 = "b3-pipeline-v1"
 CONFIG_FIELDS = {
     "schema_version", "status", "unit", "fit_split", "evaluation_split",
     "feature_set", "b3", "bootstrap",
+}
+# Extra v1 fields; each names the only rule implemented for it.
+V1_FIELDS = {"label_qc": "exclude_dbp_ge_sbp", "train_weighting": "inverse_subject_rows"}
+PULSE_PRESSURE_QUANTILES = {
+    "min": 0, "p01": 0.01, "p05": 0.05, "p50": 0.5, "p95": 0.95, "p99": 0.99, "max": 1,
 }
 MODELS = ("B0", "B3")
 TARGETS = ("SBP", "DBP")
@@ -32,10 +41,14 @@ TARGETS = ("SBP", "DBP")
 def load_config(payload: bytes) -> dict:
     """Parse and check the run config; unknown or missing fields are rejected."""
     config = json.loads(payload)
-    if not isinstance(config, dict) or set(config) != CONFIG_FIELDS:
+    v1 = isinstance(config, dict) and config.get("schema_version") == VERSION_V1
+    expected = CONFIG_FIELDS | (set(V1_FIELDS) if v1 else set())
+    if not isinstance(config, dict) or set(config) != expected:
         raise ValueError("Config must contain exactly the documented fields")
-    if config["schema_version"] != VERSION or config["unit"] != "mmHg":
+    if config["schema_version"] not in (VERSION, VERSION_V1) or config["unit"] != "mmHg":
         raise ValueError("Unsupported schema_version or BP unit")
+    if v1 and any(config[field] != rule for field, rule in V1_FIELDS.items()):
+        raise ValueError("Unsupported label_qc or train_weighting")
     if config["fit_split"] != "train":
         raise ValueError("Models are fitted on train only")
     if config["evaluation_split"] != "val":
@@ -75,17 +88,74 @@ def _rows(manifest, split):
     return manifest[manifest.split == split].sort_values("raw_index")
 
 
-def run_baselines(segments, manifest, inventory, config) -> dict:
-    """Fit B0/B3 on train rows and score both on the same val rows and draws."""
-    verify_inputs(manifest, inventory, segments)
-    train, val = _rows(manifest, "train"), _rows(manifest, "val")
-    train_labels = train[["sbp", "dbp"]].to_numpy()
-    train_features = features.feature_matrix([segments[i] for i in train.raw_index])
-    val_features = features.feature_matrix([segments[i] for i in val.raw_index])
+def label_qc(manifest, inventory):
+    """v1 rule: drop train/val rows with DBP >= SBP (pulse pressure <= 0).
 
-    b0 = PopulationMeanBaseline().fit(train_labels)
+    Returns the reduced manifest and inventory (so validate_manifest still checks
+    conservation between them) and the excluded row counts. The rule is not
+    applied to test rows (count None): they stay, unscored; a locked test
+    evaluation applies it. Test labels are only hashed by ``verify_inputs``.
+    """
+    labelled = manifest[manifest.split.isin(LABEL_SUMMARY_SPLITS)]
+    bad = labelled[labelled.dbp >= labelled.sbp]
+    keep_manifest = ~manifest.sample_id.isin(bad.sample_id)
+    keep_inventory = ~inventory.sample_id.isin(bad.sample_id)
+    excluded = {split: int((bad.split == split).sum()) for split in LABEL_SUMMARY_SPLITS}
+    report = {"rule": V1_FIELDS["label_qc"], "excluded_rows": {**excluded, "test": None}}
+    return (manifest[keep_manifest].reset_index(drop=True),
+            inventory[keep_inventory].reset_index(drop=True), report)
+
+
+def pulse_pressure_summary(rows) -> dict:
+    """SBP - DBP distribution of the given rows (call it on train only)."""
+    pressure = (rows.sbp - rows.dbp).to_numpy()
+    return {
+        "rows": len(pressure), "rows_le_0": int((pressure <= 0).sum()),
+        **{name: float(np.quantile(pressure, q))
+           for name, q in PULSE_PRESSURE_QUANTILES.items()},
+    }
+
+
+def subject_weights(subject_ids):
+    """v1 train weights: 1/n_s per row (n_s = that subject's rows), mean 1.
+
+    Every subject carries the same total weight. Rescaling to mean 1 keeps the
+    total hessian of the squared loss equal to the row count, as with unweighted
+    rows, so XGBoost's absolute settings (the min_child_weight threshold, the
+    reg_lambda penalty) act on the same global scale as in v0; B0's weighted
+    mean (the mean of subject means) does not depend on it.
+    """
+    ids = subjects(subject_ids)
+    _, inverse, counts = np.unique(ids, return_inverse=True, return_counts=True)
+    weights = 1.0 / counts[inverse]
+    return weights * (len(ids) / weights.sum())
+
+
+def run_baselines(segments, manifest, inventory, config) -> dict:
+    """Fit B0/B3 on train rows and score both on the same val rows and draws.
+
+    ``segments`` is indexed by raw_index (a list of every file row, or a
+    ``{raw_index: segment}`` mapping of the inventory rows). v1 first applies
+    ``label_qc`` and weights train rows with ``subject_weights``.
+    """
+    verify_inputs(manifest, inventory, segments)
+    v1 = config["schema_version"] == VERSION_V1
+    qc, weights = None, None
+    if v1:
+        train_pressure = pulse_pressure_summary(_rows(manifest, "train"))
+        manifest, inventory, qc = label_qc(manifest, inventory)
+        qc["train_pulse_pressure_before_qc"] = train_pressure
+    train, val = _rows(manifest, "train"), _rows(manifest, "val")
+    if v1:
+        weights = subject_weights(train.subject_id.to_numpy())
+    train_labels = train[["sbp", "dbp"]].to_numpy()
+    # Generators in raw_index order: a lazy reader holds one block at a time.
+    train_features = features.feature_matrix(segments[i] for i in train.raw_index)
+    val_features = features.feature_matrix(segments[i] for i in val.raw_index)
+
+    b0 = PopulationMeanBaseline().fit(train_labels, sample_weight=weights)
     b3 = XGBoostBaseline(config["b3"]["seed"], config["b3"]["params"]).fit(
-        train_features, train_labels
+        train_features, train_labels, sample_weight=weights
     )
     predictions = {"B0": b0.predict(len(val)), "B3": b3.predict(val_features)}
     table = pd.concat([
@@ -99,7 +169,7 @@ def run_baselines(segments, manifest, inventory, config) -> dict:
     ], ignore_index=True)
     evaluation = evaluate_prediction_table(
         manifest, inventory, table, split="val",
-        config=BootstrapConfig(**config["bootstrap"]),
+        config=BootstrapConfig(**config["bootstrap"]), contrasts=[("B3", "B0")],
     )
     counts = {
         split: {
@@ -110,6 +180,8 @@ def run_baselines(segments, manifest, inventory, config) -> dict:
     }
     return {
         "predictions": table, "evaluation": evaluation, "counts": counts,
+        "label_qc": qc,
+        "train_weighting": V1_FIELDS["train_weighting"] if v1 else "equal_rows",
         "b0_constant": dict(zip(TARGETS, b0.predict(1)[0].tolist())),
         "b3": b3, "feature_names": list(features.FEATURE_NAMES),
         # Normalized PulseDB channels may make some statistics constant.
@@ -156,10 +228,19 @@ def baseline_table(evaluation, counts) -> str:
                 f"{_number(point['sample_weighted_bias'])} | "
                 f"{_number(point['sample_sd'])} |"
             )
-    lines += [
-        "",
+    lines.append("")
+    for contrast in evaluation.get("contrasts", []):
+        name = f"{contrast['model']} - {contrast['reference']}"
+        for target in TARGETS:
+            lines.append(
+                f"{name}, {target}, subject-balanced MAE difference (same draws): "
+                f"{_number(contrast['point'][target]['subject_balanced_mae'])} "
+                f"{_interval(contrast, target, 'subject_balanced_mae')} mmHg; "
+                "negative means lower error than the reference."
+            )
+    lines.append(
         f"Error = prediction - reference (mmHg). Bootstrap: {evaluation['method']}, "
         f"seed {evaluation['seed']}, {evaluation['repetitions']} repetitions, "
-        f"status {evaluation['status']}.",
-    ]
+        f"status {evaluation['status']}."
+    )
     return "\n".join(lines) + "\n"

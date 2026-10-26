@@ -1,0 +1,104 @@
+{
+  "source_type": "SYNTHETIC",
+  "config": "configs/hardware/packet_simulation_v3.json",
+  "logger_config": "configs/hardware/packet_logger.json",
+  "derivation": "Hand-derived from Packet_Schema_V0.1.md sections 6, 9, 12 and the case definitions in docs/protocol/packet_simulation.md; the example packet was assembled field by field and its CRC computed with Python binascii.crc_hqx(body, 0xFFFF), not with the code under test.",
+  "crc16_ccitt_false": [
+    {"ascii": "123456789", "crc": 10673},
+    {"ascii": "", "crc": 65535}
+  ],
+  "example_packet": {
+    "fields": {
+      "version": 1, "channel_id": 225, "session_id": 1, "seq": 2,
+      "first_sample_index": 32, "t_anchor_us": 1063500, "t_first_us": 1061547,
+      "fs_nominal_mhz": 512000, "status": 17, "data": [1193024, 65472]
+    },
+    "field_bytes": [
+      "a55a SYNC", "01 VERSION", "e1 CHANNEL_ID", "01000000 SESSION_ID=1",
+      "02000000 SEQ=2", "20000000 FIRST_SAMPLE_INDEX=32",
+      "4c3a100000000000 T_ANCHOR_US=1063500 (0x103A4C)",
+      "ab32100000000000 T_FIRST_US=1061547 = round(1063500 - 1953.125)",
+      "00d00700 FS_NOMINAL_MHZ=512000 (512 Hz)", "0200 SAMPLE_COUNT=2",
+      "1100 STATUS bits 0 and 4", "40341200 DATA[0]=0x123440",
+      "c0ff0000 DATA[1]=0x00FFC0", "43fd CRC16=0xFD43 over bytes 2..47"
+    ],
+    "crc": 64835,
+    "size": 50,
+    "hex": "a55a01e10100000002000000200000004c3a100000000000ab3210000000000000d007000200110040341200c0ff000043fd"
+  },
+  "packets_in_valid_stream": 26,
+  "fault_channel": "0xF1",
+  "cases": {
+    "valid": {
+      "issue_counts": {},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 8, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": []
+    },
+    "missing": {
+      "issue_counts": {"missing_packets": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 7, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": [{"reasons": ["missing"], "lost_samples": 4}]
+    },
+    "duplicate": {
+      "issue_counts": {"duplicate": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 8, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": []
+    },
+    "reordered": {
+      "issue_counts": {"out_of_order": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 8, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": []
+    },
+    "timestamp": {
+      "issue_counts": {"timestamp_anomaly": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 7, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": [{"reasons": ["timestamp_anomaly"], "lost_samples": 4}]
+    },
+    "timestamp_first": {
+      "issue_counts": {"timestamp_anomaly": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 7, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": []
+    },
+    "offset": {
+      "issue_counts": {"channel_offset": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 8, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": []
+    },
+    "crc": {
+      "issue_counts": {"crc_mismatch": 1, "missing_packets": 1, "skipped_bytes": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 7, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": [{"reasons": ["missing"], "lost_samples": 4}],
+      "skipped_bytes": 58
+    },
+    "byte_loss": {
+      "issue_counts": {"crc_mismatch": 1, "missing_packets": 1, "skipped_bytes": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 7, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": [{"reasons": ["missing"], "lost_samples": 4}],
+      "skipped_bytes": 53
+    },
+    "index_jump": {
+      "issue_counts": {"sample_gap_status": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 8, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": [{"reasons": ["status_sample_loss"], "lost_samples": 5}]
+    },
+    "reanchor": {
+      "issue_counts": {"sample_index_reanchored": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 8, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": [{"reasons": ["reanchored"], "lost_samples": null}]
+    },
+    "version": {
+      "issue_counts": {"missing_packets": 1, "skipped_bytes": 1, "unsupported_version": 1},
+      "accepted": {"1": {"0xE1": 8, "0xF1": 7, "0xF2": 8, "0xC1": 2}},
+      "fault_gaps": [{"reasons": ["missing"], "lost_samples": 4}],
+      "skipped_bytes": 58
+    },
+    "session_restart": {
+      "issue_counts": {"session_change": 1},
+      "accepted": {
+        "1": {"0xE1": 3, "0xF1": 3, "0xF2": 3, "0xC1": 2},
+        "2": {"0xE1": 5, "0xF1": 5, "0xF2": 5}
+      },
+      "fault_gaps": []
+    }
+  }
+}

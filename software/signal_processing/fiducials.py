@@ -6,6 +6,22 @@ from numbers import Real
 import numpy as np
 from scipy.signal import butter, find_peaks, sosfiltfilt
 
+# "prominence": local maxima (v0). "derivative_energy": maxima of a centred moving
+# average of the squared first difference, refined to the signal maximum. This
+# borrows the derivative/squaring idea but is NOT Pan-Tompkins: no fixed
+# bandpass, no adaptive thresholds, no search-back.
+R_METHODS = ("prominence", "derivative_energy")
+# Prominence threshold of the derivative-energy envelope: "quantile" =
+# prominence_fraction x (Q95 - Q05) of the energy (decided 2026-10-25), so that
+# one large beat does not hide the others; "ptp" = x peak-to-peak (week 5 v0).
+R_ENERGY_THRESHOLDS = ("quantile", "ptp")
+# "tangent": max-upslope tangent meets valley level (v0). "d2_max": maximum of
+# the second difference between valley and max upslope. "valley_min": last
+# minimum before the upstroke. Both new ones may use parabolic sub-sample
+# refinement (foot_interpolation, off by default since 2026-10-25).
+FOOT_METHODS = ("tangent", "d2_max", "valley_min")
+DEFAULT_METHODS = ("prominence", "tangent")
+
 
 def finite_number(value, name):
     """Reject bool/string/array scalars consistently with ValueError."""
@@ -48,8 +64,29 @@ class SignalConfig:
     ecg_band_hz: tuple[float, float] = (0.5, 40.0)
     ppg_band_hz: tuple[float, float] = (0.5, 8.0)
     filter_order: int = 2
+    # Week 5 candidate methods. Defaults reproduce features-sqi-v1 exactly.
+    r_method: str = "prominence"
+    foot_method: str = "tangent"
+    r_energy_window_s: float = 0.1
+    # Decided 2026-10-25 (docs/protocol/week05_fiducials_pat_validity.md section
+    # 8). None: PPG peaks use refractory_s, as features-sqi-v1/v2 do.
+    ppg_refractory_s: float | None = None
+    foot_interpolation: bool = False
+    r_energy_threshold: str = "quantile"
 
     def __post_init__(self):
+        if self.r_method not in R_METHODS or self.foot_method not in FOOT_METHODS:
+            raise ValueError(f"r_method must be one of {R_METHODS}, "
+                             f"foot_method one of {FOOT_METHODS}")
+        if finite_number(self.r_energy_window_s, "r_energy_window_s") <= 0:
+            raise ValueError("r_energy_window_s must be finite and positive")
+        if self.ppg_refractory_s is not None and finite_number(
+                self.ppg_refractory_s, "ppg_refractory_s") <= 0:
+            raise ValueError("ppg_refractory_s must be None or finite and positive")
+        if not isinstance(self.foot_interpolation, bool):
+            raise ValueError("foot_interpolation must be true or false")
+        if self.r_energy_threshold not in R_ENERGY_THRESHOLDS:
+            raise ValueError(f"r_energy_threshold must be one of {R_ENERGY_THRESHOLDS}")
         for name in ("flat_std", "refractory_s", "foot_lookback_s", "pat_min_s",
                      "pat_max_s", "gap_factor", "prominence_fraction"):
             value = finite_number(getattr(self, name), name)
@@ -155,13 +192,97 @@ def prepare(channel: Channel, config: SignalConfig, kind: str):
     return values, times, flags, finite_fraction
 
 
-def peaks(values, times, fs_hz, config):
+def ppg_refractory(config):
+    """Refractory period of PPG peaks: ppg_refractory_s, else refractory_s."""
+    return config.refractory_s if config.ppg_refractory_s is None else config.ppg_refractory_s
+
+
+def peaks(values, times, fs_hz, config, refractory_s=None):
+    """Local maxima at least ``refractory_s`` apart (default config.refractory_s)."""
+    refractory_s = config.refractory_s if refractory_s is None else refractory_s
     indices, _ = find_peaks(
-        values, distance=max(1, int(np.ceil(config.refractory_s * fs_hz))),
+        values, distance=max(1, int(np.ceil(refractory_s * fs_hz))),
         prominence=config.prominence_fraction * np.ptp(values),
     )
+    return _inside_edges(indices, times, config)
+
+
+def _inside_edges(indices, times, config):
     return indices[(times[indices] >= times[0] + config.edge_s)
                    & (times[indices] <= times[-1] - config.edge_s)]
+
+
+def r_peaks(values, times, fs_hz, config):
+    """R candidates by ``config.r_method`` on a prepared (oriented) ECG."""
+    if config.r_method == "prominence":
+        return peaks(values, times, fs_hz, config)
+    if len(values) < 3:
+        return np.array([], dtype=int)
+    distance = max(1, int(np.ceil(config.refractory_s * fs_hz)))
+    width = max(1, int(round(config.r_energy_window_s * fs_hz)))
+    energy = np.convolve((np.diff(values, prepend=values[0]) * fs_hz) ** 2,
+                         np.ones(width) / width, mode="same")
+    if config.r_energy_threshold == "ptp":
+        scale = np.ptp(energy)
+    else:
+        scale = np.quantile(energy, 0.95) - np.quantile(energy, 0.05)
+    found, _ = find_peaks(energy, distance=distance,
+                          prominence=config.prominence_fraction * scale)
+    refined = []
+    for index in found:
+        low, high = max(0, index - width), min(len(values), index + width + 1)
+        candidate = low + int(np.argmax(values[low:high]))
+        # Refinement can pull two envelope peaks onto close samples; keep the
+        # larger one so the refractory period still holds.
+        if refined and candidate - refined[-1] < distance:
+            if values[candidate] > values[refined[-1]]:
+                refined[-1] = candidate
+            continue
+        refined.append(candidate)
+    return _inside_edges(np.array(refined, dtype=int), times, config)
+
+
+def _vertex_offset(y0, y1, y2, extremum):
+    """Parabola vertex offset in samples from the middle point, clipped to ±0.5.
+
+    ``extremum`` is "min" or "max". A parabola curved the wrong way has no
+    vertex of that kind near the middle point, so the offset is 0 (no shift).
+    """
+    denominator = y0 - 2 * y1 + y2
+    if (denominator <= 0) if extremum == "min" else (denominator >= 0):
+        return 0.0
+    return float(np.clip(0.5 * (y0 - y2) / denominator, -0.5, 0.5))
+
+
+def _foot_time(values, times, valley, slope_index, tangent_foot, method, interpolate):
+    """Foot time by ``method``; with ``interpolate``, a strict three-point extremum
+    is refined by a parabola (at most half a sample). An asymmetric corner, as at
+    a pulse onset, is still a strict extremum and refinement can ADD error
+    (docs/protocol/week05_fiducials_pat_validity.md, sections 2 and 8)."""
+    if method == "tangent":
+        return tangent_foot
+    offset = 0.0
+    if method == "valley_min":
+        index = valley
+        # Never a plateau: only a strict local minimum.
+        if (interpolate and 0 < index < len(values) - 1
+                and values[index - 1] > values[index] < values[index + 1]):
+            offset = _vertex_offset(*values[index - 1:index + 2], "min")
+    else:
+        low, high = max(valley, 1), min(slope_index, len(values) - 2)
+        if high < low:
+            return None
+        d2 = values[low - 1:high] - 2 * values[low:high + 1] + values[low + 1:high + 2]
+        index = low + int(np.argmax(d2))
+        if interpolate and 1 < index < len(values) - 2:
+            d2_here = [values[index + k - 1] - 2 * values[index + k] + values[index + k + 1]
+                       for k in (-1, 0, 1)]
+            # A strict maximum of the second difference, not only the curvature
+            # sign: the argmax at the edge of the search is no extremum.
+            if d2_here[0] < d2_here[1] > d2_here[2]:
+                offset = _vertex_offset(*d2_here, "max")
+    step = times[min(index + 1, len(times) - 1)] - times[max(index - 1, 0)]
+    return float(times[index] + offset * step / 2)
 
 
 def ppg_fiducials(values, times, peak_indices, config):
@@ -192,7 +313,13 @@ def ppg_fiducials(values, times, peak_indices, config):
         candidates = np.flatnonzero(np.isclose(slopes, maximum, rtol=1e-6, atol=1e-12))
         slope_index = valley + candidates[len(candidates) // 2]
         foot = times[slope_index] - (values[slope_index] - values[valley]) / maximum
-        if not times[valley] - 1e-9 <= foot < times[peak]:
+        lowest = times[valley] - 1e-9
+        if config.foot_method != "tangent" and config.foot_interpolation:
+            # Parabolic refinement may move up to half a sample before the valley.
+            lowest -= (times[valley] - times[max(valley - 1, 0)]) / 2
+        foot = _foot_time(values, times, valley, slope_index, foot, config.foot_method,
+                          config.foot_interpolation)
+        if foot is None or not lowest <= foot < times[peak]:
             continue
         if foot < times[0] + config.edge_s:
             continue
@@ -211,6 +338,24 @@ def ppg_fiducials(values, times, peak_indices, config):
                 width = float(rt - lt)
         beats.append((float(foot), int(peak), int(valley), float(amplitude), width))
     return beats
+
+
+def detect(channel: Channel, config: SignalConfig, kind: str):
+    """Fiducial times (s) of one channel by the configured method, plus issues.
+
+    ECG returns R times; PPG returns foot times. A channel with issues returns
+    no fiducials, as in features-sqi-v1. Never reads BP/ABP.
+    """
+    if kind not in ("ecg", "ppg"):
+        raise ValueError("kind must be ecg or ppg")
+    values, times, issues, _ = prepare(channel, config, kind)
+    if issues:
+        return np.array([], dtype=float), issues
+    if kind == "ecg":
+        return times[r_peaks(values, times, channel.fs_hz, config)], []
+    peak_indices = peaks(values, times, channel.fs_hz, config, ppg_refractory(config))
+    beats = ppg_fiducials(values, times, peak_indices, config)
+    return np.array([b[0] for b in beats], dtype=float), []
 
 
 def pair_pat(r_times, foot_times, config):

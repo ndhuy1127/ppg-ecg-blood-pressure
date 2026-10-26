@@ -13,6 +13,7 @@ from pathlib import Path
 CODE_FILES = (
     "scripts/run_b3_pulsedb.py", "software/pulsedb/pipeline.py",
     "software/pulsedb/features.py", "software/pulsedb/reader.py",
+    "software/pulsedb/h5_reader.py",
     "software/models/xgboost_baseline.py", "software/models/constant_baselines.py",
     "software/evaluation/subject_bootstrap.py", "software/evaluation/bp_metrics.py",
     "software/signal_processing/fiducials.py", "software/data_io/split_manifest.py",
@@ -28,20 +29,15 @@ def _git(repo, *args):
         return None
 
 
-def run(raw_path, split_dir, config_path, output, repo):
-    """Validate every input before fitting; write a new output directory only."""
-    from software._provenance import text_file_sha256, text_sha256
+def load_split(raw_path, split_dir):
+    """Check a split-v2 handover against the raw file before anything is read.
+
+    Returns ``(payloads, split_report, raw_sha256, inventory, manifest,
+    pool_decision)``. Also used by ``scripts/run_b2_pulsedb.py``.
+    """
     from software.data_io.split_manifest import (
         VERSION as SPLIT_VERSION, file_sha256, read_manifest_bytes,
     )
-    from software.pulsedb.pipeline import baseline_table, load_config, run_baselines
-    from software.pulsedb.reader import PulseDBReader
-
-    output = Path(output)
-    if output.exists():
-        raise FileExistsError("Output directory already exists; refusing overwrite")
-    config_bytes = Path(config_path).read_bytes()
-    config = load_config(config_bytes)
 
     split_dir = Path(split_dir)
     payloads = {name: (split_dir / name).read_bytes() for name in SPLIT_FILES}
@@ -69,9 +65,40 @@ def run(raw_path, split_dir, config_path, output, repo):
     manifest = read_manifest_bytes(payloads["manifest.csv"])
     if set(inventory.source_sha256) != {raw_sha256}:
         raise ValueError("Inventory source_sha256 differs from the raw file")
+    return payloads, split_report, raw_sha256, inventory, manifest, pool_decision
 
-    segments = PulseDBReader(str(raw_path)).read()
-    result = run_baselines(segments, manifest, inventory, config)
+
+def run(raw_path, split_dir, config_path, output, repo):
+    """Validate every input before fitting; write a new output directory only."""
+    from software._provenance import text_file_sha256, text_sha256
+    from software.data_io.split_manifest import file_sha256
+    from software.pulsedb.h5_reader import PulseDBH5Reader
+    from software.pulsedb.pipeline import (
+        VERSION_V1, baseline_table, load_config, run_baselines,
+    )
+    from software.pulsedb.reader import PulseDBReader
+
+    output = Path(output)
+    if output.exists():
+        raise FileExistsError("Output directory already exists; refusing overwrite")
+    config_bytes = Path(config_path).read_bytes()
+    config = load_config(config_bytes)
+    payloads, split_report, raw_sha256, inventory, manifest, pool_decision = (
+        load_split(raw_path, split_dir))
+
+    v1 = config["schema_version"] == VERSION_V1
+    if not v1 and split_report.get("subject_subsample") is not None:
+        # v0 reads the whole file; the rebuilt inventory could never match.
+        raise ValueError("Split has a subject subsample; use b3-pipeline-v1")
+    if v1:
+        # Only the inventory rows (e.g. a subject subsample), keyed by raw_index
+        # and read block by block, so the pool never has to fit in RAM.
+        reader = PulseDBH5Reader(str(raw_path))
+        with reader.lazy(inventory.raw_index.tolist()) as segments:
+            result = run_baselines(segments, manifest, inventory, config)
+    else:
+        segments = PulseDBReader(str(raw_path)).read()
+        result = run_baselines(segments, manifest, inventory, config)
     # Detect replacement/modification of the raw file while it was being read.
     if file_sha256(raw_path) != raw_sha256:
         raise ValueError("Raw file changed during reading")
@@ -96,7 +123,10 @@ def run(raw_path, split_dir, config_path, output, repo):
         },
         "split_schema_version": split_report["schema_version"],
         "split_pool_decision": pool_decision,
+        "reader": ("h5py, inventory rows only" if v1 else "mat73, whole file"),
         "split_counts": result["counts"],
+        "label_qc": result["label_qc"],
+        "train_weighting": result["train_weighting"],
         "feature_names": result["feature_names"],
         "constant_train_features": result["constant_train_features"],
         "B0_constant": result["b0_constant"],
@@ -111,12 +141,18 @@ def run(raw_path, split_dir, config_path, output, repo):
             "B0/B3 fitted on train rows only; no imputation/scaling/selection",
             "Val scored with the same rows and bootstrap draws for B0 and B3",
             "Test rows not featurized, predicted or scored",
-            "No rows excluded; no SQI filter applied",
+            ("Train/val rows with DBP >= SBP excluded from fit and scoring "
+             "(label_qc); rule not applied to unscored test rows, whose labels are "
+             "only re-hashed; no SQI filter applied" if v1 else
+             "No rows excluded; no SQI filter applied"),
         ],
         "limitations": [
             "PUBLIC_ABP labels from one PulseDB subset; not cuff or prototype data",
-            "Train rows weighted equally; subjects with more segments weigh more",
-            "ECG_F/PPG_F amplitude units and normalization are unverified",
+            ("Train rows weighted 1/n_s (mean 1): every subject weighs the same"
+             if v1 else
+             "Train rows weighted equally; subjects with more segments weigh more"),
+            ("ECG_F/PPG_F are min-max normalized per segment to [0, 1] (checked "
+             "2026-10-25): their min/max/range features carry no information"),
             "Hyperparameters are not tuned; no model selection has been done",
             "B1 not run: no chronology/calibration metadata",
         ],
@@ -127,7 +163,8 @@ def run(raw_path, split_dir, config_path, output, repo):
         },
         "environment": {
             "python": platform.python_version(),
-            **{name: version(name) for name in ("numpy", "pandas", "xgboost", "mat73")},
+            **{name: version(name)
+               for name in ("numpy", "pandas", "xgboost", "mat73", "h5py")},
         },
         "run_time_utc": now.isoformat(),
     }

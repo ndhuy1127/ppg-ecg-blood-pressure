@@ -1,5 +1,19 @@
 # Evaluation — chỉ số sai số huyết áp
 
+Ngoài `bp_metrics.py` (dưới đây) và `subject_bootstrap.py`, thư mục có
+[fiducial_agreement.py](fiducial_agreement.py) (Tuần 5): so mốc R/foot tự động với
+đánh dấu tay, chỉ train/val. Mô tả đầu vào/đầu ra ở
+[week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
+mục 4.
+
+[fiducial_gate.py](fiducial_gate.py) (Tuần 5): cổng nghiệm thu mốc đăng ký trước.
+`gate` chấm mọi phương án trên nhóm chọn, giữ phương án đạt mọi ngưỡng có MAE trung
+bình theo người thấp nhất, rồi chỉ chấm phương án đó một lần trên nhóm xác nhận;
+`repeatability` so hai lượt đánh dấu của cùng người cách nhau ít nhất `min_days`.
+Ngưỡng nằm trong khối `acceptance` của `configs/data/week05_huy.json`; mô tả ở
+[week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
+mục 9.
+
 [bp_metrics.py](bp_metrics.py) chứa hàm đánh giá và các lớp chứa kết quả.
 Demo/pipeline gọi hàm với nhãn và dự đoán; chạy riêng file không tự tạo dữ liệu
 hay in báo cáo.

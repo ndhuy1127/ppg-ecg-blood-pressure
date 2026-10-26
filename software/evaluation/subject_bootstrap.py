@@ -17,12 +17,20 @@ class BootstrapConfig:
     repetitions: int = 2000
     confidence: float = 0.95
     min_subjects: int = 2
+    # Below this many subjects the CI is still computed but the status is
+    # "few_subjects": a percentile cluster bootstrap with few clusters tends to
+    # give intervals narrower than their nominal coverage. 10 is a convention
+    # (2026-10-24), not a derived threshold.
+    few_subjects: int = 10
 
     def __post_init__(self):
-        for name, minimum in (("seed", 0), ("repetitions", 2), ("min_subjects", 2)):
+        for name, minimum in (("seed", 0), ("repetitions", 2), ("min_subjects", 2),
+                              ("few_subjects", 2)):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
                 raise ValueError(f"Invalid bootstrap {name}")
+        if self.few_subjects < self.min_subjects:
+            raise ValueError("few_subjects must be at least min_subjects")
         if not 0 < finite_number(self.confidence, "confidence") < 1:
             raise ValueError("confidence must be in (0, 1)")
 
@@ -48,8 +56,48 @@ def _statistics(evaluation):
     } for target in ("SBP", "DBP")}
 
 
-def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig()):
-    """Same cluster draws for every model; no model fitting or selection here."""
+# Paired contrasts: metric of model minus metric of the reference model, from
+# the same draw (a negative MAE difference means the model has lower error).
+CONTRAST_METRICS = ("subject_balanced_mae", "sample_weighted_mae")
+
+
+def _contrast_pairs(contrasts, names):
+    if contrasts is None:
+        return None
+    if not isinstance(contrasts, (list, tuple)):
+        raise ValueError("contrasts must be a list of (model, reference) pairs")
+    pairs = []
+    for pair in contrasts:
+        if (not isinstance(pair, (list, tuple)) or len(pair) != 2
+                or pair[0] == pair[1] or any(name not in names for name in pair)):
+            raise ValueError("Each contrast is two different model names")
+        pairs.append((pair[0], pair[1]))
+    if len(set(pairs)) != len(pairs):
+        raise ValueError("Duplicate contrast")
+    return pairs
+
+
+def _difference(a, b):
+    return None if a is None or b is None else a - b
+
+
+def _interval(values, alpha):
+    bounds = np.quantile(values, [alpha, 1 - alpha]).tolist() if values else None
+    return {"bounds": bounds, "valid_repetitions": len(values),
+            "status": "undefined" if not values
+            else ("degenerate" if np.ptp(values) == 0 else "ok")}
+
+
+def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig(), *,
+                 contrasts=None):
+    """Same cluster draws for every model; no model fitting or selection here.
+
+    ``contrasts``: optional (model, reference) pairs. For each, the difference
+    model - reference of ``CONTRAST_METRICS`` per target is taken within every
+    draw, and its percentile CI is reported under ``result["contrasts"]``. The
+    point difference of subject-balanced MAE equals the mean over subjects of
+    MAE_s(model) - MAE_s(reference). Without contrasts the result is unchanged.
+    """
     reference = bp_pairs(reference, "reference")
     ids = subjects(subject_ids, len(reference))
     if not isinstance(prediction_sets, dict) or not prediction_sets:
@@ -59,49 +107,79 @@ def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig
         raise ValueError("Model names must be nonempty text")
     if any(values.shape != reference.shape for values in predictions.values()):
         raise ValueError("reference and predictions must have identical shapes")
+    pairs = _contrast_pairs(contrasts, predictions)
     point = {name: _statistics(evaluate_bp(reference, values, ids)) for name, values in predictions.items()}
     n_subjects = len(np.unique(ids))
     result = {"n_rows": len(ids), "n_subjects": n_subjects, "seed": config.seed,
               "repetitions": config.repetitions, "confidence": config.confidence,
               "method": "subject cluster percentile; shared draws across models",
-              "models": {}, "status": "ok"}
+              "models": {},
+              "status": "ok" if n_subjects >= config.few_subjects else "few_subjects"}
+    contrast_point = [
+        {target: {metric: _difference(point[a][target][metric],
+                                      point[b][target][metric])
+                  for metric in CONTRAST_METRICS} for target in point[a]}
+        for a, b in pairs or ()
+    ]
     if n_subjects < config.min_subjects:
         result["status"] = "insufficient_subjects"
         result["models"] = {name: {"point": stats, "ci": None} for name, stats in point.items()}
+        if pairs is not None:
+            result["contrasts"] = [{"model": a, "reference": b, "point": p, "ci": None}
+                                   for (a, b), p in zip(pairs, contrast_point)]
         return result
     samples = {name: {target: {metric: [] for metric in stats[target]} for target in stats} for name, stats in point.items()}
+    contrast_samples = [{target: {metric: [] for metric in CONTRAST_METRICS}
+                         for target in point[a]} for a, _ in pairs or ()]
     rng = np.random.default_rng(config.seed)
     for _ in range(config.repetitions):
         indices, draw_ids = cluster_draw(ids, rng)
+        draw = {}
         for name, values in predictions.items():
-            stats = _statistics(evaluate_bp(reference[indices], values[indices], draw_ids))
+            stats = draw[name] = _statistics(
+                evaluate_bp(reference[indices], values[indices], draw_ids))
             for target in stats:
                 for metric, value in stats[target].items():
                     if value is not None:
                         samples[name][target][metric].append(value)
+        for (a, b), store in zip(pairs or (), contrast_samples):
+            for target, metrics in store.items():
+                for metric, values in metrics.items():
+                    value = _difference(draw[a][target][metric],
+                                        draw[b][target][metric])
+                    if value is not None:
+                        values.append(value)
     alpha = (1 - config.confidence) / 2
     for name in point:
-        intervals = {}
-        for target in point[name]:
-            intervals[target] = {}
-            for metric, values in samples[name][target].items():
-                bounds = np.quantile(values, [alpha, 1 - alpha]).tolist() if values else None
-                intervals[target][metric] = {"bounds": bounds, "valid_repetitions": len(values),
-                    "status": "undefined" if not values else ("degenerate" if np.ptp(values) == 0 else "ok")}
+        intervals = {target: {metric: _interval(values, alpha)
+                              for metric, values in samples[name][target].items()}
+                     for target in point[name]}
         result["models"][name] = {"point": point[name], "ci": intervals}
+    if pairs is not None:
+        result["contrasts"] = [
+            {"model": a, "reference": b, "point": p,
+             "ci": {target: {metric: _interval(values, alpha)
+                             for metric, values in metrics.items()}
+                    for target, metrics in store.items()}}
+            for (a, b), p, store in zip(pairs, contrast_point, contrast_samples)
+        ]
     return result
 
 
-def evaluate_prediction_table(manifest, inventory, predictions, *, split="val", config=BootstrapConfig()):
+def evaluate_prediction_table(manifest, inventory, predictions, *, split="val",
+                              config=BootstrapConfig(), contrasts=None):
     """Validate v2 conservation/leakage and exact prediction keys before metrics.
 
     Table columns: sample_id, subject_id, split, model, pred_sbp, pred_dbp.
     Caller still owns raw/pool permissions and observation/calibration checks.
-    Test evaluation requires caller's prior model/threshold lock; not enforced here.
+    Validation only (2026-10-24): test evaluation is refused here; it needs a
+    separate script that requires a lock file committed before the run.
+    ``contrasts`` is passed to ``bootstrap_bp``.
     """
     validate_manifest(manifest, inventory)
-    if split not in ("val", "test"):
-        raise ValueError("Evaluation split must be val/test")
+    if split != "val":
+        raise ValueError("Only split='val' is evaluated here; test evaluation needs "
+                         "a separate locked script")
     columns = {"sample_id", "subject_id", "split", "model", "pred_sbp", "pred_dbp"}
     if not isinstance(predictions, pd.DataFrame) or predictions.empty or not predictions.columns.is_unique or set(predictions.columns) != columns:
         raise ValueError("Prediction table needs exactly the documented columns")
@@ -122,4 +200,4 @@ def evaluate_prediction_table(manifest, inventory, predictions, *, split="val", 
             raise ValueError("Prediction subject mismatch")
         prediction_sets[name] = group[["pred_sbp", "pred_dbp"]].to_numpy()
     return bootstrap_bp(rows[["sbp", "dbp"]].to_numpy(), prediction_sets,
-                        rows.subject_id.to_numpy(), config)
+                        rows.subject_id.to_numpy(), config, contrasts=contrasts)

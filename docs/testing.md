@@ -6,6 +6,9 @@
 > Pipeline cũ đã chấm điểm trên tập **test**; không dùng số ở mục 7 để chọn model.
 > Số ở mục 7 cũng không khớp `notebooks/metrics_all_splits.csv` (ví dụ SBP val
 > 20.16 so với 20.66). Chưa rõ nguyên nhân vì không có log chạy.
+> Hai CSV `notebooks/pulsedb_manifest_1000.csv` và `notebooks/metrics_all_splits.csv`
+> đã gỡ khỏi Git ngày 2026-10-24 (còn trong lịch sử, commit `1f218eb`, `acc8b8b`);
+> các lệnh dưới đây cần lấy lại file bằng `git show` trước khi chạy.
 
 ## 1. Mục đích
 

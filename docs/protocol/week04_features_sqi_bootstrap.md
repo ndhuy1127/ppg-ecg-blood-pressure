@@ -75,6 +75,9 @@ Prominence tính theo `prominence_fraction × peak-to-peak` của cả cửa s�
 `filter_mode=none`, trôi đường nền lớn có thể làm prominence vượt biên độ xung
 và không phát hiện được peak nào (gắn cờ `too_few_peaks`, không crash).
 Không mở khảo sát nhiều detector; chưa xác nhận độ nhạy/PPV trên ECG thật.
+Tuần 5 thêm phương pháp ứng viên chọn qua `SignalConfig` (`r_method`,
+`foot_method`), xem [week05_fiducials_pat_validity.md](week05_fiducials_pat_validity.md);
+`features-sqi-v1` chỉ nhận phương pháp mặc định và output không đổi.
 
 Default `filter_mode=none`: không thêm lọc khi chưa biết xử lý upstream.
 Tùy chọn `zero_phase` là Butterworth SOS forward–backward, band/order trong
@@ -126,6 +129,17 @@ cần ít nhất hai chu kỳ không phẳng. Không có template học từ tes
 `flagged` là có bất kỳ cờ, **không phải quyết định loại tự động**; cờ PAT có thể
 không chặn PPG-only. Motion/ADC saturation/AC–DC đều N/A do thiếu bằng chứng đầu vào.
 
+**`features-sqi-v2` (2026-10-24):** chọn bằng `extract_window(..., version=
+"features-sqi-v2")`; mặc định vẫn là v1, giữ đúng từng byte. Khác v1 đúng một điểm:
+khi không ghép PAT vì timing chưa kiểm (`alignment_unverified`, `clock_unverified`,
+`upstream_delay_unknown`, mặc định với PulseDB), v1 ghi `pat_pair_count` = 0,
+`pat_pair_fraction` = 0.0 và đếm mọi nhịp là không ghép, nên dễ bị đọc nhầm là tín
+hiệu xấu. v2 ghi `None` cho sáu trường đó (`pat_pair_count`,
+`pat_unmatched_r_count`, `pat_unmatched_foot_count`, `pat_edge_unpaired_r_count`,
+`pat_edge_unpaired_foot_count`, `pat_pair_fraction`) và lý do ở
+`quality["pat_quality_unavailable"]` (`None` khi đã ghép). Đặc trưng và cờ giống v1.
+Dùng v2 cho mọi nơi đọc các trường chất lượng PAT.
+
 ## 5. Bootstrap và prediction
 
 `bootstrap_bp(reference, {model: predictions}, subject_ids, BootstrapConfig)`
@@ -139,17 +153,31 @@ Mỗi lượt lấy N người có hoàn lại và giữ toàn bộ dòng của 
 không gộp A sau lấy mẫu. RNG seed 20261013, 2000 lượt, percentile 2.5/97.5.
 Mọi model dùng cùng draws. Không fit lại model; CI chỉ mô tả uncertainty theo
 người của predictions đã có, không chứng minh CI nominal coverage.
-Ít hơn 2 người: giữ point metric, CI N/A và `insufficient_subjects`; quá ít người
-dù >=2 vẫn cần cảnh báo diễn giải. Replicates thiếu SD được đếm, phân phối hằng
+Ít hơn 2 người: giữ point metric, CI N/A và `insufficient_subjects`. Từ 2 tới dưới
+`few_subjects` người (mặc định 10, quy ước ngày 2026-10-24, không phải ngưỡng suy
+ra): vẫn tính CI nhưng `status` = `few_subjects`, vì bootstrap theo cụm với ít cụm
+thường cho CI hẹp hơn độ phủ danh nghĩa; diễn giải các CI này là mô tả. Replicates thiếu SD được đếm, phân phối hằng
 gắn `degenerate`; không coi CI hằng là bằng chứng chắc chắn trên quần thể.
+
+**So sánh ghép cặp (thêm 2026-10-23):** `bootstrap_bp(..., contrasts=[(A, B)])`
+trả thêm `contrasts`, mỗi phần tử có `model`, `reference`, `point` và `ci` của hiệu
+A − B cho `subject_balanced_mae` và `sample_weighted_mae` theo từng huyết áp. Hiệu
+được lấy **trong từng lượt** từ cùng draw, rồi mới lấy percentile; không trừ đầu
+mút của hai CI riêng, và không kết luận từ việc hai CI riêng chồng nhau hay không.
+Hiệu MAE âm nghĩa là A sai số thấp hơn B. Hiệu của MAE trung bình đều theo người
+bằng trung bình theo người của MAE_s(A) − MAE_s(B), tức đại lượng $d_s$ của
+[RQ](../research_questions_v0.1.md) khi A là PPG + PAT và B là PPG-only. Không
+truyền `contrasts` thì output giữ nguyên như trước.
 
 `evaluate_prediction_table(manifest, inventory, predictions, split='val')`
 gọi validator v2 rồi join theo sample_id, kiểm tra đúng subject/split, số dòng,
 không trùng/mất/thêm ID và cùng tập cho các model. Prediction table có đúng:
 `sample_id, subject_id, split, model, pred_sbp, pred_dbp`. Không nhận nhãn từ
 prediction table; reference lấy từ manifest được inventory kiểm tra.
-Nguồn/quyền dùng/pool, raw hash, chronology/calibration và khóa test vẫn là
-trách nhiệm caller; API không đủ metadata để xác nhận B1 hợp lệ.
+Từ 2026-10-24 API chỉ nhận `split='val'`: đánh giá test bị từ chối ở đây và phải đi
+qua một script riêng đòi file khóa (model, config, phiên bản đặc trưng, ngưỡng, ngày)
+đã commit trước khi chạy. Nguồn/quyền dùng/pool, raw hash và chronology/calibration
+vẫn là trách nhiệm caller; API không đủ metadata để xác nhận B1 hợp lệ.
 Beta/r ΔBP không triển khai khi chưa có định nghĩa/metadata phù hợp.
 
 ## 6. Ví dụ tích hợp và tái chạy
@@ -180,12 +208,12 @@ True chỉ để có feature. Runner fixture không tải/đọc dataset:
 & '.venv/Scripts/python.exe' -m pytest -q 'tests/test_week04_features.py' 'tests/test_subject_bootstrap.py'
 ```
 
-Runner sinh JSON, CSV fixture và SVG theo đường dẫn báo cáo Tuần 4, ghi raw fixture/
-config/code/figure/table SHA256, seed, commit và dirty. Đường dẫn `--output`,
-`--figure` có thể đổi; runner chủ động tạo lại output được chỉ định, không dùng
-cho raw. Khác với các runner khác trong `scripts/` (từ chối ghi đè), runner này
-**ghi đè** output mặc định trong `reports/`; muốn giữ bản cũ thì truyền
-`--output`/`--figure` tới thư mục mới. SVG được lưu không kèm ngày giờ và với
+Runner sinh JSON, CSV fixture và SVG, mặc định trong `runs/demo_week04_huy/`
+(không vào Git), ghi raw fixture/config/code/figure/table SHA256, seed, commit và
+dirty. Đường dẫn `--output`, `--figure` có thể đổi; CSV nằm cạnh JSON. Như các
+runner khác trong `scripts/`, runner **từ chối ghi đè** (sửa 2026-10-25: trước đó
+mặc định ghi đè bản ghi Tuần 4 trong `reports/`): nếu JSON, CSV hay SVG đã có thì
+dừng trước khi tính gì. SVG được lưu không kèm ngày giờ và với
 `svg.hashsalt` cố định, nên `figure_sha256` giống nhau giữa các lần chạy trong
 cùng môi trường. Không đưa bảng fixture vào bảng baseline công khai.
 CSV và JSON được ghi với LF; `config_sha256` và `code_sha256` tính trên nội dung

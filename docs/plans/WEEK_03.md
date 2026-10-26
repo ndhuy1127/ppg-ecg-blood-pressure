@@ -83,7 +83,7 @@ Các đường dẫn trên là vị trí **dự kiến**, chưa phải sản ph�
 
 **Cập nhật đầu ra hỗ trợ Linh/Đức Anh, 2026-10-10:** đã có pipeline split v2
 với inventory và công cụ generator/replay packet SYNTHETIC v2 trong workspace,
-có test cục bộ; xem [báo cáo mục 6.6](../../reports/weekly/week_03/README.md#66-bản-sửa-hỗ-trợ-phần-linh-và-đức-anh-ngày-2026-10-10).
+có test cục bộ; xem [báo cáo Tuần 3](../../reports/weekly/week_03/README.md).
 Fixture expected thực tế ở `tests/fixtures/`, packet/config/replay/report sinh
 qua runner vào output mới ngoài Git. Vị trí `data/sample/` trong bảng đầu ra là
 dự kiến ban đầu. Chưa xác nhận chạy raw/nguồn/pool, schema firmware được khóa,

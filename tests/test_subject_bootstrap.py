@@ -35,6 +35,105 @@ def test_bootstrap_reproducible_shared_draws_and_point_metrics():
     assert first["models"]["B0"]["ci"]["SBP"]["subject_balanced_mae"]["bounds"] == [0, 8]
 
 
+class SequenceDraw:
+    """Stands in for numpy's Generator: returns the given cluster draws in turn."""
+
+    def __init__(self, draws):
+        self.draws = iter(draws)
+
+    def choice(self, unique, size, replace):
+        return np.array(next(self.draws))
+
+
+def contrast_fixture():
+    # Absolute errors (SBP and DBP alike). Model M: A rows 2 and 4 (MAE_A 3),
+    # B row 10 (MAE_B 10). Reference R: A rows 1 and 1, B row 4.
+    ref = np.tile([120.0, 80.0], (3, 1))
+    m = ref + np.array([[2, 2], [4, 4], [10, 10]])
+    r = ref + np.array([[1, 1], [-1, -1], [4, 4]])
+    return ref, {"M": m, "R": r}, ["A", "A", "B"]
+
+
+def test_contrast_is_the_difference_within_each_draw(monkeypatch):
+    ref, models, ids = contrast_fixture()
+    draws = [["A", "B"], ["B", "B"], ["A", "A"]]
+    config = BootstrapConfig(repetitions=3, confidence=0.5)
+    monkeypatch.setattr("software.evaluation.subject_bootstrap.np.random.default_rng",
+                        lambda seed: SequenceDraw(draws))
+    result = bootstrap_bp(ref, models, ids, config, contrasts=[("M", "R")])
+    (contrast,) = result["contrasts"]
+    assert (contrast["model"], contrast["reference"]) == ("M", "R")
+    for target in ("SBP", "DBP"):
+        # Point: subject-balanced (3 + 10) / 2 - (1 + 4) / 2; sample (16 - 6) / 3.
+        point = contrast["point"][target]
+        assert point["subject_balanced_mae"] == pytest.approx(4)
+        assert point["sample_weighted_mae"] == pytest.approx(10 / 3)
+        # Draws [A,B], [B,B], [A,A] give 4, 6, 2 (subject-balanced) and 10/3, 6, 2
+        # (sample-weighted); quartiles by linear interpolation.
+        ci = contrast["ci"][target]
+        assert ci["subject_balanced_mae"]["bounds"] == pytest.approx([3, 5])
+        assert ci["sample_weighted_mae"]["bounds"] == pytest.approx(
+            [2 + (10 / 3 - 2) / 2, 10 / 3 + (6 - 10 / 3) / 2])
+        assert ci["subject_balanced_mae"]["valid_repetitions"] == 3
+    # The per-model results are those of a call without contrasts.
+    monkeypatch.setattr("software.evaluation.subject_bootstrap.np.random.default_rng",
+                        lambda seed: SequenceDraw(draws))
+    plain = bootstrap_bp(ref, models, ids, config)
+    assert "contrasts" not in plain and plain["models"] == result["models"]
+
+
+def test_contrast_sign_identity_and_insufficient_subjects():
+    ref, models, ids = contrast_fixture()
+    config = BootstrapConfig(seed=3, repetitions=200)
+    both = bootstrap_bp(ref, {**models, "M2": models["M"]}, ids, config,
+                        contrasts=[("M", "R"), ("R", "M"), ("M", "M2")])
+    forward, backward, same = both["contrasts"]
+    low, high = forward["ci"]["SBP"]["subject_balanced_mae"]["bounds"]
+    assert backward["ci"]["SBP"]["subject_balanced_mae"]["bounds"] == pytest.approx(
+        [-high, -low])
+    assert same["point"]["SBP"]["subject_balanced_mae"] == 0
+    assert same["ci"]["SBP"]["subject_balanced_mae"]["bounds"] == [0, 0]
+    assert same["ci"]["SBP"]["subject_balanced_mae"]["status"] == "degenerate"
+    assert both == bootstrap_bp(ref, {**models, "M2": models["M"]}, ids, config,
+                                contrasts=[("M", "R"), ("R", "M"), ("M", "M2")])
+    one = bootstrap_bp(ref[:1], {"M": models["M"][:1], "R": models["R"][:1]}, ["A"],
+                       config, contrasts=[("M", "R")])
+    assert one["status"] == "insufficient_subjects"
+    assert one["contrasts"][0]["ci"] is None
+    assert one["contrasts"][0]["point"]["SBP"]["subject_balanced_mae"] == 1
+
+
+@pytest.mark.parametrize("contrasts", [[("M", "M")], [("M", "X")], [("M",)],
+                                       [("M", "R"), ("M", "R")], "M-R", [["M"]]])
+def test_bad_contrasts_are_rejected(contrasts):
+    ref, models, ids = contrast_fixture()
+    with pytest.raises(ValueError):
+        bootstrap_bp(ref, models, ids, BootstrapConfig(repetitions=10),
+                     contrasts=contrasts)
+
+
+@pytest.mark.parametrize("n,status", [(1, "insufficient_subjects"),
+                                      (2, "few_subjects"), (9, "few_subjects"),
+                                      (10, "ok")])
+def test_status_flags_few_subjects(n, status):
+    ids = [f"S{i}" for i in range(n)]
+    ref = np.tile([120.0, 80.0], (n, 1))
+    pred = ref + np.arange(n)[:, None]
+    result = bootstrap_bp(ref, {"M": pred}, ids, BootstrapConfig(repetitions=20))
+    assert result["status"] == status
+    # The CI is computed from 2 subjects on, flagged or not.
+    assert (result["models"]["M"]["ci"] is None) == (n < 2)
+    with pytest.raises(ValueError):
+        BootstrapConfig(min_subjects=5, few_subjects=4)
+
+
+def test_test_split_is_refused():
+    manifest, inventory, predictions = table_fixture()
+    with pytest.raises(ValueError, match="val"):
+        evaluate_prediction_table(manifest, inventory, predictions.assign(split="test"),
+                                  split="test", config=BootstrapConfig(repetitions=10))
+
+
 def test_insufficient_subjects_and_degenerate_results():
     ref = [[120, 80]]
     one = bootstrap_bp(ref, {"B0": ref}, ["A"], BootstrapConfig(repetitions=10))

@@ -1,0 +1,15 @@
+{
+  "schema_version": "pulsedb-split-v2",
+  "input_path": "../../data/raw/pulsedb/VitalDB_Train_Subset.mat",
+  "input_sha256": "20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002",
+  "source": "VitalDB_Train_Subset.mat",
+  "source_version": "Kaggle weinanwangrutgers/pulsedb-balanced-training-and-testing version 4 (updated 2022-12-08), downloaded 2026-10-25, 13797698523 bytes",
+  "license": "CC BY-NC-SA 4.0 (LICENSE.txt in the Kaggle package)",
+  "permission_basis": "Public dataset under CC BY-NC-SA 4.0; non-commercial thesis use; .mat files stay out of Git and are not redistributed",
+  "pool_decision": "Huy 2026-10-24 (docs/pulsedb_provenance.md section 5): pool = VitalDB_Train_Subset, subject subsample of 400 from Subject IDs only (seed 20261024), then train/val/test 0.8/0.1/0.1 by subject (seed 72); VitalDB_CalFree_Test_Subset is the external test; CalBased Test (same subjects as Train) and AAMI Cal/AAMI Test (AAMI Cal already exposed as test) are not used",
+  "subject_identity_review": "Subject is p<6 digits>_<source>, source 1 = VitalDB per Generate_Subsets.m (provenance section 7); split on the full string; row counts matching the pattern are in report.json (pool_subject_id_format)",
+  "unit": "mmHg",
+  "seed": 72,
+  "ratios": [0.8, 0.1, 0.1],
+  "subject_subsample": {"n_subjects": 400, "seed": 20261024}
+}
