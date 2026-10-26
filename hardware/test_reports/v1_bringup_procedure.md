@@ -38,7 +38,12 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 
 1. Cắm cổng UART (cổng qua chip cầu USB–UART) vào laptop. Trong Device Manager,
    ghi cổng COM của từng cổng USB. Cổng USB native của ESP32-S3 có VID:PID
-   `303A:1001` (USB Serial/JTAG).
+   `303A:1001` (USB Serial/JTAG); nó chỉ hiện khi cắm thêm cổng USB native (cáp thứ
+   hai). Đọc `bMaxPower` trong configuration descriptor của `303A:1001` bằng USBView
+   (Windows) hay `lsusb -v` và ghi vào báo cáo. Khi đo trên người chỉ có một cáp, nối cổng
+   USB native, nên đó là cổng cấp nguồn mà
+   [power_budget_v1.md](../../configs/hardware/power_budget_v1.md) mục 4 xét, và giới
+   hạn dòng phụ thuộc giá trị này (thêm 2026-10-26).
 2. Đọc loại chip và eFuse, **chỉ đọc**. Không bao giờ chạy lệnh `burn_*` của
    espefuse: ghi eFuse không đảo ngược được.
 
@@ -114,9 +119,14 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 
 1. Kiểm hướng DevKitC theo silkscreen (đầu USB, đầu anten) **trước khi cắm**: cắm
    ngược 180° làm chập 3V3–GND (A.2).
-2. Cấp nguồn qua USB tester. Ghi dòng lúc cắm và dòng ổn định; so với dòng của
-   DevKitC đứng riêng ở mục 2. Rút USB ngay nếu dòng cao bất thường, điện áp USB
-   sụt, hoặc có linh kiện nóng. Đo TP1–TP2: khoảng 3,3 V.
+2. Cấp nguồn qua USB tester đặt trên cáp cổng USB native, và chỉ cắm cáp này khi ghi
+   dòng: cắm thêm cáp UART thì dòng chia cho hai cổng và số đo không so được với
+   [power_budget_v1.md](../../configs/hardware/power_budget_v1.md). Ghi dòng lúc cắm
+   (trước khi host cấu hình thiết bị) và dòng ổn định; so với dòng của DevKitC đứng
+   riêng ở mục 2. Rút USB ngay nếu dòng cao bất thường, điện áp USB
+   sụt, hoặc có linh kiện nóng. Mức tham chiếu: ước lượng cả hệ khoảng 61 mA điển hình
+   ([power_budget_v1.md](../../configs/hardware/power_budget_v1.md)); ở bước này chưa có
+   breakout và bo cổ tay nên phải thấp hơn. Đo TP1–TP2: khoảng 3,3 V.
 3. LED D1 nháy theo nhịp 0,5 s của firmware khung.
 4. TP6 ở mức cao khi nhả SW1, mức thấp khi nhấn. Mỗi lần nhấn SW1, log UART0 in
    `t0 event` và luồng packet có một packet `0xC1`.
@@ -168,6 +178,11 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    4, 6, 8, 10, 12, 14; chân 1 (3V3) không chập GND.
 2. Cắm cáp vào J2 và J1 (đúng khe khóa), cấp nguồn lại qua USB tester, theo dõi
    dòng như mục 6. Đo 3V3 tại chân C2 của bo cổ tay (bo cổ tay không có test point).
+   Ghi dòng 5 V USB ổn định khi LED PPG ở mã mặc định và ở 0x7F, so với
+   [power_budget_v1.md](../../configs/hardware/power_budget_v1.md) (khoảng 61 và 112 mA).
+   Chụp dòng khởi động bằng oscilloscope qua điện trở shunt nối tiếp đường 5 V, vì USB
+   tester không bắt được xung nạp trước khoảng 500 mA, 400 µs của boost PAM2401
+   (thêm 2026-10-26).
 3. Nguồn LED của MAX30101 (net 5V trên bo SparkFun), theo A.6 mục 3:
    - khi không tải: khoảng 5,1 V danh định;
    - lúc khởi động: quá áp, chụp bằng oscilloscope;
@@ -212,6 +227,13 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    - sườn lên I²C ≤ 300 ns ở cả hai phía bộ chuyển mức trên bo SparkFun;
    - sườn giả trên `PPG_SCL`, `T0_BTN`, `ECG_CS` khi `BMI_SCK` và `LED_STAT` đảo
      liên tục.
+9. Chạy cả hệ 75 phút như một buổi đo (chỉ cáp USB native, laptop chạy pin, LED PPG ở
+   mã cao nhất định dùng, chưa gắn lên người), mỗi 15 phút ghi dòng 5 V USB, 3V3 tại
+   TP1–TP2 và nhiệt độ vỏ LDO SGM2212 của DevKitC (nhiệt kế hồng ngoại hay cặp nhiệt),
+   kèm nhiệt độ phòng. Đạt khi dòng và 3V3 ổn định và nhiệt độ LDO thôi tăng trước khi
+   hết buổi; tăng liên tục hay 3V3 sụt thì dừng và xét lại mã LED tối đa
+   ([power_budget_v1.md](../../configs/hardware/power_budget_v1.md) mục 4; thêm
+   2026-10-26).
 
 ## 9. Đo đồng bộ 10 phút
 

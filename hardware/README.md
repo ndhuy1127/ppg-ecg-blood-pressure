@@ -22,6 +22,7 @@
 Tài liệu cấu hình liên quan ở `configs/hardware/`: yêu cầu V0,
 [sơ đồ khối V1-module](../configs/hardware/hardware_diagram_v1.svg),
 [nguồn/giao tiếp/lấy mẫu](../configs/hardware/interface_power_sampling_v0.md),
+[ước lượng dòng so với cổng USB](../configs/hardware/power_budget_v1.md),
 [V1 dùng module và bản chip trần](../configs/hardware/custom_board_proposal.md) và
 packet schema [V0.1](../configs/hardware/Packet_Schema_V0.1.md) và bản sửa đổi
 [V0.2](../configs/hardware/Packet_Schema_V0.2.md) mà firmware V1 dùng.
