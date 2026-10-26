@@ -84,10 +84,13 @@ def write_subset(path, rows, optional=True, chunk_rows=2):
     return path
 
 
-def subsample_split_config(tmp_path, n_pool=30, per_subject=3, n_subjects=20, seed=5):
-    """Pool file + split-v2 config with an explicit subject subsample."""
-    raw = write_subset(tmp_path / "SYN_pool.mat",
-                       synthetic_rows(n_subjects=n_pool, per_subject=per_subject))
+def subsample_split_config(tmp_path, n_pool=30, per_subject=3, n_subjects=20, seed=5,
+                           rows=None):
+    """Pool file (``rows``, else synthetic_rows) + split-v2 config with an explicit
+    subject subsample."""
+    if rows is None:
+        rows = synthetic_rows(n_subjects=n_pool, per_subject=per_subject)
+    raw = write_subset(tmp_path / "SYN_pool.mat", rows)
     config = {
         "schema_version": VERSION, "input_path": raw.name,
         "input_sha256": file_sha256(raw), "source": "SYN_pool.mat",

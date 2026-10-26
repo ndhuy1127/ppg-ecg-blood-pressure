@@ -29,23 +29,15 @@ def _git(repo, *args):
         return None
 
 
-def run(raw_path, split_dir, config_path, output, repo):
-    """Validate every input before fitting; write a new output directory only."""
-    from software._provenance import text_file_sha256, text_sha256
+def load_split(raw_path, split_dir):
+    """Check a split-v2 handover against the raw file before anything is read.
+
+    Returns ``(payloads, split_report, raw_sha256, inventory, manifest,
+    pool_decision)``. Also used by ``scripts/run_b2_pulsedb.py``.
+    """
     from software.data_io.split_manifest import (
         VERSION as SPLIT_VERSION, file_sha256, read_manifest_bytes,
     )
-    from software.pulsedb.h5_reader import PulseDBH5Reader
-    from software.pulsedb.pipeline import (
-        VERSION_V1, baseline_table, load_config, run_baselines,
-    )
-    from software.pulsedb.reader import PulseDBReader
-
-    output = Path(output)
-    if output.exists():
-        raise FileExistsError("Output directory already exists; refusing overwrite")
-    config_bytes = Path(config_path).read_bytes()
-    config = load_config(config_bytes)
 
     split_dir = Path(split_dir)
     payloads = {name: (split_dir / name).read_bytes() for name in SPLIT_FILES}
@@ -73,6 +65,26 @@ def run(raw_path, split_dir, config_path, output, repo):
     manifest = read_manifest_bytes(payloads["manifest.csv"])
     if set(inventory.source_sha256) != {raw_sha256}:
         raise ValueError("Inventory source_sha256 differs from the raw file")
+    return payloads, split_report, raw_sha256, inventory, manifest, pool_decision
+
+
+def run(raw_path, split_dir, config_path, output, repo):
+    """Validate every input before fitting; write a new output directory only."""
+    from software._provenance import text_file_sha256, text_sha256
+    from software.data_io.split_manifest import file_sha256
+    from software.pulsedb.h5_reader import PulseDBH5Reader
+    from software.pulsedb.pipeline import (
+        VERSION_V1, baseline_table, load_config, run_baselines,
+    )
+    from software.pulsedb.reader import PulseDBReader
+
+    output = Path(output)
+    if output.exists():
+        raise FileExistsError("Output directory already exists; refusing overwrite")
+    config_bytes = Path(config_path).read_bytes()
+    config = load_config(config_bytes)
+    payloads, split_report, raw_sha256, inventory, manifest, pool_decision = (
+        load_split(raw_path, split_dir))
 
     v1 = config["schema_version"] == VERSION_V1
     if not v1 and split_report.get("subject_subsample") is not None:
