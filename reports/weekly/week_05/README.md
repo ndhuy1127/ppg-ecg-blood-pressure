@@ -1,7 +1,7 @@
 # Báo cáo tiến độ Tuần 5
 
-> **Giai đoạn:** Tuần 5 / 28 tuần (2026-10-20 → 2026-10-24; phần ngày 2026-10-24 ở
-> cuối mục 3)
+> **Giai đoạn:** Tuần 5 / 28 tuần (2026-10-20 → 2026-10-24; các cập nhật tới
+> 2026-10-28 ở cuối mục 3)
 >
 > **Thành viên:** Linh, Trương Đức Anh, Nguyễn Đức Huy
 
@@ -201,7 +201,7 @@ Không đo trên người trong tuần này.
   Lệnh `gate` mới chỉ kết luận `B4_ALLOWED` khi đạt cả ba điều kiện: chọn được
   phương pháp, xác nhận được phương pháp đó, và độ lặp lại đạt.
 - **Đã xuất 80 đoạn** (`main/`) và 16 đoạn lặp lại (`repeat/`), chạy sẵn cả năm
-  detector và in hình mù (mục 6.5). Bước đánh dấu tay đang chờ Huy làm.
+  detector và in hình mù (mục 6.5). Bước đánh dấu tay chưa làm.
 - **Cấu hình bộ lọc của PulseDB** (Supplementary Material): ECG Butterworth
   [0,5; 40] Hz, PPG Chebyshev-II [0,5; 8] Hz, chuẩn hóa [0, 1] theo từng đoạn. Vẫn
   chưa biết lọc zero-phase hay causal.
@@ -210,6 +210,57 @@ Không đo trên người trong tuần này.
   ECG–PPG trong VitalDB lệch khoảng 350 ms (nguồn thứ cấp). Vì vậy PAT PulseDB chỉ
   dùng được như đặc trưng tương đối, và giới hạn 80–400 ms phải xem lại trước khi
   làm B4 ([provenance](../../../docs/pulsedb_provenance.md) mục 6).
+
+### Cập nhật ngày 2026-10-26 → 2026-10-28
+
+**Phần mềm (commit `3111a9e`, 2026-10-26)**
+
+- **B2** (nhân khẩu học cộng HR từ đỉnh R của ECG): định nghĩa, code và test
+  SYNTHETIC; chạy theo hai bảng định trước `full` và `hr_available`
+  ([định nghĩa B2](../../../docs/protocol/b2_pulsedb_definition.md)). **Chưa chạy trên
+  PulseDB:** định nghĩa chưa duyệt, runner từ chối khi config còn ở trạng thái
+  `PENDING_APPROVAL_NOT_RUN`.
+
+**Firmware và logger (2026-10-25 → 2026-10-26)**
+
+- **Lệnh PC → thiết bị** (`ping`, `set-ppg-led`) qua `device_command.py` trong lúc
+  `record --commands`; packet cấu hình AFE `0xD2` và xác nhận lệnh `0xD3` (Packet
+  Schema V0.2 mục 12–13); logger nâng lên `packet-logger-v2`.
+- **Sự kiện mã 3:** xung kích thích ở GPIO6 (header J3) cho phép đo đồng bộ 10 phút
+  ([kế hoạch đo](../../../hardware/test_reports/sync_10min_test_plan.md)).
+- Các phần trên test trên máy tính, chưa chạy trên chip.
+- **Ước lượng dòng** có nguồn datasheet
+  ([power_budget_v1.md](../../../configs/hardware/power_budget_v1.md)): khoảng 61 mA điển
+  hình, kịch bản xấu khoảng 112 mA trung bình và 206 mA trong xung LED; chưa đo.
+
+**Phần cứng (2026-10-27 → 2026-10-28)**
+
+- **MCU đổi sang bo Waveshare ESP32-S3-DEV-KIT-N8R8-M** (module ESP32-S3-WROOM-1-N8R8,
+  một cổng USB-C qua hub CH334 và CH343, chân giống DevKitC-1); **đã đặt 2026-10-27**.
+- **KiCad V1-draft5:**
+  - viền U1 theo bo Waveshare (63,30 × 25,40 mm);
+  - breakout MAX30001 dời 0,5 mm sang trái;
+  - 3V3 hình sao, nhánh ECG từ U1.1 và nhánh cáp từ U1.2;
+  - silkscreen `CHIP SIDE OUT` cho BMI270 ở mặt dưới bo cổ tay.
+
+  ERC 0 lỗi. DRC 0 lỗi, 0 chỗ chưa nối, khớp schematic.
+- **Đối chiếu toàn bộ 30 footprint** (2026-10-27):
+  - 26 footprint chuẩn giống thư viện KiCad 10;
+  - 4 footprint module khớp file Eagle của ProtoCentral và SparkFun và bản vẽ Waveshare, sai số 0 mm;
+  - BMI270 ở mặt dưới đúng cho cách lắp mặt chip quay ra ngoài.
+
+  Codex rà soát độc lập: không có lỗi phải sửa PCB.
+- **Gerber và file khoan V1-draft5** xuất ngày 2026-10-27, không lưu trong repo.
+  - Đã kiểm: mọi lỗ khoan khớp pad/via; lỗ mạ có đồng hai lớp; pad có lỗ mở mask.
+  - Đặt ở CXT thành hai thiết kế riêng, 5 tấm mỗi mạch.
+- **Lưu ý lắp ráp** ghi vào [bring-up](../../../hardware/test_reports/v1_bringup_procedure.md)
+  và [danh sách mua](../../../hardware/bom/purchase_list_v1_module.md):
+  - box header 90° của bo cổ tay phải có khe khóa ở vách xa mặt PCB;
+  - hàn header breakout ECG từ mặt dưới;
+  - cực LED D1;
+  - vít, đai ốc và spacer nylon M2;
+  - đo thông mạch xuyên cả hệ trước khi cấp nguồn (bring-up mục 8.1).
+- So sánh hai phương án điện cực ECG chuyển từ PDF sang Markdown.
 
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
@@ -252,10 +303,17 @@ Không đo trên người trong tuần này.
 | 35 | Reader `h5py` và split Train 400 người (2026-10-25) | Huy | [h5_reader.py](../../../software/pulsedb/h5_reader.py), [run_pulsedb_split.md](../../../docs/protocol/run_pulsedb_split.md), [pulsedb_train400_split.json](../../../configs/data/pulsedb_train400_split.json) |
 | 36 | `b3-pipeline-v1` và kết quả B0/B3 trên val (2026-10-25) | Huy | [run_b3_pulsedb.md](../../../docs/protocol/run_b3_pulsedb.md), [b3_pulsedb_v1.json](../../../configs/models/b3_pulsedb_v1.json), [pulsedb_b3_v1/](pulsedb_b3_v1/README.md) |
 | 37 | Kế hoạch đánh dấu tay, ngưỡng chấp nhận, lệnh `repeat`/`gate`, `annotate --resume` (2026-10-25) | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) mục 9, [fiducial_gate.py](../../../software/evaluation/fiducial_gate.py), [week05_huy.json](../../../configs/data/week05_huy.json) |
+| 38 | B2: định nghĩa, code, test SYNTHETIC; chưa chạy (2026-10-26) | Huy | [b2_pulsedb_definition.md](../../../docs/protocol/b2_pulsedb_definition.md), [b2_pulsedb_v0.json](../../../configs/models/b2_pulsedb_v0.json), [features_b2.py](../../../software/pulsedb/features_b2.py), [pipeline_b2.py](../../../software/pulsedb/pipeline_b2.py), [run_b2_pulsedb.py](../../../scripts/run_b2_pulsedb.py), [test_b2_pipeline.py](../../../tests/test_b2_pipeline.py) |
+| 39 | Lệnh PC → thiết bị, packet `0xD2`/`0xD3`, `packet-logger-v2` | Phần cứng và firmware | [device_command.py](../../../scripts/device_command.py), [command_desk.py](../../../software/data_io/command_desk.py), [command_wire.py](../../../software/data_io/command_wire.py), [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) mục 12–13 |
+| 40 | Sự kiện mã 3 và kế hoạch đo đồng bộ 10 phút | Firmware | [stim_plan.c](../../../firmware/app/stim_plan.c), [sync_10min_test_plan.md](../../../hardware/test_reports/sync_10min_test_plan.md) |
+| 41 | Ước lượng dòng V1-module | Phần cứng | [power_budget_v1.md](../../../configs/hardware/power_budget_v1.md) |
+| 42 | KiCad V1-draft5 và đối chiếu footprint với module thật (2026-10-27) | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3 |
+| 43 | Danh sách mua và bring-up cập nhật theo bo Waveshare và lưu ý lắp ráp (2026-10-27) | Phần cứng | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md), [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
+| 44 | So sánh hai phương án điện cực ECG (Markdown) | Phần cứng | [Hai_phuong_an_dien_cuc_ECG.md](../../../hardware/Hai_phuong_an_dien_cuc_ECG.md) |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
-### 5.1. Trạng thái G1 (đánh giá ngày 2026-10-21, cập nhật 2026-10-25)
+### 5.1. Trạng thái G1 (đánh giá ngày 2026-10-21, cập nhật 2026-10-28)
 
 | Hạng mục | Trạng thái | Bằng chứng |
 | --- | --- | --- |
@@ -263,7 +321,7 @@ Không đo trên người trong tuần này.
 | Split theo người có test rò rỉ | Có | `pulsedb-split-v2`, `tests/test_split_manifest.py` |
 | Baseline đầu tiên | Có (val) | B0/B3 `b3-pipeline-v1` trên PulseDB Train 400 người, val 40 người, CI bootstrap theo người (mục 6.4); B1 chưa chạy (không có chronology); test và CalFree chưa chấm |
 | Đặc trưng/SQI/bootstrap | Có (SYNTHETIC) | `features-sqi-v1`, `subject_bootstrap.py`, mốc thứ hai Tuần 5 |
-| PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-draft4 qua ERC/DRC, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút, firmware khung gửi Packet Schema V0.2 build được và logger đọc được (cập nhật 2026-10-24); chưa có module, chưa chạy firmware trên bo, chưa có bản ghi trên phần cứng |
+| PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-draft5 qua ERC/DRC, footprint đã đối chiếu với module thật, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút, firmware khung gửi Packet Schema V0.2 build được và logger đọc được. Bo Waveshare đã đặt, PCB đang đặt (2026-10-28); chưa có module trong tay, chưa chạy firmware trên bo, chưa có bản ghi trên phần cứng |
 | Hồ sơ đạo đức | Bản nháp v0.1 | `docs/ethics/` |
 
 G1 phần mềm đạt phần baseline trên val (2026-10-25); G1 phần cứng chưa đạt.
@@ -472,22 +530,23 @@ bên nào đúng. Chưa có kết quả chấm ngưỡng nào: bảng sẽ có s
 ## 7. Mốc đóng Tuần 5 và việc chuyển sang Tuần 6
 
 Đánh giá ngày 2026-10-25 theo mục "Mốc đóng tuần" của
-[kế hoạch Tuần 5](../../../docs/plans/WEEK_05.md).
+[kế hoạch Tuần 5](../../../docs/plans/WEEK_05.md), cập nhật trạng thái ngày 2026-10-28.
 
 | Mốc đóng tuần | Trạng thái | Người xử lý | Chuyển sang |
 | --- | --- | --- | --- |
 | Bảng B0/B3 trên raw có CI | Đạt trên val (mục 6.4). Test của split và CalFree chưa chấm; chỉ chấm khi model đã khóa | Huy | — |
-| Module đã đặt mua | **Chưa đạt**: [danh sách mua](../../../hardware/bom/purchase_list_v1_module.md) ở trạng thái chờ duyệt, chưa đặt hàng | Huy | Tuần 6, việc đầu tiên |
-| A.6 đóng, một pin map chuẩn | Đạt: pin map A.7, KiCad V1-draft4 qua ERC/DRC. Độ rộng xung LED (411 hay 215 µs) chờ số đo bring-up | Phần cứng và firmware | Độ rộng xung: khi bring-up |
-| Đặt gia công PCB V1 | Chưa: đã có gói file gia công và tờ kiểm footprint tỉ lệ 1:1; chưa in để kiểm, chưa đặt | Huy | Tuần 6 |
-| Firmware khung gửi packet tới logger | Đạt một phần: firmware V0.2 build được, logger đọc đúng luồng dựng theo quy ước firmware (mục 6.1, 6.2). Chưa chạy trên DevKitC thật | Phần cứng và firmware, Linh | Khi nhận DevKitC |
-| Hồ sơ đạo đức sẵn sàng nộp | Chưa: bản nháp v0.1 đủ năm file, còn các ô chờ thầy/hội đồng | Huy | Tuần 6, sau khi thầy trả lời |
+| Module đã đặt mua | **Đạt một phần** (2026-10-28): bo Waveshare ESP32-S3-DEV-KIT-N8R8-M đã đặt 2026-10-27; MAX30001, MAX30101, BMI270 và điện cực chưa đặt ([danh sách mua](../../../hardware/bom/purchase_list_v1_module.md)) | Huy | Tuần 6 |
+| A.6 đóng, một pin map chuẩn | Đạt: pin map A.7, KiCad V1-draft5 qua ERC/DRC, footprint đối chiếu với module thật (2026-10-27). Độ rộng xung LED (411 hay 215 µs) chờ số đo bring-up | Phần cứng và firmware | Độ rộng xung: khi bring-up |
+| Đặt gia công PCB V1 | **Đang đặt** (2026-10-28): Gerber V1-draft5 đã xuất và kiểm; đặt ở CXT thành hai thiết kế riêng, 5 tấm mỗi mạch; chưa có ngày giao | Huy | Tuần 6 |
+| Firmware khung gửi packet tới logger | Đạt một phần: firmware V0.2 build được, logger đọc đúng luồng dựng theo quy ước firmware (mục 6.1, 6.2); thêm lệnh PC → thiết bị và sự kiện mã 3 (2026-10-26). Chưa chạy trên bo thật | Phần cứng và firmware, Linh | Khi nhận bo Waveshare |
+| Hồ sơ đạo đức sẵn sàng nộp | Chưa: bản nháp v0.1 đủ năm file, còn các ô `[...]` chưa điền | Huy | Tuần 6 |
 | Sơ đồ phân bổ tay được xác nhận | Đạt (2026-10-23, protocol v0.2 mục 5.2) | — | — |
-| Bảng sai số mốc so với đánh dấu tay | Chưa: kế hoạch, ngưỡng và bộ 80 đoạn đã sẵn (mục 6.5); chờ đánh dấu | Huy | Tuần 6 (lần 1); lần 2 sau ít nhất 2 ngày |
+| Bảng sai số mốc so với đánh dấu tay | Chưa: kế hoạch, ngưỡng và bộ 80 đoạn đã sẵn (mục 6.5); chưa đánh dấu tay | Huy | Tuần 6 (lần 1); lần 2 sau ít nhất 2 ngày |
 
 **G1:** phần mềm đạt (baseline trên val, pipeline và split có kiểm rò rỉ); phần cứng
-chưa đạt (chưa có module, chưa có bản ghi ECG–PPG đồng bộ). Đường găng vẫn là phần
-cứng, nên Tuần 6 ưu tiên việc mua hàng và đặt PCB, trước mọi việc phần mềm.
+chưa đạt (mới đặt bo Waveshare và đang đặt PCB, chưa có bản ghi ECG–PPG đồng bộ). Đường
+găng vẫn là phần cứng, nên Tuần 6 ưu tiên đặt nốt module và nhận PCB, trước mọi việc
+phần mềm.
 
 **Câu hỏi cho thầy (mang theo đầu Tuần 6):**
 
@@ -503,8 +562,9 @@ cứng, nên Tuần 6 ưu tiên việc mua hàng và đặt PCB, trước mọi 
 viết 2026-10-25 trước khi có chip, mỗi chip có bản build riêng `ecg_real`, `ppg_real`,
 `imu_real`; [firmware/README.md](../../../firmware/README.md)); bring-up
 theo [trình tự V1-module](../../../hardware/test_reports/v1_bringup_procedure.md); đo
-đồng bộ 10 phút; chốt độ rộng xung LED; chọn cách đo dòng rò. Ngày giao hàng chưa
-có, nên chưa xếp được tuần cho các việc này.
+đồng bộ 10 phút; chốt độ rộng xung LED; chọn cách đo dòng rò. Bo Waveshare đã đặt,
+PCB đang đặt, các module còn lại chưa đặt; chưa có ngày giao nên chưa xếp được tuần cho
+các việc này.
 
 **B4 (PAT trên PulseDB):** chỉ làm khi lệnh `gate` cho `B4_ALLOWED`. Trước khi làm
 còn phải quyết cách ghép R–foot và giới hạn PAT cho PulseDB, vì PPG có vẻ trễ
