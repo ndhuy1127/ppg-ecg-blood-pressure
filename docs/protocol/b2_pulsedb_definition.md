@@ -1,6 +1,6 @@
 # Định nghĩa B2 trên PulseDB: nhân khẩu học cộng HR
 
-> **Trạng thái:** đề xuất ngày 2026-10-26, **chờ Huy duyệt**. Code và test SYNTHETIC
+> **Trạng thái:** đề xuất ngày 2026-10-26, **chưa duyệt**. Code và test SYNTHETIC
 > đã có (mục 8), chưa chạy trên PulseDB, chưa có số B2 nào. Định nghĩa này phải được duyệt và commit **trước** khi tính
 > bất kỳ số B2 nào trên val (kế hoạch Tuần 6, việc 2 của Huy). Sau khi đã thấy kết quả
 > thì không đổi đặc trưng, bộ dò, ngưỡng, learner hay phép so sánh; nếu phải đổi thì
@@ -125,7 +125,7 @@ vì kết quả SYNTHETIC Tuần 5 cho thấy nó bắt đỉnh T.
   `PENDING_APPROVAL_NOT_RUN` và `APPROVED_NOT_TEST_EVALUATED`; giá trị khác (rỗng, gõ
   sai) làm config bị từ chối. Runner chỉ chạy với `APPROVED_NOT_TEST_EVALUATED`, và chỉ
   khi config cùng file định nghĩa này đã được Git theo dõi và không khác `HEAD`; nếu
-  không thì dừng trước khi đọc raw. Khi Huy duyệt, đổi `status` trong một commit riêng
+  không thì dừng trước khi đọc raw. Khi duyệt xong, đổi `status` trong một commit riêng
   rồi mới chạy, để lịch sử Git cho thấy định nghĩa có trước số liệu. Runner không có
   tham số bỏ qua chốt này; file bị symlink không được tính là đã commit. Test SYNTHETIC
   (config nằm ngoài repo) thay phép kiểm Git bằng `monkeypatch`.

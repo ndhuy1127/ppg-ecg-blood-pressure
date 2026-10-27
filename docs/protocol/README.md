@@ -28,7 +28,7 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Tạo inventory và split PulseDB](run_pulsedb_split.md)
 - [Chạy B0/B3 trên PulseDB split v2](run_b3_pulsedb.md)
 - [Định nghĩa B2 trên PulseDB](b2_pulsedb_definition.md): nhân khẩu học cộng HR,
-  hai bảng so sánh định trước; đề xuất 2026-10-26, chờ Huy duyệt; code có, chưa chạy
+  hai bảng so sánh định trước; đề xuất 2026-10-26, chưa duyệt; code có, chưa chạy
 - [Sinh và replay packet giả lập](packet_simulation.md): `synthetic-packet-v2`
   (JSON) và `synthetic-packet-v3` (luồng byte theo Packet Schema V0.1)
 - [Logger packet phía máy tính](packet_logger.md): decoder `SYNC`/CRC16, kiểm tra

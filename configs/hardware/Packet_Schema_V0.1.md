@@ -218,7 +218,7 @@ khoảng cách cạnh lên giữa hai khe liên tiếp là 427 / 525 / 720 / 1 1
 rộng xung 69 / 118 / 215 / 411 µs (MAX30102 tr. 25, Bảng 14; MAX30101 tr. 22,
 Bảng 11). Khe thứ j lệch khoảng (j−1) lần giá trị này so với khe 1. Logger hiện
 không dựng thời gian từng khe (`samples.csv` chỉ có chỉ số mẫu), nên chưa cộng độ
-lệch này; cộng ở bước nào và theo quy ước nào chờ Huy duyệt (sửa 2026-10-25: bản
+lệch này; cộng ở bước nào và theo quy ước nào còn mở (sửa 2026-10-25: bản
 trước ghi receiver đã cộng).
 
 ## 8. Dữ liệu và đơn vị

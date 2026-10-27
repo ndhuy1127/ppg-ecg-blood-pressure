@@ -47,7 +47,7 @@ Nhóm làm rõ định hướng khoa học chủ đạo:
 |---|---|---|---|
 | **Linh** | Chuẩn hóa repository, môi trường Python, thiết lập CI, quy ước dữ liệu và tên file | Repository cấu trúc chuẩn, CI passing, tài liệu quy ước | *[CẦN LINH XÁC NHẬN BẰNG CHỨNG TRONG REPO]* |
 | **Đức Anh** | Chốt yêu cầu phần cứng, lập BOM v0.1, đề xuất $\ge 2$ phương án điện cực ECG, danh sách linh kiện | BOM v0.1, sơ đồ khối phần cứng, tài liệu phương án điện cực | *[CẦN ĐỨC ANH XÁC NHẬN BẰNG CHỨNG TRONG REPO]* |
-| **Huy** | Lập ma trận 10–12 bài báo, chốt bản thảo RQ1–RQ3, khung protocol v0.1, khung hồ sơ đạo đức v0.1, biên bản họp và báo cáo tuần | `week_01_literature_matrix.md`, `research_questions_v0.1.md`, `protocol_outline_v0.1.md`, `ethics_outline_v0.1.md`, `week_01_kickoff.md`, `reports/weekly/week_01/README.md` | Đã hoàn thành bản thảo v0.1, chờ nhóm review |
+| **Huy** | Lập ma trận 10–12 bài báo, chốt bản thảo RQ1–RQ3, khung protocol v0.1, khung hồ sơ đạo đức v0.1, biên bản họp và báo cáo tuần | `week_01_literature_matrix.md`, `research_questions_v0.1.md`, `protocol_outline_v0.1.md`, `ethics_outline_v0.1.md`, `week_01_kickoff.md`, `reports/weekly/week_01/README.md` | Đã hoàn thành bản thảo v0.1 |
 
 ---
 
@@ -86,7 +86,7 @@ Nhóm làm rõ định hướng khoa học chủ đạo:
 
 1. **Cấu hình hiện hành:** Python 3.11 theo `pyproject.toml` (`>=3.11,<3.12`) và CI. Chưa hỗ trợ chính thức Python 3.13. Phụ thuộc được ghi trong `requirements.txt` và `environment.yml`; kiểm tra dùng Ruff và pytest. Sự tồn tại của workflow không chứng minh CI hiện tại đạt.
 2. **Quyết định 2 (Cấu trúc thư mục):** Tổ chức theo chức năng kỹ thuật (`hardware/`, `firmware/`, `software/`, `docs/`, `reports/`), tuyệt đối không tạo thư mục cá nhân theo tên người.
-3. **Định hướng đề xuất:** Dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ sau hiệu chuẩn cá nhân theo RQ v0.1, chờ nhóm/giảng viên xác nhận. Không nghiên cứu calibration-free trong phạm vi này; không suy rộng thành tuyên bố mọi phương pháp calibration-free đều bất khả thi.
+3. **Định hướng đề xuất:** Dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ sau hiệu chuẩn cá nhân theo RQ v0.1. Không nghiên cứu calibration-free trong phạm vi này; không suy rộng thành tuyên bố mọi phương pháp calibration-free đều bất khả thi.
 4. **Quyết định 4 (Nguyên tắc dữ liệu tuần 1):** Tuần 1 tuyệt đối không tuyển người hay thu dữ liệu thật.
 
 ---

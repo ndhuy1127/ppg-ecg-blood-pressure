@@ -590,7 +590,7 @@ của Codex cùng ngày (thiết kế, rồi code).
 
 ## 12. Packet cấu hình AFE `0xD2` (sửa đổi 2026-10-25)
 
-Quyết định ngày 2026-10-25 (chờ Huy duyệt; thiết kế đã qua phản biện của Codex): cấu
+Quyết định ngày 2026-10-25 (thiết kế đã qua phản biện của Codex): cấu
 hình thật của từng AFE đi **trong** luồng raw, như thông tin thiết bị `0xD1`, để biết
 chip đã chạy với thanh ghi nào và nguồn của từng kênh (chip thật hay nguồn giả) khi một
 bản build trộn hai loại. Metadata mục 8 do người vận hành viết vẫn giữ nguyên; logger
@@ -670,7 +670,7 @@ thái ấy được gửi lại kèm bit 1). Số thứ tự trạng thái là 6
 
 ## 13. Lệnh từ PC và packet xác nhận `0xD3` (sửa đổi 2026-10-25)
 
-Quyết định ngày 2026-10-25 (chờ Huy duyệt; thiết kế đã qua phản biện của Codex): PC gửi
+Quyết định ngày 2026-10-25 (thiết kế đã qua phản biện của Codex): PC gửi
 lệnh xuống qua chính cổng USB Serial/JTAG của luồng packet. Mục đích trước hết là hiệu
 chuẩn dòng LED PPG theo người (protocol v0.2 mục 6.1): buổi đầu chỉnh rồi khóa, các
 buổi sau PC gửi lại đúng các mã đã khóa ngay đầu phiên. Firmware không lưu dòng LED qua

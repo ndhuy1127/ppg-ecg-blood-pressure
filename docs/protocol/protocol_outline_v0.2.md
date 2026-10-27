@@ -68,7 +68,7 @@
 > - 4.3 chưa có L5 (cổ tay, cẳng tay trái, bắp tay phải), L7 (không đo được BP tay
 >   phải), L8 và L9.
 >
-> Cần thống nhất trước khi nộp hồ sơ (**chờ quyết định**, cần chuyên môn y tế).
+> Cần thống nhất trước khi nộp hồ sơ (**chưa quyết định**, cần chuyên môn y tế).
 > Độ tuổi 18–35 là đề xuất của nhóm, chưa có nguồn.
 
 ### 4.2. Tiêu chí lựa chọn (Inclusion Criteria)
@@ -87,18 +87,18 @@
 ## 5. Bố trí thiết bị, điện cực và tư thế đo
 
 > [!IMPORTANT]
-> **Mục 5 và mục 6.4–6.5: đề xuất của Huy (2026-10-21).** Phân bổ tay, số và vị
-> trí điện cực, cực tính (5.1, 5.2) đã xác nhận về phần cứng ngày 2026-10-23. Các
-> nghiệm pháp ở 6.4 còn chờ thầy và hội đồng đạo đức chấp thuận. Chưa đo trên
+> **Mục 5 và mục 6.4–6.5: đề xuất ngày 2026-10-21.** Phân bổ tay, số và vị
+> trí điện cực, cực tính (5.1, 5.2) đã chốt về phần cứng ngày 2026-10-23. Các
+> nghiệm pháp ở 6.4 chưa được hội đồng đạo đức duyệt. Chưa đo trên
 > người, kể cả thành viên nhóm. Kiểm tra xung đột ở 5.4 là kiểm tra trên giấy;
-> dòng "chưa kiểm chứng" cần bản ghi bench/G2.
+> dòng "chưa kiểm chứng" cần bản ghi bring-up/G2.
 
 ### 5.1. Thiết bị V1-module
 
 Theo [custom_board_proposal.md, Phần A](../../configs/hardware/custom_board_proposal.md):
 
 - **Bo cảm biến cổ tay** 40,4 × 31,5 mm, gắn dây velcro 20 mm: PPG SparkFun
-  MAX30101 (SEN-16474, ba kênh xanh lá, đỏ, IR; **nhóm đã chọn**, Huy xác nhận
+  MAX30101 (SEN-16474, ba kênh xanh lá, đỏ, IR; **đã chọn**
   2026-10-22), IMU BMI270; V1 không dùng FSR (chốt 2026-10-23). Nối bo đế bằng cáp
   dẹt 16 dây dài dự kiến 20–30 cm. Pin map chuẩn: KiCad V1-module
   (`configs/hardware/custom_board_proposal.md` A.7, chốt 2026-10-23); danh sách
@@ -164,10 +164,10 @@ lên ngón tay. Chiều dài dây và việc dây không kéo bo PPG kiểm khi 
 - Ngồi tựa lưng thoải mái trên ghế có tựa, hai bàn chân đặt phẳng trên sàn, hai chân không bắt chéo (trừ khi làm M3/M4).
 - Cả hai cẳng tay đặt thả lỏng trên mặt bàn có đệm êm, giữ cho cổ tay đeo thiết bị và vùng đo bắp tay nằm **ngang mức tim**.
 - Không nói chuyện, không cử động ngón tay hay thay đổi tư thế trong suốt quá trình ghi tín hiệu và bơm xả cuff.
-- **Mâu thuẫn chưa giải quyết (review 2026-10-22):** M2 cần người tham gia trả lời
+- **Mâu thuẫn chưa giải quyết (ghi nhận 2026-10-22):** M2 cần người tham gia trả lời
   bằng lời, và 6.4 đo cuff "khi đang làm" M2. Cách trả lời (nói, hay cách khác
   không dùng tay), thời điểm được nói và việc có đo cuff khi đang nói hay không:
-  **chờ quyết định**. Cần vẽ trục thời gian M2 trước khi nộp hồ sơ.
+  **chưa quyết định**. Cần vẽ trục thời gian M2 trước khi nộp hồ sơ.
 
 ### 5.4. Kiểm tra xung đột (2026-10-21, trên giấy; sửa 2026-10-22)
 
@@ -204,8 +204,8 @@ Kết luận (trên giấy, 2026-10-22):
    30–70% thang đo ADC (16 384 nA), không bão hòa và không tràn khử ánh sáng môi
    trường; khóa giá trị đó cho người này ở **mọi buổi sau**, để biên độ PPG giữa các
    buổi của cùng người còn so sánh được (ΔBP cross-session). Firmware không tự chỉnh
-   trong lúc ghi; giá trị dùng ghi vào metadata phiên. Lệnh từ PC (2026-10-25, chờ
-   duyệt; Packet Schema V0.2 mục 13): `scripts/device_command.py set-ppg-led` trong lúc
+   trong lúc ghi; giá trị dùng ghi vào metadata phiên. Lệnh từ PC (2026-10-25;
+   Packet Schema V0.2 mục 13): `scripts/device_command.py set-ppg-led` trong lúc
    `record --commands`, mã theo bước 0,2 mA (xanh là mã mỗi nhánh), tối đa 127 (giới
    hạn tạm của firmware). Mỗi lệnh cấu hình lại chip nên tạo ranh giới chuỗi trong dữ
    liệu; dòng thật đang dùng nằm trong packet `0xD2` của luồng raw. Đoạn hiệu chuẩn và
@@ -236,7 +236,7 @@ Mỗi sự kiện đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, g�
 - Phải phân biệt timestamp **lấy mẫu**, timestamp **đọc FIFO** và thời điểm **nhận gói tại PC**. Counter MCU không tự loại bỏ độ trễ sensor/FIFO, sai lệch clock hoặc jitter. Cần ghi clock, đơn vị, tần số theo kênh, mất mẫu và cách suy ra thời điểm từng mẫu từ timestamp mẫu đầu gói.
 - Marker bắt đầu bơm cuff (`t0`) phải cùng clock hoặc có ánh xạ có thể kiểm tra. Không dịch PPG để trùng đỉnh R vì sẽ mất độ trễ cần tính PAT.
 
-### 6.4. Nghiệm pháp tạo ΔBP (đề xuất, chờ thầy/hội đồng chấp thuận)
+### 6.4. Nghiệm pháp tạo ΔBP (đề xuất, chưa được hội đồng đạo đức duyệt)
 
 Mục đích chung: mở rộng dải ΔBP so với mốc hiệu chuẩn, vì đo lúc nghỉ ở người
 trẻ cho ΔBP nhỏ và baseline zero-change khó bị vượt (mục 3). Mukkamala et al.
@@ -269,7 +269,7 @@ về gần nền": **chưa khóa, chưa có nguồn**. Đo cuff: trong M1 (phút
 M3 (khi đang làm, tay phải không tham gia), M4 (ngay sau khi dừng đạp). Mỗi lần
 đo cuff vẫn là một nhãn; nhiều cửa sổ trong cùng nghiệm pháp không thành nhiều nhãn.
 
-**Mâu thuẫn chưa giải quyết (review 2026-10-22), chờ quyết định trước khi nộp hồ sơ:**
+**Mâu thuẫn chưa giải quyết (ghi nhận 2026-10-22), phải quyết định trước khi nộp hồ sơ:**
 
 - **M4:** cửa sổ tín hiệu là 60 s ngay trước khi bơm cuff (6.2). Nếu cuff bơm
   "ngay sau khi dừng đạp", cửa sổ đó rơi vào lúc **đang đạp**, trái với K2. Cần
@@ -285,7 +285,7 @@ trung bình các lần cuff M0 cùng buổi; SBP và DBP riêng.
 | # | Tiêu chí | Nguồn của ngưỡng |
 | --- | --- | --- |
 | P1 | Báo cáo theo người và theo nghiệm pháp: median, IQR của ΔSBP/ΔDBP và tỷ lệ lần cuff có hướng thay đổi đúng như 6.4 | Hướng: nguồn ở 6.4. Không có ngưỡng đạt/không đạt cho tỷ lệ (**chưa có nguồn**) |
-| P2 | Median theo người của max \|ΔSBP\| qua các nghiệm pháp **≥ 15 mmHg**; thấp hơn thì báo giảng viên và rà protocol trước thu chính | Lấy từ dấu hiệu R3 của kế hoạch 28 tuần (tài liệu nội bộ ngoài repo, áp dụng ở thu chính) — **ngưỡng nội bộ, không có nguồn khoa học**. Định nghĩa ở đây (max, trong phiên, so với M0) **khác** câu "median ΔSBP theo người" ở [kịch bản bài báo](../paper_scenarios_v0.1.md): phải chọn **một** định nghĩa và khóa cùng lúc (**chờ quyết định**). Lấy max bị kéo lên bởi sai số đo cuff |
+| P2 | Median theo người của max \|ΔSBP\| qua các nghiệm pháp **≥ 15 mmHg**; thấp hơn thì báo giảng viên và rà protocol trước thu chính | Lấy từ dấu hiệu R3 của kế hoạch 28 tuần (tài liệu nội bộ ngoài repo, áp dụng ở thu chính) — **ngưỡng nội bộ, không có nguồn khoa học**. Định nghĩa ở đây (max, trong phiên, so với M0) **khác** câu "median ΔSBP theo người" ở [kịch bản bài báo](../paper_scenarios_v0.1.md): phải chọn **một** định nghĩa và khóa cùng lúc (**chưa quyết định**). Lấy max bị kéo lên bởi sai số đo cuff |
 | P3 | Báo SD của ΔBP tham chiếu và tỷ lệ \|ΔBP\| > 5 mmHg | [RQ v0.2, mục 4](../research_questions_v0.1.md) (quy ước nội bộ) |
 | P4 | Không tăng cường độ hay thời lượng nghiệm pháp ngoài bản đã duyệt để đạt P2 | Kế hoạch 28 tuần (nội bộ) |
 
@@ -402,17 +402,17 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 | ECG đạo trình I nhiễu, SNR thấp | Cao | Cao | Điện cực dán Ag/AgCl đạo trình I qua hai tay (LA mặt lòng cổ tay trái, RA mặt lòng cổ tay phải, RL cẳng tay trái; mục 5.2); thiết kế lọc dải thông khoảng $0.5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn); so sánh điện cực khô với Ag/AgCl dùng gel theo [yêu cầu phần cứng V0](../../configs/hardware/hardware_requirements_for_V0.md). |
 | Nhiễu trôi đường nền PPG do lỏng dây đeo | Trung bình | Trung bình | Bổ sung cơ chế hiển thị SQI trực quan trên giao diện thu thập; hướng dẫn kỹ thuật viên siết chặt vòng vừa đủ trước khi bắt đầu đếm ngược 60 giây. |
 | Biên độ biến thiên huyết áp tự nhiên giữa các phiên quá nhỏ ($< 5\text{ mmHg}$) | Trung bình | Cao | Nghiệm pháp ở mục 6.4 và tiêu chí kiểm ở pilot (6.5), chỉ khi đã được duyệt đạo đức. |
-| Người tham gia cử động tay trong khi đo | Cao | Trung bình | Hiển thị SQI và cờ cử động (`motion-sqi-v0`) cho người vận hành; khi có cử động trong cửa sổ trước cuff, người vận hành đánh dấu (sự kiện mã 4) và có thể đo lại sau thời gian nghỉ theo quy tắc an toàn. Mọi lượt, kể cả lượt cử động, vẫn giữ trong raw kèm cờ; việc loại khỏi phân tích dùng ngưỡng SQI khóa trước, không quyết lúc đang đo, để RQ3 có dữ liệu SQI kém (sửa 2026-10-26; bản trước ghi tự động hủy lượt đo, chờ Huy duyệt). |
+| Người tham gia cử động tay trong khi đo | Cao | Trung bình | Hiển thị SQI và cờ cử động (`motion-sqi-v0`) cho người vận hành; khi có cử động trong cửa sổ trước cuff, người vận hành đánh dấu (sự kiện mã 4) và có thể đo lại sau thời gian nghỉ theo quy tắc an toàn. Mọi lượt, kể cả lượt cử động, vẫn giữ trong raw kèm cờ; việc loại khỏi phân tích dùng ngưỡng SQI khóa trước, không quyết lúc đang đo, để RQ3 có dữ liệu SQI kém (sửa 2026-10-26; bản trước ghi tự động hủy lượt đo). |
 
 ---
 
-## 12. Danh mục việc cần nhóm và giảng viên xác nhận
+## 12. Việc còn mở trước protocol v1.0
 
 > [!IMPORTANT]
 > **Checklist trước khi hoàn thiện protocol v1.0:**
-> 1. [x] Phân bổ tay/điện cực (mục 5.2): phương án A, ba điện cực LA cổ tay trái, RA cổ tay phải, RL cẳng tay trái; cực tính LA → ECGP (xác nhận 2026-10-23). Còn kiểm K3–K5 ở mục 5.4 khi có module.
-> 2. [ ] Linh xác nhận cấu trúc gói dữ liệu nhị phân/JSON truyền từ thiết bị vào máy tính có trường lưu `subject_id`, `session_id`, `event_id` và timestamp vi giây.
-> 3. [ ] Thống nhất nhãn hiệu và model máy đo huyết áp bắp tay đối chứng dùng trong phòng thí nghiệm.
-> 4. [ ] Xin ý kiến giảng viên hướng dẫn về quy trình làm việc với hội đồng đạo đức trước khi tuyển tình nguyện viên.
-> 5. [ ] Đối chiếu khác biệt sampling, timestamp lấy mẫu/FIFO/nhận gói, clock và marker cuff với packet schema; ghi commit và quyết định trước khi khóa giao diện.
+> 1. [x] Phân bổ tay/điện cực (mục 5.2): phương án A, ba điện cực LA cổ tay trái, RA cổ tay phải, RL cẳng tay trái; cực tính LA → ECGP (chốt 2026-10-23). Còn kiểm K3–K5 ở mục 5.4 khi có module.
+> 2. [ ] Định danh trong dữ liệu: `SESSION_ID`, timestamp vi giây và sự kiện cuff (packet `0xC1`; SBP/DBP nhập ở PC theo `event_id`) đã có trong Packet Schema V0.1/V0.2; còn thiếu chỗ ghi `subject_id` (mã giả danh) trong metadata phiên.
+> 3. [ ] Chọn nhãn hiệu và model máy đo huyết áp bắp tay đối chứng dùng trong phòng thí nghiệm.
+> 4. [ ] Làm rõ quy trình nộp hồ sơ hội đồng đạo đức trước khi tuyển tình nguyện viên.
+> 5. [x] Đối chiếu khác biệt sampling, timestamp lấy mẫu/FIFO/nhận gói, clock và marker cuff với packet schema: chốt trong Packet Schema V0.1 mục 5 và V0.2 mục 7 (2026-10-23/24).
 > 6. [ ] Kiểm tra căn cứ cỡ mẫu, cửa sổ, SQI, kiểm định và mọi tiêu chí an toàn/vận động dự thảo; không dùng outline để tự triển khai đo trên người.

@@ -526,7 +526,7 @@ BST-BMI270-DS000-08 rev 1.6 (3/2026, SHA-256
 
 ## Cấu hình AFE `0xD2` và lệnh từ PC (2026-10-25, chưa chạy trên chip)
 
-Packet Schema V0.2 mục 12–13. Thiết kế chờ Huy duyệt.
+Packet Schema V0.2 mục 12–13.
 
 - **Task điều khiển** (`ctl_task` trong `main.c`) là nơi duy nhất tạo `0xD2` và `0xD3`
   (một producer mỗi kênh). Nó đọc cổng USB Serial/JTAG liên tục (lượt 10 ms, bộ đệm RX

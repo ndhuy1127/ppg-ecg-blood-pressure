@@ -30,7 +30,7 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
   Metadata phiên (`packet-session-metadata-v0`) không đổi tên version; nhận thêm khóa
   kênh của V0.2. Config đổi trường `packet_schema` thành `packet_schemas`. Phiên ghi bằng v0 vẫn đọc được manifest; replay bằng v1 so với
   manifest v0 có thể lệch hash và manifest ghi rõ `logger_version` của mỗi bên.
-- **`packet-logger-v2` (2026-10-25, chờ Huy duyệt):** output và config đổi so với
+- **`packet-logger-v2` (2026-10-25):** output và config đổi so với
   v1, nên nâng version:
   - đọc mục 12–13 của Packet Schema V0.2 (`0xD2`, `0xD3`; trước đó đã thêm dưới tên
     v1 cùng ngày, cùng `0xB1` mục 11);
@@ -98,7 +98,7 @@ viên bị từ chối vẫn nằm trong `skipped_bytes`.
 
 **Khác với thứ tự liệt kê ở mục 12:** `VERSION` được kiểm trước CRC, vì gặp
 version lạ thì không biết layout nên không tính được CRC. CRC16 được đọc
-little-endian theo ghi chú "little-endian" của mục 6 (câu hỏi D1).
+little-endian theo ghi chú "little-endian" của mục 6 (D1).
 `SAMPLE_COUNT = 0` bị coi là header vô lý (D7). Không loại trừ được trường hợp
 gặp `SYNC` giả mà CRC vẫn trùng (khoảng 1/65 536 mỗi ứng viên).
 
@@ -122,7 +122,7 @@ giữ). Kênh dữ liệu (ECG/PPG) khai báo trong `channels` của metadata m�
 không có packet nào giải mã được thì báo `channel_missing` và liệt kê trong
 `channels_missing` của phiên; kênh chỉ có packet bị cách ly vẫn tính là có mặt.
 Metadata vì vậy chỉ khai báo các kênh dự kiến chạy. Không có packet `0xC1` thì không
-báo (buổi bench có thể không bấm t0). Luồng không giải mã được packet nào thì không
+báo (buổi bring-up có thể không bấm t0). Luồng không giải mã được packet nào thì không
 có phiên để báo. Packet sự kiện: xem R1.
 
 **Kênh im lặng (từ 2026-10-25):** `channel_missing` không thấy một kênh dừng giữa phiên
@@ -191,14 +191,14 @@ chốt 2026-10-25); ở 1 Hz, dung sai 1 chu kỳ + 500 µs nhận cả hai anch
   (mục 4), nên ±3 % chỉ làm giảm độ nhạy. Hệ số này áp cho ECG của cả V0.1 lẫn V0.2
   (tốc độ là của chip, không phụ thuộc version); các luồng mô phỏng V0.1 cho cùng
   kết quả như trước.
-- Hệ số này không phải ước lượng tốc độ thực ở mục 5.3. Thay bằng số đo bench
+- Hệ số này không phải ước lượng tốc độ thực ở mục 5.3. Thay bằng số đo bring-up
   khi có (D10).
 
 ### Quy tắc R1–R6 (ghi ngày 2026-10-21, đối chiếu với firmware ngày 2026-10-23)
 
-R1–R4 và R6 khớp quy ước của firmware khung (câu hỏi D3–D7 ở cuối tài liệu) và đã
+R1–R4 và R6 khớp quy ước của firmware khung (D3–D7 ở cuối tài liệu) và đã
 chạy đúng trên luồng giả lập theo firmware (mục "Đối chiếu với firmware khung").
-R5 vẫn là giá trị tạm, chờ số đo bench (D8, D10).
+R5 vẫn là giá trị tạm, chờ số đo bring-up trên PCB V1 (D8, D10).
 
 - **R1, packet `0xC1`:** kiểm CRC/`SYNC`/`VERSION` và `SEQ` (bước 1–3, 5), **bỏ
   bước 6**; `FS_NOMINAL_MHZ`, `T_FIRST_US` được ghi lại nhưng không diễn giải.
@@ -473,11 +473,12 @@ và hash config/metadata được so với manifest.
   không có vấn đề; phiên rất dài sẽ cần ghi theo dòng.
 - Chỉ dùng thư viện chuẩn; chưa có hiệu chỉnh `L`, fs thật hay drift.
 
-## Câu hỏi cho Đức Anh
+## Quy ước packet của firmware (D1–D10)
 
-Trả lời ngày 2026-10-23 theo firmware khung
+Chốt ngày 2026-10-23 theo firmware khung
 ([firmware/README.md](../../firmware/README.md), mục "Quy ước packet của
-firmware"); D8 và D10 chờ bench.
+firmware"). D8 và D10 là dung sai thời gian, chỉ chốt được bằng số đo khi bring-up trên
+PCB V1.
 
 - **D1.** Byte order của CRC16: little-endian như các trường khác (đang giả định)
   hay big-endian? → **Little-endian.**
@@ -493,7 +494,7 @@ firmware"); D8 và D10 chờ bench.
   chuyển sang packet gửi được kế tiếp (bit 0 từ
   2026-10-23). Firmware sinh bit 5 khi neo lại (từ 2026-10-24: ECG khởi động lại,
   IMU và PPG đọc lại; xem `firmware/README.md`).**
-- **D4.** Bit 4 bật từ khi nào và tắt khi nào (theo từng cấu hình sau bench)?
+- **D4.** Bit 4 bật từ khi nào và tắt khi nào (theo từng cấu hình sau bring-up)?
   Có bật cho `0xC1` không? → **Bật trên mọi packet ECG/PPG cho tới khi đo xong
   `L` của cấu hình; không bật cho `0xC1`.**
 - **D5.** `SEQ` và `FIRST_SAMPLE_INDEX` có bắt đầu từ 0 ở mỗi phiên không? →
@@ -503,7 +504,7 @@ firmware"); D8 và D10 chờ bench.
   R1: số thứ tự sự kiện, 0, `T_ANCHOR_US`; `SEQ` đếm riêng (schema mục 10).**
 - **D7.** Có khi nào `SAMPLE_COUNT = 0` (đọc FIFO rỗng) không? Có gửi packet đó
   không? → **Không gửi.**
-- **D8.** Sau bench: `d_ptr_us`/`d_word_us` đo được để chốt dung sai `T_ANCHOR_US`.
+- **D8.** Sau bring-up: `d_ptr_us`/`d_word_us` đo được để chốt dung sai `T_ANCHOR_US`.
 - **D9.** USB CDC: baud, kích thước buffer; có log text nào đi chung cổng packet
   không (mục 13)? → **Packet đi USB Serial/JTAG native, không có baud; bộ đệm TX
   8 192 byte, hàng đợi MCU 64 packet, timeout ghi 20 ms. Log chữ đi UART0;
@@ -516,9 +517,9 @@ firmware"); D8 và D10 chờ bench.
   ±1 000 ppm (`ecg_anchor_rate_tolerance_ppm`, chốt 2026-10-24, Packet Schema V0.2
   mục 7.5), chỉnh sau bring-up. PPG vẫn chờ số đo.**
 
-## Danh sách để Đức Anh review logger theo spec
+## Đối chiếu logger với spec và firmware
 
-Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
+Đối chiếu ngày 2026-10-23 với firmware khung (`firmware/`):
 
 - [x] `HEADER = struct.Struct("<2sBBIIIQQIHH")` và vị trí DATA/CRC khớp struct
       firmware: encoder C (`firmware/app/packet_v01.c`, từ 2026-10-24 là
@@ -536,7 +537,7 @@ Review ngày 2026-10-23, đối chiếu với firmware khung (`firmware/`):
       `firmware/include/packet_v01.h` (nay là `packet_wire.h`, thêm mã kênh và bit
       `STATUS` của V0.2).
 - [x] Quy tắc R1–R6: R1–R4 và R6 giữ nguyên; R5 giữ giá trị tạm tới khi có số đo
-      bench.
+      bring-up.
 - [x] Dung sai mặc định phù hợp cấu hình dự kiến (ECG 512 sps, N = 16): dung sai
       một packet bình thường khoảng 3,4 ms. Dung sai tốc độ ±3 % giữ tới khi có
       số đo (D10). Từ 2026-10-24 ECG dùng ±1 000 ppm: khoảng 2,48 ms với mốc đọc

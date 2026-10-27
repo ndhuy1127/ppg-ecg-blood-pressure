@@ -4,7 +4,7 @@
 
 - Linh xây dựng, kiểm thử pipeline đọc phần PulseDB được phép dùng và khảo sát ít nhất 1.000 đoạn ECG, PPG, ABP.
 - Đức Anh chốt phương án phần cứng v0 trên tài liệu: BOM, sơ đồ khối, pin map, nguồn/mức logic, cấu hình lấy mẫu dự kiến và kế hoạch mua/mượn, lắp ráp, bring-up.
-- Huy chốt định nghĩa mẫu, nhãn, cửa sổ và schema dữ liệu với Linh; tổng hợp PAT/PTT/PEP/PWA và giới hạn diễn giải PAT.
+- Huy và Linh thống nhất định nghĩa mẫu, nhãn, cửa sổ và schema dữ liệu; Huy tổng hợp PAT/PTT/PEP/PWA và giới hạn diễn giải PAT.
 - Cả ba thống nhất giao diện bàn giao dữ liệu dự kiến giữa logger và pipeline phần mềm.
 - **Chưa có phần cứng PPG/ECG.** Tuần này chỉ nghiệm thu đầu ra dữ liệu công khai và thiết kế trên tài liệu; không coi PulseDB là bản ghi thiết bị của nhóm. Chưa tuyển người hoặc đo trên người bằng prototype khi chưa có phê duyệt đạo đức và kiểm tra an toàn cần thiết.
 
@@ -35,7 +35,7 @@
 - Phương án linh kiện/board, mua hay mượn và phê duyệt mua; pin map, nguồn/mức logic và tần số lấy mẫu chỉ là dự kiến cho đến khi kiểm tra trên phần cứng.
 - Trường logger, đơn vị tín hiệu, clock chung, timestamp và cách lưu thời điểm bắt đầu bơm cuff; schema nhãn/metadata cần Linh, Đức Anh và Huy cùng xác nhận.
 - Cửa sổ phân tích chính và ngưỡng SQI chỉ được khóa trước trên pilot/validation; 10/20/30/60 giây hiện là ứng viên phân tích độ nhạy. Chia tập theo người, hiệu chuẩn trước kiểm tra theo thời gian; không dùng test set để chọn cửa sổ hoặc ngưỡng.
-- Tài liệu phân công đề cập sáu giai đoạn và G1–G6. Các mốc đó vẫn là đề xuất của tài liệu ngoài repo, chờ nhóm xác nhận trước khi coi là kế hoạch đã khóa.
+- Tài liệu phân công đề cập sáu giai đoạn và G1–G6. Các mốc đó vẫn là đề xuất của tài liệu ngoài repo, chưa phải kế hoạch đã khóa.
 
 ## Nguồn đối chiếu
 
