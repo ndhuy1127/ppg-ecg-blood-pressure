@@ -1,7 +1,7 @@
 # Trình tự bring-up V1-module
 
 > **Chưa thực hiện**: chưa có module và PCB. Áp dụng cho KiCad V1-module (bo đế
-> V1-draft4, bo cổ tay V1-draft4), pin map chuẩn ở
+> V1-draft5, bo cổ tay V1-draft5, 2026-10-27), pin map chuẩn ở
 > [custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) mục
 > A.7 và [firmware khung](../../firmware/README.md).
 >
@@ -25,7 +25,7 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 
 | Module | Kiểm | Đạt khi |
 | --- | --- | --- |
-| DevKitC | Đo khoảng cách tâm hai hàng chân bằng thước kẹp; đặt lên bản in 1:1 của bo đế | **22,86 mm**, khớp footprint U1 (bo chính hãng ESP32-S3-DevKitC-1-N8R8, danh sách mua dòng 6) |
+| DevKitC | Đo khoảng cách tâm hai hàng chân bằng thước kẹp; đặt lên bản in 1:1 của bo đế | **22,86 mm**, khớp footprint U1 (bo Waveshare ESP32-S3-DEV-KIT-N8R8-M đã đặt 2026-10-27, chân giống DevKitC-1; danh sách mua dòng 6) |
 | DevKitC | Đọc ký hiệu trên vỏ module | ESP32-S3-WROOM-1-N8R8 (A.6 mục 4). Bản N16R16VA hoặc chip R16V thì dừng: GPIO47 chạy 1,8 V |
 | DevKitC | Đối chiếu nhãn từng chân với bảng A.7 (đủ kích thước chưa đủ: phải đúng vị trí) | Pad U1 1–2 là 3V3, 21 là 5V, 22–24 và 44 là GND; các GPIO ở đúng pad như A.7 |
 | Breakout MAX30001 | So với `pc_max30001_brk_v1.0` | Có R3 (10 kΩ, cỡ 0805) nối sleeve của jack với VCM; R7, R8 (0 Ω, cỡ 0402); header SV1 10 chân (A.2) |
@@ -36,11 +36,12 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 
 ## 2. DevKitC đứng riêng (chỉ cắm USB)
 
-1. Cắm cổng UART (cổng qua chip cầu USB–UART) vào laptop. Trong Device Manager,
-   ghi cổng COM của từng cổng USB. Cổng USB native của ESP32-S3 có VID:PID
-   `303A:1001` (USB Serial/JTAG); nó chỉ hiện khi cắm thêm cổng USB native (cáp thứ
-   hai). Đọc `bMaxPower` trong configuration descriptor của `303A:1001` bằng USBView
-   (Windows) hay `lsusb -v` và ghi vào báo cáo. Khi đo trên người chỉ có một cáp, nối cổng
+1. Cắm cáp USB-C của bo Waveshare vào laptop (đổi 2026-10-27: một cổng USB-C qua hub
+   CH334, sau hub có cầu USB–UART CH343 cho UART0 và cổng USB native của ESP32-S3).
+   Trong Device Manager ghi hai cổng COM: cổng USB native có VID:PID `303A:1001`
+   (USB Serial/JTAG, gửi packet), cổng CH343 là log UART0. Đọc `bMaxPower` của hub
+   CH334 và của `303A:1001` bằng USBView (Windows) hay `lsusb -v` và ghi vào báo cáo:
+   laptop thấy hub, nên con số của hub là dòng cổng laptop cấp cho cả bo. Khi đo trên người chỉ có một cáp, nối cổng
    USB native, nên đó là cổng cấp nguồn mà
    [power_budget_v1.md](../../configs/hardware/power_budget_v1.md) mục 4 xét, và giới
    hạn dòng phụ thuộc giá trị này (thêm 2026-10-26).
@@ -89,7 +90,7 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 | --- | --- | --- |
 | Breakout MAX30001 | Thay R3 bằng 220 kΩ ±1 %, cỡ 0805 (datasheet yêu cầu ≥ 200 kΩ, A.2) | Đo R3 trước khi hàn lên bo: 220 kΩ ±1 % |
 | Breakout MAX30001 | Gỡ R7, R8 (0 Ω, cỡ 0402): ngắt jack khỏi BIP/BIN của BioZ; đường ECG đi qua R4, R5 51 kΩ vẫn giữ nguyên | Pad R7, R8 hở mạch |
-| Breakout MAX30001 | Hàn header SV1 10 chân (có trong kit) | Chân thẳng, không cầu thiếc |
+| Breakout MAX30001 | Hàn header SV1 10 chân (có trong kit) từ mặt dưới: thân nhựa header ở mặt dưới, chân dài chĩa xuống, mặt linh kiện và jack 3,5 mm quay lên (thêm 2026-10-27) | Chân thẳng, không cầu thiếc. Đặt breakout lên bản in 1:1 của bo đế: chân GND ở đầu hàng phía jack trùng J1.1, lỗ vít trùng lỗ NPTH (23,37; 2,97). Lỗ vít không trùng nghĩa là breakout đang bị lật; một trong hai cách lật làm đảo thứ tự chân (VCC rơi vào lỗ MOSI) |
 | SparkFun MAX30101 | Cắt JP1 để tắt LED nguồn đỏ (LED cùng mặt với cảm biến, A.3) | Khi cấp nguồn, LED nguồn không sáng |
 | SparkFun BMI270 | Cắt jumper `I2C` và `ADR` để chạy SPI (A.3) | Hai jumper hở mạch |
 
@@ -99,29 +100,40 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 10.
 
 1. Hàn linh kiện dán trước: R2 10 kΩ, R3 1 kΩ, R8 100 kΩ, R9–R11 33 Ω (mặt dưới);
    C2, C4, C6, C8 100 nF; C9 100 nF (mặt dưới, sát J2.1/J2.2); C3, C5, C7 10 µF.
-2. Hàn linh kiện chân cắm: SW1, D1 (đúng cực), hai socket 1×22, socket 1×10, J2
-   (khe khóa theo silkscreen).
+2. Hàn linh kiện chân cắm: SW1, D1 (chân dài, anode, vào pad tròn; chân ngắn và phía
+   vát của vỏ, cathode, vào pad vuông nối GND), hai socket 1×22, socket 1×10, J2 (khe
+   khóa theo silkscreen).
 3. Dán 4 chân cao su ở mặt dưới: R9–R11 và C9 nằm ở mặt dưới, không được tì lên
    mặt bàn (A.2).
 4. Đo lại 3V3–GND: không chập.
 
 **Bo cổ tay** (theo A.3):
 
-1. Hàn J1 (box header cong) ở **mặt dưới**. Hàn nhầm sang mặt trên sẽ đưa chân 1
-   vào lỗ GND.
+1. Kiểm J1 (box header cong) trước khi hàn: khe khóa ở vách xa mặt PCB (A.3). Cắm J1
+   vào bo từ **mặt dưới** (chưa hàn), cắm một đầu cáp vào J1, đo thông mạch từ tiếp
+   điểm chân 1 ở đầu cáp kia (sọc đỏ) tới chân J1 nằm trong lỗ J1.1 (pad vuông, có số
+   `1` ở mặt trên): phải thông. Đạt thì hàn J1 ở **mặt dưới**. Hàn nhầm sang mặt trên
+   làm chân 1 (3V3) của cáp rơi vào lỗ J1.15 (`BMI_MOSI`); J1 loại có khe ở vách sát
+   PCB đảo cả cáp (chân n vào pad 17 − n). Sửa 2026-10-27: bản trước ghi chân 1 rơi vào
+   lỗ GND, không còn đúng với thứ tự cáp V1-draft4.
 2. Hàn header của M1 và M3, C2 10 µF, C3 100 nF. Cắt sát đuôi chân, dán kapton lên
    mối hàn ở mặt trên (mặt áp vào da).
-3. Lắp M1 (MAX30101) ở mặt trên, M3 (BMI270) ở mặt dưới, spacer nylon M3 ở ba lỗ,
-   miếng đệm dán ở góc thứ tư.
+3. Lắp M1 (MAX30101) ở mặt trên, cảm biến quay ra ngoài; M3 (BMI270) ở mặt dưới,
+   **mặt chip quay ra ngoài** (silkscreen `CHIP SIDE OUT`; lắp chip quay vào bo thì sơ
+   đồ chân bị gương, chân 3V3 của module rơi vào pad OCS); vít, đai ốc và spacer nylon
+   M2 ở ba lỗ, mỗi lỗ hai spacer (tròn Ø ≤ 4,5 mm hoặc lục giác 4 mm giữa hai cạnh, M1
+   và M3 mỗi bên một cái). Không dùng spacer lục giác cỡ M3: chạm thân nhựa header
+   ([danh sách mua](../bom/purchase_list_v1_module.md) mục 2). Miếng đệm dán ở góc thứ
+   tư.
 4. Đo lại 3V3–GND: không chập.
 
 ## 6. Bo đế với DevKitC (chưa có breakout và bo cổ tay)
 
 1. Kiểm hướng DevKitC theo silkscreen (đầu USB, đầu anten) **trước khi cắm**: cắm
    ngược 180° làm chập 3V3–GND (A.2).
-2. Cấp nguồn qua USB tester đặt trên cáp cổng USB native, và chỉ cắm cáp này khi ghi
-   dòng: cắm thêm cáp UART thì dòng chia cho hai cổng và số đo không so được với
-   [power_budget_v1.md](../../configs/hardware/power_budget_v1.md). Ghi dòng lúc cắm
+2. Cấp nguồn qua USB tester đặt trên cáp USB-C duy nhất của bo Waveshare (dòng đo gồm
+   cả hub CH334 và cầu CH343, chưa có trong
+   [power_budget_v1.md](../../configs/hardware/power_budget_v1.md); sửa 2026-10-27). Ghi dòng lúc cắm
    (trước khi host cấu hình thiết bị) và dòng ổn định; so với dòng của DevKitC đứng
    riêng ở mục 2. Rút USB ngay nếu dòng cao bất thường, điện áp USB
    sụt, hoặc có linh kiện nóng. Mức tham chiếu: ước lượng cả hệ khoảng 61 mA điển hình
@@ -137,7 +149,9 @@ Bước 2–5 dùng driver MAX30001 (từ 2026-10-25, chưa chạy trên chip): 
 `pio run -d firmware -e esp32s3_devkitc_ecg_real`; log UART0 in `INFO` và kết quả
 khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX30001").
 
-1. Rút cả hai cáp USB, cắm breakout vào socket SV1, bắt vít vào lỗ NPTH 3,2 mm.
+1. Rút cả hai cáp USB, cắm breakout vào socket SV1, bắt vít vào lỗ NPTH 3,2 mm (bộ
+   nylon M2; đầu vít hay đai ốc ở mặt trên breakout nhỏ hơn Ø 5 mm vì tụ C1 của breakout
+   cách tâm lỗ 2,52 mm).
    Cấp nguồn lại qua USB tester, theo dõi dòng như mục 6: 3V3 vẫn khoảng 3,3 V;
    đầu ra LDO 1,8 V của breakout (AP2112K-1.8) khoảng 1,8 V.
 2. Đọc thanh ghi `INFO` (0x0F): nửa byte cao bằng `0x5`, như thư viện ProtoCentral
@@ -175,9 +189,13 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
 ## 8. Bo cổ tay qua cáp
 
 1. Rút cả hai cáp USB. Đo thông mạch cáp 16 dây: chân n ↔ chân n; GND ở chân 2,
-   4, 6, 8, 10, 12, 14; chân 1 (3V3) không chập GND.
-2. Cắm cáp vào J2 và J1 (đúng khe khóa), cấp nguồn lại qua USB tester, theo dõi
-   dòng như mục 6. Đo 3V3 tại chân C2 của bo cổ tay (bo cổ tay không có test point).
+   4, 6, 8, 10, 12, 14; chân 1 (3V3) không chập GND. Cắm cáp vào J2 và J1 (đúng khe
+   khóa), vẫn chưa cấp nguồn, đo xuyên cả hệ (thêm 2026-10-27, để bắt J1 hàn nhầm mặt
+   hay sai loại khe khóa): TP1 (3V3) ↔ chân 3.3V của M1 và chân 3V3 của M3; TP2 (GND)
+   ↔ chân GND của M1 và M3; pad 17 của U1 (GPIO11) ↔ chân SDA của M3 (qua R10 33 Ω);
+   pad 19 của U1 (GPIO13) ↔ chân ADR của M3; 3V3 không chập GND. Sai một phép đo thì
+   không cấp nguồn.
+2. Cấp nguồn lại qua USB tester, theo dõi dòng như mục 6. Đo 3V3 tại chân C2 của bo cổ tay (bo cổ tay không có test point).
    Ghi dòng 5 V USB ổn định khi LED PPG ở mã mặc định và ở 0x7F, so với
    [power_budget_v1.md](../../configs/hardware/power_budget_v1.md) (khoảng 61 và 112 mA).
    Chụp dòng khởi động bằng oscilloscope qua điện trở shunt nối tiếp đường 5 V, vì USB
@@ -217,11 +235,11 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    độ.
 7. Dây cáp và dây điện cực không kéo hay đè bo PPG khi đặt cẳng tay lên bàn, đo
    trên bench (protocol v0.2 mục 5.4, K5).
-8. Nguồn và tín hiệu khi cả hệ chạy (`custom_board_proposal.md` mục A.3, đoạn rà
-   soát đi dây V1-draft3: 3V3 dùng chung cho xung LED PPG và breakout ECG), với
-   cáp dài nhất:
-   - 3V3 tại DevKitC, VDD/1,8 V của breakout và 3V3 tại M1 khi LED PPG chạy xung
-     cao nhất (và radio nếu có bật);
+8. Nguồn và tín hiệu khi cả hệ chạy (`custom_board_proposal.md` mục A.3: từ
+   V1-draft5, 3V3 của breakout ECG và cụm tụ C3/C4/C6–C8 đi dây riêng từ U1.1, tách
+   khỏi nhánh cáp U1.2 → J2 mang dòng xung LED PPG), với cáp dài nhất:
+   - 3V3 tại DevKitC, VCC breakout (J1.2–J1.3, bằng oscilloscope) và 1,8 V của
+     breakout, 3V3 tại M1 khi LED PPG chạy xung cao nhất (và radio nếu có bật);
    - nhiễu trên ECG khi bật/tắt LED PPG;
    - SCK, MOSI, CS tại BMI270 và MISO tại MCU ở 1 rồi 2 MHz;
    - sườn lên I²C ≤ 300 ns ở cả hai phía bộ chuyển mức trên bo SparkFun;
@@ -229,7 +247,8 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
      liên tục.
 9. Chạy cả hệ 75 phút như một buổi đo (chỉ cáp USB native, laptop chạy pin, LED PPG ở
    mã cao nhất định dùng, chưa gắn lên người), mỗi 15 phút ghi dòng 5 V USB, 3V3 tại
-   TP1–TP2 và nhiệt độ vỏ LDO SGM2212 của DevKitC (nhiệt kế hồng ngoại hay cặp nhiệt),
+   TP1–TP2 và nhiệt độ vỏ LDO 3,3 V của bo Waveshare (mã LDO đọc khi nhận hàng,
+   [power_budget_v1.md](../../configs/hardware/power_budget_v1.md)) (nhiệt kế hồng ngoại hay cặp nhiệt),
    kèm nhiệt độ phòng. Đạt khi dòng và 3V3 ổn định và nhiệt độ LDO thôi tăng trước khi
    hết buổi; tăng liên tục hay 3V3 sụt thì dừng và xét lại mã LED tối đa
    ([power_budget_v1.md](../../configs/hardware/power_budget_v1.md) mục 4; thêm
@@ -243,7 +262,7 @@ Theo [sync_10min_test_plan.md](sync_10min_test_plan.md), sau khi bước 7 và 8
 
 Mỗi lần bring-up ghi một file `hardware/test_reports/<YYYY-MM-DD>_v1_bringup.md`:
 
-- ngày, người làm, revision hai bo (theo title block KiCad, hiện cả hai là V1-draft4);
+- ngày, người làm, revision hai bo (theo title block KiCad, hiện cả hai là V1-draft5);
 - ký hiệu module, kết quả `chip_id` và `espefuse summary` (các trường VDD_SPI),
   revision breakout MAX30001, kết quả đo thông mạch cáp ECG;
 - commit firmware và ELF SHA-256, `SESSION_ID` của mỗi lần ghi;

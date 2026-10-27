@@ -28,7 +28,7 @@
 | --- | --- | --- | --- | --- |
 | ESP32-S3, 160 MHz | Modem-sleep (RF tắt), mọi clock ngoại vi bật; từ WAITI tới hai nhân 128 bit | 42,3 → 81,1 mA | không ghi | ESP32-S3 Datasheet v2.2, tr. 67, Bảng 5-9; chú thích 3 tr. 68: thêm khoảng 10 mA khi đọc flash |
 | Module WROOM-1 | Nguồn phải cấp được | ≥ 0,5 A | — | WROOM-1 v1.8, tr. 27, Bảng 6-2 |
-| LDO 3,3 V của DevKitC (SGM2212-3.3) | Dòng ra | 800 mA | — | Schematic DevKitC v1.1 tr. 2; SGM2212 REV A.2 (7/2023), tr. 1 |
+| LDO 3,3 V của DevKitC Espressif (SGM2212-3.3); bo Waveshare đã đặt 2026-10-27 dùng LDO khác, chưa xác định: đọc mã trên bo khi nhận và kiểm lại dòng ra | Dòng ra | 800 mA | — | Schematic DevKitC v1.1 tr. 2; SGM2212 REV A.2 (7/2023), tr. 1 |
 | SGM2212 | Dòng chân GND, 25 °C, không tải / 100 mA | 80 / 290 µA | 110 / 360 µA (370 µA ở 100 mA trên dải nhiệt) | SGM2212 REV A.2, tr. 6 |
 | MAX30001 AVDD + DVDD | Kênh ECG | 95 µA | 120 µA | Rev 2 (8/19), tr. 9 (bản mirror) |
 | MAX30001 OVDD | 3,6 V, ECG 512 sps | 0,6 µA | 1,6 µA | Rev 2, tr. 9 |

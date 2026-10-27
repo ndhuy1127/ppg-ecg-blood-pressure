@@ -131,7 +131,7 @@ theo thời gian.
 Nếu độ lệch thay đổi theo thời gian, phải ghi nhận drift và xác định phương pháp hiệu chỉnh trước khi sử dụng dữ liệu để tính PAT.
 Ở V1-module chưa chốt một con số jitter/drift cứng nếu chưa có phép đo và yêu cầu nghiên cứu cụ thể. Giá trị giới hạn sẽ được xác định sau khi thực hiện thử nghiệm đồng bộ.
 ## 5. Yêu cầu MCU
-ESP32-S3-DevKitC-1-N8R8 chính hãng (chốt 2026-10-24) là MCU chính của prototype V1-module.
+Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M (module Espressif ESP32-S3-WROOM-1-N8R8, chân giống DevKitC-1; đặt 2026-10-27, thay bản DevKitC-1-N8R8 chốt 2026-10-24) là MCU chính của prototype V1-module.
 MCU có các nhiệm vụ:
 
 Nhận dữ liệu ECG từ MAX30001 thông qua SPI.
