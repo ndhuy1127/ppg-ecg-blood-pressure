@@ -60,4 +60,4 @@ Protocol đi kèm: [protocol v0.3](../protocol/protocol_outline_v0.2.md) (tên f
     - quy tắc dừng;
     - protocol, RQ và kịch bản bài báo.
 
-Thiết bị: PPG là MAX30101 (nhóm đã chọn, Huy xác nhận 2026-10-22). Pin map chuẩn là KiCad V1-module (`configs/hardware/custom_board_proposal.md` A.7, chốt 2026-10-23); pin map và BOM cũ trên nhánh `dev/ducanh` không dùng nữa.
+Thiết bị: PPG là MAX30101 (nhóm đã chọn 2026-10-22). Pin map chuẩn là KiCad V1-module (`configs/hardware/custom_board_proposal.md` A.7, chốt 2026-10-23); pin map và BOM cũ trên nhánh `dev/ducanh` không dùng nữa.

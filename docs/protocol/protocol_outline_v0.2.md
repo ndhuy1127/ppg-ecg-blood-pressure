@@ -27,7 +27,7 @@
 
 **Changelog 2026-10-22 (Huy, sửa theo review độc lập Tuần 5):**
 
-- 5.1: MAX30101 là module PPG nhóm đã chọn (Huy xác nhận 2026-10-22). Số điện cực và việc dùng điện cực khô trên người ghi là chờ quyết định. Khôi phục hai ý của v0.1 bị mất khi viết lại mục 5: ghi chú Cohen 2025 về sai số cuff truyền vào hiệu chuẩn, và yêu cầu chốt quy trình đo hai tay trước thu chính.
+- 5.1: MAX30101 là module PPG nhóm đã chọn. Số điện cực và việc dùng điện cực khô trên người ghi là chờ quyết định. Khôi phục hai ý của v0.1 bị mất khi viết lại mục 5: ghi chú Cohen 2025 về sai số cuff truyền vào hiệu chuẩn, và yêu cầu chốt quy trình đo hai tay trước thu chính.
 - 5.3, 6.4: ghi rõ mâu thuẫn chưa giải quyết về thời điểm nói ở M2 và thời điểm cửa sổ tín hiệu ở M4.
 - 5.4: đổi tên quy tắc R1–R6 thành K1–K6 để không trùng với dấu hiệu R2/R3/R5 của kế hoạch 28 tuần; K3 thêm M1, M2, M4 (chưa đánh giá); K4 ghi tay đeo cuff luôn mang một điện cực; K6 tách M3/M4; viết lại kết luận cho đúng trạng thái.
 - 6.4: M3 thêm yếu tố nhiễu co mạch ngoại vi; M4 ghi hướng ở pha hồi phục chưa chắc; đổi tên "ESH 2023" thành Stergiou 2023; ghi Carroll 2012, Jern 1991 chỉ ủng hộ gián tiếp; bỏ Fu 2002 (nguồn yếu, M5 đã loại).
