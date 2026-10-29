@@ -372,7 +372,8 @@ def test_export_with_duplicate_or_misplanned_records_is_refused(chain):
     main_csv = export.parent / "main" / "records.csv"
     rows = pd.read_csv(main_csv, dtype=str)
     for bad in (pd.concat([rows.iloc[:3], rows.iloc[:1]]),  # Duplicate record.
-                rows.assign(subject_id=["SYN_S0", "SYN_S0", "SYN_S2", "SYN_S3"])):
+                rows.assign(subject_id=["SYN_S0", "SYN_S0", "SYN_S2", "SYN_S3"]),
+                rows.assign(split="val")):  # Not the plan's train split.
         bad.to_csv(main_csv, index=False, lineterminator="\n")
         info = copy.deepcopy(chain["info"])
         info["records_csv_sha256"]["main"] = hashlib.sha256(
@@ -430,6 +431,15 @@ def test_resume_refuses_edits_and_recovers_an_uncommitted_record(chain, monkeypa
     with pytest.raises(ValueError, match="Unreadable progress"):
         run_annotate(main_dir, chain["dir"] / "broken.csv", "HUY", "2026-10-26", 0.5,
                      resume=True)
+
+
+def test_gate_refuses_compared_rows_outside_train(chain):
+    d, config, export = chain["dir"], chain["config"], chain["export"]
+    compared = json.loads((d / "agreement.json").read_text(encoding="utf-8"))
+    compared["per_record"][0]["split"] = "val"
+    (d / "agreement_val.json").write_text(json.dumps(compared), encoding="utf-8")
+    with pytest.raises(ValueError, match="train rows only"):
+        run_gate(d / "agreement_val.json", export, config, d / "gate_val.json")
 
 
 def test_check_limits_fails_every_undefined_metric():

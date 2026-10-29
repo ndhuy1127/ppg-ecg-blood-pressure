@@ -1,4 +1,4 @@
-"""Week 5 fiducial review: SYNTHETIC records, train/val export, plots, detection,
+"""Week 5 fiducial review: SYNTHETIC records, train export, plots, detection,
 agreement.
 
 Subcommands (each refuses to overwrite its output and writes provenance):
@@ -49,7 +49,10 @@ from software.signal_processing.fiducials import (  # noqa: E402
 
 # v3 (2026-10-25): export follows review_plan (train only, two subject groups,
 # repeat segments); new repeat and gate commands.
-SCRIPT_VERSION = "week05-fiducials-v3"
+# v4 (2026-10-29): compare refuses manual marks on val unless detect verified the
+# records as unchanged synth output (records_from_synth); gate refuses non-train
+# compared rows; export.json records must be on the plan's train split.
+SCRIPT_VERSION = "week05-fiducials-v4"
 # v1 (2026-10-25): T apex at 0.28 * sqrt(RR) s after R instead of a fixed 0.25 s,
 # which sat on the 0.25 s refractory boundary; SYN_T_EDGE_HR60 keeps the old
 # position as a boundary case. v0 results stay as history.
@@ -97,6 +100,18 @@ def provenance(command, inputs, source_types):
 
 def _sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _synth_records(records, records_sha256):
+    """True only for an unchanged ``synth`` output: its synth.provenance.json
+    lists this records.csv hash and SYNTHETIC as the only source type."""
+    try:
+        info = json.loads((Path(records) / "synth.provenance.json").read_text(
+            encoding="utf-8"))
+        return (info["outputs_sha256"]["records.csv"] == records_sha256
+                and info["provenance"]["source_types"] == ["SYNTHETIC"])
+    except (OSError, KeyError, TypeError, json.JSONDecodeError):
+        return False
 
 
 def _sidecar(path):
@@ -231,7 +246,7 @@ def run_synth(out):
     return out
 
 
-# --- PulseDB train/val export ------------------------------------------------
+# --- PulseDB train export ----------------------------------------------------
 
 def export_record_id(raw_sha256, split, raw_index):
     """``PDB_<first 12 hex of the raw SHA-256>_<split>_<raw_index>``.
@@ -656,6 +671,8 @@ def run_detect(records, config_path, out):
     _write_json(sidecar, {
         "config_version": config.get("version"), "config_status": config.get("status"),
         "signal_config": asdict(base),
+        # Checked against synth.provenance.json, not taken from records.csv.
+        "records_from_synth": _synth_records(records, inputs["records_csv"]),
         "channel_issues": issues,
         "output_sha256": _sha256(out),
         "provenance": provenance(
@@ -734,8 +751,13 @@ def run_compare(annotations_csv, detections_csv, config_path, out,
     annotations = pd.read_csv(annotations_csv, **read)
     detections = pd.read_csv(detections_csv, dtype={"record_id": str, "split": str,
                                                      "method": str, "fiducial": str})
+    # Manual marks on val pass only for records verified as synth output at detect;
+    # a source_type typed into records.csv is not enough (None fails closed).
+    synth = detect_info.get("records_from_synth") is True
     result = agreement(annotations, detections, config["agreement"]["tolerance_s"],
-                       allow_synthetic_truth=allow_synthetic_truth)
+                       allow_synthetic_truth=allow_synthetic_truth,
+                       source_types=(detect_info["provenance"]["source_types"]
+                                     if synth else None))
     result["provenance"] = provenance("compare", {
         "annotations": _sha256(annotations_csv),
         "annotations_provenance": annotation_source["sha256"],
@@ -751,8 +773,9 @@ def run_compare(annotations_csv, detections_csv, config_path, out,
 
 def _export_info(export_json, config_bytes):
     """export.json, the subject of each main/ record and the repeat/ record IDs,
-    after checking both records.csv hashes and that the export used this config
-    (so the plan, groups and gates belong together)."""
+    after checking both records.csv hashes, that both are on the plan's train
+    split and that the export used this config (so the plan, groups and gates
+    belong together)."""
     import pandas as pd
 
     export_json = Path(export_json)
@@ -768,11 +791,14 @@ def _export_info(export_json, config_bytes):
             raise ValueError(f"{name}/records.csv differs from export.json")
         index[name] = pd.read_csv(path, dtype=str)
     plan, groups = info["review_plan"], info["groups"]
+    _check_plan(plan)  # Train only, among others.
     main, repeat = index["main"], index["repeat"]
     per_subject = main.groupby("subject_id").size()
     selection = set(groups["selection"])
     repeat_groups = [s in selection for s in repeat.subject_id]
     if (main.record_id.duplicated().any() or repeat.record_id.duplicated().any()
+            or set(main.split) != {plan["split"]}
+            or set(repeat.split) != {plan["split"]}
             or len(per_subject) != plan["n_subjects"]
             or set(per_subject) != {plan["per_subject"]}
             or len(groups["selection"]) != plan["selection_subjects"]
@@ -848,6 +874,8 @@ def run_gate(agreement_json, export_json, config_path, out, repeatability_json=N
     kinds = {"annotate", "synth"} if allow_synthetic_truth else {"annotate"}
     if source["kind"] not in kinds or source["records_csv"] != main_sha:
         raise ValueError("gate needs marks with verified provenance on main/")
+    if {row["split"] for row in compared["per_record"]} != {"train"}:
+        raise ValueError("gate selects fiducial methods on train rows only")
     result = gate(compared["per_record"], record_subject, info["groups"],
                   config["acceptance"])
     inputs = {"agreement": _sha256(agreement_json), "export": _sha256(export_json),

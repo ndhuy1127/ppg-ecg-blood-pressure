@@ -13,7 +13,10 @@ Manual marks count inside the reviewed region. A detection up to one tolerance
 outside the region may still match a mark near the edge, but an unmatched one
 there is not a false positive, so methods with a timing bias are not penalised
 at the region edges. Splits other than train/val are rejected: test is never
-opened for method selection. Beats of one record are not independent;
+opened for method selection. Manual marks are compared on train only (methods
+are selected on train, so B4 - B3 on val stays independent); val is accepted
+with manual marks only when every record is declared SYNTHETIC (practice
+marking on generated records). Beats of one record are not independent;
 per-record rows are returned alongside the pooled summary, each with its
 matched errors (``errors_ms``) so subject-level gates can pool them.
 """
@@ -22,9 +25,13 @@ import numpy as np
 import pandas as pd
 
 # v1 (2026-10-25): per-record rows carry their matched errors, errors_ms.
+# 2026-10-29: manual marks on val are refused unless every record is SYNTHETIC;
+# accepted inputs give the same output, so the version is unchanged.
 VERSION = "fiducial-agreement-v1"
 FIDUCIALS = ("ecg_r", "ppg_foot")
 ALLOWED_SPLITS = ("train", "val")
+# Split of manual marks on real records: fiducial methods are selected on train.
+MANUAL_SPLITS = ("train",)
 ANNOTATION_COLUMNS = (
     "record_id", "split", "fiducial", "time_s", "review_start_s", "review_end_s",
     "annotator", "annotated_on", "note",
@@ -137,6 +144,19 @@ def _reference_type(annotations, allow_synthetic_truth):
     return "SYNTHETIC_TRUTH"
 
 
+def _check_manual_split(annotations, reference_type, source_types):
+    """Manual marks count on train only, unless every record is SYNTHETIC.
+
+    ``source_types`` None (undeclared) counts as real records: fail closed.
+    """
+    if reference_type != "MANUAL" or set(annotations.split) <= set(MANUAL_SPLITS):
+        return
+    if isinstance(source_types, (list, tuple)) and set(source_types) == {"SYNTHETIC"}:
+        return
+    raise ValueError("Manual marks on real records are compared on train only; val "
+                     "is never used to select fiducial methods")
+
+
 def _summary(errors, n_ref, n_det, tp):
     fp, fn = n_det - tp, n_ref - tp
     errors_ms = np.asarray(errors, dtype=float) * 1000
@@ -151,15 +171,19 @@ def _summary(errors, n_ref, n_det, tp):
     }
 
 
-def agreement(annotations, detections, tolerance_s, allow_synthetic_truth=False):
+def agreement(annotations, detections, tolerance_s, allow_synthetic_truth=False,
+              source_types=None):
     """Sensitivity, PPV and timing error (det - manual) per method and fiducial.
 
     ``tolerance_s`` maps fiducial -> matching window in seconds. Generated
     SYNTHETIC truth is refused unless ``allow_synthetic_truth`` (a code check).
+    ``source_types``: list of the records' source types, vouched for by the
+    caller; manual marks on val are refused unless its only value is SYNTHETIC.
     ``n_detected`` = TP + FP: detections in the region plus edge matches.
     """
     regions = _regions(annotations)
     reference_type = _reference_type(annotations, allow_synthetic_truth)
+    _check_manual_split(annotations, reference_type, source_types)
     det_times = _check_columns(detections, DETECTION_COLUMNS, "detections")
     if detections.method.isna().any() or not all(
         isinstance(m, str) and m for m in detections.method

@@ -72,9 +72,10 @@ module `features-sqi-v1` chưa được tích hợp.
 
 **Quyết định 2026-10-25 (Huy):** B3 (kể cả `b3-pipeline-v1`) giữ đặc trưng
 `pulsedb-simple-stats-v0` để đóng baseline G1. PAT, nhịp tim và SQI đi vào một
-model **B4** riêng, chỉ sau khi đánh dấu tay trên train/val (không bao giờ test)
-xác nhận mốc R/foot ([tài liệu mốc Tuần 5](week05_fiducials_pat_validity.md) mục
-8). Báo B4 − B3 ghép cặp theo người để biết PAT thêm được bao nhiêu. Lý do: mốc chưa
+model **B4** riêng, chỉ sau khi đánh dấu tay trên train (không dùng val hay test để
+chọn mốc) xác nhận mốc R/foot
+([tài liệu mốc Tuần 5](week05_fiducials_pat_validity.md) mục 9). Báo B4 − B3 ghép
+cặp theo người để biết PAT thêm được bao nhiêu. Lý do: mốc chưa
 thẩm định; PPG của PulseDB là PPG ngón tay 125 Hz, khác cổ tay của thiết bị; lọc theo
 SQI làm đổi tập được đánh giá và ngưỡng SQI chưa có nguồn.
 
@@ -130,23 +131,21 @@ train/val là số dòng/người **sau** QC, đúng tập được fit và ch�
 
 ## Chạy
 
-```powershell
-.\.venv\Scripts\python.exe scripts/build_pulsedb_split.py --config data/processed/linh_split_config.json --output data/processed/pulsedb_split_run_01
-.\.venv\Scripts\python.exe scripts/run_b3_pulsedb.py --raw <đường dẫn .mat> --split-dir data/processed/pulsedb_split_run_01
-```
-
-Tùy chọn: `--config` (mặc định `configs/models/b3_pulsedb_v0.json`) và
-`--output` (thư mục mới). Với v0, reader nạp toàn bộ file vào RAM. Với v1, reader
-`h5py` chỉ đọc các dòng inventory, mỗi lần một khối. Cả hai đều hash lại mọi dòng
-inventory.
-
-v0 từ chối ngay (trước khi đọc raw) split có `subject_subsample`, vì inventory
-của nó chỉ gồm một phần dòng của file. Pool Train 400 người (2026-10-25):
+Pool Train 400 người đã chốt (config split
+[pulsedb_train400_split.json](../../configs/data/pulsedb_train400_split.json)):
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/build_pulsedb_split.py --config configs/data/pulsedb_train400_split.json --output data/processed/pulsedb_train400_split_run01
 .\.venv\Scripts\python.exe scripts/run_b3_pulsedb.py --raw data/raw/pulsedb/VitalDB_Train_Subset.mat --split-dir data/processed/pulsedb_train400_split_run01 --config configs/models/b3_pulsedb_v1.json
 ```
+
+Tùy chọn: `--config` và `--output` (thư mục mới). **Mặc định của `--config` là
+`configs/models/b3_pulsedb_v0.json`**, và v0 từ chối split có `subject_subsample`
+(sau khi kiểm bàn giao split, trước khi đọc tín hiệu), vì inventory của nó chỉ gồm một
+phần dòng của file. Với split đã chốt phải truyền
+`--config configs/models/b3_pulsedb_v1.json`. Với v0, reader nạp toàn bộ file vào
+RAM. Với v1, reader `h5py` chỉ đọc các dòng inventory, mỗi lần một khối. Cả hai đều
+hash lại mọi dòng inventory.
 
 ## Đầu ra `runs/b3_pulsedb/<UTC>/`
 

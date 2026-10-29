@@ -443,7 +443,7 @@ def test_match_events_maximises_pairs_and_never_reuses():
     assert match_events([1.0], [1.0501], 0.05)[0] == []
 
 
-def _tables(times_det, split="val", marks=(1.0, 2.0, 3.0), annotator="HUY",
+def _tables(times_det, split="train", marks=(1.0, 2.0, 3.0), annotator="HUY",
             det_split=None):
     rows = [(f, t) for f, t in [("ecg_r", t) for t in marks] + [("ppg_foot", None)]]
     annotations = pd.DataFrame([
@@ -488,12 +488,34 @@ def test_agreement_rejects_test_split_mismatch_and_missing_run():
     annotations, detections = _tables([1.0], split="test")
     with pytest.raises(ValueError, match="train/val"):
         agreement(annotations, detections, TOLERANCE)
-    annotations, detections = _tables([1.0], det_split="train")
+    annotations, detections = _tables([1.0], det_split="val")
     with pytest.raises(ValueError, match="split differs"):
         agreement(annotations, detections, TOLERANCE)
     annotations, detections = _tables([1.0])
     with pytest.raises(ValueError, match="No method was run"):
         agreement(annotations, detections[detections.fiducial == "ecg_r"], TOLERANCE)
+
+
+def test_agreement_takes_manual_marks_on_val_only_for_synthetic_records():
+    """Decided 2026-10-29 (docs section 4, 9.1): fiducial methods are selected on
+    train only, so manual marks on val of real or undeclared records are refused."""
+    annotations, detections = _tables([1.0, 2.0, 3.0], split="val")
+    for source_types in (None, ["PUBLIC_PULSEDB"], ["SYNTHETIC", "PUBLIC_PULSEDB"],
+                         [], "SYNTHETIC"):
+        with pytest.raises(ValueError, match="train only"):
+            agreement(annotations, detections, TOLERANCE, source_types=source_types)
+    # Practice marks on generated records may stay on val.
+    practice = agreement(annotations, detections, TOLERANCE,
+                         source_types=["SYNTHETIC"])
+    assert practice["reference_type"] == "MANUAL"
+    # Generated truth is a code check and keeps val.
+    truth, detections = _tables([1.0], split="val",
+                                annotator="SYNTHETIC_GROUND_TRUTH_NOT_MANUAL")
+    assert agreement(truth, detections, TOLERANCE, allow_synthetic_truth=True)[
+        "reference_type"] == "SYNTHETIC_TRUTH"
+    annotations, detections = _tables([1.0, 2.0, 3.0], split="train")
+    assert agreement(annotations, detections, TOLERANCE,
+                     source_types=["PUBLIC_PULSEDB"])["reference_type"] == "MANUAL"
 
 
 @pytest.mark.parametrize("name", ["SYNTHETIC_GROUND_TRUTH_NOT_MANUAL",
@@ -701,6 +723,43 @@ def test_compare_ties_annotations_to_the_detected_records(tmp_path):
     with pytest.raises(ValueError, match="differ from the file"):
         run_compare(truth, det, CONFIG_PATH, tmp_path / "e.json",
                     allow_synthetic_truth=True)
+
+
+def test_compare_refuses_manual_marks_on_val_of_real_records(tmp_path):
+    """Synth records are val. Relabelled PUBLIC_PULSEDB, or edited while still
+    labelled SYNTHETIC, they stand in for real val records: marks under a person's
+    name (a renamed truth copy, with the sidecar annotate writes) are refused
+    there. Only records that detect verified as unchanged synth output pass."""
+    for case, edit, refused in (
+            ("pulsedb", {"source_type": "PUBLIC_PULSEDB"}, True),
+            ("relabelled", {"subject_id": "SYN_S02"}, True),
+            ("synth", None, False)):
+        base = tmp_path / case
+        records, det, manual = base / "records", base / "det.csv", base / "manual.csv"
+        main(["synth", "--out", str(records)])
+        if edit is not None:
+            index = pd.read_csv(records / "records.csv", dtype=str)
+            index.assign(**edit).to_csv(records / "records.csv", index=False,
+                                        lineterminator="\n")
+        main(["detect", "--records", str(records), "--out", str(det)])
+        detect_info = json.loads((base / "det.provenance.json").read_text("utf-8"))
+        assert detect_info["records_from_synth"] is not refused
+        pd.read_csv(records / "truth_synthetic.csv", dtype=str,
+                    keep_default_na=False).assign(
+            annotator="HUY", annotated_on="2026-10-29").to_csv(
+            manual, index=False, lineterminator="\n")
+        (base / "manual.provenance.json").write_text(json.dumps({
+            "output_sha256": hashlib.sha256(manual.read_bytes()).hexdigest(),
+            "provenance": {"inputs_sha256": {"records_csv": hashlib.sha256(
+                (records / "records.csv").read_bytes()).hexdigest()}}}),
+            encoding="utf-8")
+        if refused:
+            with pytest.raises(ValueError, match="train only"):
+                run_compare(manual, det, CONFIG_PATH, base / "cmp.json")
+            assert not (base / "cmp.json").exists()
+        else:
+            result = run_compare(manual, det, CONFIG_PATH, base / "cmp.json")
+            assert result["reference_type"] == "MANUAL"
 
 
 def test_annotate_refuses_existing_output_before_any_window(tmp_path, monkeypatch):
