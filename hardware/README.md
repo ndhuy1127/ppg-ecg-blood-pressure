@@ -17,7 +17,8 @@
   - [v1_bringup_procedure.md](test_reports/v1_bringup_procedure.md): trình tự
     kiểm khi nhận hàng, sửa module, hàn, cấp nguồn và kiểm từng khối của V1-module;
   - [sync_10min_test_plan.md](test_reports/sync_10min_test_plan.md): đo tốc độ
-    thực, drift, jitter, độ trễ và lệch ECG–PPG trên bench.
+    thực, drift, jitter, độ trễ và lệch ECG–PPG khi thử trên bàn với PCB V1 (không
+    người), sau bring-up mục 7–8.
 
 Tài liệu cấu hình liên quan ở `configs/hardware/`: yêu cầu V0,
 [sơ đồ khối V1-module](../configs/hardware/hardware_diagram_v1.svg),

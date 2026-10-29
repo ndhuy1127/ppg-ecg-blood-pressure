@@ -1,5 +1,11 @@
 # So sánh hai phương án điện cực ECG: Ag/AgCl gel và điện cực khô
 
+> Bảng và phần "Kết luận cho V0" là lịch sử (bản V0 nối dây đã bỏ ngày 2026-10-24). Quyết
+> định hiện hành (chốt 2026-10-29): hồ sơ đạo đức v0.1 và pilot chỉ dùng ba điện cực dán
+> Ag/AgCl trên người, theo [protocol v0.2](../docs/protocol/protocol_outline_v0.2.md)
+> mục 5.1–5.2; điện cực khô và cấu hình 2 điện cực
+> không thuộc hồ sơ v0.1, chỉ thử trên bàn không người, hoặc sau pilot qua sửa đổi đạo đức.
+
 | Tiêu chí | Điện cực Ag/AgCl có gel | Điện cực khô |
 | --- | --- | --- |
 | Cấu tạo, nguyên lý sử dụng | Điện cực sử dụng vật liệu Ag/AgCl tiếp xúc với da thông qua lớp gel điện giải. Gel giúp tạo tiếp xúc điện ổn định và giảm trở kháng tiếp xúc da–điện cực. | Điện cực tiếp xúc trực tiếp với da mà không sử dụng gel điện giải. Có thể dùng các cấu trúc/vật liệu dẫn điện phù hợp cho tiếp xúc khô với da; hiệu quả phụ thuộc mạnh vào cơ khí tiếp xúc và áp lực lên da. |

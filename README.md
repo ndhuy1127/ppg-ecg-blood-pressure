@@ -126,14 +126,16 @@ lượng lớn, bí mật, token hay tệp môi trường. Chỉ dữ liệu m�
 
 ## Trạng thái dự án
 
-Dự án đang ở tuần 6 trong lộ trình 28 tuần (bắt đầu 2026-09-17; cập nhật 2026-10-25). Tóm tắt theo mức bằng chứng:
+Dự án đang ở tuần 6 trong lộ trình 28 tuần (bắt đầu 2026-09-17; cập nhật 2026-10-29). Tóm tắt theo mức bằng chứng:
 
 | Mức | Nội dung |
 | --- | --- |
 | Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; đặc trưng PPG/HR/PAT, SQI `features-sqi-v1` và bootstrap theo người (Tuần 4); pipeline B0/B3 (XGBoost, đặc trưng `pulsedb-simple-stats-v0`) trên split v2, fit trên train và chỉ chấm val ([hướng dẫn](docs/protocol/run_b3_pulsedb.md)); logger packet V0.1 và V0.2 (mốc `SAMP` bit 8, nhiệt độ `0xB1`, cấu hình AFE `0xD2`, lệnh và xác nhận `0xD3`, kênh im lặng), mô phỏng `synthetic-packet-v3`, mốc R/foot thứ hai và quy tắc PAT hợp lệ (Tuần 5) |
 | Build được, chưa chạy trên bo | Firmware ESP32-S3 gửi packet V0.2 (`0xD1`, IMU, mốc `SAMP`, nhiệt độ `0xB1`, cấu hình AFE `0xD2`, lệnh từ PC, xung kích thích đồng bộ) từ nguồn AFE giả, và driver chip thật MAX30001, MAX30101, BMI270 chưa chạy trên chip ([firmware/](firmware/README.md)) |
-| Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3); B0/B3 trên PulseDB VitalDB Train 400 người, chỉ chấm val, nhãn ABP công khai, không phải cuff ([Tuần 5](reports/weekly/week_05/pulsedb_b3_v1/README.md)) |
-| Bản thảo | Câu hỏi nghiên cứu, protocol v0.2, hồ sơ đạo đức v0.1, tổng quan tài liệu, danh sách mua, thiết kế KiCad V1-module (chưa đặt gia công) |
+| Có code và test SYNTHETIC, chưa chạy | B2 trên PulseDB (nhân khẩu học cộng HR từ đỉnh R của ECG): chờ duyệt định nghĩa, runner từ chối chạy khi status là `PENDING_APPROVAL_NOT_RUN` ([định nghĩa B2](docs/protocol/b2_pulsedb_definition.md)) |
+| Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3, lịch sử: tập AAMI Cal đã lộ test, xem [hướng dẫn](docs/protocol/run_b0_pulsedb_csv.md)); B0/B3 trên PulseDB VitalDB Train 400 người, chỉ chấm val, nhãn ABP công khai, không phải cuff ([Tuần 5](reports/weekly/week_05/pulsedb_b3_v1/README.md)) |
+| Bản thảo | Câu hỏi nghiên cứu, protocol v0.3 ([protocol_outline_v0.2.md](docs/protocol/protocol_outline_v0.2.md)), hồ sơ đạo đức (các mục thiết kế/đạo đức đã có phương án của nhóm ngày 2026-10-29, chờ thầy duyệt trước khi nộp), tổng quan tài liệu, danh sách mua |
+| Phần cứng V1, chưa có trong tay | Thiết kế KiCad V1-draft5: PCB V1 đang đặt gia công ở CXT từ 2026-10-28. Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M đã đặt 2026-10-27; MAX30001, MAX30101, BMI270 và điện cực chưa đặt |
 | Chưa có | Phần cứng lắp ráp, bản ghi ECG/PPG của nhóm, dữ liệu cuff, mô hình ΔBP và mọi kết quả trả lời RQ1–RQ3 |
 
 Kết quả trên dữ liệu giả lập chỉ kiểm tra code, không phải hiệu năng ước lượng

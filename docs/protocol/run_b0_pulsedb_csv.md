@@ -1,8 +1,14 @@
 # Chạy B0 từ CSV PulseDB của Linh
 
-Đây là runner mới cho API B0/metrics Tuần 3, chỉ fit train và đánh giá val.
+Đây là runner cho API B0/metrics Tuần 3, chỉ fit train và đánh giá val.
 Không đổi split, đọc waveform, dùng nhãn test, hoặc chạy B1. Kết quả là mô tả
 BP tuyệt đối trên các dòng nhãn ABP công khai; chưa thay đánh giá cuff/ΔBP.
+
+**Runner lịch sử.** Mặc định nó chạy trên CSV 1.000 đoạn của pool AAMI Cal, tập đã
+lộ test: notebook Tuần 3–4 đã chấm test trên pool này
+([provenance](../pulsedb_provenance.md) mục 5). Không dùng kết quả để chọn model. B0
+hiện hành chạy trong `b3-pipeline-v1` trên split Train 400 người
+([run_b3_pulsedb.md](run_b3_pulsedb.md)).
 
 ## Đầu vào
 
@@ -77,7 +83,8 @@ script từ chối ghi đè file đã tồn tại.
   kiểm tra chuỗi hash trong CSV, chưa tái tạo hash từ raw.
 - Xác nhận mapping người, việc chọn pool 100 người × 10 đoạn và cách chia lại
   subset so với các holdout gốc; sample_id đánh lại không thay index raw gốc.
-- B0 tính trung bình đều theo dòng; trọng số và đơn vị quan sát chưa chốt.
+- B0 tính trung bình đều theo dòng, giữ như Tuần 3. Trọng số 1/n_s (B0 = trung bình
+  các trung bình theo người) được chốt trong `b3-pipeline-v1`, không áp ở runner này.
 - Không có chronology/calibration nên chưa chạy B1 trên CSV này.
 - Test runner dùng dữ liệu tự tạo; không thay CI Python 3.11.
 

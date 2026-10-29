@@ -1,7 +1,7 @@
 # Danh sách mua V1-module
 
-> **Trạng thái (2026-10-28):** đã đặt bo Waveshare ESP32-S3 (2026-10-27); các mục khác
-> chưa đặt.
+> **Trạng thái (2026-10-29):** đã đặt bo Waveshare ESP32-S3 (2026-10-27); PCB V1 đang
+> đặt ở CXT từ 2026-10-28; các mục khác chưa đặt (mục 5).
 >
 > **Phạm vi:** một bộ module cắm thẳng vào bo đế và bo cổ tay V1
 > ([custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md)
@@ -22,7 +22,9 @@
 
 - Không nhầm BMI270 với bản SEN-22398 ("Micro", 0,75" × 0,30"); footprint bo cổ
   tay theo bản SEN-22397.
-- **MCU (dòng 6, đổi 2026-10-27):** Đã đặt bo Waveshare ESP32-S3-DEV-KIT-N8R8-M.
+- **MCU (dòng 6, đổi 2026-10-27):** Đã đặt bo Waveshare ESP32-S3-DEV-KIT-N8R8-M
+  thành đơn riêng, không thuộc đơn DigiKey này; nơi bán, giá và mã đơn chưa ghi
+  (mục 5).
   Bo này công bố kích thước và pinout: hai hàng 1×22 cách 22,86 mm, thứ tự chân giống
   hệt DevKitC-1 (đối chiếu từng chân với footprint U1 ngày 2026-10-27; wiki Waveshare
   ghi "Compatible with the pinout of ESP32-S3-DevKitC-1"), module Espressif
@@ -38,9 +40,10 @@
   cổng USB-to-UART là Micro-USB và cáp đi kèm hướng dẫn là USB-A – Micro-B. Flash
   8 MB đủ cho firmware (khoảng 208 KB); GPIO47 chạy 3,3 V với WROOM-1-N8R8
   (custom_board_proposal.md A.6 mục 4).
-- Tạm tính: $68,87 + phí ship $25 (đơn dưới $150) = **$93,87**, chưa gồm thuế
-  nhập khẩu/VAT. DigiKey giao 1–5 ngày bằng DHL/FedEx/UPS; thuế và phí hải quan
-  thu khi nhận hàng
+- Tạm tính (dòng 1, 2, 4): $35,03 + $18,50 + 10 × $0,034 = $53,87, cộng phí ship $25
+  (đơn dưới $150) = **$78,87**, chưa gồm thuế nhập khẩu/VAT (sửa 2026-10-29: bản
+  trước tính $68,87 + $25 = $93,87, còn gồm DevKitC). DigiKey giao 1–5 ngày bằng
+  DHL/FedEx/UPS; thuế và phí hải quan thu khi nhận hàng
   ([biểu phí ship](https://www.digikey.com/en/help-support/delivery-information/international-shipping-rates?country=VN)).
 
 ### 1.2. ProtoCentral (đặt trực tiếp)
@@ -71,7 +74,8 @@ gồm phí ship.
 - Header đực (dòng 9) để hàn M1 (MAX30101) và M3 (BMI270) lên bo cổ tay
   ([custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) A.3).
 
-- MCU mua qua DigiKey (dòng 6, mục 1.1). Bo OEM "ESP32-S3-DevKitC N16R8" (thegioiic,
+- MCU là bo Waveshare ESP32-S3-DEV-KIT-N8R8-M, đặt 2026-10-27 (dòng 6, mục 1.1);
+  nơi bán và giá chưa ghi. Bo OEM "ESP32-S3-DevKitC N16R8" (thegioiic,
   mã IC42459) trong bản trước của danh sách không mua nữa (2026-10-24): trang bán
   không ghi module, kích thước hay pinout, nên không bảo đảm cắm vừa bo đế.
 - Một cáp USB-C mang cả cổng USB native (packet) và UART (log) qua hub trên bo
@@ -92,7 +96,12 @@ Kiểm đồ có sẵn ở lab trước, chỉ mua phần thiếu; chưa tra gi�
 | Dây kẹp cá sấu | 4 | Nối mạch chia áp vào đầu bấm của cáp ECG |
 | Hộp tối nhỏ | 1 | Che MAX30101 khi đo |
 
-## 2. Đợt 2: mua cùng PCB V1 (chưa mua)
+## 2. Đợt 2: mua cùng PCB V1 (PCB V1 đang đặt ở CXT từ 2026-10-28)
+
+**Trạng thái (2026-10-29):** PCB V1-draft5 đang đặt ở CXT từ 2026-10-28, hai thiết kế
+riêng, 5 tấm mỗi mạch, chưa có ngày giao
+([báo cáo Tuần 5](../../reports/weekly/week_05/README.md)); linh kiện lắp ráp ở bảng
+dưới chưa đặt.
 
 Đặt gia công PCB ngay sau khi sửa bo đế (header J3, V1-draft4;
 `custom_board_proposal.md` A.2) và ERC/DRC sạch, song song với đợt 1, không chờ
@@ -109,7 +118,7 @@ gửi nhà mạch thành hai thiết kế riêng, không lưu trong repo.** Danh
 
 | Bo | Ký hiệu | Linh kiện | SL |
 | --- | --- | --- | --- |
-| Đế | U1 | Socket cái 1×22, 2,54 mm, cho DevKitC | 2 |
+| Đế | U1 | Socket cái 1×22, 2,54 mm, cho bo Waveshare (chân giống DevKitC-1) | 2 |
 | Đế | J1 | Socket cái 1×10, 2,54 mm, cho header SV1 của breakout MAX30001 | 1 |
 | Đế | J2 | Box header IDC 2×8, 2,54 mm, đứng | 1 |
 | Đế | J3 | Header đực 1×2, 2,54 mm (GPIO6, GND), cắt từ header 1×40 ở dòng 9 | 1 |
@@ -164,15 +173,20 @@ Trình tự đầy đủ, kể cả bước cấp nguồn:
 | Linh kiện | Lý do |
 | --- | --- |
 | FSR 402 | V1 không dùng FSR (chốt 2026-10-23) |
-| Điện cực khô BIOPAC ELDRY | Để sau pilot; việc dùng điện cực khô trên người còn mở trong protocol v0.2 |
+| Điện cực khô BIOPAC ELDRY | Để sau pilot: hồ sơ đạo đức v0.1 chỉ dùng Ag/AgCl trên người (chốt 2026-10-29) |
 | TMP117 | V1 không có TMP117 (chốt 2026-10-16) |
 
 ## 5. Duyệt và đặt hàng
 
-| Mục | Nội dung |
-| --- | --- |
-| Người duyệt | |
-| Ngày duyệt | |
-| Ngày đặt (DigiKey / ProtoCentral / trong nước) | |
-| Ngày giao dự kiến | |
-| Mã đơn | |
+Cập nhật 2026-10-29. Mỗi đơn một dòng.
+
+| Đơn | Nội dung | Nơi bán | Trạng thái | Ngày đặt | Ngày giao dự kiến | Mã đơn | Người duyệt | Ngày duyệt |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Waveshare | Bo ESP32-S3-DEV-KIT-N8R8-M (dòng 6) | Chưa ghi (giá chưa ghi) | Đã đặt, chưa nhận | 2026-10-27 | Chưa ghi | Chưa ghi | | |
+| CXT | Gia công PCB V1-draft5, hai thiết kế riêng, 5 tấm mỗi mạch (mục 2); commit và SHA-256 của gói Gerber chưa ghi | CXT | Đang đặt | 2026-10-28 | Chưa có | Chưa ghi | | |
+| DigiKey | Dòng 1, 2, 4; tạm tính $78,87 gồm ship (mục 1.1) | DigiKey | Chưa đặt | — | — | — | | |
+| ProtoCentral | Kit MAX30001 (dòng 5); phí ship và giao về Việt Nam chưa kiểm | ProtoCentral (đặt trực tiếp) | Chưa đặt; trang bán ghi hết hàng tạm thời (tra 2026-10-23) | — | — | — | | |
+| Trong nước | Dòng 7–9; 154.000 đ cộng cáp USB-C chưa tra giá (mục 1.3) | Minh Trí Medical, hshop; cáp USB-C chưa chọn nơi bán | Chưa đặt | — | — | — | | |
+
+Linh kiện lắp ráp đợt 2 (mục 2) và đồ dựng kích thích (mục 1.4) chưa chọn nơi bán,
+chưa đặt.

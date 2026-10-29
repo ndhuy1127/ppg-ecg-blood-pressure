@@ -1,12 +1,50 @@
 # Changelog
 
 Ghi các thay đổi đã merge vào `develop`, nhóm theo tuần của lộ trình. Nguồn: lịch
-sử Git (PR #1–#23) và báo cáo tuần trong `reports/weekly/`. Ngày là ngày merge PR.
+sử Git (PR #1–#25 và ba commit đẩy thẳng ngày 2026-10-28) và báo cáo tuần trong
+`reports/weekly/`. Ngày là ngày merge PR, hoặc ngày commit với commit không qua PR.
 Changelog không ghi kết quả hiệu năng; test và demo trên dữ liệu SYNTHETIC chỉ
 kiểm tra code. Ngày tính theo giờ Việt Nam (UTC+7).
 
-## Chưa merge (nhánh `dev/huy`)
+## Tuần 5 (PR #25 và commit trực tiếp, 2026-10-26 → 2026-10-28)
 
+- #25 (2026-10-26): phần cứng V1, firmware khung và Packet Schema.
+  - Packet: Packet Schema V0.1 chốt, bản bổ sung V0.2
+    (`configs/hardware/Packet_Schema_V0.2.md`, `VERSION 0x02`: IMU, mốc `SAMP`
+    bit 8, `0xD1`, `0xB1`, `0xD2`, `0xD3`); logger `packet-logger-v2`
+    (`scripts/packet_logger.py`, đọc file hoặc cổng serial, thêm `pyserial==3.5`),
+    lệnh PC → thiết bị (`scripts/device_command.py`), mô phỏng
+    `synthetic-packet-v3`.
+  - Firmware ESP32-S3 khung (`firmware/`): gửi packet V0.2 từ nguồn AFE giả, nút
+    `t0`, xung kích thích mã 3; driver MAX30001, MAX30101, BMI270 test trên máy
+    tính, chưa chạy trên chip.
+  - Tín hiệu: mốc R/foot thứ hai, PAT hợp lệ
+    (`software/signal_processing/pat_validity.py`), so với đánh dấu tay và cổng
+    chấp nhận (`fiducials-week05-v2`, `scripts/week05_fiducials.py`);
+    `features-sqi-v2`; `motion-sqi-v0`.
+  - PulseDB: reader `h5py` đọc từng phần (thêm `h5py==3.16.0`), `subject_subsample`
+    của split, split Train 400 người (`configs/data/pulsedb_train400_split.json`),
+    `b3-pipeline-v1` (QC DBP ≥ SBP, trọng số 1/n_s) và kết quả B0/B3 trên val
+    (`reports/weekly/week_05/pulsedb_b3_v1/`); builder từ chối ECG/PPG trùng giữa
+    split và sai thứ tự kênh; B2 có code và test SYNTHETIC, chưa chạy, chờ duyệt
+    định nghĩa. Gỡ khỏi Git CSV nhãn và MAE test của pool AAMI Cal.
+  - Phần cứng: KiCad V1-draft4, pin map, danh sách mua, trình tự bring-up, ước
+    lượng dòng (`configs/hardware/power_budget_v1.md`); bỏ bản V0 nối dây.
+  - Tài liệu: protocol v0.2, hồ sơ đạo đức bản nháp v0.1 (`docs/ethics/`), kịch bản
+    bài báo v0.1, báo cáo Tuần 1–5 theo mẫu chung, kế hoạch Tuần 6.
+- `9a10274` (2026-10-28, không qua PR): KiCad V1-draft5 theo bo Waveshare
+  ESP32-S3-DEV-KIT-N8R8 (U1 63,3 × 25,4 mm, breakout ECG dời 0,5 mm, 3V3 hình sao);
+  danh sách mua và bring-up cập nhật; so sánh điện cực ECG chuyển từ PDF sang
+  Markdown.
+- `18a4a63` (2026-10-28, không qua PR): bỏ ghi chú chờ duyệt theo người trong kế
+  hoạch tuần, biên bản kickoff, protocol, Packet Schema, hướng dẫn logger, quy ước dữ
+  liệu, `firmware/README.md` và định nghĩa B2; giữ các việc còn mở thật. B2 vẫn chưa
+  duyệt, runner vẫn bị chặn.
+- `4ee3e6d` (2026-10-28, không qua PR): báo cáo Tuần 5 cập nhật tới 2026-10-28.
+
+## #24: làm chặt pipeline Tuần 4 và thêm kế hoạch Tuần 5 (2026-10-20)
+
+- Kế hoạch Tuần 5 (`docs/plans/WEEK_05.md`).
 - SQI `features-sqi-v1`: nhịp không ghép vì nằm sát biên cửa sổ không còn bị đếm
   là `pat:unmatched_beats` (v0 gắn cờ nhầm 89/200 cửa sổ sạch); ghi lại độ lệch
   foot +5,7 ms của lọc `zero_phase` trên fixture.

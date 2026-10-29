@@ -1,4 +1,4 @@
-# Kế hoạch đo đồng bộ ECG–PPG 10 phút (bench, không đo người)
+# Kế hoạch đo đồng bộ ECG–PPG 10 phút (thử trên bàn với PCB V1, không người)
 
 > Chưa thực hiện vì chưa có phần cứng. Chỉ tiêu đạt/không
 > đạt chưa chốt; theo `configs/hardware/hardware_requirements_for_V0.md` §4.4,
@@ -28,6 +28,14 @@ dùng PAT hay mốc sinh lý để suy ra lệch clock.
   V0.2 mục 7); lần đo với firmware V0.1 chỉ cho `L_ECG` của mốc đọc FIFO và ghi riêng.
 - Cấu hình AFE (tốc độ, FMSTR, chế độ LED, lấy trung bình, bộ lọc) đã ghi vào
   metadata phiên. Mỗi cấu hình khác nhau là một lần đo riêng.
+- **Độ rộng xung LED đã chốt** (thêm 2026-10-29) theo luật viết trước ở
+  [interface_power_sampling_v0.md](../../configs/hardware/interface_power_sampling_v0.md)
+  mục 6, từ số đo bring-up mục 8. Chưa chốt thì chưa đo: khoảng lệch giữa các khe PPG
+  và `L_PPG` phụ thuộc độ rộng xung. `sync10` mặc định 411 µs; chọn 215 µs thì build
+  với `-DBOARD_PPG_LED_PW_US=215` (mục 3). Kiểm `SPO2_CONFIG` trong `0xD2` của phiên
+  khớp độ rộng xung đã chọn.
+- **Cực tính `SAMP` đã kiểm** ở bring-up mục 7 bước 4, cùng việc xung `SAMP` đầu tiên
+  ứng với mẫu đầu tiên của FIFO (mục 3).
 - **Không gắn điện cực lên người.** Mọi đo đạc dùng tín hiệu nhân tạo.
 
 ## 3. Bố trí kích thích chung
@@ -51,9 +59,29 @@ ghi lại:
   khi đặt GPIO6 lên mức cao (sai số cỡ µs, gồm cả độ trễ ghi GPIO). Seed của dãy độ
   lệch là `SESSION_ID`, có trong mọi packet: mỗi lần khởi động một dãy mới, tái lập
   được. Số thứ tự sự kiện đếm chung với sự kiện t0 (Packet Schema V0.1 mục 10).
+- **Cờ build của `sync10` (chốt 2026-10-29):** env này đặt sẵn `BOARD_SAMP_VERIFIED=1`
+  và `BOARD_STIM=1`, nên chỉ dùng sau khi bring-up mục 7 bước 4 đã kiểm cực tính
+  `SAMP`, và phải truyền đúng cạnh đo được. Mặc định của firmware là cạnh xuống
+  (`BOARD_SAMP_RISING_EDGE=0`). Sai cạnh thì mốc bit 8 lệch một khoảng cố định, cỡ độ
+  rộng xung `SAMP` (khoảng 488 µs); logger không bắt được lệch cố định này, và
+  `L_ECG,SAMP` đo ở đây chỉ đúng với cạnh đã dùng. Độ rộng xung LED truyền cùng lúc.
+  Giá trị đo được truyền lúc build bằng biến môi trường, không sửa `platformio.ini`
+  ([firmware/README.md](../../firmware/README.md) mục "Bản build"):
+
+  ```powershell
+  $env:PLATFORMIO_BUILD_FLAGS = "-DBOARD_SAMP_RISING_EDGE=1 -DBOARD_PPG_LED_PW_US=411"
+  pio run -d firmware -e esp32s3_devkitc_sync10 -t upload --upload-port COM5
+  Remove-Item Env:PLATFORMIO_BUILD_FLAGS
+  ```
+
+  (ví dụ: cạnh lên, 411 µs.) Ghi nguyên văn biến môi trường, commit và ELF SHA-256
+  (packet `0xD1`) vào báo cáo; cực tính `SAMP` không có trong luồng packet.
 - **Kênh ECG:** đưa xung qua mạch chia áp vào đầu vào điện cực của breakout
-  MAX30001, để biên độ ở mức vài mV (đúng dải ECG). Nếu có ECG simulator có
-  đầu vào trigger thì dùng simulator. Không nối GPIO trực tiếp vào đầu vào ECG.
+  MAX30001, để biên độ ở mức vài mV (đúng dải ECG). Mạch chia áp là mức bắt buộc tối
+  thiểu (chốt 2026-10-29, [bring-up](v1_bringup_procedure.md) mục 7 bước 5). ECG/patient
+  simulator có QRS, nếu lab có, dùng cho bước tùy chọn kiểm phát hiện R-peak (bring-up
+  mục 7 bước 6); chỉ thay mạch chia áp trong phép đo này khi simulator có đầu vào
+  trigger nhận xung GPIO6. Không nối GPIO trực tiếp vào đầu vào ECG.
   **Nút tham chiếu (chốt 2026-10-25): nút "cơ thể" nối chân sleeve của jack điện
   cực** (RL → R3 220 kΩ → VCM), không phải GND của bo. Lý do: ở AVDD = 1,8 V đầu
   vào ECG chỉ làm việc trong VMID ± 550 mV, VMID = AVDD/2,15 ≈ 0,84 V, tức khoảng
@@ -75,8 +103,8 @@ ghi lại:
   coi là ánh sáng môi trường và trừ đi, khi đó số đếm ADC không tăng như giả định
   ở trên [chưa đối chiếu datasheet]. Bit 6 = 0 (`ALC_OVF` không bật) chỉ cho biết
   ALC chưa tràn, không chứng minh kích thích thấy được trong dữ liệu PPG. Phải
-  thử trên bench, nhìn trực tiếp số đếm ADC tại cạnh xung, trước khi chạy đủ 10
-  phút (mục 8).
+  thử trên bàn với PCB V1 (không người), sau bring-up mục 8, nhìn trực tiếp số đếm
+  ADC tại cạnh xung, trước khi chạy đủ 10 phút (mục 8).
 - Ghi lại sơ đồ đấu nối thực tế, giá trị điện trở, khoảng cách LED–cảm biến.
 
 Nếu chưa dựng được kích thích chung, vẫn đo được mục 1–3 và 5 (chỉ dùng chỉ số
@@ -133,6 +161,18 @@ giới bit 5) và, với ECG, từng nguồn mốc (bit 8 = 1: mốc `SAMP`; bit
 FIFO; Packet Schema V0.2 mục 7.5); bỏ anchor của packet bit 0/bit 7. Không gộp hai
 nguồn mốc trong một hồi quy, và `L_ECG` luôn ghi kèm nguồn mốc.
 
+**Ba khe PPG (chốt 2026-10-29).** Theo quy ước offset giữa các khe
+([Packet_Schema_V0.1.md](../../configs/hardware/Packet_Schema_V0.1.md) mục 7): mốc
+`t'` của khe j là mốc dựng theo V0.1 mục 5.3 cộng (j − 1) · Δ(PW), gốc là khe 1, Δ
+suy từ `SPO2_CONFIG` trong `0xD2` của phiên.
+
+- `L_PPG` đo trên trục thời gian **đã cộng** Δ: một giá trị `L_PPG` cho cấu hình, ước
+  lượng từ cạnh kích thích thấy trên các khe sau khi cộng Δ.
+- Phần dư theo từng khe (`L_PPG,j` riêng từng khe trừ `L_PPG`) chỉ để kiểm quy ước (ví
+  dụ Δ sai hay một khe lệch), **không** trừ lần hai khi dựng thời gian mẫu.
+- Ghi version của quy ước cùng kết quả; Δ danh định 1 107 µs (411 µs) hay 720 µs
+  (215 µs), Δ dùng thật suy từ `0xD2`.
+
 | Chỉ số | Cách tính |
 | --- | --- |
 | Tốc độ thực `fs_c` | Hồi quy tuyến tính `A_us(k) = a_us + b_us · k`, với `b_us = 10⁶ / fs_c` (µs/mẫu; ví dụ 200 Hz cho `b_us ≈ 5 000`). Suy ra `fs_c = 10⁶ / b_us`, báo cáo kèm khoảng tin cậy |
@@ -180,8 +220,8 @@ hạn. Ghi riêng "giá trị thiết kế/datasheet" và "giá trị đo đư�
 ## 8. Việc còn mở
 
 1. Kích thích PPG bằng LED ngoài có bị ALC của MAX3010x trừ đi không, và cách
-   hiểu STATUS bit 6 (`ALC_OVF`) trong phép đo này (mục 3). Kiểm trên bench
-   trước.
+   hiểu STATUS bit 6 (`ALC_OVF`) trong phép đo này (mục 3). Kiểm trước, khi thử
+   trên bàn với PCB V1 (không người) sau bring-up mục 8.
 2. MAX30101 ở multi-LED ba khe: datasheet không có bảng tổ hợp tốc độ × độ rộng
    xung cho chế độ này (`custom_board_proposal.md` A.6 mục 3), và chip tự đổi tốc
    độ khi tổ hợp không được phép. Trước khi đo, đọc lại thanh ghi `SPO2_SR`; khi

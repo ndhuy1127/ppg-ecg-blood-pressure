@@ -10,9 +10,7 @@
 > nối dây: dùng thẳng PCB V1-module (chốt 2026-10-24). Nguồn, giao tiếp và lấy
 > mẫu: [interface_power_sampling_v0.md](interface_power_sampling_v0.md).
 >
-> **Nguồn số trang:** số trang datasheet được đối chiếu ngày
-> 2026-10-16. Dòng ghi **[chưa đối chiếu]** là thông số chưa kiểm trên
-> datasheet gốc; phải kiểm trước khi chốt linh kiện.
+
 
 ## Phần A — V1 dùng module
 
@@ -36,23 +34,23 @@
 
 | Khối | Linh kiện | Giao tiếp, ghi chú |
 | --- | --- | --- |
-| MCU | Waveshare ESP32-S3-DEV-KIT-N8R8-M, module Espressif ESP32-S3-WROOM-1-N8R8 (đã đặt 2026-10-27; thay bản DevKitC-1-N8R8 chốt 2026-10-24). Bo 63,30 × 25,40 mm (chốt 2026-10-27, bản vẽ Waveshare; nhô 3,3 mm quá mép trên bo đế). Hai hàng 1×22 cách 22,86 mm, thứ tự chân giống DevKitC-1, khớp footprint U1; một cổng USB-C (hub CH334 + CH343) | Cấp nguồn và truyền dữ liệu qua USB với laptop **đang chạy pin, không cắm sạc** |
-| ECG | Breakout ProtoCentral MAX30001 | **SPI bus 1, dùng riêng.** Oscillator 32,768 kHz, LDO 1,8 V và TXB0108 có sẵn trên breakout. Thiết lập V1 chốt ngày 2026-10-23: 512 sps, gain/DHPF/DLPF cố định (độ trễ ECG phụ thuộc các thiết lập này, Table 4 tr. 26, nên bản hoàn chỉnh phải giữ cùng thiết lập). Giá trị chốt ngày 2026-10-25: `ECG_GAIN = 00` (20 V/V, thang ±50 mV, tr. 53), `ECG_DLPF = 01` (40,96 Hz, FIR pha tuyến tính, độ trễ 31,555 ms theo Table 4 tr. 26), `ECG_DHPF = 0` (tắt; lọc thông cao 0,5 Hz zero-phase làm offline), phát hiện rời điện cực DC bật: `EN_DCLOFF = 01`, `IMAG = 010` (10 nA), `VTH = 01` (VMID ± 400 mV), `DCLOFF_IPOL = 0` (tr. 48–49); fast recovery tự động (`FAST = 10`, `FAST_TH` mặc định 0x3F, tr. 45); SPI MAX30001 4 MHz; SPI BMI270 bắt đầu 1 MHz, lên 2 MHz sau khi đo scope; I²C MAX30101 400 kHz (lùi 100 kHz nếu sườn lên qua cáp quá chậm). Chốt 2026-10-24: `EFIT = 15` (ngắt INTB khi có 16 mẫu; đọc tới EOF, nên mỗi packet thường 16 mẫu, tối đa 32 = độ sâu FIFO); xung `SAMP` trên INT2B bật luôn và làm mốc thời gian ECG, chốt cạnh bằng MCPWM capture (Packet Schema V0.2 mục 7) |
-| Điện cực ECG | Ba điện cực dán Ag/AgCl (10 miếng kèm kit, hoặc 3M Red Dot 2228) qua cáp 3 điện cực LA/RA/RL kèm kit | Qua jack 3,5 mm của breakout. Đạo trình I, 3 điện cực theo Figure 17c của datasheet MAX30001 (tr. 84), chốt 2026-10-23 (protocol v0.2 mục 5.2): LA → ring → ECGP ở **mặt lòng** cổ tay trái (mặt lưng đã có bo PPG); RA → tip → ECGN ở mặt lòng cổ tay phải; RL → sleeve → R3 → VCM ở cẳng tay trái, cách LA khoảng 5 cm. Ánh xạ jack theo schematic `pc_max30001_brk_v1.0`: ring → R4 51 kΩ → ECGP, tip → R5 51 kΩ → ECGN, sleeve → R3 → VCM. Tắt lead bias nội. Cấu hình 2 điện cực (bật lead bias nội) và điện cực khô BIOPAC chỉ để so sánh trên bench. Màu nắp đầu bấm khác nhau tùy lô: đo thông mạch trước khi dùng |
+| MCU | Waveshare ESP32-S3-DEV-KIT-N8R8-M, module Espressif ESP32-S3-WROOM-1-N8R8 (đã đặt 2026-10-27; thay bản DevKitC-1-N8R8 chốt 2026-10-24). Bo 63,30 × 25,40 mm (chốt 2026-10-27, bản vẽ Waveshare; nhô 3,3 mm quá mép trên bo đế). Hai hàng 1×22 cách 22,86 mm, thứ tự chân giống DevKitC-1, khớp footprint U1; một cổng USB-C (hub CH334 + CH343) | Cấp nguồn và truyền dữ liệu qua USB với laptop **đang chạy pin, không cắm sạc**. Một cáp USB-C cho hai cổng COM: USB native `303A:1001` (packet) và CH343 (log UART0), chọn theo VID:PID ([bring-up](../../hardware/test_reports/v1_bringup_procedure.md) mục 2) |
+| ECG | Breakout ProtoCentral MAX30001 | **Bus SPI ECG (`SPI2_HOST`), dùng riêng.** Oscillator 32,768 kHz, LDO 1,8 V và TXB0108 có sẵn trên breakout. Thiết lập V1 chốt ngày 2026-10-23: 512 sps, gain/DHPF/DLPF cố định (độ trễ ECG phụ thuộc các thiết lập này, Table 4 tr. 26, nên bản hoàn chỉnh phải giữ cùng thiết lập). Giá trị chốt ngày 2026-10-25: `ECG_GAIN = 00` (20 V/V, thang ±50 mV, tr. 53), `ECG_DLPF = 01` (40,96 Hz, FIR pha tuyến tính, độ trễ 31,555 ms theo Table 4 tr. 26), `ECG_DHPF = 0` (tắt; lọc thông cao 0,5 Hz zero-phase làm offline), phát hiện rời điện cực DC bật: `EN_DCLOFF = 01`, `IMAG = 010` (10 nA), `VTH = 01` (VMID ± 400 mV), `DCLOFF_IPOL = 0` (tr. 48–49); fast recovery tự động (`FAST = 10`, `FAST_TH` mặc định 0x3F, tr. 45); SPI MAX30001 4 MHz; SPI BMI270 bắt đầu 1 MHz, lên 2 MHz sau khi đo scope; I²C MAX30101 400 kHz (lùi 100 kHz nếu sườn lên qua cáp quá chậm). Chốt 2026-10-24: `EFIT = 15` (ngắt INTB khi có 16 mẫu; đọc tới EOF, nên mỗi packet thường 16 mẫu, tối đa 32 = độ sâu FIFO); xung `SAMP` trên INT2B bật luôn và làm mốc thời gian ECG, chốt cạnh bằng MCPWM capture (Packet Schema V0.2 mục 7) |
+| Điện cực ECG | Ba điện cực dán Ag/AgCl (10 miếng kèm kit, hoặc 3M Red Dot 2228) qua cáp 3 điện cực LA/RA/RL kèm kit | Qua jack 3,5 mm của breakout. Đạo trình I, 3 điện cực theo Figure 17c của datasheet MAX30001 (tr. 84), chốt 2026-10-23 (protocol v0.2 mục 5.2): LA → ring → ECGP ở **mặt lòng** cổ tay trái (mặt lưng đã có bo PPG); RA → tip → ECGN ở mặt lòng cổ tay phải; RL → sleeve → R3 → VCM ở cẳng tay trái, cách LA khoảng 5 cm. Ánh xạ jack theo schematic `pc_max30001_brk_v1.0`: ring → R4 51 kΩ → ECGP, tip → R5 51 kΩ → ECGN, sleeve → R3 → VCM. Tắt lead bias nội. Hồ sơ đạo đức v0.1 và pilot chỉ dùng cấu hình 3 điện cực Ag/AgCl này trên người (chốt 2026-10-29); cấu hình 2 điện cực (bật lead bias nội) và điện cực khô BIOPAC chỉ thử trên bàn, không người, hoặc sau pilot qua sửa đổi hồ sơ đạo đức. Màu nắp đầu bấm khác nhau tùy lô: đo thông mạch trước khi dùng |
 | Sửa trên breakout | R3 (VCM → sleeve của jack) 10 kΩ thay bằng 220 kΩ ±1% (datasheet yêu cầu ≥ 200 kΩ, tr. 22, 31, 35, 84); gỡ R7, R8 (0 Ω nối điện cực vào BIP/BIN) | Làm trước khi đo trên người, sau khi đối chiếu bo thật với `pc_max30001_brk_v1.0`. BioZ không dùng (`EN_BIOZ = 0`). Firmware đặt `INTB_TYPE = 01` (CMOS) ở `EN_INT` (0x02) và `EN_INT2` (0x03) vì INTB/INT2B đi qua TXB0108 (mặc định là open-drain, Table 14, tr. 43) |
 | Sự kiện | Nút bấm `t0` (SW1) vào GPIO4, kéo lên 10 kΩ (R2) và tụ 100 nF (C2); LED trạng thái D1 qua 1 kΩ (R3) ở GPIO5 | Đánh dấu bắt đầu bơm cuff trên cùng đồng hồ `esp_timer` |
 | SPI BMI270 qua cáp | R9, R10, R11 33 Ω ở mặt dưới bo đế, nối tiếp `BMI_SCK`, `BMI_MOSI`, `BMI_CS` (net phía MCU mang hậu tố `_MCU`) | Giảm chấn ở đầu phát cho cáp 20–30 cm; giá trị chỉnh theo đo scope. `BMI_MISO` không có điện trở ở bo cổ tay vì không còn chỗ ngoài courtyard của M1/M3 |
-| Phụ | Socket cho DevKitC (2 hàng 1×22) và breakout MAX30001 (header 10 chân SV1); R8 100 kΩ kéo `ECG_CS` lên 3V3; lỗ NPTH 3,2 mm tại (23,37; 2,97) trùng lỗ bắt vít của breakout (V1-draft5 dời breakout 0,5 mm sang trái, 2026-10-27) | Tụ 3V3–GND trên bo đế: C3, C5, C7 (10 µF), C4, C6, C8 (100 nF) và C9 100 nF ở mặt dưới, sát J2.1/J2.2 (đầu vào nguồn của cáp). Từ V1-draft5 (2026-10-27) 3V3 chia hai nhánh từ U1: C3, C4, C6–C8 ở nhánh ECG (U1.1 → J1.2), C5 và C9 ở nhánh cáp (U1.2 → J2.1), xem A.3. Mặt dưới bo đế có R9–R11 và C9 nên phải kê chân cao su. Test point (pad 1,0 mm, có nhãn silkscreen): TP1 `3V3`, TP2 `GND`, TP4 `PPG_SCL`, TP5 `BMI_SCK` (phía cáp), TP6 `T0_BTN`. Header J3 1×2 (chân 1 `STIM` = GPIO6, chân 2 GND) phát xung kích thích cho phép đo đồng bộ 10 phút; J3 nằm trên dải 4 mm thêm ở mép dưới (V1-draft4, 2026-10-24), bên trái cổng USB-C của bo Waveshare, nên bo đế nay 53 × 67,3 mm. Các đường INT, bus SPI ECG, `PPG_SDA`, `BMI_MOSI/MISO/CS` không có test point: đo ở mối hàn chân header mặt trên DevKitC hoặc breakout (bỏ TP7–TP10 ngày 2026-10-24: pad 1 mm không móc kẹp được, lại thêm nhánh dây dài trên đường INT). Silkscreen có viền bo Waveshare (hở phía trên vì bo nhô quá mép trên) và viền breakout, dấu đầu USB và đầu anten (cắm ngược 180° sẽ chập 3V3–GND), bảng chân cáp ở mặt dưới. Vùng anten (30–49,5 × 0–5 mm) cấm cả đổ đồng, track và via. GPIO6 nối J3.1 (`STIM`) |
+| Phụ | Socket cho U1 (2 hàng 1×22, thứ tự chân DevKitC-1) và breakout MAX30001 (header 10 chân SV1); R8 100 kΩ kéo `ECG_CS` lên 3V3; lỗ NPTH 3,2 mm tại (23,37; 2,97) trùng lỗ bắt vít của breakout (V1-draft5 dời breakout 0,5 mm sang trái, 2026-10-27) | Tụ 3V3–GND trên bo đế: C3, C5, C7 (10 µF), C4, C6, C8 (100 nF) và C9 100 nF ở mặt dưới, sát J2.1/J2.2 (đầu vào nguồn của cáp). Từ V1-draft5 (2026-10-27) 3V3 chia hai nhánh từ U1: C3, C4, C6–C8 ở nhánh ECG (U1.1 → J1.2), C5 và C9 ở nhánh cáp (U1.2 → J2.1), xem A.3. Mặt dưới bo đế có R9–R11 và C9 nên phải kê chân cao su. Test point (pad 1,0 mm, có nhãn silkscreen): TP1 `3V3`, TP2 `GND`, TP4 `PPG_SCL`, TP5 `BMI_SCK` (phía cáp), TP6 `T0_BTN`. Header J3 1×2 (chân 1 `STIM` = GPIO6, chân 2 GND) phát xung kích thích cho phép đo đồng bộ 10 phút; J3 nằm trên dải 4 mm thêm ở mép dưới (V1-draft4, 2026-10-24), bên trái cổng USB-C của bo Waveshare, nên bo đế nay 53 × 67,3 mm. Các đường INT, bus SPI ECG, `PPG_SDA`, `BMI_MOSI/MISO/CS` không có test point: đo ở mối hàn chân header mặt trên bo Waveshare hoặc breakout (bỏ TP7–TP10 ngày 2026-10-24: pad 1 mm không móc kẹp được, lại thêm nhánh dây dài trên đường INT). Silkscreen có viền bo Waveshare (hở phía trên vì bo nhô quá mép trên) và viền breakout, dấu đầu USB và đầu anten (cắm ngược 180° sẽ chập 3V3–GND), bảng chân cáp ở mặt dưới. Vùng anten (30–49,5 × 0–5 mm) cấm cả đổ đồng, track và via. GPIO6 nối J3.1 (`STIM`) |
 
 ### A.3. Bo cảm biến cổ tay (gắn trên dây đeo)
 
 | Khối | Linh kiện | Giao tiếp, ghi chú |
 | --- | --- | --- |
-| PPG | SparkFun Photodetector Breakout MAX30101 (Qwiic), SEN-16474 | **I²C bus 1, dùng riêng.** Chỉ cần cấp 3,3 V (A.4). Không chọn bo có chip MAX32664 (chỉ xuất nhịp tim/SpO2 đã tính). Chốt 2026-10-24: multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps mỗi khe, `SMP_AVE = 1`; firmware xóa ngắt `PPG_RDY` sau mỗi mẫu, tới mẫu thứ 8 thì đọc hết FIFO (thường 8 mẫu; Packet Schema V0.2 mục 7.6); độ rộng xung 411 hay 215 µs chọn ở bring-up (A.6 mục 3). Chốt 2026-10-25: dải ADC `SPO2_ADC_RGE = 11` (16 384 nA, LSB 62,5 pA; MAX30101 tr. 19, Bảng 5); dòng LED **hiệu chuẩn theo người**: buổi đầu chỉnh để mức DC mỗi màu khoảng 30–70% thang đo rồi khóa cho người đó ở mọi buổi sau (protocol v0.2 mục 6.1); dòng xanh là tổng của LED3 và LED4 vì khe `011` bật cả hai (tr. 22), nên mỗi nhánh nhận một nửa (mặc định bring-up 7,2 mA mỗi màu: đỏ/IR `0x24`, xanh `0x12` mỗi nhánh); nhiệt độ trong chip đo mỗi 1 s, gửi qua kênh mới `0xB1` của Packet Schema V0.2, mỗi packet một giá trị (chốt 2026-10-25; V0.2 mục 11) |
-| IMU | SparkFun Qwiic 6DoF BMI270 (bản 1×1), mặt dưới bo, **mặt chip quay ra ngoài** (xa bo cổ tay) | **SPI bus 2**, tách khỏi bus của MAX30001. Phải cắt jumper `I2C` và `ADR` để dùng SPI. Giá trị thanh ghi chốt 2026-10-25 (Packet Schema V0.2 mục 3): gia tốc và con quay ở chế độ hiệu năng, INT1 push-pull mức cao không chốt, microcode Bosch chép vào repo. Footprint M3 đã lật cho cách lắp mặt chip quay ra ngoài; lắp chip quay vào bo thì sơ đồ chân bị gương (chân 3V3 của module rơi vào pad OCS, GND vào OSDO). Silkscreen mặt dưới ghi `CHIP SIDE OUT` (V1-draft5, 2026-10-27). Trục: quy ước trục bo cổ tay X sang phải, Y về phía mép J1, Z hướng ra mặt trên (mặt áp da); khi đó trục bo = (−X, +Y, −Z) của BMI270 (suy từ hình trục trong file Eagle SparkFun ngày 2026-10-27; kiểm bằng trọng lực khi bring-up) |
+| PPG | SparkFun Photodetector Breakout MAX30101 (Qwiic), SEN-16474 | **Bus I²C PPG (`I2C_NUM_0`), dùng riêng.** Chỉ cần cấp 3,3 V (A.4). Không chọn bo có chip MAX32664 (chỉ xuất nhịp tim/SpO2 đã tính). Chốt 2026-10-24: multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps mỗi khe, `SMP_AVE = 1`; firmware xóa ngắt `PPG_RDY` sau mỗi mẫu, tới mẫu thứ 8 thì đọc hết FIFO (thường 8 mẫu; Packet Schema V0.2 mục 7.6); độ rộng xung 411 hay 215 µs chọn ở bring-up (A.6 mục 3). Chốt 2026-10-25: dải ADC `SPO2_ADC_RGE = 11` (16 384 nA, LSB 62,5 pA; MAX30101 tr. 19, Bảng 5); dòng LED **hiệu chuẩn theo người**: buổi đầu chỉnh để mức DC mỗi màu khoảng 30–70% thang đo rồi khóa cho người đó ở mọi buổi sau (protocol v0.2 mục 6.1); dòng xanh là tổng của LED3 và LED4 vì khe `011` bật cả hai (tr. 22), nên mỗi nhánh nhận một nửa (mặc định bring-up 7,2 mA mỗi màu: đỏ/IR `0x24`, xanh `0x12` mỗi nhánh); nhiệt độ trong chip đo mỗi 1 s, gửi qua kênh mới `0xB1` của Packet Schema V0.2, mỗi packet một giá trị (chốt 2026-10-25; V0.2 mục 11) |
+| IMU | SparkFun Qwiic 6DoF BMI270 (bản 1×1), mặt dưới bo, **mặt chip quay ra ngoài** (xa bo cổ tay) | **Bus SPI IMU (`SPI3_HOST`)**, tách khỏi bus của MAX30001. Phải cắt jumper `I2C` và `ADR` để dùng SPI. Giá trị thanh ghi chốt 2026-10-25 (Packet Schema V0.2 mục 3): gia tốc và con quay ở chế độ hiệu năng, INT1 push-pull mức cao không chốt, microcode Bosch chép vào repo. Footprint M3 đã lật cho cách lắp mặt chip quay ra ngoài; lắp chip quay vào bo thì sơ đồ chân bị gương (chân 3V3 của module rơi vào pad OCS, GND vào OSDO). Silkscreen mặt dưới ghi `CHIP SIDE OUT` (V1-draft5, 2026-10-27). Trục: quy ước trục bo cổ tay X sang phải, Y về phía mép J1, Z hướng ra mặt trên (mặt áp da); khi đó trục bo = (−X, +Y, −Z) của BMI270 (suy từ hình trục trong file Eagle SparkFun ngày 2026-10-27; kiểm bằng trọng lực khi bring-up) |
 | Áp lực | Không dùng FSR ở V1 (nhóm chốt 2026-10-23) | Dây cáp 15–16 chuyển thành GND ở V1-draft3; từ V1-draft4 hai chân này là `BMI_MOSI`/`BMI_MISO` (A.7) |
 | Cơ khí | Hai khe 3 × 22 mm trên PCB cho dây velcro 20 mm; tấm kính hoặc acrylic che | Bo 40,4 × 31,5 mm theo Edge.Cuts (bản V1-draft3 bỏ tab giữ cáp). Thân nhựa của J1 (box header cong) nằm hoàn toàn ngoài mép trên: theo footprint KiCad, thân bắt đầu cách mép 0,42 mm và sâu khoảng 9,1 mm, chỉ được giữ bằng 16 chân hàn; nhóm chốt giữ nguyên, không nới PCB (2026-10-23): khi cắm/rút luôn giữ thân header và buộc cáp vào dây đeo để lực kéo không dồn vào mối hàn; nếu chân cong hoặc mối hàn nứt khi thử thì xét nới PCB dưới thân header (khoảng 28 × 9,5 mm). Ba lỗ 3,2 mm tại (30,36; 8,14), (10,04; 28,46), (30,36; 28,46) trùng lỗ standoff của M1 và M3, dùng vít, đai ốc và spacer nylon M2 (spacer tròn Ø ≤ 4,5 mm hoặc lục giác 4 mm giữa hai cạnh), mỗi lỗ hai spacer cao bằng thân nhựa header (chốt 2026-10-27: tâm lỗ chỉ cách góc thân nhựa header gần nhất 2,54 mm, nên spacer lục giác cỡ M3, 5,5 mm giữa hai cạnh, lấn vào thân nhựa ít nhất 0,2 mm; [danh sách mua](../../hardware/bom/purchase_list_v1_module.md) mục 2); góc thứ tư (10,04; 8,14) nằm trên đường đi dây chính nên dùng miếng đệm dán. Theo ảnh sản phẩm, hai đầu nối Qwiic cao hơn chip cảm biến nên da cổ tay chạm đầu nối trước: tháo đầu nối Qwiic hoặc làm giá đỡ |
-| Lắp ráp | Hàn J1 và cả hai header module vào bo cổ tay trước, cắt sát đuôi chân, dán kapton, sau đó mới lắp M1 và M3 lên header. J1 đặt ở mặt dưới nên mối hàn nằm ở mặt trên, là mặt áp vào da | Chân M3 nằm dưới thân M1 và ngược lại (18 cảnh báo `pth_inside_courtyard` là dự kiến). Trên M1 cắt JP1 để tắt LED nguồn đỏ, vì LED này nằm cùng mặt với cảm biến |
+| Lắp ráp | Hàn J1 và cả hai header module vào bo cổ tay trước, cắt sát đuôi chân, dán kapton, sau đó mới lắp M1 và M3 lên header. J1 đặt ở mặt dưới nên mối hàn nằm ở mặt trên, là mặt áp vào da | Chân M3 nằm dưới thân M1 và ngược lại, nên DRC báo 18 cảnh báo `pth_inside_courtyard` (pad 1–6 của M1 trong courtyard M3; pad 1–12 của M3 trong courtyard M1) và 3 `npth_inside_courtyard` (ba lỗ NPTH của M1 trong courtyard M3), tổng 21, đều là dự kiến (DRC chạy lại 2026-10-29 trên 9a10274, KiCad 10). Trên M1 cắt JP1 để tắt LED nguồn đỏ, vì LED này nằm cùng mặt với cảm biến |
 | Phụ | C2 10 µF + C3 100 nF trên 3V3–GND ở mặt trên, sát chân cáp J1.1 (đầu vào nguồn; nhìn từ mặt trên là đầu phải hàng chân), dùng chung cho M1 (MAX30101) và M3 (BMI270); giữ nguyên (chốt 2026-10-24): bring-up mục 8 đo 3V3 tại M1 khi LED chạy xung, sụt thì hàn thêm tụ | Không có test point trên bo cổ tay. Bảng chân cáp chỉ in ở mặt dưới bo đế; bo cổ tay chỉ có số 1 cạnh J1.1 |
 
 **Cáp nối hai bo (theo KiCad):**
@@ -140,8 +138,10 @@ của ghi chú M3 và hai câu dưới; sau khi chuyển cụm tụ trái sang n
   ghi chú M3 `CHIP SIDE OUT` / `cut I2C+ADR jumpers` ở mặt dưới. Title block schematic
   hai bo: `V1-draft5`, 2026-10-27.
 - DRC (kèm so khớp schematic) và ERC không đổi so với V1-draft4: bo đế 0 lỗi (2 cảnh báo
-  thư viện), bo cổ tay 0 lỗi (21 cảnh báo chân trong courtyard đã biết, 2 cảnh báo thư
-  viện). Gerber V1-draft5 đã xuất ngày 2026-10-27 (không lưu trong repo); bản xuất
+  thư viện), bo cổ tay 0 lỗi (18 cảnh báo `pth_inside_courtyard`: pad 1–6 của M1 trong
+  courtyard M3, pad 1–12 của M3 trong courtyard M1; 3 `npth_inside_courtyard`: ba lỗ NPTH
+  của M1 trong courtyard M3; tổng 21, xem A.3 "Lắp ráp"; 2 cảnh báo thư viện). DRC chạy
+  lại 2026-10-29 trên 9a10274, KiCad 10: 0 pad chưa nối, 0 lệch schematic. Gerber V1-draft5 đã xuất ngày 2026-10-27 (không lưu trong repo); bản xuất
   V1-draft4 ngày 2026-10-25 không dùng nữa.
 
 ### A.4. Bo SparkFun MAX30101: điều đã kiểm trong schematic
@@ -152,10 +152,10 @@ ngày 2026-10-16.
 
 | Chức năng | Trên bo | Hệ quả cho bo đế |
 | --- | --- | --- |
-| Nguồn vào | Chỉ 3,3 V (chân 3.3V và Qwiic) | Cấp 3V3 từ DevKitC |
+| Nguồn vào | Chỉ 3,3 V (chân 3.3V và Qwiic) | Cấp 3V3 từ LDO của bo Waveshare (U1) qua cáp |
 | VDD 1,8 V của MAX30101 | LDO SP6214 1,8 V/100 mA từ 3,3 V | **Chân header "1.8V" là đầu ra LDO**; không nối nguồn vào |
 | VDD_LED (VLED+) | Boost PAM2401 từ 3,3 V lên net 5V | LED xanh có nguồn 5 V ngay trên bo |
-| I²C | Chuyển mức bằng 2 MOSFET kênh N; kéo lên 2,2 kΩ ở cả phía 1,8 V và phía 3,3 V (phía 3,3 V qua jumper `I2C PU`) | Bus 1 không cần thêm kéo lên. Không thêm footprint kéo lên I²C trên bo nào (chốt 2026-10-24): với 2,2 kΩ và tổng điện dung ước khoảng 50 pF (cáp 20–30 cm, chân, bộ chuyển mức), thời gian lên 30–70% ≈ 0,85 × 2,2 kΩ × 50 pF ≈ 0,1 µs, dưới 0,3 µs của chế độ 400 kHz. Chưa đo; nếu sườn lên chậm thì chạy 100 kHz (A.2) |
+| I²C | Chuyển mức bằng 2 MOSFET kênh N; kéo lên 2,2 kΩ ở cả phía 1,8 V và phía 3,3 V (phía 3,3 V qua jumper `I2C PU`) | Bus I²C PPG không cần thêm kéo lên. Không thêm footprint kéo lên I²C trên bo nào (chốt 2026-10-24): với 2,2 kΩ và tổng điện dung ước khoảng 50 pF (cáp 20–30 cm, chân, bộ chuyển mức), thời gian lên 30–70% ≈ 0,85 × 2,2 kΩ × 50 pF ≈ 0,1 µs, dưới 0,3 µs của chế độ 400 kHz. Chưa đo; nếu sườn lên chậm thì chạy 100 kHz (A.2) |
 | INT | Kéo lên 4,7 kΩ lên 3,3 V (jumper `INT`) | Nối thẳng GPIO |
 
 ### A.5. Không dùng ở V1
@@ -164,9 +164,9 @@ LiPo, BQ25180, TPS62840, W25Q128, LDO 1,8 V và oscillator riêng: dữ liệu g
 laptop; nguồn, clock và chuyển mức đã có trên module. Các linh kiện này thuộc
 Phần B.
 
-### A.6. Cần kiểm tra trước khi vẽ
+### A.6. Đối chiếu tài liệu và việc kiểm khi nhận hàng
 
-Trạng thái ngày 2026-10-24. Mục còn lại chỉ làm được khi có hàng; bước kiểm khi
+Trạng thái ngày 2026-10-27. Mục còn lại chỉ làm được khi có hàng; bước kiểm khi
 nhận hàng ở
 [danh sách mua](../../hardware/bom/purchase_list_v1_module.md) mục 3.
 
@@ -197,7 +197,10 @@ nhận hàng ở
      trợ. Không dùng 400 sps với 411 µs (2 625 µs > 2 500 µs). Chip tự đổi sang
      tốc độ hợp lệ nếu tổ hợp không được phép (`interface_power_sampling_v0.md`
      mục 4). **Khi có bo:** đọc lại thanh ghi `SPO2_SR` và đo tốc độ ra từng khe;
-     chọn độ rộng xung 411 hay 215 µs bằng số đo này.
+     chọn độ rộng xung 411 hay 215 µs theo luật viết trước ở
+     `interface_power_sampling_v0.md` mục 6 (chốt 2026-10-29: giữ 411 µs khi
+     `SPO2_SR` đúng, mỗi khe đủ 200 sps và nguồn LED, 3V3 không sụt ở mã LED cao
+     nhất; sai một điều thì 215 µs).
    - VLED: bo SparkFun tạo VLED+ bằng boost PAM2401 (A.4) với chia áp phản hồi
      R1 750 kΩ / R4 100 kΩ, tức 0,6 × (1 + 7,5) = **5,1 V danh định** (công thức
      VOUT = 0,6 (1 + R1/R2), Diodes DS37285 Rev 1-2, tr. 5). Mức này nằm trong dải
@@ -207,11 +210,11 @@ nhận hàng ở
      ứng dụng MAX30101 ghi nguồn +5 V "200 mA MAX" (tr. 32); hai số này không
      chứng minh bo đủ dòng, vì còn phụ thuộc cuộn cảm, nguồn 3V3 vào (dòng vào
      ≈ 5,1 × I_out / (3,3 × hiệu suất), cộng tải của MCU, ECG và IMU) và LDO 3V3
-     của DevKitC. Chốt 2026-10-24: giữ nguyên 5,1 V, không sửa bo SparkFun.
+     của bo Waveshare (mã chưa xác định). Chốt 2026-10-24: giữ nguyên 5,1 V, không sửa bo SparkFun.
      **Khi có bo:** đo VLED+ khi không tải, quá áp lúc khởi động
      và gợn khi LED xanh chạy xung dòng cao nhất đã chọn, so với dải chung
      4,5–5,0 V của cả ba LED; đo 3V3 tại bo cổ tay cùng lúc, vì 3V3 đi qua cáp
-     20–30 cm từ DevKitC.
+     20–30 cm từ bo đế.
 4. **Đã đối chiếu tài liệu module.** Module ESP32-S3-WROOM-1-N16R8 có flash 16 MB
    Quad SPI và PSRAM 8 MB Octal SPI (datasheet WROOM-1/1U v1.8, Bảng 1-1, tr. 3);
    VDD_SPI 1,8 V chỉ có ở bản N16R16VA (chú thích 7, tr. 4), và GPIO47/48 chạy
@@ -235,20 +238,20 @@ dùng cùng bảng này trong `firmware/boards/board_v1_module.h`. Pin map V1 c�
 (`Pin_Map_V1.md`, `V1.SchDoc` trên nhánh `dev/ducanh`: MAX30001 và BMI270 chung SPI,
 không nối INT2B) không dùng nữa.
 
-**GPIO của DevKitC (U1):**
+**GPIO của U1 (bo Waveshare; symbol `ESP32-S3-DevKitC-1`):**
 
 | Net | GPIO | U1 pad | Thiết bị | Ghi chú |
 | --- | ---: | ---: | --- | --- |
 | `/ECG_CS` | 7 | 7 | MAX30001 CSB (J1 bo đế = SV1 chân 7) | R8 100 kΩ kéo lên 3V3 |
-| `/ECG_SCLK` | 15 | 8 | MAX30001 SCLK (J1 bo đế = SV1 chân 8) | SPI bus 1. GPIO15 cũng là XTAL_32K_P (mục 7 Việc còn mở) |
+| `/ECG_SCLK` | 15 | 8 | MAX30001 SCLK (J1 bo đế = SV1 chân 8) | Bus SPI ECG. GPIO15 cũng là XTAL_32K_P (mục 7 Việc còn mở) |
 | `/ECG_MOSI` | 16 | 9 | MAX30001 MOSI (J1 bo đế = SV1 chân 9) | GPIO16 cũng là XTAL_32K_N (mục 7 Việc còn mở) |
 | `/ECG_MISO` | 17 | 10 | MAX30001 MISO (J1 bo đế = SV1 chân 10) | |
 | `/ECG_INTB` | 21 | 27 | MAX30001 INTB (J1 bo đế = SV1 chân 5) | |
 | `/ECG_INT2B` | 47 | 28 | MAX30001 INT2B (J1 bo đế = SV1 chân 4) | Xung `SAMP`, bật luôn và làm mốc thời gian ECG (chốt 2026-10-24; Packet Schema V0.2 mục 7); bản hoàn chỉnh cũng phải nối INT2B. Chạy 3,3 V với module WROOM-1-N16R8/N8R8; 1,8 V chỉ ở chip ESP32-S3R16V (A.6 mục 4) |
-| `/PPG_SDA` | 8 | 12 | MAX30101 SDA (cáp chân 3) | I²C bus 1 |
+| `/PPG_SDA` | 8 | 12 | MAX30101 SDA (cáp chân 3) | Bus I²C PPG |
 | `/PPG_SCL` | 9 | 15 | MAX30101 SCL (cáp chân 5) | TP4 |
 | `/PPG_INT` | 18 | 11 | MAX30101 INT (cáp chân 7) | |
-| `/BMI_CS_MCU` | 10 | 16 | BMI270 CS qua R11 33 Ω (`/BMI_CS`, cáp chân 13) | SPI bus 2 |
+| `/BMI_CS_MCU` | 10 | 16 | BMI270 CS qua R11 33 Ω (`/BMI_CS`, cáp chân 13) | Bus SPI IMU |
 | `/BMI_MOSI_MCU` | 11 | 17 | BMI270 SDA (= SDI) qua R10 33 Ω (`/BMI_MOSI`, cáp chân 15) | |
 | `/BMI_SCK_MCU` | 12 | 18 | BMI270 SCL (= SCK) qua R9 33 Ω (`/BMI_SCK`, cáp chân 11) | TP5 nằm trên `/BMI_SCK` (phía cáp) |
 | `/BMI_MISO` | 13 | 19 | BMI270 ADR (= SDO) (cáp chân 16) | |
@@ -256,10 +259,14 @@ không nối INT2B) không dùng nữa.
 | `/T0_BTN` | 4 | 4 | SW1 | R2 10 kΩ kéo lên, C2 100 nF, TP6 |
 | `/LED_STAT` | 5 | 5 | D1 qua R3 1 kΩ | |
 | `/STIM` | 6 | 6 | J3 chân 1 | Xung kích thích cho phép đo đồng bộ 10 phút; J3 chân 2 là GND |
-| `/+3V3` | — | 1, 2 | Nguồn 3V3 của DevKitC | Chân 5V (pad 21) không nối |
+| `/+3V3` | — | 1, 2 | Nguồn 3V3 từ LDO của bo Waveshare | Chân 5V (pad 21) không nối |
 | `/GND` | — | 22, 23, 24, 44 | | |
 
 Không nối: EN và GPIO0, 1, 2, 3, 19, 20, 35–42, 43, 44, 45, 46, 48.
+
+**Tên bus và host ESP-IDF:** tài liệu dùng tên logic. Bus SPI ECG = `SPI2_HOST`
+(`firmware/drivers/max30001_esp.c`), bus SPI IMU = `SPI3_HOST` (`bmi270_esp.c`, có DMA),
+bus I²C PPG = `I2C_NUM_0` (`max30101_esp.c`). Chân nối vào host qua GPIO matrix.
 
 **Cáp 16 dây (J2 bo đế ↔ J1 bo cổ tay, cùng số chân, V1-draft4; không đổi ở V1-draft5):**
 
@@ -443,3 +450,5 @@ vẫn truyền qua USB tới laptop.
    XTAL_32K_P/N của ESP32-S3 (mục 5). V1 không có thạch anh 32 kHz nên không bị
    ảnh hưởng. Nếu bản hoàn chỉnh giữ pin map này thì phải bỏ thạch anh 32 kHz hoặc
    đổi chân SPI ECG.
+7. Độ rộng xung LED 411 hay 215 µs: chờ số đo bring-up, theo luật đã viết trước ở
+   `interface_power_sampling_v0.md` mục 6 (2026-10-29).

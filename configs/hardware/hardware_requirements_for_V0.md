@@ -1,8 +1,5 @@
 # Yêu cầu phần cứng
 
-> **Cập nhật 2026-10-24:** không làm bản V0 nối dây; dùng thẳng PCB V1-module
-> ([custom_board_proposal.md](custom_board_proposal.md) Phần A). Các yêu cầu và
-> tiêu chí dưới đây áp dụng cho V1-module. Tên file giữ `V0` để không đổi liên kết.
 ## 1. Mục đích
 Mục tiêu của V1-module là:
 Kiểm chứng khả năng thu nhận tín hiệu ECG.
@@ -17,18 +14,18 @@ V1-module là prototype phục vụ kiểm chứng nguyên lý và chất lượ
 V1-module tập trung vào các chức năng chính:
 Thu nhận tín hiệu ECG.
 Thu nhận tín hiệu PPG.
-Điều khiển và thu thập dữ liệu bằng ESP32-S3-DevKitC-1-N8R8.
+Điều khiển và thu thập dữ liệu bằng bo Waveshare ESP32-S3-DEV-KIT-N8R8-M (mục 5).
 Gắn timestamp cho dữ liệu ECG và PPG.
 Truyền dữ liệu từ ESP32-S3 sang laptop để kiểm thử và lưu trữ.
 Kiểm tra chất lượng tín hiệu và phổ nhiễu.
 Kiểm tra tính ổn định của quá trình thu thập và truyền dữ liệu.
-Đánh giá hai phương án điện cực ECG.
+Thu ECG trên người chỉ bằng ba điện cực dán Ag/AgCl; điện cực khô và cấu hình 2 điện cực chỉ thử trên bàn, không người (mục 8; chốt 2026-10-29).
 ## 3. Yêu cầu phần cứng thu nhận tín hiệu
 ### 3.1 ECG
 Hệ thống ECG của V1-module sử dụng:
 Điện cực ECG.
 MAX30001 làm ECG AFE.
-ESP32-S3-DevKitC-1-N8R8 làm MCU.
+Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M làm MCU.
 Luồng dữ liệu:
 Điện cực ECG
       ↓
@@ -46,8 +43,8 @@ Kiểm tra mức nhiễu và các thành phần nhiễu trong tín hiệu.
 ### 3.2 PPG
 Hệ thống PPG của V1-module sử dụng:
 MAX30101 làm cảm biến PPG.
-> Ghi chú: linh kiện PPG đã chốt ngày 2026-10-22 là MAX30101 trên bo SparkFun SEN-16474 (`custom_board_proposal.md` A.3–A.4). BOM V1 và schematic V1 cũ trên nhánh `dev/ducanh` ghi MAX30102 và không dùng nữa. Chế độ LED và tốc độ PPG: mục 4.1; độ rộng xung còn mở: `interface_power_sampling_v0.md` mục 6.
-ESP32-S3-DevKitC-1-N8R8 làm MCU.
+> Ghi chú: linh kiện PPG đã chốt ngày 2026-10-22 là MAX30101 trên bo SparkFun SEN-16474 (`custom_board_proposal.md` A.3–A.4). BOM V1 và schematic V1 cũ trên nhánh `dev/ducanh` ghi MAX30102 và không dùng nữa. Chế độ LED và tốc độ PPG: mục 4.1; độ rộng xung còn mở, luật chọn viết trước ở `interface_power_sampling_v0.md` mục 6.
+Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M làm MCU.
 
 Luồng dữ liệu:
 MAX30101
@@ -75,7 +72,7 @@ $$
 T_s = \frac{1}{200}\,\text{s} = 5\,\text{ms}
 $$
 
-Độ rộng xung (411 hay 215 µs) còn mở, chọn bằng số đo bring-up ([interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 4 và 6). Các khe của một mẫu không phát LED cùng lúc: khe sau lệch khe trước 1 107 µs (411 µs) hoặc 720 µs (215 µs), receiver cộng độ lệch này khi dựng thời gian từng khe (`Packet_Schema_V0.1.md` mục 7).
+Độ rộng xung (411 hay 215 µs) còn mở, chọn bằng số đo bring-up theo luật viết trước ([interface_power_sampling_v0.md](interface_power_sampling_v0.md) mục 4 và 6). Các khe của một mẫu không phát LED cùng lúc: khe sau lệch khe trước 1 107 µs (411 µs) hoặc 720 µs (215 µs). Quy ước (chốt 2026-10-29, `Packet_Schema_V0.1.md` mục 7): raw và logger giữ nguyên; phân tích offline cộng (j−1)·Δ cho khe j, gốc là khe 1, với Δ suy từ độ rộng xung trong packet `0xD2` của phiên.
 
 Tần số ghi trong packet là giá trị danh định; tốc độ thực của từng kênh phải đo (mục 4.4). Phát hiện R-peak và chân sóng PPG trên mẫu gốc của từng kênh. Đổi tần số (ví dụ về 125 Hz để so với PulseDB) là một thí nghiệm riêng, ghi trong cấu hình phân tích, không thay dữ liệu gốc.
 ### 4.2 Đồng bộ PPG và ECG
@@ -163,34 +160,35 @@ Dữ liệu thô phải được giữ lại để phục vụ các bước xử
 ## 7. Yêu cầu về nguồn và an toàn thử nghiệm
 Prototype V1-module phải ưu tiên sử dụng nguồn pin khi thực hiện phép đo có tiếp xúc với cơ thể.
 Yêu cầu:
-Thiết bị prototype V1 không có pin riêng: lấy 5 V từ USB của laptop chạy pin, rút sạc, rồi LDO 3,3 V của DevKitC cấp cho cả hai bo (protocol v0.2 mục 5).
+Thiết bị prototype V1 không có pin riêng: lấy 5 V qua cổng USB-C duy nhất của bo Waveshare từ laptop chạy pin, rút sạc, rồi LDO 3,3 V trên bo Waveshare (mã chưa xác định, đọc khi nhận hàng) cấp cho cả hai bo (protocol v0.2 mục 5; `power_budget_v1.md`).
 Khi thu ECG trên người, laptop phải hoạt động bằng pin.
 Không sử dụng trực tiếp nguồn điện lưới cho hệ thống đang kết nối với điện cực trên cơ thể.
 Kiểm tra hệ thống trước khi thử nghiệm trên người.
-Ưu tiên kiểm tra bằng nguồn tín hiệu/ECG simulator trước khi kết nối điện cực với người.
+Kiểm tra bằng tín hiệu nhân tạo trước khi kết nối điện cực với người (tiêu chí an toàn ở mục 9).
 
 V1-module chỉ phục vụ nghiên cứu và kiểm chứng nguyên lý, không được xem là thiết bị đo huyết áp hoặc thiết bị y tế đã được chứng nhận.
 ## 8. Yêu cầu về điện cực ECG
-V1-module cần đánh giá hai phương án điện cực:
+Chốt 2026-10-29: hồ sơ đạo đức v0.1 và pilot chỉ dùng phương án A trên người. Phương án B và cấu hình 2 điện cực không thuộc hồ sơ v0.1.
 Phương án A — Điện cực Ag/AgCl dùng gel
-Điện cực Ag/AgCl được sử dụng làm phương án tham chiếu trong kiểm thử prototype.
+Ba điện cực dán Ag/AgCl có gel, dùng một lần (LA, RA, RL tham chiếu), đạo trình I giữa hai cổ tay, tắt lead bias nội; vị trí theo protocol v0.2 mục 5.1–5.2 và `custom_board_proposal.md` A.2.
 Mục đích:
 Kiểm chứng khả năng thu ECG của MAX30001.
 Có cơ sở tham chiếu khi đánh giá chất lượng tín hiệu.
-So sánh với phương án điện cực khô.
-Phương án B — Điện cực khô (Dry electrode)
-Điện cực khô được nghiên cứu để đánh giá khả năng sử dụng cho thiết bị đeo trong các phiên bản sau.
-Cần đánh giá:
+Làm mốc so sánh cho điện cực khô ở phiên bản sau.
+Phương án B — Điện cực khô (Dry electrode) và cấu hình 2 điện cực (bỏ RL, bật lead bias nội)
+Điện cực khô được nghiên cứu để đánh giá khả năng sử dụng cho thiết bị đeo trong các phiên bản sau. Ở V1 chỉ thử trên bàn, không người; dùng trên người chỉ sau pilot, qua sửa đổi hồ sơ đạo đức.
+Cần đánh giá (phần cần tiếp xúc da chỉ làm sau khi có sửa đổi đó):
 Chất lượng tín hiệu ECG.
 Mức nhiễu.
 Ảnh hưởng của chuyển động.
 Độ ổn định tiếp xúc với da.
 Khả năng tích hợp cơ khí.
-V1-module không mặc định loại bỏ một trong hai phương án; cả hai được đưa vào quá trình kiểm thử và so sánh.
+V1-module không loại bỏ phương án B, nhưng trên người chỉ dùng phương án A cho tới khi hồ sơ đạo đức được sửa đổi.
 ## 9. Tiêu chí kiểm chứng
 Tiêu chí nghiệm thu V1-module
 V1-module được coi là đạt khi:
 ECG
+Xét trên cấu hình 3 điện cực dán Ag/AgCl (mục 8).
 Thu được waveform ECG ổn định.
 Không bị saturation trong điều kiện thử nghiệm.
 Có thể phát hiện R-peak trên dữ liệu đạt chất lượng.
@@ -212,7 +210,8 @@ Có sequence number.
 Có timestamp.
 Có thể phát hiện mất mẫu/gói.
 An toàn
-Hoàn thành kiểm tra bằng ECG simulator trước khi xem xét thử trên người.
+Trước khi xem xét thử trên người (chốt 2026-10-29): bắt buộc tối thiểu là kiểm bằng tín hiệu nhân tạo qua mạch chia áp theo `hardware/test_reports/v1_bringup_procedure.md` mục 7 bước 5. Bước này kiểm đường dữ liệu, cực tính và biên độ, không kiểm hình thái QRS.
+Nếu lab có ECG/patient simulator có QRS: thêm bước kiểm phát hiện R-peak bằng simulator. Nếu không có simulator: tiêu chí phát hiện R-peak (mục ECG ở trên) được kiểm ở pilot.
 Có cấu hình nguồn phù hợp cho thử nghiệm trên người.
 Không sạc khi đang đeo.
 Laptop chạy pin khi thực hiện phép đo trên người.

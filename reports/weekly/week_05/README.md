@@ -307,7 +307,7 @@ Không đo trên người trong tuần này.
 | 39 | Lệnh PC → thiết bị, packet `0xD2`/`0xD3`, `packet-logger-v2` | Phần cứng và firmware | [device_command.py](../../../scripts/device_command.py), [command_desk.py](../../../software/data_io/command_desk.py), [command_wire.py](../../../software/data_io/command_wire.py), [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) mục 12–13 |
 | 40 | Sự kiện mã 3 và kế hoạch đo đồng bộ 10 phút | Firmware | [stim_plan.c](../../../firmware/app/stim_plan.c), [sync_10min_test_plan.md](../../../hardware/test_reports/sync_10min_test_plan.md) |
 | 41 | Ước lượng dòng V1-module | Phần cứng | [power_budget_v1.md](../../../configs/hardware/power_budget_v1.md) |
-| 42 | KiCad V1-draft5 và đối chiếu footprint với module thật (2026-10-27) | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3 |
+| 42 | KiCad V1-draft5 và đối chiếu footprint với file CAD và bản vẽ của nhà sản xuất (2026-10-27) | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3 |
 | 43 | Danh sách mua và bring-up cập nhật theo bo Waveshare và lưu ý lắp ráp (2026-10-27) | Phần cứng | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md), [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
 | 44 | So sánh hai phương án điện cực ECG (Markdown) | Phần cứng | [Hai_phuong_an_dien_cuc_ECG.md](../../../hardware/Hai_phuong_an_dien_cuc_ECG.md) |
 
@@ -321,7 +321,7 @@ Không đo trên người trong tuần này.
 | Split theo người có test rò rỉ | Có | `pulsedb-split-v2`, `tests/test_split_manifest.py` |
 | Baseline đầu tiên | Có (val) | B0/B3 `b3-pipeline-v1` trên PulseDB Train 400 người, val 40 người, CI bootstrap theo người (mục 6.4); B1 chưa chạy (không có chronology); test và CalFree chưa chấm |
 | Đặc trưng/SQI/bootstrap | Có (SYNTHETIC) | `features-sqi-v1`, `subject_bootstrap.py`, mốc thứ hai Tuần 5 |
-| PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-draft5 qua ERC/DRC, footprint đã đối chiếu với module thật, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút, firmware khung gửi Packet Schema V0.2 build được và logger đọc được. Bo Waveshare đã đặt, PCB đang đặt (2026-10-28); chưa có module trong tay, chưa chạy firmware trên bo, chưa có bản ghi trên phần cứng |
+| PPG–ECG đồng bộ, báo cáo phần cứng v0 | Chưa đạt | Có KiCad V1-draft5 qua ERC/DRC, footprint đã đối chiếu với file CAD và bản vẽ của nhà sản xuất, pin map A.7, trình tự bring-up, kế hoạch đo 10 phút, firmware khung gửi Packet Schema V0.2 build được và logger đọc được. Bo Waveshare đã đặt, PCB đang đặt (2026-10-28); chưa có module trong tay, chưa chạy firmware trên bo, chưa có bản ghi trên phần cứng |
 | Hồ sơ đạo đức | Bản nháp v0.1 | `docs/ethics/` |
 
 G1 phần mềm đạt phần baseline trên val (2026-10-25); G1 phần cứng chưa đạt.
@@ -394,7 +394,7 @@ bản có thông điệp chính, RQ trả lời được, bảng/hình chính v�
 - Packet đi qua cổng USB Serial/JTAG gốc của ESP32-S3; log chữ đi riêng qua UART0
   để không lẫn vào luồng byte của logger.
 - Mốc SAMP/INT2B của MAX30001 là lúc mẫu vào FIFO, không phải lúc lấy mẫu analog;
-  phân tích offline trừ độ trễ hiệu dụng `L_us` đo ở bench, không dùng thẳng bảng
+  phân tích offline trừ độ trễ hiệu dụng `L_us` đo ở phép đo đồng bộ 10 phút trên PCB V1, không dùng thẳng bảng
   datasheet (Packet Schema mục 5.2, 5.3). Từ 2026-10-24 `SAMP` bật luôn và làm mốc
   ECG (mục 5.8).
 - Firmware chỉ phát dữ liệu giả, nên mọi kết quả hiện có chỉ kiểm đường packet
@@ -536,7 +536,7 @@ bên nào đúng. Chưa có kết quả chấm ngưỡng nào: bảng sẽ có s
 | --- | --- | --- | --- |
 | Bảng B0/B3 trên raw có CI | Đạt trên val (mục 6.4). Test của split và CalFree chưa chấm; chỉ chấm khi model đã khóa | Huy | — |
 | Module đã đặt mua | **Đạt một phần** (2026-10-28): bo Waveshare ESP32-S3-DEV-KIT-N8R8-M đã đặt 2026-10-27; MAX30001, MAX30101, BMI270 và điện cực chưa đặt ([danh sách mua](../../../hardware/bom/purchase_list_v1_module.md)) | Huy | Tuần 6 |
-| A.6 đóng, một pin map chuẩn | Đạt: pin map A.7, KiCad V1-draft5 qua ERC/DRC, footprint đối chiếu với module thật (2026-10-27). Độ rộng xung LED (411 hay 215 µs) chờ số đo bring-up | Phần cứng và firmware | Độ rộng xung: khi bring-up |
+| A.6 đóng, một pin map chuẩn | Đạt: pin map A.7, KiCad V1-draft5 qua ERC/DRC, footprint đối chiếu với file CAD và bản vẽ của nhà sản xuất (2026-10-27). Độ rộng xung LED (411 hay 215 µs) chờ số đo bring-up | Phần cứng và firmware | Độ rộng xung: khi bring-up |
 | Đặt gia công PCB V1 | **Đang đặt** (2026-10-28): Gerber V1-draft5 đã xuất và kiểm; đặt ở CXT thành hai thiết kế riêng, 5 tấm mỗi mạch; chưa có ngày giao | Huy | Tuần 6 |
 | Firmware khung gửi packet tới logger | Đạt một phần: firmware V0.2 build được, logger đọc đúng luồng dựng theo quy ước firmware (mục 6.1, 6.2); thêm lệnh PC → thiết bị và sự kiện mã 3 (2026-10-26). Chưa chạy trên bo thật | Phần cứng và firmware, Linh | Khi nhận bo Waveshare |
 | Hồ sơ đạo đức sẵn sàng nộp | Chưa: bản nháp v0.1 đủ năm file, còn các ô `[...]` chưa điền | Huy | Tuần 6 |

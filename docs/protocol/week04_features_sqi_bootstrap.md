@@ -70,7 +70,7 @@ liền trước**; nếu không có giới hạn này, ở HR cao (RR < `foot_lo
 nhịp có thể dùng chung một valley, foot bị lệch hoặc trùng nhau và `pair_pat` báo
 lỗi cho cả batch (đã sửa ngày 2026-10-14, có test hồi quy RR 0,42 s).
 Foot được nội suy dưới một sample; **R-peak thì không**, nên PAT có sai số lượng
-tử khoảng ±1/fs của ECG (±2 ms ở 500 Hz).
+tử khoảng ±1/fs của ECG (±1,95 ms ở 512 sps, tần số ECG thiết bị đã chốt).
 Prominence tính theo `prominence_fraction × peak-to-peak` của cả cửa sổ. Với
 `filter_mode=none`, trôi đường nền lớn có thể làm prominence vượt biên độ xung
 và không phát hiện được peak nào (gắn cờ `too_few_peaks`, không crash).
@@ -127,7 +127,9 @@ không ghép. Shape SQI: nội suy mỗi chu kỳ foot→foot vào 64 điểm, z
 tính median Pearson correlation với median template trong chính cửa sổ;
 cần ít nhất hai chu kỳ không phẳng. Không có template học từ test/train chung.
 `flagged` là có bất kỳ cờ, **không phải quyết định loại tự động**; cờ PAT có thể
-không chặn PPG-only. Motion/ADC saturation/AC–DC đều N/A do thiếu bằng chứng đầu vào.
+không chặn PPG-only. ADC saturation/AC–DC đều N/A do thiếu bằng chứng đầu vào.
+Motion N/A cho PulseDB (không có IMU); dữ liệu thiết bị dùng `motion-sqi-v0`
+([motion_sqi.py](../../software/feature_extraction/motion_sqi.py)).
 
 **`features-sqi-v2` (2026-10-24):** chọn bằng `extract_window(..., version=
 "features-sqi-v2")`; mặc định vẫn là v1, giữ đúng từng byte. Khác v1 đúng một điểm:

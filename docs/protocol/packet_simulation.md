@@ -240,10 +240,10 @@ cho cùng `stream.bin`. Đọc luồng bằng [logger](packet_logger.md).
 
 ## Việc còn mở
 
-Công cụ này không giải quyết mâu thuẫn version tài liệu phần cứng và không thay
-quyết định giao diện firmware chính thức.
+Công cụ này không thay quyết định giao diện firmware chính thức.
 
-Khi có phần cứng: cần kế hoạch bản ghi **10 phút** trên điều kiện được
+Khi có phần cứng: chạy bản ghi **10 phút** theo
+[kế hoạch đo đồng bộ](../../hardware/test_reports/sync_10min_test_plan.md) trên điều kiện được
 phép/an toàn, lưu raw/config/checksum/log, dùng mốc tham chiếu đồng bộ có kiểm
 chứng. Báo riêng offset ban đầu, biến thiên timing/jitter, thay đổi offset theo
 thời gian/drift và tỷ lệ missing packet/sample từ sequence/log. Không lấy trễ

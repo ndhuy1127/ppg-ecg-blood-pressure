@@ -10,7 +10,7 @@
 
   <!-- Title -->
   <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0d47a1">Sơ đồ khối V1-module (dùng module, thu ECG + PPG)</text>
-  <text x="640" y="56" text-anchor="middle" fill="#455a64">Theo configs/hardware/custom_board_proposal.md Phần A, pin map A.7 và protocol v0.2 mục 5.2 (2026-10-23). Chưa đo trên phần cứng.</text>
+  <text x="640" y="56" text-anchor="middle" fill="#455a64">Theo configs/hardware/custom_board_proposal.md Phần A, pin map A.7 và protocol v0.2 mục 5.2 (2026-10-23); MCU theo A.2 (2026-10-27). Chưa đo trên phần cứng.</text>
 
   <!-- Body column -->
   <rect x="20" y="80" width="290" height="860" rx="10" fill="#fafafa" stroke="#9e9e9e" stroke-dasharray="6 4"/>
@@ -52,13 +52,13 @@
   <text x="372" y="236" fill="#1b5e20">tip → ECGN (RA), sleeve → R3</text>
   <text x="372" y="254" fill="#1b5e20">220 kΩ → VCM (RL)</text>
   <text x="372" y="274" fill="#1b5e20">BioZ tắt; gỡ R7, R8</text>
-  <text x="372" y="292" font-size="11" fill="#1b5e20">SPI 1: GPIO7/15/16/17</text>
+  <text x="372" y="292" font-size="11" fill="#1b5e20">SPI ECG: GPIO7/15/16/17</text>
   <text x="372" y="306" font-size="11" fill="#1b5e20">INTB → GPIO21; SAMP (INT2B) → GPIO47</text>
 
   <!-- ESP32 -->
   <rect x="660" y="118" width="244" height="300" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
-  <text x="672" y="140" font-weight="bold" fill="#0d47a1">ESP32-S3-DevKitC-1</text>
-  <text x="672" y="160" fill="#0d47a1">Module WROOM-1 N8R8/N16R8,</text>
+  <text x="672" y="140" font-weight="bold" fill="#0d47a1">Bo Waveshare ESP32-S3 (U1)</text>
+  <text x="672" y="160" fill="#0d47a1">DEV-KIT-N8R8-M, WROOM-1-N8R8,</text>
   <text x="672" y="178" fill="#0d47a1">GPIO 3,3 V (kể cả GPIO47)</text>
   <text x="672" y="200" fill="#0d47a1">Đồng hồ chung: esp_timer µs</text>
   <text x="672" y="220" fill="#0d47a1">Chốt số mẫu FIFO rồi ghi</text>
@@ -67,8 +67,8 @@
   <text x="672" y="277" font-size="11" fill="#0d47a1">0xE1 ECG, 0xF1–F3 PPG, 0xA1–A6 IMU,</text>
   <text x="672" y="292" font-size="11" fill="#0d47a1">0xB1 nhiệt độ, 0xC1 sự kiện,</text>
   <text x="672" y="307" font-size="11" fill="#0d47a1">0xD1–D3 thông tin, cấu hình, lệnh</text>
-  <text x="672" y="328" fill="#0d47a1">LDO 3,3 V của DevKitC cấp</text>
-  <text x="672" y="345" fill="#0d47a1">cho cả hai bo</text>
+  <text x="672" y="328" fill="#0d47a1">LDO 3,3 V trên bo (mã chưa rõ)</text>
+  <text x="672" y="345" fill="#0d47a1">cấp cho cả hai bo</text>
   <text x="672" y="366" fill="#0d47a1">Lắp vào 2 socket 1×22,</text>
   <text x="672" y="383" fill="#0d47a1">hai hàng cách 22,86 mm</text>
   <text x="672" y="404" fill="#0d47a1">Không có pin LiPo ở V1</text>
@@ -126,17 +126,17 @@
   <text x="972" y="296" fill="#263238">tham gia đang đeo thiết bị</text>
 
   <!-- Timing notes -->
-  <rect x="960" y="350" width="300" height="210" rx="8" fill="#ffffff" stroke="#90a4ae"/>
-  <text x="972" y="372" font-weight="bold" fill="#37474f">Thời gian và đồng bộ</text>
-  <text x="972" y="394" fill="#37474f">ECG theo dao động 32,768 kHz,</text>
-  <text x="972" y="412" fill="#37474f">PPG theo dao động nội MAX30101:</text>
-  <text x="972" y="430" fill="#37474f">hai AFE không chung clock</text>
-  <text x="972" y="452" fill="#37474f">SAMP (INT2B) báo lúc mẫu ECG vào</text>
-  <text x="972" y="470" fill="#37474f">FIFO, không phải lúc lấy mẫu</text>
-  <text x="972" y="492" fill="#37474f">Drift, jitter, lệch ECG–PPG đo</text>
-  <text x="972" y="510" fill="#37474f">bằng kích thích chung (kế hoạch</text>
-  <text x="972" y="528" fill="#37474f">10 phút), không dùng PAT</text>
-  <text x="972" y="546" fill="#37474f">PAT = PEP + PTT</text>
+  <rect x="960" y="366" width="300" height="210" rx="8" fill="#ffffff" stroke="#90a4ae"/>
+  <text x="972" y="388" font-weight="bold" fill="#37474f">Thời gian và đồng bộ</text>
+  <text x="972" y="410" fill="#37474f">ECG theo dao động 32,768 kHz,</text>
+  <text x="972" y="428" fill="#37474f">PPG theo dao động nội MAX30101:</text>
+  <text x="972" y="446" fill="#37474f">hai AFE không chung clock</text>
+  <text x="972" y="468" fill="#37474f">SAMP (INT2B) báo lúc mẫu ECG vào</text>
+  <text x="972" y="486" fill="#37474f">FIFO, không phải lúc lấy mẫu</text>
+  <text x="972" y="508" fill="#37474f">Drift, jitter, lệch ECG–PPG đo</text>
+  <text x="972" y="526" fill="#37474f">bằng kích thích chung (kế hoạch</text>
+  <text x="972" y="544" fill="#37474f">10 phút), không dùng PAT</text>
+  <text x="972" y="562" fill="#37474f">PAT = PEP + PTT</text>
 
   <!-- Legend -->
   <rect x="960" y="620" width="300" height="230" rx="8" fill="#ffffff" stroke="#90a4ae"/>
@@ -160,7 +160,7 @@
 
   <!-- MAX30001 <-> ESP32 -->
   <path d="M610,170 L658,170" stroke="#1565c0" stroke-width="2" fill="none" marker-start="url(#a-sig)" marker-end="url(#a-sig)"/>
-  <text x="614" y="162" font-size="11" fill="#1565c0">SPI 1</text>
+  <text x="614" y="162" font-size="10" fill="#1565c0">SPI ECG</text>
   <path d="M610,226 L658,226" stroke="#1565c0" stroke-width="2" fill="none" marker-end="url(#a-sig)"/>
   <text x="614" y="218" font-size="11" fill="#1565c0">INTB</text>
   <path d="M610,276 L658,276" stroke="#1565c0" stroke-width="2" fill="none" marker-end="url(#a-sig)"/>
@@ -176,8 +176,8 @@
 
   <!-- J2 <-> ESP32 -->
   <path d="M610,470 L782,470 L782,420" stroke="#1565c0" stroke-width="2" fill="none" marker-start="url(#a-sig)" marker-end="url(#a-sig)"/>
-  <text x="616" y="462" font-size="11" fill="#1565c0">I²C 1: GPIO8/9, INT 18</text>
-  <text x="616" y="490" font-size="11" fill="#1565c0">SPI 2: GPIO10–13, INT1 14</text>
+  <text x="616" y="462" font-size="11" fill="#1565c0">I²C PPG: GPIO8/9, INT 18</text>
+  <text x="616" y="490" font-size="11" fill="#1565c0">SPI IMU: GPIO10–13, INT1 14</text>
   <path d="M610,520 L850,520 L850,420" stroke="#c62828" stroke-width="2" fill="none" marker-start="url(#a-pwr)"/>
   <text x="700" y="514" font-size="11" fill="#c62828">3V3, GND (cáp chân 1, 2)</text>
 
@@ -187,9 +187,9 @@
 
   <!-- J1 -> sensors -->
   <path d="M495,704 L495,726" stroke="#1565c0" stroke-width="2" fill="none" marker-start="url(#a-sig)" marker-end="url(#a-sig)"/>
-  <text x="502" y="720" font-size="11" fill="#1565c0">I²C 1, INT</text>
+  <text x="502" y="720" font-size="11" fill="#1565c0">I²C PPG, INT</text>
   <path d="M777,704 L777,726" stroke="#1565c0" stroke-width="2" fill="none" marker-start="url(#a-sig)" marker-end="url(#a-sig)"/>
-  <text x="784" y="720" font-size="11" fill="#1565c0">SPI 2, INT1</text>
+  <text x="784" y="720" font-size="11" fill="#1565c0">SPI IMU, INT1</text>
 
   <!-- Body wrist marker -->
   <path d="M294,708 L358,760" stroke="#6a1b9a" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
@@ -199,9 +199,10 @@
   <text x="924" y="162" font-size="10" fill="#2e7d32">USB</text>
   <text x="924" y="186" font-size="10" fill="#2e7d32">native</text>
   <path d="M904,240 L958,240" stroke="#2e7d32" stroke-width="2" fill="none" marker-end="url(#a-usb)"/>
-  <text x="924" y="232" font-size="10" fill="#2e7d32">UART0</text>
+  <text x="924" y="232" font-size="10" fill="#2e7d32">CH343</text>
   <path d="M958,300 L906,300" stroke="#c62828" stroke-width="2" fill="none" marker-end="url(#a-pwr)"/>
   <text x="922" y="292" font-size="10" fill="#c62828">5 V</text>
   <text x="922" y="316" font-size="10" fill="#c62828">USB</text>
-  <text x="972" y="340" font-size="11" fill="#2e7d32">USB native: packet V0.2; UART0: log chữ</text>
+  <text x="972" y="340" font-size="11" fill="#2e7d32">Một cáp USB-C qua hub CH334, hai cổng COM:</text>
+  <text x="972" y="355" font-size="11" fill="#2e7d32">303A:1001 (USB native) packet V0.2; CH343 log</text>
 </svg>

@@ -21,6 +21,12 @@ chứa ID người nên không chép vào đây; SHA-256 của nó có trong `ou
 Lần chạy dùng commit `4be5a6d` cộng các thay đổi chưa commit
 (`workspace_has_changes: true`). Code đúng như lúc chạy được xác định bằng
 `code_provenance.sha256_lf` (hash nội dung LF của từng file), không phải bằng commit.
+Mã khớp `sha256_lf` của cả 13 file có ở commit `462c8d9` (kiểm 2026-10-29). Từ
+2026-10-26 runner `scripts/run_b3_pulsedb.py` đã đổi: `d123cba` sửa câu giới hạn về
+chuẩn hóa ECG/PPG, `004343c` tách `load_split` để dùng chung cho B2; các module
+`software/` vẫn khớp ở HEAD. Ba commit này chỉ còn trên nhánh cục bộ
+`backup/dev-huy-truoc-reset`; trên `develop` chúng nằm trong commit squash `3111a9e`
+(PR #25).
 Môi trường: Python 3.11.7, numpy 1.26.4, pandas 2.2.1, xgboost 3.2.0, h5py 3.16.0,
 mat73 0.65 (đúng `requirements.txt`).
 

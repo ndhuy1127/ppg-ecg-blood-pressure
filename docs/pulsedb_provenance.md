@@ -97,15 +97,15 @@ Theo Bảng 4 của bài báo, bản VitalDB của AAMI Test có 116 người, k
 người trong file thực dùng. Phần VitalDB của Train có 1.293 người (cùng số người
 với CalBased Test), của CalFree Test có 144 người.
 
-**Hệ quả cho dự án (chưa khóa):**
+**Bối cảnh lịch sử (trước quyết định 2026-10-24):**
 
-- Chia train/val/test theo người bên trong `VitalDB_AAMI_Cal_Subset` là hợp lệ
-  về mặt rò rỉ **giữa các tập của chính nhóm**.
-- Mọi người trong pool này cũng có mặt trong `VitalDB_AAMI_Test_Subset`. Nếu sau
-  này dùng AAMI Test hoặc gộp thêm subset khác, có nguy cơ trùng người với tập
-  dùng để huấn luyện hoặc chọn mô hình.
-- Vai trò của từng subset được chốt ngày 2026-10-24 (mục dưới). Ghi lại đúng nội
-  dung đó vào trường `pool_decision` của config split trước khi chạy.
+- Notebook Tuần 3–4 chia train/val/test theo người bên trong
+  `VitalDB_AAMI_Cal_Subset`. Cách chia đó không rò rỉ **giữa các tập của chính
+  nhóm**, nhưng mọi người trong pool này cũng có mặt trong
+  `VitalDB_AAMI_Test_Subset`, và notebook đã chấm test trên pool này.
+- Vì vậy pool AAMI Cal không dùng cho split mới. Vai trò của từng subset được chốt
+  ngày 2026-10-24 (mục dưới) và ghi trong trường `pool_decision` của
+  [config split](../configs/data/pulsedb_train400_split.json).
 
 **Quyết định pool (Huy, 2026-10-24; chưa có file raw nào trên máy, chưa đọc nhãn
 hay tín hiệu của subset nào):**
@@ -333,4 +333,5 @@ sử. Hai notebook Tuần 3–4 vẫn tham chiếu các đường dẫn này và
   PulseDB. Cách khả dĩ: so `ECG_F`/`PPG_F` với tín hiệu thô của cùng bản ghi
   VitalDB (cần file Segment có trường `T`).
 - Đánh giá CalFree Test (tập kiểm tra ngoài) chỉ sau khi model được khóa, bằng
-  script khóa riêng (chưa viết).
+  script khóa riêng (chưa viết). Quy trình đăng ký trước ngày 2026-10-29:
+  [pulsedb_test_scoring_preregistration.md](protocol/pulsedb_test_scoring_preregistration.md).

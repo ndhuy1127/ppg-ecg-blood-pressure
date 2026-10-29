@@ -5,7 +5,7 @@
 Pipeline mới `software/data_io/split_manifest.py` và
 `scripts/build_pulsedb_split.py` kế thừa `software/pulsedb/reader.py` trong repo.
 Không dùng reader import từ dataset Kaggle riêng, không chọn `file_paths[0]`.
-CSV/notebook cũ và cấu hình B0 đang dùng **không bị sửa hoặc thay thế**.
+CSV/notebook cũ và cấu hình B0 lịch sử **không bị sửa hoặc thay thế**.
 
 Schema hiện tại là `pulsedb-split-v2`, không tương đương hash notebook lịch sử
 hoặc bản v1. V2 thêm `waveform_hash` không chứa ID/nhãn và schema đóng để không
@@ -13,8 +13,8 @@ làm mất metadata khi xuất CSV. Config v1 bị từ chối; không chỉ đ�
 trên CSV cũ: phải tạo lại inventory/hash từ waveform. Dữ liệu bàn giao cũ giữ nguyên.
 Pipeline giữ **mọi dòng reader trả về** của một file được chỉ định; không áp dụng
 quy tắc chọn 10 đoạn/người hoặc pool 1.000 đoạn của notebook cũ. Vì vậy không
-coi output mới là lần tái tạo pool cũ. Pool thực nghiệm phải
-chốt trước khi chạy; không tái chia holdout gốc để tuyên bố đánh giá PulseDB.
+coi output mới là lần tái tạo pool cũ. Pool thực nghiệm đã chốt ngày 2026-10-24,
+trước khi chạy (mục dưới); không tái chia holdout gốc để tuyên bố đánh giá PulseDB.
 Không dùng nhãn test để chọn tỷ lệ, seed, model hoặc tiêu chí loại.
 
 ## Chọn pool và vai trò subset
@@ -24,7 +24,13 @@ cùng người; AAMI Test và AAMI Cal là cùng người (nhóm C); CalFree Tes
 người riêng. CSV lịch sử dùng `VitalDB_AAMI_Cal_Subset.mat` (116 người, đều có
 mặt trong AAMI Test). Chi tiết và bằng chứng: [provenance PulseDB](../pulsedb_provenance.md).
 
-Trước khi chạy, trường `pool_decision` phải ghi rõ:
+**Đã chốt ngày 2026-10-24 (Huy, provenance mục 5):** pool là
+`VitalDB_Train_Subset.mat`, lấy mẫu con 400 người (seed 20261024), chia theo người
+với seed 72 và tỉ lệ 0,8/0,1/0,1. CalFree Test là tập kiểm tra ngoài; CalBased Test,
+AAMI Cal và AAMI Test không dùng. Split đã chạy hai lần trên raw ngày 2026-10-25,
+cùng SHA-256 `inventory.csv` và `manifest.csv`.
+
+Trường `pool_decision` của config phải ghi rõ:
 
 - file nào là pool để chia train/val/test;
 - subset nào là held-out bên ngoài và subset nào **không được dùng** ở bất kỳ
@@ -36,9 +42,10 @@ inventory.
 
 ## Config đầu vào
 
-Lưu JSON cục bộ ngoài Git, ví dụ
-`D:\ppg-ecg-blood-pressure\data\processed\linh_split_config.json`.
-Không có config mặc định và không bịa checksum. JSON phải có
+Config đã chốt nằm trong Git:
+[pulsedb_train400_split.json](../../configs/data/pulsedb_train400_split.json)
+(đường dẫn raw tương đối, file `.mat` ở ngoài Git). Script không có config mặc định;
+không bịa checksum. JSON phải có
 đúng các trường sau, tất cả chuỗi phải không rỗng:
 
 | Trường | Giá trị / ý nghĩa |
@@ -52,9 +59,9 @@ Không có config mặc định và không bịa checksum. JSON phải có
 | `pool_decision` | Quyết định đã chốt về pool và quan hệ với holdout có sẵn |
 | `subject_identity_review` | Kết quả kiểm tra ý nghĩa ID/alias và giới hạn còn lại |
 | `unit` | `mmHg` |
-| `seed` | Số nguyên; 72 là seed lịch sử, chỉ dùng nếu quyết định giữ seed đó |
-| `ratios` | Ba tỷ lệ dương tổng bằng 1, thứ tự train/val/test; 0.8/0.1/0.1 là phương án lịch sử |
-| `subject_subsample` (tùy chọn, từ 2026-10-25) | `{"n_subjects": N, "seed": S}`: lấy mẫu con N người trước khi chia (mục dưới); thiếu trường này thì giữ mọi dòng như trước |
+| `seed` | Số nguyên; chốt 72 (2026-10-24) |
+| `ratios` | Ba tỷ lệ dương tổng bằng 1, thứ tự train/val/test; chốt 0.8/0.1/0.1 (2026-10-24) |
+| `subject_subsample` (tùy chọn, từ 2026-10-25) | `{"n_subjects": N, "seed": S}`: lấy mẫu con N người trước khi chia (mục dưới); config đã chốt dùng 400 người, seed 20261024; thiếu trường này thì giữ mọi dòng như trước |
 
 Các mô tả quyền dùng/pool/ID là khai báo cần người kiểm tra, **không phải chứng
 nhận tự động**. Có thể tính checksum tại máy được phép giữ dataset bằng
@@ -66,12 +73,14 @@ Không tự tải dataset hoặc commit đường dẫn/metadata nhạy cảm.
 Dùng môi trường đã cài theo repo, không cài dependency trong lúc chạy:
 
 ```powershell
-& 'D:\ppg-ecg-blood-pressure\.venv\Scripts\python.exe' -B 'D:\ppg-ecg-blood-pressure\scripts\build_pulsedb_split.py' --config 'D:\ppg-ecg-blood-pressure\data\processed\linh_split_config.json' --output 'D:\ppg-ecg-blood-pressure\data\processed\linh_split_run_01'
+& 'D:\ppg-ecg-blood-pressure\.venv\Scripts\python.exe' -B 'D:\ppg-ecg-blood-pressure\scripts\build_pulsedb_split.py' --config 'D:\ppg-ecg-blood-pressure\configs\data\pulsedb_train400_split.json' --output 'D:\ppg-ecg-blood-pressure\data\processed\pulsedb_train400_split_run01'
 ```
 
-Chạy lại với cùng config/raw/code/môi trường và output mới `linh_split_run_02`.
-So sánh SHA-256 `manifest.csv` và `inventory.csv`; script từ chối thư mục output
-đã tồn tại. Terminal chỉ in hash và số người/đoạn, không in ID cá nhân.
+Chạy lại với cùng config/raw/code/môi trường và output mới
+`pulsedb_train400_split_run02`. So sánh SHA-256 `manifest.csv` và `inventory.csv`
+(đã làm ngày 2026-10-25, hai lần cùng hash; giá trị ở provenance mục 5); script từ
+chối thư mục output đã tồn tại. Terminal chỉ in hash và số người/đoạn, không in ID
+cá nhân.
 Raw được hash trước/sau đọc; checksum sai hoặc raw thay đổi thì dừng.
 Không có `subject_subsample` thì reader `mat73` nạp cả file vào RAM; không chạy
 file lớn trên máy thiếu bộ nhớ. Có `subject_subsample` thì builder dùng reader
@@ -188,9 +197,9 @@ file SYNTHETIC bố cục MATLAB v7.3, lấy mẫu con theo người, hash,
 sort, thống kê, tái chạy, checksum và không ghi đè output. Không chứng minh
 nguồn raw, ID người, record/cửa sổ gốc hoặc PulseDB đã được nghiệm thu.
 
-Còn cần config/pool đã chốt, quyền dùng/checksum thật, chạy
-raw hai lần, đối chiếu số dòng raw-reader-inventory và record/alias nếu có.
-Thiếu record metadata phải ghi giới hạn; không tạo ID người hay timestamp giả.
+File Subset không có record metadata ([provenance](../pulsedb_provenance.md) mục 7),
+nên chưa kiểm được leakage theo record/cửa sổ gốc; ghi giới hạn này, không tạo ID
+người hay timestamp giả.
 Chưa có chronology/calibration thì chưa đánh giá B1/cross-session/DeltaBP.
 Không có preprocessing học tham số trong pipeline này. Mọi bổ sung fit sau này
 phải chỉ dùng train. Cần CI Python 3.11 đạt trước nghiệm thu chung.

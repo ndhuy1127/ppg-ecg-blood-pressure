@@ -64,6 +64,8 @@ B0 mặc định dùng trung bình đều theo dòng train; truyền `sample_wei
 ([quy ước Tuần 3](../../docs/protocol/week_03_baselines_metrics.md)). B1 dùng trung bình đều các dòng
 hiệu chuẩn của từng người và thuộc kịch bản cá nhân hóa có hiệu chuẩn. Caller
 phải xác minh split, không trùng record/event và calibration có trước evaluation;
-API không nhận metadata để tự chứng minh các điều kiện đó. Quy tắc dataset thật
-và trọng số chưa chốt cho phân tích. Xem
+API không nhận metadata để tự chứng minh các điều kiện đó. Với PulseDB, trọng số
+1/n_s (B0 = trung bình các trung bình theo người) được chốt trong `b3-pipeline-v1`
+([hướng dẫn B0/B3](../../docs/protocol/run_b3_pulsedb.md)); quy tắc và trọng số cho
+dữ liệu thiết bị chưa chốt. Xem
 [quy ước phương pháp](../../docs/protocol/week_03_baselines_metrics.md).
