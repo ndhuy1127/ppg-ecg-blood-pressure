@@ -4,8 +4,10 @@
 > hay đo trên người cho tới khi có văn bản phê duyệt. Các ô `[...]` là thông tin
 > còn chờ giảng viên hướng dẫn hoặc hội đồng; nhóm không tự điền.
 >
-> Người soạn: Huy, 2026-10-21. Nguồn nội dung: [khung đạo đức v0.1](ethics_outline_v0.1.md),
-> [protocol v0.2](../protocol/protocol_outline_v0.2.md),
+> Người soạn: Huy, 2026-10-21; cập nhật 2026-10-29 theo protocol v0.3 (số buổi, số lần
+> bơm cuff, chuẩn bị trước buổi đo, ngưỡng huyết áp, rút lui, thời hạn lưu). Nguồn
+> nội dung: [khung đạo đức v0.1](ethics_outline_v0.1.md),
+> [protocol v0.3](../protocol/protocol_outline_v0.2.md),
 > [thiết bị V1-module](../../configs/hardware/custom_board_proposal.md) (Phần A).
 
 **Tên nghiên cứu:** Nguyên mẫu đeo cổ tay thu đồng thời tín hiệu quang học (PPG)
@@ -26,14 +28,24 @@ chẩn đoán, sàng lọc hay điều trị, và nhóm không đưa ra lời kh
 
 ## 2. Bạn sẽ làm gì
 
-Nếu đồng ý tham gia, bạn sẽ tham gia **[số] buổi đo** (dự kiến 3 buổi, ở ít nhất
-2 ngày khác nhau). Mỗi buổi dự kiến tối đa **[số] phút** (ước tính hiện tại của
-nhóm khoảng 75 phút, chưa có nguồn; sẽ chốt sau buổi diễn tập).
+Nếu đồng ý tham gia, bạn sẽ tham gia **tối đa 3 buổi đo** (ít nhất 2), mỗi buổi
+một ngày khác nhau, tất cả trong khoảng 4 tuần. Mỗi buổi kéo dài **tối đa 120
+phút**; nhóm ước tính khoảng 90–100 phút nếu làm đủ các nghiệm pháp ở bước 6.
+
+**Trước mỗi buổi đo:**
+
+- Trong 2 giờ trước buổi đo, không uống cà phê hay trà, không hút thuốc, không
+  vận động mạnh. Nếu chưa kiêng đủ, hãy báo nhóm: buổi đo sẽ được hẹn lại, bạn
+  không bị ảnh hưởng gì.
+- Mặc áo tay ngắn hoặc tay rộng để quấn được vòng bít ở bắp tay phải. Ở buổi đầu,
+  nhóm đo chu vi bắp tay phải để chọn cỡ vòng bít.
+- Nhóm sẽ nhắn tin nhắc bạn trước mỗi buổi đo.
 
 Trong mỗi buổi:
 
 1. Trả lời phiếu sàng lọc (tuổi, tiền sử bệnh liên quan, dị ứng, thuốc đang dùng).
-   Nhóm không ghi họ tên vào phiếu này; phiếu chỉ mang mã nghiên cứu.
+   Nhóm không ghi họ tên vào phiếu này; phiếu chỉ mang mã nghiên cứu. Ở buổi đầu,
+   nhóm đo huyết áp mỗi tay một lần, trước khi gắn thiết bị.
 2. Ngồi nghỉ yên tĩnh ít nhất 10 phút trên ghế có tựa, hai chân đặt trên sàn.
 3. Nhóm gắn thiết bị:
    - Một bo cảm biến nhỏ (khoảng 4 × 3 cm) gắn bằng dây dán (velcro) ở **mặt
@@ -44,20 +56,25 @@ Trong mỗi buổi:
      điện tim thông thường) để ghi điện tim: một miếng ở mặt trong cổ tay trái, một
      miếng ở mặt trong cẳng tay trái, một miếng ở mặt trong cổ tay phải. Da được
      lau sạch trước khi dán.
-   - [Điện cực khô (không gel) để so sánh: chỉ ghi vào đây nếu nhóm quyết định
-     dùng trên người; khi đó cần thêm mục đồng thuận riêng.]
-   - **Vòng bít máy đo huyết áp** ở bắp tay phải. Máy sẽ bơm và xả nhiều lần trong
-     buổi đo; mỗi lần khoảng 45–60 giây, giữa hai lần nghỉ ít nhất 2 phút.
+   - **Vòng bít máy đo huyết áp** ở bắp tay phải. Mỗi buổi máy bơm và xả khoảng 6
+     lần, **tối đa 8 lần** (cộng 2 lần đo hai tay ở buổi đầu); nếu buổi đó chỉ đo
+     lúc nghỉ thì tối đa 4 lần. Mỗi lần khoảng 45–60 giây, giữa hai lần nghỉ ít
+     nhất 2 phút.
+   - Ở buổi đầu, nhóm chỉnh độ sáng đèn của bo cảm biến cho hợp với cổ tay bạn
+     (vài phút) và dùng lại mức đó ở các buổi sau.
 4. Bo mạch đế trên bàn nối bằng cáp USB với một máy tính xách tay **chạy bằng
    pin, không cắm sạc** trong suốt thời gian bạn đeo thiết bị.
 5. Bạn ngồi yên, không nói chuyện, không cử động tay trong lúc ghi tín hiệu và
-   lúc máy đo huyết áp bơm. [Cách trả lời trong nghiệm pháp tính nhẩm và lúc nào
-   được nói: chờ chốt.]
-6. **[Chỉ khi hội đồng chấp thuận]** Một số nghiệm pháp ngắn làm huyết áp thay
-   đổi nhẹ, ví dụ: thở chậm theo nhịp hướng dẫn, làm phép tính nhẩm, ngâm một bàn
-   chân vào nước lạnh, đạp xe nhẹ ở tư thế ngồi. Mỗi nghiệm pháp được giải thích
-   trước, và bạn có thể từ chối từng nghiệm pháp mà vẫn tiếp tục buổi đo. Danh
-   sách cuối cùng: [điền theo protocol được duyệt].
+   lúc máy đo huyết áp bơm. Trong nghiệm pháp tính nhẩm, bạn nhẩm trong đầu và
+   không nói; chỉ nói đáp án khi nhóm báo đã hết khoảng im lặng, sau khi máy đo
+   huyết áp xả xong.
+6. **[Chỉ khi hội đồng chấp thuận]** Các nghiệm pháp làm huyết áp thay đổi:
+   thở chậm theo nhịp hướng dẫn (khoảng 15 phút); làm phép tính nhẩm; ngâm một
+   bàn chân vào nước lạnh (khoảng 1,5–2 phút, rút chân ra ngay khi bạn muốn);
+   đạp xe nhẹ ở tư thế ngồi. Giữa các nghiệm pháp có thời gian nghỉ. Mỗi nghiệm
+   pháp được giải thích trước, và bạn có thể từ chối từng nghiệm pháp mà vẫn tiếp
+   tục buổi đo. Thời lượng tính nhẩm, đạp xe và danh sách cuối cùng: [điền theo
+   protocol được duyệt].
 
 ## 3. Rủi ro và khó chịu có thể gặp
 
@@ -71,7 +88,7 @@ Trong mỗi buổi:
   chip, và nâng lên 5 V cho đèn LED đo mạch. Máy tính
   chạy pin và không cắm sạc, không nối thiết bị nào khác vào ổ điện lưới khi bạn
   đang đeo. Thiết bị chỉ được dùng trên người sau khi đã đo dòng rò trên bo thật
-  [biên bản đo: chờ hoàn thành].
+  và so với giới hạn của tiêu chuẩn IEC 60601-1 [biên bản đo: chờ hoàn thành].
 - **Nghiệm pháp (nếu có):** nước lạnh gây buốt, đau tăng dần; tính nhẩm có thể
   gây căng thẳng; thở chậm có thể gây chóng mặt nhẹ; vận động gây mệt.
 - **Riêng tư:** dữ liệu có nguy cơ bị lộ dù đã mã hóa; biện pháp giảm rủi ro ở mục 5.
@@ -82,8 +99,16 @@ Nếu có bất kỳ khó chịu nào, nói ngay để nhóm dừng. Quy tắc d
 ## 4. Lợi ích
 
 Bạn **không có lợi ích sức khỏe trực tiếp**. Số đo huyết áp trong nghiên cứu
-không phải kết quả khám bệnh. [Cách xử lý khi số đo cuff vượt ngưỡng cần đi khám,
-và việc có thông báo số đo cho người tham gia hay không: chờ thầy/hội đồng.]
+không phải kết quả khám bệnh.
+
+- Nếu một lần đo có huyết áp tâm thu từ 180 mmHg hoặc tâm trương từ 110 mmHg trở
+  lên, nhóm dừng buổi đo.
+- Nếu huyết áp trung bình lúc nghỉ đầu buổi từ 140/90 mmHg trở lên, nhóm chỉ đo
+  lúc nghỉ, không làm các nghiệm pháp.
+- Trong hai trường hợp trên, nhóm báo số đo cho bạn (đây không phải chẩn đoán) và
+  khuyên bạn đi khám tại [cơ sở y tế/đầu mối — chờ xác nhận].
+- [Ngưỡng là đề xuất của nhóm, chờ thầy/hội đồng duyệt.]
+
 [Bồi dưỡng/thù lao, nếu có: chờ xác nhận.]
 
 ## 5. Dữ liệu và bảo mật
@@ -92,19 +117,31 @@ và việc có thông báo số đo cho người tham gia hay không: chờ th�
   sàng lọc chỉ mang mã này, không có họ tên, số điện thoại, mã sinh viên hay
   ngày sinh.
 - Bảng nối mã với danh tính được lưu riêng, mã hóa, chỉ người quản lý dữ liệu
-  được mở. Phiếu đồng thuận có chữ ký lưu bản giấy trong tủ khóa, tách khỏi dữ liệu.
+  được mở. Phiếu đồng thuận có chữ ký (có họ tên và mã của bạn) lưu bản giấy
+  trong tủ khóa, để riêng, không cùng chỗ với phiếu sàng lọc và dữ liệu.
 - Dữ liệu không được đưa lên kho mã nguồn (GitHub). Kết quả công bố chỉ ở dạng
   tổng hợp, không nhận ra từng người.
-- Dữ liệu được giữ tới [thời hạn — đề xuất 03 năm sau công bố, chờ xác nhận] rồi xóa.
+- Dữ liệu được giữ theo [quy định lưu trữ của trường/hội đồng — chờ thầy]; nếu
+  không có quy định, giữ 03 năm kể từ khi kết thúc đề tài hoặc kể từ khi công bố
+  kết quả, tính theo mốc muộn hơn (không công bố thì tính từ khi kết thúc đề
+  tài), rồi xóa.
 - Chi tiết: [kế hoạch quản lý dữ liệu](data_management_plan_v0.1.md).
 
 ## 6. Tham gia tự nguyện và quyền rút lui
 
 Tham gia là tự nguyện. Bạn có thể từ chối hoặc rút lui bất cứ lúc nào, không cần
 nêu lý do và không bị ảnh hưởng gì (kể cả điểm số hay quan hệ với giảng viên nếu
-bạn là sinh viên). Khi rút lui, bạn có thể yêu cầu xóa dữ liệu của mình; dữ liệu
-đã đưa vào kết quả tổng hợp đã công bố trước thời điểm đó thì không rút lại được
-[mốc thời gian cụ thể: chờ xác nhận].
+bạn là sinh viên). Khi rút lui, nhóm ngừng thu dữ liệu của bạn, và bạn chọn một
+trong hai cách:
+
+- xóa toàn bộ dữ liệu đã thu của bạn, kể cả bản sao lưu (riêng phiếu đồng thuận
+  có chữ ký được giữ làm hồ sơ chứng minh bạn đã đồng ý tham gia);
+- cho phép nhóm giữ dữ liệu đã thu để phân tích.
+
+Nhóm ghi lại lựa chọn của bạn (chỉ theo mã). Yêu cầu xóa thực hiện được nếu đưa ra
+trước ngày nhóm khóa dữ liệu để phân tích: [ngày cụ thể, dự kiến tuần 2027-01-28 →
+2027-02-03 — chờ xác nhận]. Sau ngày đó, dữ liệu đã nằm trong các phân tích đã khóa
+nên không xóa được, nhưng nhóm không thu thêm dữ liệu của bạn.
 
 ## 7. Liên hệ
 

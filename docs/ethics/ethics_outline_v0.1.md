@@ -19,14 +19,15 @@
 > | Mục trong outline | Nội dung đã cũ | Theo bản mới |
 > | --- | --- | --- |
 > | 3, bước 1 | "chạm ngón tay vào điện cực ECG" | V1 dùng điện cực dán, không cần chạm chủ động (protocol v0.2 mục 5.1) |
-> | 3, bước 1 | Mỗi phiên khoảng 20–30 phút | Phiếu thông tin: ước tính khoảng 75 phút, chưa chốt |
-> | 3, bước 4 | Rút lui thì xóa vĩnh viễn **toàn bộ** dữ liệu | Có thể yêu cầu xóa; dữ liệu đã vào kết quả tổng hợp đã công bố thì không rút lại được (phiếu thông tin mục 6, kế hoạch quản lý dữ liệu) |
+> | 3, bước 1 | Mỗi phiên khoảng 20–30 phút | Phiếu thông tin: tối đa 120 phút mỗi buổi, tối đa 3 buổi (2026-10-29) |
+> | 3, bước 4 | Rút lui thì xóa vĩnh viễn **toàn bộ** dữ liệu | Người rút lui chọn xóa hay giữ; xóa được nếu yêu cầu trước mốc khóa dữ liệu ở G4 (phiếu thông tin mục 6, kế hoạch quản lý dữ liệu mục 4; 2026-10-29) |
 > | 4, đoạn đầu | Tự phân loại "rủi ro tối thiểu (minimal risk)" | Phân loại rủi ro do hội đồng quyết định; câu trong outline chỉ là nhận định ban đầu của nhóm |
 > | 4.1 | Quy tắc pin, cấm nối máy tính | V1: USB tới laptop chạy pin, rút sạc (ghi chú trong 4.1) |
 > | 4.2 | Vỏ in 3D; vật liệu điện cực chưa chốt | V1: bo cổ tay gắn velcro, không có vỏ in 3D; điện cực Ag/AgCl dán là phương án chính |
 > | 4.2 | LED < 15 mW | Chưa có nguồn (ghi chú trong 4.2) |
 > | 4.3 | Nghỉ 2–3 phút giữa hai lần cuff | Phiếu thông tin và protocol: ít nhất 2 phút |
-> | 4.4, ý 4 | Ngưỡng SBP > 180 / DBP > 110 mmHg | Chưa có nguồn, chờ thầy/hội đồng ([quy tắc dừng](session_safety_stopping_v0.1.md)) |
+> | 4.4, ý 4 | Ngưỡng SBP > 180 / DBP > 110 mmHg | Đề xuất ≥ 180/110 dừng buổi, M0 ≥ 140/90 không làm nghiệm pháp; chờ thầy/hội đồng ([quy tắc dừng](session_safety_stopping_v0.1.md) mục 3) |
+> | 5, thời hạn lưu | Tối đa 03 năm sau khi công bố | Theo quy định của trường; không có thì 03 năm kể từ mốc muộn hơn giữa kết thúc đề tài và công bố ([kế hoạch quản lý dữ liệu](data_management_plan_v0.1.md) mục 5) |
 
 ---
 

@@ -1,10 +1,10 @@
-# Câu hỏi nghiên cứu (Research Questions) — v0.2
+# Câu hỏi nghiên cứu (Research Questions) — v0.3
 
 > **Người thực hiện:** Nguyễn Đức Huy
 >
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 >
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code)
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline)
 >
 > Tên file giữ `v0.1` để không làm gãy liên kết.
 
@@ -29,7 +29,7 @@ Mục tiêu triển khai (chế tạo prototype, firmware, pipeline) là điều
 1. **Đánh giá SBP và DBP riêng.** Hai đại lượng chịu ảnh hưởng của các yếu tố sinh lý khác nhau một phần (SBP gắn nhiều hơn với tống máu và độ cứng động mạch lớn, DBP với kháng lực ngoại vi). Không gộp thành một chỉ số sai số chung.
 2. **Gọi đúng PAT.** Khoảng từ đỉnh R của ECG đến chân sóng PPG là PAT, `PAT = PEP + PTT` (cách viết gọn; mốc R không trùng mốc Q/QRS mà PEP thường dùng). Không áp trực tiếp phương trình của PTT lên PAT.
 3. **Chống rò rỉ dữ liệu.** Chia theo người; với cá nhân hóa, dữ liệu hiệu chuẩn có trước dữ liệu kiểm tra. Một lần đo cuff là một nhãn; nhiều cửa sổ cùng lần đo không phải nhiều mẫu độc lập. Bootstrap lấy mẫu lại theo người. Các biện pháp này giảm nguy cơ mô hình nhận dạng người thay vì học quan hệ với BP, nhưng không loại trừ hoàn toàn mọi dạng rò rỉ.
-4. **Không chọn gì trên tập test.** Đặc trưng, cửa sổ, ngưỡng SQI, siêu tham số và mức vận hành đều chọn trên train/validation; test chỉ dùng một lần sau khi đã khóa.
+4. **Không chọn gì trên tập test.** Đặc trưng, cửa sổ, ngưỡng SQI, siêu tham số và mức vận hành đều chọn trên train/validation; test chỉ dùng một lần sau khi đã khóa. Với dữ liệu prototype, việc này thực hiện bằng LOSO lồng ([protocol v0.3](protocol/protocol_outline_v0.2.md) mục 9.1, chốt 2026-10-29): siêu tham số chọn ở vòng trong; cửa sổ, mốc, SQI khóa trên pilot; vòng ngoài chạy một lần.
 
 ---
 
@@ -58,20 +58,21 @@ SBP và DBP được kiểm định riêng. Bằng chứng hiện có (Payne 200
 
 - **Đặc trưng PPG:** thời gian lên (rise time), độ rộng xung tại 50% biên độ, biên độ xung, HR tính từ PPG; ứng viên mở rộng là tỷ số diện tích tâm thu/tâm trương và PIR (Ding et al., 2016). Bộ đặc trưng v0 đã có trong code Tuần 4 (`software/feature_extraction/week04.py`), chưa được khóa.
 - **Đặc trưng từ ECG:** PAT (R-peak → PPG foot cùng nhịp, trung vị trong cửa sổ) và $`\Delta\text{PAT} = \text{PAT}_{\text{hiện tại}} - \text{PAT}_{\text{hiệu chuẩn}}`$. HR và HRV ngắn hạn từ ECG là đặc trưng phụ cho phân tích ablation.
-- **Mốc hiệu chuẩn:** $`\text{SBP}_0`$, $`\text{DBP}_0`$ từ lần cuff hợp lệ ở phiên 1 (cách tổng hợp nhiều lần cuff chưa khóa).
+- **Mốc hiệu chuẩn (chốt 2026-10-29):** $`\text{SBP}_0`$, $`\text{DBP}_0`$ là trung bình các lần cuff M0 (nghỉ ngồi) hợp lệ ở phiên 1; $`\text{PAT}_{\text{hiệu chuẩn}}`$ và đặc trưng nền lấy từ cửa sổ của các lần cuff đó.
 - **Đầu ra:** $`\Delta\text{SBP} = \text{SBP}_{\text{target}} - \text{SBP}_0`$, $`\Delta\text{DBP} = \text{DBP}_{\text{target}} - \text{DBP}_0`$ (mmHg). Ước lượng BP cuối: $`\widehat{\text{BP}} = \text{BP}_0 + \Delta\widehat{\text{BP}}`$.
+- **Tập đánh giá (endpoint chính; đề xuất của nhóm 2026-10-29, chờ thầy xác nhận):** mọi lần cuff hợp lệ ở phiên ≥ 2, gồm M0 và các nghiệm pháp M1–M4 ([protocol v0.3](protocol/protocol_outline_v0.2.md) mục 6.4). Nghiệm pháp là biến phân tầng. Phân tích phụ định trước: chỉ các lần cuff M0 ở phiên ≥ 2. Cuff nghiệm pháp ở phiên 1 của người được đánh giá không dùng để hiệu chuẩn và không vào tập đánh giá.
 
 ### C. Các mô hình so sánh
 
 | Mô hình | Đầu vào | Vai trò |
 |---|---|---|
 | **Zero-change** | Không có đặc trưng; $`\Delta\widehat{\text{BP}} = 0`$, tức $`\widehat{\text{BP}} = \text{BP}_0`$ | Baseline bắt buộc. Mô hình không vượt baseline này thì không có giá trị gia tăng so với chỉ dùng mốc hiệu chuẩn |
-| **PAT-only** | $`\Delta(1/\text{PAT}^2)`$ hoặc $`\Delta\text{PAT}`$ | Kiểm tra lượng thông tin của riêng PAT. Hệ số học ở mức quần thể trên người thuộc tập train, vì một lần cuff hiệu chuẩn không đủ để fit hệ số riêng cho từng người. Đây là hồi quy thực nghiệm, không phải áp Moens–Korteweg lên PAT |
+| **PAT-only** | $`\Delta(1/\text{PAT}^2)`$ hoặc $`\Delta\text{PAT}`$ | Kiểm tra lượng thông tin của riêng PAT. Hệ số học ở mức quần thể trên người thuộc tập train, vì người được đánh giá chỉ đóng góp $`\text{BP}_0`$ (trung bình M0 phiên 1) cho hiệu chuẩn; cuff nghiệm pháp phiên 1 của họ không dùng để fit hệ số riêng. Đây là hồi quy thực nghiệm, không phải áp Moens–Korteweg lên PAT |
 | **PPG-only** | Đặc trưng PPG + HR từ PPG | Đối chứng chính của RQ1 |
 | **PPG + PAT** | Như PPG-only, thêm PAT/ΔPAT | Mô hình chính của RQ1 |
 | **PPG + PAT + ECG-HRV** | Thêm HR/HRV từ ECG | Ablation phụ, tách phần đóng góp của PAT với phần của các đặc trưng ECG khác |
 
-**Phép so sánh chính là PPG-only với PPG + PAT**, dùng cùng thuật toán (ví dụ Ridge), cùng ngân sách chọn siêu tham số trên validation và **cùng tập lần đo đánh giá** (những lần đo có cả ECG và PPG đạt chất lượng). Nếu PPG-only được đánh giá trên nhiều lần đo hơn (gồm cả lần ECG hỏng), hai mô hình sẽ bị so trên hai tập khác nhau. Kết quả PPG-only trên toàn bộ lần đo và tỷ lệ lần đo mất ECG được báo cáo riêng như phân tích phụ.
+**Phép so sánh chính là PPG-only với PPG + PAT**, dùng cùng thuật toán (ví dụ Ridge), cùng ngân sách chọn siêu tham số ở vòng trong của LOSO lồng (protocol mục 9.1) và **cùng tập lần đo đánh giá** (những lần đo tính được cả PAT và đặc trưng PPG; phân tích chính không lọc thêm theo ngưỡng SQI, lọc SQI là phân tích phụ đăng ký trước: protocol mục 7.3, chốt 2026-10-29). Nếu PPG-only được đánh giá trên nhiều lần đo hơn (gồm cả lần ECG hỏng), hai mô hình sẽ bị so trên hai tập khác nhau. Kết quả PPG-only trên toàn bộ lần đo và tỷ lệ lần đo mất ECG được báo cáo riêng như phân tích phụ.
 
 ### D. Chỉ số đánh giá
 
@@ -82,6 +83,7 @@ Tính riêng cho ΔSBP và ΔDBP:
 - Pearson $r$ giữa ΔBP tham chiếu và ΔBP dự đoán (không xác định cho zero-change vì dự đoán là hằng).
 - Tỷ lệ lần đo có $|e| \le 5$ và $\le 10$ mmHg, chỉ để mô tả; không phải tiêu chí AAMI/ISO.
 - **Bắt buộc báo cáo kèm:** SD của ΔBP tham chiếu và tỷ lệ lần đo có $|\Delta\text{BP}| > 5$ mmHg. Nếu ΔBP tham chiếu rất hẹp, mọi so sánh MAE đều kém nhạy, và người đọc cần biết điều đó.
+- Các chỉ số trên báo cả tổng và theo từng nghiệm pháp (M0–M4), và cho phân tích phụ chỉ M0.
 
 ### E. Tiêu chí kết luận
 
@@ -100,7 +102,7 @@ Tính riêng cho ΔSBP và ΔDBP:
 
 ### G. Dữ liệu tối thiểu và tính khả thi
 
-- 15–20 người khỏe mạnh, mỗi người ít nhất 2 phiên ở các thời điểm khác nhau (1 phiên hiệu chuẩn + ≥ 1 phiên đánh giá); protocol đề xuất 3 phiên. Mỗi phiên có ít nhất 2 lần cuff hợp lệ. Đơn vị phân tích cho kiểm định là người.
+- Mục tiêu ≥ 15 người đạt chuẩn, tuyển tối đa 25 người (trần đề xuất của nhóm, chờ thầy). Mục tiêu 3 phiên mỗi người, tối thiểu 2 (1 phiên hiệu chuẩn + ≥ 1 phiên đánh giá), mọi phiên trong 4 tuần kể từ phiên 1 (protocol v0.3 mục 3, chốt 2026-10-29). Mỗi phiên có ít nhất 2 lần cuff hợp lệ. Đơn vị phân tích cho kiểm định là người.
 - Các con số này là đề xuất khả thi, chưa dựa trên phân tích power; cần tính lại từ pilot.
 - **Hiện trạng:** chưa có prototype, phê duyệt đạo đức hay dữ liệu cuff. PulseDB **không** trả lời được RQ1: nhãn là ABP xâm lấn chứ không phải cuff, và không có cấu trúc phiên theo thời gian. PulseDB chỉ dùng để phát triển và kiểm tra đặc trưng.
 
@@ -147,7 +149,13 @@ Báo cáo ΔMAE với CI theo người, riêng SBP và DBP. Mức suy giảm 40%
 
 ### G. Dữ liệu và tính khả thi
 
-- **Phần (a), làm được ngay:** PulseDB (phần VitalDB trên Kaggle) với reader, inventory và split theo người `pulsedb-split-v2` đã có, cùng pipeline B0/B3 trên split này (mục 7; đã chạy trên raw PulseDB VitalDB Train 400 người ngày 2026-10-25, chỉ chấm val; [báo cáo](../reports/weekly/week_05/pulsedb_b3_v1/README.md)). Cần thêm: một hàm chia ngẫu nhiên theo đoạn (chỉ cho đối chứng A). Một lựa chọn khác cần nhóm cân nhắc là dùng chính các tập của PulseDB: tập kiểm thử có hiệu chuẩn (CalBased) chứa người đã có trong tập huấn luyện, còn tập không hiệu chuẩn (CalFree) chứa người mới. Theo Bảng 4 của bài báo PulseDB (Wang et al., 2023), phần VitalDB có 1.293 người ở cả Train và CalBased Test, 144 người ở CalFree Test; các con số 2.506 và 279 là tổng MIMIC-III + VitalDB.
+- **Phần (a), làm được ngay:** PulseDB (phần VitalDB trên Kaggle) với reader, inventory và split theo người `pulsedb-split-v2` đã có, cùng pipeline B0/B3 trên split này (mục 7; đã chạy trên raw PulseDB VitalDB Train 400 người ngày 2026-10-25, chỉ chấm val; [báo cáo](../reports/weekly/week_05/pulsedb_b3_v1/README.md)). Cần thêm: một hàm chia ngẫu nhiên theo đoạn (chỉ cho đối chứng A).
+- **Rào chắn cho phần (a) (chốt 2026-10-29):**
+  - RQ2(a) chỉ chạy trên người thuộc train ∪ val của split v2, so chia theo đoạn với chia theo người (k-fold theo người) trên cùng pool đó.
+  - 40 người test của split v2 và tập CalFree không tham gia.
+  - Hàm chia ngẫu nhiên theo đoạn phải từ chối mọi dòng có `split = test`; viết kèm test cho điều này trước khi viết hàm.
+  - Không dùng CalBased Test: tập này cùng người với Train, đã loại trong quyết định pool ngày 2026-10-24 ([provenance](pulsedb_provenance.md)).
+  - Theo Bảng 4 của bài báo PulseDB (Wang et al., 2023), phần VitalDB có 1.293 người ở cả Train và CalBased Test, 144 người ở CalFree Test; các con số 2.506 và 279 là tổng MIMIC-III + VitalDB.
 - **Phần (b):** cần dữ liệu prototype có cấu trúc `subject_id → session_id → event_id → window_id`, tối thiểu khoảng 30–40 phiên trên ít nhất 15 người, có biến thiên BP tự nhiên giữa các phiên.
 
 ---
@@ -211,11 +219,12 @@ Lưu ý: "coverage" ở đây là **tỷ lệ quan sát được giữ lại**, 
 
 | Tên trong RQ | Tên trong code / kế hoạch | Bài toán | Trạng thái |
 |---|---|---|---|
-| — | **B0** `PopulationMeanBaseline` (trung bình nhãn train) | BP tuyệt đối, người mới; dùng cho RQ2 | Đã cài, đã chạy sơ bộ trên CSV PulseDB (Tuần 3) |
+| — | **B0** `PopulationMeanBaseline` (trung bình nhãn train; trong b3-pipeline-v1 là trung bình các trung bình theo người) | BP tuyệt đối, người mới; dùng cho RQ2 | Đã cài; chạy sơ bộ trên CSV PulseDB (Tuần 3, lịch sử), rồi cùng B3 trên raw PulseDB VitalDB Train 400 người ngày 2026-10-25, chỉ chấm val |
 | **Zero-change** | **B1** `PersonalMeanBaseline`, khi $`\text{BP}_0`$ là trung bình các lần cuff hiệu chuẩn | $`\widehat{\text{BP}} = \text{BP}_0`$, tương đương $`\Delta\widehat{\text{BP}} = 0`$; RQ1 | Đã cài, mới kiểm tra bằng dữ liệu giả lập |
 | — | **B3** `XGBoostBaseline` (`software/models/xgboost_baseline.py`), đặc trưng `pulsedb-simple-stats-v0`; pipeline `software/pulsedb/pipeline.py`, runner `scripts/run_b3_pulsedb.py` | BP tuyệt đối (không phải ΔBP) trên PulseDB; RQ2 | Đã cài: fit trên train, chỉ đánh giá val (không trích đặc trưng tập test); đã chạy trên raw PulseDB ngày 2026-10-25 (val 40 người), chưa chấm test |
+| — | **B2** nhân khẩu học + HR từ ECG (`software/pulsedb/pipeline_b2.py`, `features_b2.py`; runner `scripts/run_b2_pulsedb.py`; định nghĩa [b2_pulsedb_definition.md](protocol/b2_pulsedb_definition.md)) | BP tuyệt đối trên PulseDB | Có code và test SYNTHETIC; định nghĩa chưa duyệt, runner từ chối chạy, chưa có kết quả |
 | PAT-only, PPG-only, PPG + PAT | Chưa có | ΔBP; RQ1 | Chưa triển khai, cần dữ liệu prototype |
-| Không từ chối / ngẫu nhiên / SQI / SQI + độ bất định | Cờ SQI `features-sqi-v1` có trong `week04.py`; chưa có cơ chế từ chối | RQ3 | Mới có cờ SQI, chưa có ngưỡng khóa |
+| Không từ chối / ngẫu nhiên / SQI / SQI + độ bất định | Cờ SQI `features-sqi-v1`/`v2` trong `week04.py`, cờ cử động `motion-sqi-v0` (`motion_sqi.py`); chưa có cơ chế từ chối | RQ3 | Mới có cờ SQI, chưa có ngưỡng khóa |
 
 Tên B0/B1/B3 trong code không trùng với số thứ tự "Baseline 1/2/3" của bản v0.1; bảng này thay thế cách đánh số cũ.
 
@@ -226,7 +235,8 @@ Tên B0/B1/B3 trong code không trùng với số thứ tự "Baseline 1/2/3" c�
 > [!IMPORTANT]
 > - [ ] **Đại lượng dự đoán:** xác nhận dự đoán ΔSBP/ΔDBP có hiệu chuẩn cá nhân, không làm BP tuyệt đối không hiệu chuẩn trong RQ1.
 > - [ ] **Phép so sánh chính của RQ1:** PPG-only so với PPG + PAT trên cùng tập lần đo, cùng thuật toán.
-> - [ ] **Cỡ mẫu và kiểm định:** số người/phiên, cách xử lý đa kiểm định cho SBP/DBP, có dùng ngưỡng ý nghĩa thực tiễn hay không; tất cả khóa trước khi mở test, dựa trên pilot.
-> - [ ] **RQ2:** dùng split của nhóm hay các tập có sẵn của PulseDB cho phần (a); random split chỉ là đối chứng minh họa.
+> - [ ] **Endpoint RQ1 khi có nghiệm pháp M0–M4** (đề xuất của nhóm 2026-10-29, mục 4.B): mọi lần cuff hợp lệ ở phiên ≥ 2 so với $`\text{BP}_0`$ = trung bình M0 phiên 1; nghiệm pháp là biến phân tầng; chỉ M0 là phân tích phụ.
+> - [ ] **Cỡ mẫu và kiểm định:** trần tuyển 25 người và số phiên (mục 4.G, đề xuất 2026-10-29); cách xử lý đa kiểm định cho SBP/DBP, có dùng ngưỡng ý nghĩa thực tiễn hay không; tất cả khóa trước khi mở test, dựa trên pilot.
+> - [x] **RQ2:** phần (a) dùng train ∪ val của split v2, không dùng test, CalFree hay CalBased (chốt 2026-10-29, mục 5.G); random split chỉ là đối chứng minh họa.
 > - [ ] **RQ3:** nguồn dữ liệu có đoạn nhiễu tự nhiên (mục 6.G); phương pháp đo độ bất định; mức coverage chọn trên validation.
 > - [ ] **Mốc PEP:** PEP thường tính từ Q/QRS, còn PAT của dự án tính từ R; không đồng nhất hai mốc khi diễn giải.

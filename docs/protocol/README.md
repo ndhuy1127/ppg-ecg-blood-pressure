@@ -5,10 +5,11 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 
 ## Protocol và định nghĩa phương pháp
 
-- [Khung protocol nghiên cứu thực nghiệm v0.2](protocol_outline_v0.2.md): bản
-  hiện hành (2026-10-21). Phân bổ tay/điện cực theo V1-module, kiểm tra xung đột,
-  nghiệm pháp tạo ΔBP và tiêu chí pilot; mục 5.1–5.2 đã xác nhận về phần cứng ngày
-  2026-10-23, nghiệm pháp 6.4–6.5 chưa được hội đồng đạo đức duyệt.
+- [Khung protocol nghiên cứu thực nghiệm v0.3](protocol_outline_v0.2.md): bản
+  hiện hành (2026-10-29; tên file giữ `v0.2`). Phân bổ tay/điện cực theo V1-module,
+  kiểm tra xung đột, nghiệm pháp tạo ΔBP, endpoint RQ1, trục thời gian M2–M4, LOSO
+  lồng và tiêu chí pilot. Mục 5.1–5.2 đã xác nhận về phần cứng ngày 2026-10-23; các
+  mục ghi "đề xuất của nhóm" chờ thầy, nghiệm pháp chưa được hội đồng đạo đức duyệt.
 - [Khung protocol nghiên cứu thực nghiệm v0.1](protocol_outline_v0.1.md): bản
   lịch sử; thiết kế đo lặp nhiều phiên, quy trình đo đối chứng bằng cuff, ghép
   cửa sổ tín hiệu và kế hoạch phân tích thống kê.
@@ -29,6 +30,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Chạy B0/B3 trên PulseDB split v2](run_b3_pulsedb.md)
 - [Định nghĩa B2 trên PulseDB](b2_pulsedb_definition.md): nhân khẩu học cộng HR,
   hai bảng so sánh định trước; đề xuất 2026-10-26, chưa duyệt; code có, chưa chạy
+- [Đăng ký trước cách chấm test split và CalFree](pulsedb_test_scoring_preregistration.md):
+  chấm mọi model đã khóa đúng một lần (chốt 2026-10-29); chưa có script, chưa chấm
 - [Sinh và replay packet giả lập](packet_simulation.md): `synthetic-packet-v2`
   (JSON) và `synthetic-packet-v3` (luồng byte theo Packet Schema V0.1)
 - [Logger packet phía máy tính](packet_logger.md): decoder `SYNC`/CRC16, kiểm tra
