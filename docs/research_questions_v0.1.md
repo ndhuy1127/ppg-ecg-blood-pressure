@@ -4,7 +4,7 @@
 >
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 >
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline), 2026-10-29 (v0.4: dẫn các nghiên cứu gần nhất; estimand RQ1; tiêu chí kết luận dùng CI cho cả so sánh với zero-change; mức hiệu ứng nhỏ nhất đáng quan tâm δ; rủi ro áp lực tiếp xúc; RQ2a chuyển thành kiểm tra rò rỉ ở phụ lục, RQ2b đổi thành đánh giá cùng phiên so với khác phiên; RQ3 thành phân tích thăm dò)
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline), 2026-10-29 (v0.4: dẫn các nghiên cứu gần nhất; estimand RQ1; tiêu chí kết luận dùng CI cho cả so sánh với zero-change; mức hiệu ứng nhỏ nhất đáng quan tâm δ; rủi ro áp lực tiếp xúc; RQ2a chuyển thành kiểm tra rò rỉ ở phụ lục, RQ2b đổi thành đánh giá cùng phiên so với khác phiên; RQ3 thành phân tích thăm dò; cùng ngày bỏ nghiệm pháp M3, M4 theo protocol 6.4, endpoint và RQ2b còn M0–M2, thêm rủi ro dải ΔBP hẹp ở mục 4.F), 2026-10-30 (mục 1 và 4.F–4.G sửa theo lần tra có hệ thống: N18 đã đánh giá qua nhiều phiên với baseline chỉ hiệu chuẩn, nên khoảng trống hẹp lại; thêm nguồn về PEP và con số 31 người của N18)
 >
 > Các thay đổi của v0.4 là **đề xuất của nhóm ngày 2026-10-29, chờ thầy xác nhận**; phải khóa trước khi chạy vòng ngoài của LOSO lồng.
 >
@@ -16,11 +16,38 @@
 
 Thiết bị đo huyết áp không vòng bít (cuffless) dựa trên PPG ở cổ tay thường cần hiệu chuẩn bằng một lần đo cuff, sau đó theo dõi thay đổi so với mốc này. Có ba vấn đề làm cho việc đánh giá các thiết bị này khó:
 
-1. **Mốc hiệu chuẩn tự nó đã là một dự đoán tốt.** Nếu BP ít thay đổi sau hiệu chuẩn, chỉ cần giữ nguyên giá trị cuff ban đầu cũng cho sai số nhỏ. Mukkamala et al. (2021) chỉ ra điểm này bằng mô phỏng, và dự án Aurora (1.125 người) không tìm thấy mô hình dạng sóng nào dự đoán BP ngày hôm sau tốt hơn rõ rệt so với baseline chỉ dùng BP hiệu chuẩn (Mukkamala et al., 2023). Xem [tổng quan bổ sung](literature/literature_update_2026-10-14.md), S2–S3. Tổng quan gần nhất của cùng nhóm tác giả (Mukkamala et al., 2025; abstract) cho rằng đến nay chưa có bằng chứng thuyết phục là phân tích dạng sóng hay PAT thêm được giá trị đáng kể ngoài cuff hiệu chuẩn hoặc dữ liệu nhân khẩu học ([N8](literature/literature_update_2026-10-29.md)).
+1. **Mốc hiệu chuẩn tự nó đã là một dự đoán tốt.** Nếu BP ít thay đổi sau hiệu chuẩn, chỉ cần giữ nguyên giá trị cuff ban đầu cũng cho sai số nhỏ. Mukkamala et al. (2021) chỉ ra điểm này bằng mô phỏng, và dự án Aurora (1.125 người) không tìm thấy mô hình dạng sóng nào dự đoán BP ngày hôm sau tốt hơn rõ rệt so với baseline chỉ dùng BP hiệu chuẩn (Mukkamala et al., 2023). Xem [tổng quan bổ sung](literature/literature_update_2026-10-14.md), S2–S3. Tổng quan gần nhất của cùng nhóm tác giả (Mukkamala et al., 2025; đọc toàn văn ngày 2026-10-29) cho rằng đến nay chưa có bằng chứng thuyết phục là phân tích dạng sóng hay PAT thêm được giá trị đáng kể ngoài cuff hiệu chuẩn hoặc dữ liệu nhân khẩu học ([N8](literature/literature_update_2026-10-29.md)).
 2. **PAT không phải PTT.** ECG cho phép đo PAT (R-peak → chân sóng PPG), nhưng PAT chứa thời gian tiền tống máu (PEP), vốn thay đổi theo trạng thái giao cảm. Payne et al. (2006) cho thấy PEP chiếm 12–35% khoảng R → xung ngón tay. Vì vậy, việc thêm ECG có giúp hơn PPG đơn lẻ hay không là câu hỏi thực nghiệm, không suy ra được từ lý thuyết PTT.
 3. **Cách chia dữ liệu làm kết quả đẹp giả.** Khi cửa sổ của cùng một người nằm ở cả tập huấn luyện và tập kiểm tra, sai số giảm đáng kể so với khi chia theo người (Yoshizawa et al., 2023; Mehta et al., 2024).
 
-**Các nghiên cứu gần nhất (v0.4).** So sánh trực tiếp PPG với PAT có baseline zero-change và đánh giá theo người đã có, nhưng trong các nguồn nhóm đã đọc chỉ ở **một buổi đo**, với PPG ở ngón tay, ngón chân hoặc tai: Finnegan et al. (2023) so các bộ đặc trưng PPG, ECG và PAT khi truyền phenylephrine, không có mô hình PPG + PAT; Natarajan et al. (2021) đánh giá đặc trưng PPG cộng PAT dưới các nghiệm pháp ([N1, N2](literature/literature_update_2026-10-29.md)). Các nghiên cứu nhiều ngày trên thiết bị cổ tay có quy mô lớn (Mieloszyk et al., 2022, [S4](literature/literature_update_2026-10-14.md); Liu et al., 2023, N6), nhưng phần nhóm đã đọc (abstract) chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT so với baseline chỉ hiệu chuẩn. Nhận định này phải kiểm lại sau khi đọc toàn văn S4 và N6, và không được viết thành "chưa có nghiên cứu nào".
+**Các nghiên cứu gần nhất (v0.4; sửa 2026-10-30 theo lần tra có hệ thống ngày 2026-10-29).** Đã có nghiên cứu đánh giá mô hình dựa trên PPG và mô hình dựa trên PAT so với baseline zero-change hoặc chỉ hiệu chuẩn, đánh giá theo người, kể cả qua nhiều phiên. Tuy vậy, chưa thấy so sánh ghép cặp PPG-only với PPG + PAT cho cùng một đầu ra qua nhiều phiên. Các nguồn dưới đây đều ở [tổng quan 2026-10-29](literature/literature_update_2026-10-29.md):
+
+- **Trong một buổi đo** (PPG ở ngón tay, ngón chân hoặc tai):
+  - Finnegan et al. (2023, N1) so các bộ đặc trưng PPG, ECG và PAT khi truyền phenylephrine; không có mô hình PPG + PAT.
+  - Natarajan et al. (2021, N2) đánh giá đặc trưng PPG cộng PAT dưới các nghiệm pháp.
+- **Qua nhiều phiên:** Yavarimanesh et al. (2022, N18, đọc toàn văn).
+  - Thiết kế: đánh giá các mô hình tuyến tính dựa trên PAT hoặc đặc trưng dạng sóng PPG (tai, ngón tay, ngón chân) ở phiên cách khoảng một năm, so với baseline chỉ dùng trung bình cuff ban đầu. Nghiệm pháp gồm thở chậm, tính nhẩm, cold pressor ở chân và nitroglycerin.
+  - Đối tượng: 10 người, 57 ± 18 tuổi; hệ số riêng từng người lập từ một phiên.
+  - Các mô hình có PAT dự đoán SBP, còn mô hình chỉ PPG dự đoán DBP. Mỗi mô hình được so riêng với baseline, nên đây không phải so sánh ghép cặp cho cùng một đầu ra.
+  - Kết quả: chỉ mô hình PAT ngón chân–SBP còn hữu ích sau một năm.
+- **Trên dữ liệu cổ tay Aurora-BP (đo lưu động):** Cisnal et al. (2025, N19, mới đọc abstract) báo baseline tốt hơn mô hình dựa trên PAT tốt nhất ở SBP và tương đương ở DBP.
+- **Nghiên cứu nhiều ngày, quy mô lớn trên thiết bị cổ tay:** Mieloszyk et al. (2022, [S4](literature/literature_update_2026-10-14.md)) và Liu et al. (2023, N6). Phần nhóm đã đọc (abstract) chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT so với baseline chỉ hiệu chuẩn.
+
+Vì vậy, các yếu tố sau, đứng riêng hay gộp một phần, đều không phải điểm mới: nhiều phiên, baseline chỉ hiệu chuẩn, nghiệm pháp, đánh giá mô hình PAT và mô hình PPG so với baseline.
+
+Phần có thể còn là đóng góp hẹp hơn ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.1): so sánh ghép cặp, đăng ký trước, giữa PPG-only và PPG + PAT, với các điều kiện:
+
+- thiết bị chỉ đặt ở cổ tay;
+- các phiên cách nhau vài ngày đến 4 tuần;
+- hiệu chuẩn bằng offset từ M0 phiên 1, hệ số chung cho mọi người học bằng LOSO lồng (khác N18);
+- luôn so với zero-change.
+
+Giới hạn của nhận định này:
+
+- Chỉ trong phạm vi đã tra: PubMed, Europe PMC, OpenAlex, giai đoạn 2022–2026; chưa tra IEEE Xplore, Scopus.
+- Phải kiểm lại sau khi đọc toàn văn N6: bài truy cập mở, nhưng tải tự động bị chặn.
+- S4 chỉ dùng abstract: ngày 2026-10-29 đã quyết định không lấy toàn văn qua thư viện, nên nhận định chưa được kiểm với toàn văn S4, và bài báo phải nêu rõ giới hạn này.
+- Không được viết thành "chưa có nghiên cứu nào".
 
 **Mục tiêu nghiên cứu:** xây dựng nguyên mẫu đo ở cổ tay (nối USB với máy tính, điện cực ECG dán ở hai cổ tay) thu đồng bộ ECG và PPG, và dùng nó để kiểm tra, trên một nhóm nhỏ người khỏe mạnh, liệu PAT có làm giảm sai số dự đoán ΔSBP/ΔDBP ở các phiên đo sau hiệu chuẩn so với chỉ dùng PPG hay không. Đánh giá phải có baseline zero-change, chia dữ liệu theo người và theo thời gian, và khoảng tin cậy theo người.
 
@@ -65,7 +92,7 @@ SBP và DBP được kiểm định riêng. Bằng chứng hiện có (Payne 200
 - **Điều kiện:** hiệu chuẩn bằng $`\text{BP}_0`$ của phiên 1 (mục B), đánh giá trên endpoint ở mục B.
 - **Trọng số:** trong một người, mỗi lần cuff có trọng số như nhau; khi tính $\theta$, mỗi người có trọng số như nhau, người nhiều lần cuff không chi phối kết quả.
 - **Phạm vi kết luận:** chỉ cho các lần đo tính được PAT (mục C); tỷ lệ lần đo mất ECG báo kèm.
-- **Ý nghĩa:** vì endpoint gộp M0–M4, $\theta$ đo khả năng theo dõi cả đáp ứng nghiệm pháp lẫn biến thiên lúc nghỉ ở phiên sau. Phân tích phụ chỉ M0 cho biết riêng phần biến thiên lúc nghỉ.
+- **Ý nghĩa:** vì endpoint gộp M0–M2 (M3, M4 bỏ ngày 2026-10-29, protocol 6.4), $\theta$ đo khả năng theo dõi cả đáp ứng nghiệm pháp lẫn biến thiên lúc nghỉ ở phiên sau. Phân tích phụ chỉ M0 cho biết riêng phần biến thiên lúc nghỉ. Theo kế hoạch M0 chiếm hai trên bốn lần cuff mỗi phiên (trước khi bỏ M3, M4 là hai trên sáu), nên $\theta$ nghiêng về biến thiên lúc nghỉ. Kết luận chỉ áp dụng cho các nghiệm pháp đã làm, không suy ra tình huống lạnh hay gắng sức.
 
 ### B. Biến nghiên cứu
 
@@ -73,7 +100,7 @@ SBP và DBP được kiểm định riêng. Bằng chứng hiện có (Payne 200
 - **Đặc trưng từ ECG:** PAT (R-peak → PPG foot cùng nhịp, trung vị trong cửa sổ) và $`\Delta\text{PAT} = \text{PAT}_{\text{hiện tại}} - \text{PAT}_{\text{hiệu chuẩn}}`$. HR và HRV ngắn hạn từ ECG là đặc trưng phụ cho phân tích ablation.
 - **Mốc hiệu chuẩn (chốt 2026-10-29):** $`\text{SBP}_0`$, $`\text{DBP}_0`$ là trung bình các lần cuff M0 (nghỉ ngồi) hợp lệ ở phiên 1; $`\text{PAT}_{\text{hiệu chuẩn}}`$ và đặc trưng nền lấy từ cửa sổ của các lần cuff đó.
 - **Đầu ra:** $`\Delta\text{SBP} = \text{SBP}_{\text{target}} - \text{SBP}_0`$, $`\Delta\text{DBP} = \text{DBP}_{\text{target}} - \text{DBP}_0`$ (mmHg). Ước lượng BP cuối: $`\widehat{\text{BP}} = \text{BP}_0 + \Delta\widehat{\text{BP}}`$.
-- **Tập đánh giá (endpoint chính; đề xuất của nhóm 2026-10-29, chờ thầy xác nhận):** mọi lần cuff hợp lệ ở phiên ≥ 2, gồm M0 và các nghiệm pháp M1–M4 ([protocol v0.3](protocol/protocol_outline_v0.2.md) mục 6.4). Nghiệm pháp là biến phân tầng. Phân tích phụ định trước: chỉ các lần cuff M0 ở phiên ≥ 2. Cuff nghiệm pháp ở phiên 1 của người được đánh giá không dùng để hiệu chuẩn và không vào tập đánh giá.
+- **Tập đánh giá (endpoint chính; đề xuất của nhóm 2026-10-29, chờ thầy xác nhận):** mọi lần cuff hợp lệ ở phiên ≥ 2, gồm M0 và các nghiệm pháp M1, M2 ([protocol v0.3](protocol/protocol_outline_v0.2.md) mục 6.4; M3, M4 bỏ ngày 2026-10-29). Nghiệm pháp là biến phân tầng. Phân tích phụ định trước: chỉ các lần cuff M0 ở phiên ≥ 2. Cuff nghiệm pháp ở phiên 1 của người được đánh giá không dùng để hiệu chuẩn và không vào tập đánh giá.
 
 ### C. Các mô hình so sánh
 
@@ -97,7 +124,7 @@ Tính riêng cho ΔSBP và ΔDBP:
 - Pearson $r$ giữa ΔBP tham chiếu và ΔBP dự đoán (không xác định cho zero-change vì dự đoán là hằng).
 - Tỷ lệ lần đo có $|e| \le 5$ và $\le 10$ mmHg, chỉ để mô tả; không phải tiêu chí AAMI/ISO.
 - **Bắt buộc báo cáo kèm:** SD của ΔBP tham chiếu và tỷ lệ lần đo có $|\Delta\text{BP}| > 5$ mmHg. Nếu ΔBP tham chiếu rất hẹp, mọi so sánh MAE đều kém nhạy, và người đọc cần biết điều đó.
-- Các chỉ số trên báo cả tổng và theo từng nghiệm pháp (M0–M4), và cho phân tích phụ chỉ M0.
+- Các chỉ số trên báo cả tổng và theo từng nghiệm pháp (M0–M2), và cho phân tích phụ chỉ M0.
 
 ### E. Tiêu chí kết luận
 
@@ -123,10 +150,15 @@ Viết lại ở v0.4 (đề xuất 2026-10-29, chờ thầy; khóa trước khi
 
 ### F. Rủi ro phương pháp
 
-- **PEP thay đổi giữa các phiên** (căng thẳng, tư thế, nhiệt độ) làm PAT thay đổi mà BP không đổi.
+- **PEP thay đổi giữa các phiên** (căng thẳng, tư thế, nhiệt độ) làm PAT thay đổi mà BP không đổi. Nguồn bổ sung 2026-10-30 (đều mới đọc abstract, [tổng quan 2026-10-29](literature/literature_update_2026-10-29.md)):
+  - stress tinh thần làm PEP giảm (N11);
+  - phản ứng PEP mạnh hơn khi nhiệm vụ khó hơn (N30);
+  - với nhiệm vụ tinh thần, tương quan giữa thay đổi PAT và thay đổi SBP không có ý nghĩa thống kê trong nghiên cứu đó (N25, r = −0,12);
+  - khi đau do lạnh, PTT giảm còn PEP không đổi (N29).
 - **PAT ở cổ tay chịu ảnh hưởng của co cơ trơn mạch ngoại vi**, độc lập với mức BP (Mukkamala et al., 2023).
 - **ΔBP giữa các phiên nhỏ** ở người trẻ khỏe mạnh đo lúc nghỉ, làm zero-change khó bị vượt và giảm độ nhạy của so sánh.
 - **Áp lực tiếp xúc và cách đeo thay đổi giữa các phiên (v0.4).** Natarajan et al. (2021, [N2](literature/literature_update_2026-10-29.md)) ghi nhận dạng sóng PPG chịu ảnh hưởng của áp lực tiếp xúc nhiều hơn PAT. Nếu độ chặt dây hay vị trí đeo ở các phiên sau khác phiên 1, PPG-only có thể kém đi vì lý do kỹ thuật, làm PAT trông có lợi mà không do sinh lý. Giảm rủi ro bằng cách chuẩn hóa cách đeo trong protocol (vị trí, nấc dây) và ghi lại ở mỗi phiên; khi diễn giải $d_s$ phải nêu rủi ro này.
+- **Dải ΔBP hẹp khi chỉ còn M0–M2 (2026-10-29).** Bỏ M3 (ngâm chân nước lạnh) và M4 (đạp xe) vì khó thực hiện ở phòng thí nghiệm ([protocol](protocol/protocol_outline_v0.2.md) mục 6.4). M2 (tính nhẩm im lặng) là nghiệm pháp duy nhất dự kiến làm BP tăng, và stress tâm lý làm PEP đổi nên PAT có thể đổi mà BP không đổi (rủi ro ở trên). Theo abstract của N25, SBP còn giảm trong nhiệm vụ tinh thần của nghiên cứu đó, nên M2 không chắc làm SBP tăng. Dải ΔBP hẹp làm baseline zero-change khó bị vượt, CI của $d_s$ dễ nằm trong $[-\delta; \delta]$ hoặc rơi vào "chưa kết luận". Mô phỏng độ nhạy ở mục E phải dùng dải ΔBP dự kiến của bộ M0–M2, làm riêng cho SBP và DBP. Khi viết bài phải báo SD của ΔBP tham chiếu theo nghiệm pháp, và không suy kết quả ra các tình huống làm BP đổi mạnh (lạnh, gắng sức).
 - **ECG đạo trình I giữa hai cổ tay (điện cực dán, chốt 2026-10-23) có biên độ nhỏ hơn ECG ngực và dễ nhiễu khi một trong hai tay cử động**, gây sai lệch R-peak. Lần đo mất ECG không ngẫu nhiên có thể làm lệch tập đánh giá; vì vậy phải so trên cùng tập (mục C).
 - **Độ phân giải thời gian:** ECG 512 sps (khoảng 1,95 ms mỗi mẫu) và PPG 200 sps mỗi khe (5 ms mỗi mẫu; chốt 2026-10-24); sai số định vị mốc, nhất là chân sóng PPG, và đồng bộ hai kênh cộng trực tiếp vào PAT.
 
@@ -134,6 +166,7 @@ Viết lại ở v0.4 (đề xuất 2026-10-29, chờ thầy; khóa trước khi
 
 - Mục tiêu ≥ 15 người đạt chuẩn, tuyển tối đa 25 người (trần đề xuất của nhóm, chờ thầy). Mục tiêu 3 phiên mỗi người, tối thiểu 2 (1 phiên hiệu chuẩn + ≥ 1 phiên đánh giá), mọi phiên trong 4 tuần kể từ phiên 1 (protocol v0.3 mục 3, chốt 2026-10-29). Mỗi phiên có ít nhất 2 lần cuff hợp lệ. Đơn vị phân tích cho kiểm định là người.
 - Các con số này là đề xuất khả thi, chưa dựa trên phân tích power; cần tính lại từ pilot và mô phỏng độ nhạy ở mục E.
+- Yavarimanesh et al. (2022, N18, đọc toàn văn) ước tính cần 31 người cho một so sánh tương tự. So sánh đó là mô hình PAT/đặc trưng PPG ngón tay với baseline sau một năm, kiểm định t ghép cặp, mức 0,05, power 0,8. Vì vậy ≥ 15 người có thể không đủ nhạy, và con số này phải đưa vào mô phỏng độ nhạy (bổ sung 2026-10-30).
 - **Hiện trạng:** chưa có prototype, phê duyệt đạo đức hay dữ liệu cuff. PulseDB **không** trả lời được RQ1: nhãn là ABP xâm lấn chứ không phải cuff, và không có cấu trúc phiên theo thời gian. PulseDB chỉ dùng để phát triển và kiểm tra đặc trưng.
 
 ---
@@ -159,10 +192,10 @@ Hiệu ứng của RQ2a đã được ghi nhận trong y văn (Yoshizawa 2023, M
 2. **B — Theo người:** mỗi người chỉ nằm trong một tập (train/validation/test cố định theo `subject_id`, hoặc k-fold/LOSO theo người).
 3. **C — Cùng phiên so với khác phiên (RQ2b, chỉ với dữ liệu prototype; thay cách chia "theo phiên" của v0.3):**
    - Dùng chính dự đoán vòng ngoài của LOSO lồng ở RQ1, không huấn luyện hay tuning thêm. Dự đoán cho cuff nghiệm pháp phiên 1 của người test phải được sinh trong cùng lần chạy vòng ngoài và khai báo trong commit khóa.
-   - Với mỗi người $s$: **tập cùng phiên** là các lần cuff nghiệm pháp M1–M4 ở phiên 1; **tập khác phiên** là các lần cuff M1–M4 ở phiên ≥ 2. Cả hai so với cùng $`\text{BP}_0`$ (trung bình M0 phiên 1). Chỉ so cuff nghiệm pháp; báo kèm phân bố nghiệm pháp của từng tập.
-   - **Chuẩn hóa theo nghiệm pháp:** với mỗi người, MAE của mỗi tập tính riêng cho từng nghiệm pháp rồi lấy trung bình đều trên các nghiệm pháp có mặt ở **cả hai** tập của người đó; các phiên ≥ 2 gộp chung. Người không có nghiệm pháp chung nào thì không tính. Như vậy $e_s$ không tăng chỉ vì nghiệm pháp khó chiếm tỷ trọng lớn hơn ở phiên sau. Bản thô (gộp theo số cuff thực có) báo kèm như phân tích phụ, ghi rõ là gồm cả thay đổi cơ cấu nghiệm pháp.
+   - Với mỗi người $s$: **tập cùng phiên** là các lần cuff nghiệm pháp M1, M2 ở phiên 1; **tập khác phiên** là các lần cuff M1, M2 ở phiên ≥ 2. Cả hai so với cùng $`\text{BP}_0`$ (trung bình M0 phiên 1). Chỉ so cuff nghiệm pháp; báo kèm phân bố nghiệm pháp của từng tập.
+   - **Chuẩn hóa theo nghiệm pháp:** với mỗi người, MAE của mỗi tập tính riêng cho từng nghiệm pháp rồi lấy trung bình đều trên các nghiệm pháp có mặt ở **cả hai** tập của người đó; các phiên ≥ 2 gộp chung. Người không có nghiệm pháp chung nào thì không tính. Như vậy $e_s$ không tăng chỉ vì nghiệm pháp khó chiếm tỷ trọng lớn hơn ở phiên sau. Bản thô (gộp theo số cuff thực có) báo kèm như phân tích phụ, ghi rõ là gồm cả thay đổi cơ cấu nghiệm pháp. Với bộ M1, M2, theo kế hoạch mỗi người có hai cuff nghiệm pháp ở tập cùng phiên và hai đến bốn ở tập khác phiên (một hay hai phiên sau), chưa kể lần đo thiếu hay đo lại; người thiếu M2 chỉ còn so được M1. Vì vậy thêm phân tích độ nhạy chỉ trên người có cả M1 và M2 ở cả hai tập, và báo số cuff theo nghiệm pháp ở từng tập.
    - Tập cùng phiên **không** thay đổi endpoint của RQ1: cuff nghiệm pháp phiên 1 vẫn không dùng để hiệu chuẩn và không vào tập đánh giá của RQ1.
-   - Chênh lệch không chỉ do hiệu chuẩn trôi theo thời gian: còn do đeo lại thiết bị, BP nền khác nhau giữa các ngày và PEP. Không quy toàn bộ chênh lệch cho một nguyên nhân.
+   - Chênh lệch không chỉ do hiệu chuẩn trôi theo thời gian: còn do đeo lại thiết bị, BP nền khác nhau giữa các ngày, PEP, và việc người tham gia quen dần nghiệm pháp ở phiên sau (nhất là tính nhẩm M2). Không quy toàn bộ chênh lệch cho một nguyên nhân.
 
 Với RQ2a, giữ nguyên cách tạo cửa sổ, đặc trưng và thuật toán giữa các cách chia; chỉ thay đổi cách chia.
 
@@ -196,7 +229,7 @@ Báo cáo ΔMAE (RQ2a) và $e_s$ (RQ2b) với CI theo người, riêng SBP và D
   - Hàm chia ngẫu nhiên theo đoạn phải từ chối mọi dòng có `split = test`; viết kèm test cho điều này trước khi viết hàm.
   - Không dùng CalBased Test: tập này cùng người với Train, đã loại trong quyết định pool ngày 2026-10-24 ([provenance](pulsedb_provenance.md)).
   - Theo Bảng 4 của bài báo PulseDB (Wang et al., 2023), phần VitalDB có 1.293 người ở cả Train và CalBased Test, 144 người ở CalFree Test; các con số 2.506 và 279 là tổng MIMIC-III + VitalDB.
-- **Phần (b):** dùng đúng dữ liệu của RQ1 (cấu trúc `subject_id → session_id → event_id → window_id`), không cần thêm phiên; chỉ tính trên người có cuff nghiệm pháp ở cả phiên 1 và phiên ≥ 2. Nếu hội đồng không duyệt nghiệm pháp M1–M4 thì RQ2b không làm được theo định nghĩa trên.
+- **Phần (b):** dùng đúng dữ liệu của RQ1 (cấu trúc `subject_id → session_id → event_id → window_id`), không cần thêm phiên; chỉ tính trên người có cuff nghiệm pháp ở cả phiên 1 và phiên ≥ 2. Nếu hội đồng không duyệt nghiệm pháp M1, M2 thì RQ2b không làm được theo định nghĩa trên.
 
 ---
 
@@ -278,7 +311,7 @@ Tên B0/B1/B3 trong code không trùng với số thứ tự "Baseline 1/2/3" c�
 > [!IMPORTANT]
 > - [ ] **Đại lượng dự đoán:** xác nhận dự đoán ΔSBP/ΔDBP có hiệu chuẩn cá nhân, không làm BP tuyệt đối không hiệu chuẩn trong RQ1.
 > - [ ] **Phép so sánh chính của RQ1:** PPG-only so với PPG + PAT trên cùng tập lần đo, cùng thuật toán.
-> - [ ] **Endpoint RQ1 khi có nghiệm pháp M0–M4** (đề xuất của nhóm 2026-10-29, mục 4.B): mọi lần cuff hợp lệ ở phiên ≥ 2 so với $`\text{BP}_0`$ = trung bình M0 phiên 1; nghiệm pháp là biến phân tầng; chỉ M0 là phân tích phụ.
+> - [ ] **Endpoint RQ1 khi có nghiệm pháp M0–M2** (đề xuất của nhóm 2026-10-29, mục 4.B): mọi lần cuff hợp lệ ở phiên ≥ 2 so với $`\text{BP}_0`$ = trung bình M0 phiên 1; nghiệm pháp là biến phân tầng; chỉ M0 là phân tích phụ.
 > - [ ] **Cỡ mẫu và kiểm định:** trần tuyển 25 người và số phiên (mục 4.G, đề xuất 2026-10-29); tất cả khóa trước khi mở test, dựa trên pilot.
 > - [ ] **Tiêu chí kết luận RQ1 v0.4** (mục 4.E, đề xuất 2026-10-29): cùng chuẩn CI cho so sánh với zero-change và với PPG-only; chọn phương án đa kiểm định A (giao–hợp, Holm giữa SBP/DBP) hay B (Holm trên bốn so sánh); giá trị δ và cách lấy từ độ lặp lại của cuff ở pilot; estimand (mục 4.A).
 > - [x] **RQ2:** phần (a) dùng train ∪ val của split v2, không dùng test, CalFree hay CalBased (chốt 2026-10-29, mục 5.G); random split chỉ là đối chứng minh họa.

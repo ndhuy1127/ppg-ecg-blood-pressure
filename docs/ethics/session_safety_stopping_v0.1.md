@@ -58,14 +58,23 @@ Dừng ngay, tháo vòng bít, dừng nghiệm pháp, tháo điện cực và bo
 
 Dừng một **nghiệm pháp** (không nhất thiết cả buổi) khi:
 
-- Thở chậm: chóng mặt, tê đầu ngón tay, khó chịu khi thở.
-- Tính nhẩm: người tham gia muốn dừng hoặc căng thẳng rõ.
-- Nước lạnh (bàn chân): đau không chịu được, hoặc hết trần thời lượng ngâm (chưa
-  có nguồn; trình tự ở protocol 6.4 cần khoảng 1,5–2 phút); rút chân ra ngay khi
-  người tham gia muốn.
-- Đạp xe tư thế ngồi: mệt, khó thở, đau cơ, hoặc hết thời lượng đã duyệt.
+- Người tham gia muốn dừng nghiệm pháp đó mà không có triệu chứng ở danh sách trên.
+- Thở chậm: tê đầu ngón tay hoặc khó chịu khi thở; người tham gia trở lại thở bình
+  thường và ngồi nghỉ.
+- Tính nhẩm: người tham gia muốn dừng, hoặc căng thẳng rõ nhưng không có triệu chứng ở
+  danh sách trên.
 
-Sau khi dừng: người tham gia ngồi nghỉ, nhóm hỏi lại triệu chứng sau [số] phút.
+Thứ tự ưu tiên (sửa 2026-10-30):
+- Có bất kỳ triệu chứng nào ở danh sách dừng buổi (ý 2 ở trên, kể cả chóng mặt và lo
+  âu rõ) thì dừng cả buổi, kể cả khi đang làm nghiệm pháp. Danh sách dừng nghiệm pháp
+  chỉ dùng khi không có các triệu chứng đó.
+- Tê đầu ngón tay hay khó chịu khi thở không hết sau 5 phút nghỉ thì cũng dừng cả buổi.
+
+Từ 2026-10-29 protocol không còn nghiệm pháp ngâm chân nước lạnh (M3) và đạp xe
+(M4), nên không có quy tắc dừng cho hai nghiệm pháp này.
+
+Sau khi dừng: người tham gia ngồi nghỉ, nhóm hỏi lại triệu chứng sau 5 phút và một
+lần nữa trước khi người tham gia ra về (đề xuất của nhóm 2026-10-29, chưa có nguồn).
 Nhóm **không chẩn đoán hay tư vấn y khoa**; khi triệu chứng không hết hoặc số đo
 vượt ngưỡng, hướng dẫn người tham gia tới [cơ sở y tế/đầu mối — chờ xác nhận].
 
@@ -74,7 +83,7 @@ vượt ngưỡng, hướng dẫn người tham gia tới [cơ sở y tế/đầ
 | Tình huống | Xử lý |
 | --- | --- |
 | (a) Bất kỳ lần cuff nào có SBP ≥ 180 mmHg hoặc DBP ≥ 110 mmHg | Dừng buổi đo (mục 2, ý 6) |
-| (b) Trung bình các lần cuff M0 của buổi có SBP ≥ 140 mmHg hoặc DBP ≥ 90 mmHg | Không làm M1–M4 trong buổi đó; chỉ đo M0 |
+| (b) Trung bình các lần cuff M0 của buổi có SBP ≥ 140 mmHg hoặc DBP ≥ 90 mmHg | Không làm M1, M2 trong buổi đó; chỉ đo M0 |
 | (c) Số đo rơi vào (a) hoặc (b) | Báo số đo cho người tham gia, kèm câu "đây là số đo trong nghiên cứu, không phải chẩn đoán", và khuyên đi khám |
 | (d) Đầu mối y tế | [cơ sở y tế/đầu mối — chờ xác nhận] |
 

@@ -5,7 +5,8 @@
 > còn chờ giảng viên hướng dẫn hoặc hội đồng; nhóm không tự điền.
 >
 > Người soạn: Huy, 2026-10-21; cập nhật 2026-10-29 theo protocol v0.3 (số buổi, số lần
-> bơm cuff, chuẩn bị trước buổi đo, ngưỡng huyết áp, rút lui, thời hạn lưu). Nguồn
+> bơm cuff, chuẩn bị trước buổi đo, ngưỡng huyết áp, rút lui, thời hạn lưu; cùng ngày
+> bỏ nghiệm pháp ngâm chân nước lạnh và đạp xe, chỉ còn thở chậm và tính nhẩm). Nguồn
 > nội dung: [khung đạo đức v0.1](ethics_outline_v0.1.md),
 > [protocol v0.3](../protocol/protocol_outline_v0.2.md),
 > [thiết bị V1-module](../../configs/hardware/custom_board_proposal.md) (Phần A).
@@ -30,7 +31,8 @@ chẩn đoán, sàng lọc hay điều trị, và nhóm không đưa ra lời kh
 
 Nếu đồng ý tham gia, bạn sẽ tham gia **tối đa 3 buổi đo** (ít nhất 2), mỗi buổi
 một ngày khác nhau, tất cả trong khoảng 4 tuần. Mỗi buổi kéo dài **tối đa 120
-phút**; nhóm ước tính khoảng 90–100 phút nếu làm đủ các nghiệm pháp ở bước 6.
+phút**; nhóm ước tính khoảng 60–80 phút nếu làm đủ hai nghiệm pháp ở bước 6 (buổi
+đầu dài hơn vì có sàng lọc, đo huyết áp hai tay và chỉnh độ sáng đèn).
 
 **Trước mỗi buổi đo:**
 
@@ -56,25 +58,27 @@ Trong mỗi buổi:
      điện tim thông thường) để ghi điện tim: một miếng ở mặt trong cổ tay trái, một
      miếng ở mặt trong cẳng tay trái, một miếng ở mặt trong cổ tay phải. Da được
      lau sạch trước khi dán.
-   - **Vòng bít máy đo huyết áp** ở bắp tay phải. Mỗi buổi máy bơm và xả khoảng 6
-     lần, **tối đa 8 lần** (cộng 2 lần đo hai tay ở buổi đầu); nếu buổi đó chỉ đo
-     lúc nghỉ thì tối đa 4 lần. Mỗi lần khoảng 45–60 giây, giữa hai lần nghỉ ít
-     nhất 2 phút.
+   - **Vòng bít máy đo huyết áp** ở bắp tay phải. Mỗi buổi máy bơm và xả khoảng 4
+     lần, **tối đa 6 lần**. Buổi đầu thêm 2 lần đo hai tay, nên tổng khoảng 6 lần,
+     tối đa 8 lần. Nếu buổi đó chỉ đo lúc nghỉ thì tối đa 4 lần (buổi đầu tối đa 6
+     lần). Mỗi lần khoảng 45–60 giây, giữa hai lần nghỉ ít nhất 2 phút.
    - Ở buổi đầu, nhóm chỉnh độ sáng đèn của bo cảm biến cho hợp với cổ tay bạn
-     (vài phút) và dùng lại mức đó ở các buổi sau.
+     (vài phút) và thường dùng lại mức đó ở các buổi sau. Nếu ở buổi sau tín hiệu
+     bị quá sáng, nhóm có thể chỉnh lại một lần, mất vài phút.
 4. Bo mạch đế trên bàn nối bằng cáp USB với một máy tính xách tay **chạy bằng
    pin, không cắm sạc** trong suốt thời gian bạn đeo thiết bị.
 5. Bạn ngồi yên, không nói chuyện, không cử động tay trong lúc ghi tín hiệu và
    lúc máy đo huyết áp bơm. Trong nghiệm pháp tính nhẩm, bạn nhẩm trong đầu và
    không nói; chỉ nói đáp án khi nhóm báo đã hết khoảng im lặng, sau khi máy đo
    huyết áp xả xong.
-6. **[Chỉ khi hội đồng chấp thuận]** Các nghiệm pháp làm huyết áp thay đổi:
-   thở chậm theo nhịp hướng dẫn (khoảng 15 phút); làm phép tính nhẩm; ngâm một
-   bàn chân vào nước lạnh (khoảng 1,5–2 phút, rút chân ra ngay khi bạn muốn);
-   đạp xe nhẹ ở tư thế ngồi. Giữa các nghiệm pháp có thời gian nghỉ. Mỗi nghiệm
-   pháp được giải thích trước, và bạn có thể từ chối từng nghiệm pháp mà vẫn tiếp
-   tục buổi đo. Thời lượng tính nhẩm, đạp xe và danh sách cuối cùng: [điền theo
-   protocol được duyệt].
+6. **[Chỉ khi hội đồng chấp thuận]** Hai nghiệm pháp làm huyết áp thay đổi, làm
+   khi vẫn ngồi yên tại bàn, hai tay đặt trên bàn:
+   - thở chậm theo nhịp hướng dẫn, khoảng 15 phút;
+   - làm phép tính nhẩm trong đầu (trừ liên tiếp một số cho trước), khoảng 3 phút.
+
+   Giữa hai nghiệm pháp có thời gian nghỉ. Mỗi nghiệm pháp được giải thích trước,
+   và bạn có thể từ chối từng nghiệm pháp mà vẫn tiếp tục buổi đo. Nghiên cứu không
+   có nghiệm pháp vận động hay ngâm nước lạnh.
 
 ## 3. Rủi ro và khó chịu có thể gặp
 
@@ -89,8 +93,8 @@ Trong mỗi buổi:
   chạy pin và không cắm sạc, không nối thiết bị nào khác vào ổ điện lưới khi bạn
   đang đeo. Thiết bị chỉ được dùng trên người sau khi đã đo dòng rò trên bo thật
   và so với giới hạn của tiêu chuẩn IEC 60601-1 [biên bản đo: chờ hoàn thành].
-- **Nghiệm pháp (nếu có):** nước lạnh gây buốt, đau tăng dần; tính nhẩm có thể
-  gây căng thẳng; thở chậm có thể gây chóng mặt nhẹ; vận động gây mệt.
+- **Nghiệm pháp (nếu có):** tính nhẩm có thể gây căng thẳng; thở chậm có thể gây
+  chóng mặt nhẹ hoặc tê đầu ngón tay.
 - **Riêng tư:** dữ liệu có nguy cơ bị lộ dù đã mã hóa; biện pháp giảm rủi ro ở mục 5.
 
 Nếu có bất kỳ khó chịu nào, nói ngay để nhóm dừng. Quy tắc dừng chi tiết:

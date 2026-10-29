@@ -3,8 +3,8 @@
 > **Phiên bản:** v0.3
 > **Người thực hiện:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14, 2026-10-29 (v0.3: phân tầng nguồn ở mục 2.1; viết lại khoảng trống theo các nghiên cứu gần nhất; mốc hiệu chuẩn và mô tả thiết bị theo RQ v0.4 và protocol v0.3)
-> Metadata của 12 bài đã được đối chiếu với Crossref/nhà xuất bản; nội dung được đối chiếu ở mức ghi trong cột "Mức đã đọc". Nguồn bổ sung nằm trong [tổng quan bổ sung 2026-10-14](literature_update_2026-10-14.md) (S1–S14) và [các bài gần nhất với RQ1, 2026-10-29](literature_update_2026-10-29.md) (N1–N17).
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14, 2026-10-29 (v0.3: phân tầng nguồn ở mục 2.1; viết lại khoảng trống theo các nghiên cứu gần nhất; mốc hiệu chuẩn và mô tả thiết bị theo RQ v0.4 và protocol v0.3), 2026-10-30 (mục 2.1, khoảng trống 1–2 và đóng góp 1 sửa theo lần tra có hệ thống N18–N42)
+> Metadata của 12 bài đã được đối chiếu với Crossref/nhà xuất bản; nội dung được đối chiếu ở mức ghi trong cột "Mức đã đọc". Nguồn bổ sung nằm trong [tổng quan bổ sung 2026-10-14](literature_update_2026-10-14.md) (S1–S14) và [các bài gần nhất với RQ1, 2026-10-29](literature_update_2026-10-29.md) (N1–N42).
 
 ---
 
@@ -55,11 +55,11 @@ Nhiều bài trong bảng trên ra đời từ 2006–2017. Chúng vẫn là ngu
 | Tầng | Nguồn | Dùng cho |
 | --- | --- | --- |
 | **Nền tảng** (giữ) | #1 Mukkamala 2015, #3 Payne 2006 (PAT, PEP); #10 Elgendi 2016 (SQI); #12 PulseDB (dataset); #6 Esmaili 2017 và #7 Ding 2016 chỉ khi bài dùng mốc chân sóng hay PIR | Cơ sở sinh lý, quy ước PAT ≠ PTT, SQI, nguồn dữ liệu công khai |
-| **Bằng chứng chính** | RQ1: S1–S5, N1–N4, N6, N8. RQ2: #4, S6, S8, S9. RQ3: S7, S10 | Khoảng trống nghiên cứu (mục 4) và phần Related Work |
+| **Bằng chứng chính** | RQ1: S1–S5, N1–N4, N6, N8, N18, N19 (N19 mới đọc abstract); N22–N24 cho baseline chỉ hiệu chuẩn (bổ sung 2026-10-30). RQ2: #4, S6, S8, S9. RQ3: S7, S10 | Khoảng trống nghiên cứu (mục 4) và phần Related Work |
 | **Hạ xuống** (chỉ trích khi cần) | #2 Zhang 2011 (trên chó), #5 Kachuee 2017 (ICU, cách chia chưa xác minh), #8 Zhang Q. 2017 (một ngày, cánh tay trên), #11 Shen 2024 (ICU) | Ví dụ bổ sung; không dùng làm bằng chứng cho khoảng trống |
-| **Mới tìm, chưa đọc** | N5, N7, N9–N17 (đa số mới có abstract hoặc metadata) | Phải đọc trước khi trích; N11, N13 liên quan rủi ro PEP và áp lực tiếp xúc của RQ1 |
+| **Mới tìm (sửa 2026-10-30)** | Đọc toàn văn: N5, N7, N16. Mới đọc abstract: N9, N11–N13. Các bài còn lại (N10, N14, N15, N17, N20–N42) đọc ở mức ghi trong cột "Mức đã đọc" của tổng quan 2026-10-29 | Phải đọc tới mức cần thiết trước khi trích; N11, N13, N25, N29, N30, N35–N38 liên quan rủi ro PEP và áp lực tiếp xúc của RQ1 |
 
-Chưa có tìm kiếm có hệ thống trên PubMed/IEEE Xplore cho giai đoạn 2022–2026 (xem tổng quan 2026-10-29, mục 6).
+Ngày 2026-10-29 đã tra có hệ thống PubMed, Europe PMC và OpenAlex cho giai đoạn 2022–2026: 32 truy vấn, 1.085 bản ghi sau khi loại trùng ([tổng quan 2026-10-29](literature_update_2026-10-29.md), mục 2.2). IEEE Xplore và Scopus chưa tra.
 
 ---
 
@@ -106,13 +106,37 @@ $$\text{PAT} = \text{PEP} + \text{PTT}$$
 
 ## 4. Khoảng trống nghiên cứu
 
-Viết lại ở v0.3 (2026-10-29) sau khi rà soát các nghiên cứu gần nhất N1–N10 theo mức truy cập ghi ở từng nguồn (toàn văn với N1–N4; abstract với N5–N8, N10; N9 mới có metadata, không tính là đã đọc). Mỗi khoảng trống chỉ phản ánh **các nguồn nhóm đã đọc** và mức đã đọc ghi ở từng nguồn, không phải kết luận về toàn bộ y văn. Các cụm "chưa ai làm", "lần đầu tiên" không được dùng khi chưa có tìm kiếm hệ thống.
+Viết lại ở v0.3 (2026-10-29) sau khi rà soát các nghiên cứu gần nhất N1–N10; sửa ngày 2026-10-30 theo lần tra có hệ thống (N18–N42). Mức đã đọc của từng nguồn ghi ở cột "Mức đã đọc" của [tổng quan 2026-10-29](literature_update_2026-10-29.md). Mỗi khoảng trống chỉ phản ánh **các nguồn nhóm đã đọc** và mức đã đọc ghi ở từng nguồn, không phải kết luận về toàn bộ y văn. Không dùng các cụm "chưa ai làm", "lần đầu tiên": lần tra có hệ thống chưa gồm IEEE Xplore và Scopus.
 
 1. **Giá trị gia tăng của PAT so với PPG ở các phiên khác ngày sau hiệu chuẩn.**
-   Bản v0.2 ghi "các nguồn đã đọc không tách riêng PAT với PPG". Điều này không còn đúng: Finnegan et al. (2023, N1) đã so các bộ đặc trưng PPG, ECG và PAT với baseline zero-change bằng LOSO lồng, và Natarajan et al. (2021, N2) đã đánh giá đặc trưng PPG cộng PAT dưới các nghiệm pháp. Vì vậy zero-change, LOSO hay nghiệm pháp, đứng riêng, đều không phải điểm mới. Cả hai nghiên cứu đó chỉ đánh giá **trong một buổi**, với PPG ở ngón tay, ngón chân hoặc tai, và N1 không có mô hình PPG + PAT. Các nghiên cứu nhiều ngày trên thiết bị cổ tay có quy mô lớn (Aurora: S3, S4; Liu et al., 2023, N6), nhưng phần nhóm đã đọc chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT so với baseline chỉ hiệu chuẩn; S3 cho biết mô hình dạng sóng không vượt rõ rệt baseline hiệu chuẩn ở ngày hôm sau, và tổng quan gần nhất (N8) cho rằng chưa có bằng chứng thuyết phục về giá trị gia tăng ngoài hiệu chuẩn.
-   **Khoảng trống, ở phạm vi hẹp:** trên cùng một thiết bị cổ tay, ở các phiên khác ngày sau hiệu chuẩn, thêm PAT vào PPG có làm giảm sai số ΔBP so với PPG-only và có vượt zero-change không, bằng ablation ghép cặp theo người với kế hoạch phân tích khóa trước. Nhận định này **phải kiểm lại sau khi đọc toàn văn S4 và N6**. Kết quả âm tính là khả năng thực tế, nên RQ1 có mức hiệu ứng nhỏ nhất đáng quan tâm δ để kết quả âm tính diễn giải được ([RQ](../research_questions_v0.1.md) mục 4.E).
+   Bản v0.2 ghi "các nguồn đã đọc không tách riêng PAT với PPG". Điều này không còn đúng: Finnegan et al. (2023, N1) đã so các bộ đặc trưng PPG, ECG và PAT với baseline zero-change bằng LOSO lồng, và Natarajan et al. (2021, N2) đã đánh giá đặc trưng PPG cộng PAT dưới các nghiệm pháp. Vì vậy zero-change, LOSO hay nghiệm pháp, đứng riêng, đều không phải điểm mới. Cả hai nghiên cứu đó chỉ đánh giá **trong một buổi**, với PPG ở ngón tay, ngón chân hoặc tai, và N1 không có mô hình PPG + PAT.
+
+   Qua nhiều phiên cũng đã có nghiên cứu (bổ sung 2026-10-30):
+   - **N18** (Yavarimanesh et al., 2022, toàn văn):
+     - đánh giá các mô hình tuyến tính dựa trên PAT hoặc đặc trưng dạng sóng PPG ở tai, ngón tay, ngón chân, ở phiên cách khoảng một năm;
+     - so với baseline chỉ dùng trung bình cuff ban đầu; có thở chậm, tính nhẩm và cold pressor;
+     - 10 người, 57 ± 18 tuổi, hệ số riêng từng người; không đo ở cổ tay;
+     - mô hình có PAT dự đoán SBP, mô hình chỉ PPG dự đoán DBP, mỗi mô hình so riêng với baseline, nên không phải so sánh ghép cặp cho cùng một đầu ra.
+   - **N19** (Cisnal et al., 2025, abstract): trên dữ liệu cổ tay Aurora-BP, baseline tốt hơn mô hình dựa trên PAT tốt nhất ở SBP.
+
+   Vì vậy nhiều phiên hay đánh giá mô hình PAT và mô hình PPG so với baseline, kể cả khi gộp một phần với các yếu tố trên, cũng không phải điểm mới. Các nghiên cứu nhiều ngày trên thiết bị cổ tay có quy mô lớn (Aurora: S3, S4; Liu et al., 2023, N6), nhưng phần nhóm đã đọc chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT so với baseline chỉ hiệu chuẩn. Về N6 (bổ sung 2026-10-29, chờ thầy xem): bài là truy cập mở (CC BY), nhưng toàn văn chưa đọc được vì tải tự động bị chặn. Theo N8 (toàn văn), N6 có so với baseline model; chưa rõ N6 có tách PPG-only với PPG + PAT không ([tổng quan 2026-10-29](literature_update_2026-10-29.md), mục 2.2). S3 cho biết mô hình dạng sóng không vượt rõ rệt baseline hiệu chuẩn ở ngày hôm sau, và tổng quan gần nhất (N8) cho rằng chưa có bằng chứng thuyết phục về giá trị gia tăng ngoài hiệu chuẩn.
+   **Khoảng trống, ở phạm vi hẹp (sửa 2026-10-30 theo [tổng quan](literature_update_2026-10-29.md) mục 5.1):** thêm PAT vào PPG có làm giảm sai số ΔBP so với PPG-only và có vượt zero-change không. Phép so sánh là ghép cặp theo người, đăng ký trước, với các điều kiện cùng lúc:
+   - thiết bị chỉ ở cổ tay: PPG cổ tay, ECG đạo trình I giữa hai cổ tay;
+   - các phiên cách nhau vài ngày đến 4 tuần;
+   - hiệu chuẩn chỉ bằng offset từ M0 phiên 1, hệ số chung cho mọi người học bằng LOSO lồng (khác N18, nơi mỗi người có hệ số riêng);
+   - cùng thuật toán và cùng tập lần đo cho hai mô hình;
+   - luôn so với zero-change, có CI bootstrap theo người và δ khóa trước.
+
+   Phạm vi tra: PubMed, Europe PMC, OpenAlex, giai đoạn 2022–2026; chưa tra IEEE Xplore, Scopus. Nhận định này **phải kiểm lại sau khi đọc toàn văn N6**. S4 chỉ dùng abstract theo quyết định ngày 2026-10-29, nên nhận định chưa được kiểm với toàn văn S4. Kết quả âm tính là khả năng thực tế, nên RQ1 có mức hiệu ứng nhỏ nhất đáng quan tâm δ để kết quả âm tính diễn giải được ([RQ](../research_questions_v0.1.md) mục 4.E).
 2. **Độ ổn định của hiệu chuẩn qua nhiều ngày, và mức lạc quan của đánh giá trong một buổi.**
-   ESH 2023 (S1) đưa ra "recalibration test" và AHA 2025 (S5) nêu rằng các protocol validation hiện chưa xử lý độ ổn định theo thời gian. Ding et al. (2017, N4) ghi nhận sai số tăng khi đánh giá ở ngày hôm sau; Vybornova 2021 (#9, thiết bị chỉ có PPG) và Liu 2023 (N6, abstract) theo dõi khoảng 1 tháng; phần đã đọc của hai bài không có phép so sánh PPG-only với PPG + PAT. Đa số nghiên cứu gần nhất (N1, N2, N7) chỉ đánh giá trong một buổi, nên RQ2b (cùng phiên so với khác phiên) đo được mức lạc quan của cách đánh giá đó trên dữ liệu của nhóm. Ở quy mô ≥ 15 người, đây là nghiên cứu khả thi (feasibility), không phải bằng chứng validation.
+   ESH 2023 (S1) đưa ra "recalibration test" và AHA 2025 (S5) nêu rằng các protocol validation hiện chưa xử lý độ ổn định theo thời gian. Ding et al. (2017, N4) ghi nhận sai số tăng khi đánh giá ở ngày hôm sau; Vybornova 2021 (#9, thiết bị chỉ có PPG) và Liu 2023 (N6, abstract) theo dõi khoảng 1 tháng; phần đã đọc của hai bài không có phép so sánh PPG-only với PPG + PAT. Một số nghiên cứu gần nhất chỉ đánh giá trong một buổi (N1, N2). N7 chỉ đo lại ngày hôm sau ở 11 người, với nghiệm pháp bóp tay.
+
+   Theo dõi dài hơn đã có (bổ sung 2026-10-30):
+   - N18: một năm, không đo ở cổ tay;
+   - N21: preprint, mới đọc abstract;
+   - N31–N34: vài tuần, thiết bị chỉ có PPG, mới đọc abstract.
+
+   N22–N24 và N33 (abstract) cho thấy đầu ra của các thiết bị thương mại được đánh giá bám gần mốc hiệu chuẩn. Vì vậy RQ2b (cùng phiên so với khác phiên) đo mức lạc quan của cách đánh giá trong một buổi trên dữ liệu của nhóm. Ở quy mô ≥ 15 người, đây là nghiên cứu khả thi (feasibility), không phải bằng chứng validation.
 3. **Ảnh hưởng của cách chia dữ liệu.**
    Đây **không** phải khoảng trống mới: Yoshizawa 2023, Mehta 2024, PulseDB và Moulaeifard 2025 đã chứng minh rò rỉ theo người làm kết quả đẹp giả. RQ2a chỉ kiểm chứng lại hiệu ứng này trong pipeline của nhóm và báo ở phụ lục.
 4. **Từ chối dự đoán kết hợp SQI và độ bất định.**
@@ -126,7 +150,7 @@ Các mục dưới đây là **dự kiến**, phụ thuộc vào việc có thu 
 
 **Đóng góp khoa học (nếu đạt điều kiện dữ liệu):**
 
-1. Một phép so sánh ghép cặp, khóa trước, cho RQ1 trên nhóm người khỏe mạnh: thêm PAT có giảm sai số ΔSBP/ΔDBP ở các phiên khác ngày so với mô hình PPG-only và so với zero-change hay không, kèm CI bootstrap theo người. Kết luận đọc theo CI và mức δ khóa trước ([RQ](../research_questions_v0.1.md) mục 4.E): có lợi, tương đương trong phạm vi δ, hoặc chưa kết luận. Kết quả tương đương trong phạm vi δ cũng là kết quả có giá trị; CI rộng thì báo là chưa kết luận, không viết thành "PAT không giúp".
+1. Một phép so sánh ghép cặp, khóa trước, cho RQ1 trên nhóm người khỏe mạnh: thêm PAT có giảm sai số ΔSBP/ΔDBP ở các phiên khác ngày so với mô hình PPG-only và so với zero-change hay không, kèm CI bootstrap theo người. Phép so sánh làm trên thiết bị chỉ ở cổ tay, với bộ nghiệm pháp M0–M2. Khác N18 ở các điều kiện ghi tại mục 4, khoảng trống 1: N18 không đo ở cổ tay và dùng hệ số riêng từng người (sửa 2026-10-30). Kết luận đọc theo CI và mức δ khóa trước ([RQ](../research_questions_v0.1.md) mục 4.E): có lợi, tương đương trong phạm vi δ, hoặc chưa kết luận. Kết quả tương đương trong phạm vi δ cũng là kết quả có giá trị; CI rộng thì báo là chưa kết luận, không viết thành "PAT không giúp".
 2. Mức lạc quan của cách đánh giá trong một buổi so với đánh giá ở phiên khác ngày, trên cùng dữ liệu và mô hình (RQ2b). Mức chênh sai số giữa chia ngẫu nhiên theo cửa sổ và chia theo người trên PulseDB (RQ2a) là kiểm chứng lại một hiệu ứng đã biết, báo ở phụ lục.
 3. Phân tích thăm dò cơ chế từ chối dự đoán bằng risk–coverage so với từ chối ngẫu nhiên (RQ3), nếu dữ liệu có đủ đoạn tín hiệu kém tự nhiên.
 

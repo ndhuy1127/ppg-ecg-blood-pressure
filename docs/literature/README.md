@@ -13,6 +13,9 @@ mức đã đọc (toàn văn hay abstract).
   tìm kiếm và 14 nguồn bổ sung (khuyến cáo ESH/AHA, dự án Aurora, benchmark,
   SQI, risk–coverage, dataset), cùng ảnh hưởng tới RQ1–RQ3.
 - [Các bài gần nhất với RQ1 (2026-10-29)](literature_update_2026-10-29.md): nhật
-  ký tìm kiếm, 17 nguồn N1–N17 (N11–N17 mới có metadata) so với thiết kế RQ1, mức
-  độ mới trong phạm vi đã tra và các bài phải đọc toàn văn trước khi viết khoảng trống
-  nghiên cứu.
+  ký hai lần tra (lần 2 có hệ thống trên PubMed, Europe PMC, OpenAlex cho 2022–2026:
+  32 truy vấn, 1.085 bản ghi sau loại trùng), 42 nguồn N1–N42 so với thiết kế RQ1, kiểm
+  kê các bài dùng Aurora-BP, mức độ mới trong phạm vi đã tra, các đoạn của ma trận và RQ
+  phải sửa theo lần tra (đã sửa ngày 2026-10-30), và danh sách bài cần lấy toàn văn (N6
+  truy cập mở nhưng tải tự động bị chặn; S4 chỉ dùng abstract theo quyết định ngày
+  2026-10-29).

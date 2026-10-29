@@ -3,7 +3,7 @@
 > **Phiên bản:** v0.3 (thay v0.2; [v0.1](protocol_outline_v0.1.md)). Tên file giữ `v0.2` để không làm gãy liên kết.
 > **Người biên soạn:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.1: đồng bộ với RQ v0.2, yêu cầu phần cứng V0 và nguồn bổ sung), 2026-10-21 (v0.2), 2026-10-22 (sửa theo review), 2026-10-29 (v0.3).
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.1: đồng bộ với RQ v0.2, yêu cầu phần cứng V0 và nguồn bổ sung), 2026-10-21 (v0.2), 2026-10-22 (sửa theo review), 2026-10-29 (v0.3), 2026-10-30 (dẫn N7 cho dạng bài M2; ngưỡng P2/R3 dùng kịch bản δ khai báo trước).
 > **Lưu ý:** chưa thu dữ liệu trên người; chỉ thu sau khi có phê duyệt đạo đức. Phân bổ tay và điện cực ở mục 5.1–5.2 đã xác nhận về phần cứng ngày 2026-10-23; nghiệm pháp ở 6.4–6.5 chưa được hội đồng đạo đức duyệt. Các mục ghi "đề xuất của nhóm, chờ thầy/hội đồng" trong v0.3 là phương án mặc định mang đi xin ý kiến, chưa phải quyết định cuối.
 
 **Changelog v0.3 (2026-10-29):** chốt các mục còn mở về thiết kế nghiên cứu để chuẩn bị hồ sơ đạo đức.
@@ -15,6 +15,7 @@
 - Mục 6.5: P2 và R3 dùng cùng thống kê (median |ΔSBP|), mỗi chỉ số có mốc so sánh riêng.
 - Mục 9.1: LOSO lồng. Mục 10: quy tắc cho lượt đo bị dừng vì an toàn.
 - Bổ sung cùng ngày theo RQ v0.4 (đề xuất, chờ thầy): 9.1 thêm dự đoán vòng ngoài cho cuff nghiệm pháp phiên 1, chỉ dùng cho RQ2b; 9.2 trỏ tiêu chí kết luận, đa kiểm định và δ về RQ mục 4.E.
+- Bổ sung cùng ngày: bỏ M3 (ngâm chân nước lạnh) và M4 (đạp xe tư thế ngồi) vì khó thực hiện ở phòng thí nghiệm của nhóm; bộ nghiệm pháp còn M0–M2, không thay bằng nghiệm pháp mới trong hồ sơ lần này (6.4, mục "Dự phòng"). Sửa theo: 3, 4.2–4.3 (bỏ L9 cũ, L10 đổi thành L9), 5.2–5.4, 6.4 (nhịp thở M1; dạng bài, thời lượng và cách kiểm mức tham gia của M2; thứ tự và thời gian nghỉ; số lần cuff; thời lượng buổi; quy tắc nếu xin sửa đổi thêm nghiệm pháp), 6.5 (ngưỡng P2/R3 phải đặt lại, đề xuất suy từ mô phỏng độ nhạy), 7.3, 9.1, 10–12.
 
 **Changelog v0.2 (2026-10-21, Huy):**
 
@@ -59,7 +60,7 @@
 - **Cấu trúc phiên đo (chốt 2026-10-29; cửa sổ tối đa là đề xuất của nhóm, chờ thầy/hội đồng):** mục tiêu 3 phiên độc lập (`session_id`) mỗi người, tối thiểu 2; người có ≥ 2 phiên hợp lệ vẫn vào phân tích RQ1. Phiên 2 cách phiên 1 ít nhất 1 ngày; mọi phiên nằm trong 4 tuần kể từ phiên 1 (con số 4 tuần chưa có nguồn, chọn theo lịch thu Tuần 12–18). Hai phiên không cùng ngày. Giờ bắt đầu phiên ghi vào metadata; không bắt buộc cùng khung giờ.
   - **Phiên 1 (Calibration Session):** mốc hiệu chuẩn $\text{BP}_0$ = trung bình các lần cuff M0 hợp lệ của phiên 1; $\text{PAT}_0$ và đặc trưng nền lấy từ cửa sổ của các lần cuff M0 đó.
   - **Phiên 2 trở đi (Evaluation Sessions):** dùng để đánh giá theo dõi $\Delta\text{BP}$ ở phiên sau (endpoint ở mục 6.4).
-  - Phiên nào cũng theo cùng trình tự: nghỉ ổn định (6.1), M0, rồi M1–M4 (6.4) nếu hội đồng đã duyệt và người tham gia đồng ý từng nghiệm pháp.
+  - Phiên nào cũng theo cùng trình tự: nghỉ ổn định (6.1), M0, rồi M1, M2 (6.4) nếu hội đồng đã duyệt và người tham gia đồng ý từng nghiệm pháp.
 - **Hệ quả cần lưu ý:** Ở người trẻ khỏe mạnh đo lúc nghỉ, $\Delta\text{BP}$ giữa các phiên có thể nhỏ. Khi đó baseline zero-change (dự đoán $\Delta\text{BP} = 0$) đã có sai số thấp, và mô hình khó thể hiện khác biệt. Mukkamala et al. (2021, [10.1161/HYPERTENSIONAHA.121.17747](https://doi.org/10.1161/HYPERTENSIONAHA.121.17747)) chỉ ra rằng thiết bị có hiệu chuẩn có thể trông chính xác chỉ vì BP ít thay đổi, nên phải báo cáo sai số của baseline chỉ dùng BP hiệu chuẩn và độ lệch chuẩn của $\Delta\text{BP}$ tham chiếu cùng với sai số mô hình.
 
 ---
@@ -72,24 +73,25 @@
 
 Tiêu chí chọn và loại (chốt 2026-10-29): nguồn duy nhất là
 [eligibility_screening_v0.1.md](../ethics/eligibility_screening_v0.1.md) (tiêu chí
-chọn mục 1, tiêu chí loại L1–L10, tự khai). Mục 4.2–4.3 chỉ tóm tắt, khi khác nhau
+chọn mục 1, tiêu chí loại L1–L9, tự khai). Mục 4.2–4.3 chỉ tóm tắt, khi khác nhau
 thì theo phiếu sàng lọc. Bỏ tiêu chí "nhịp tim xoang bình thường" của v0.1–v0.2 vì
 tự khai không kiểm được, và nhóm không có người đánh giá ECG lâm sàng. Độ tuổi,
-L7–L9 và ngưỡng chênh hai tay là đề xuất của nhóm, cần thầy/bác sĩ xác nhận.
+L7, L8 và ngưỡng chênh hai tay là đề xuất của nhóm, cần thầy/bác sĩ xác nhận.
 
 ### 4.2. Tiêu chí lựa chọn (Inclusion Criteria)
-- 18–35 tuổi, đủ năng lực tự quyết định tham gia. Giới hạn tuổi là đề xuất của nhóm, chưa có nguồn: giữ quần thể đồng nhất và giảm rủi ro khi làm M3/M4.
+- 18–35 tuổi, đủ năng lực tự quyết định tham gia. Giới hạn tuổi là đề xuất của nhóm, chưa có nguồn: giữ quần thể đồng nhất và giảm rủi ro chung khi làm nghiệm pháp.
 - Tự nguyện ký phiếu đồng thuận sau khi có phiếu thông tin ít nhất 24 giờ.
 - Tự khai không có bệnh tim mạch đã được chẩn đoán.
 - Ngồi yên được trong suốt buổi đo và tham gia được ít nhất 2 buổi (eligibility tiêu chí 4).
 
 ### 4.3. Tiêu chí loại trừ (Exclusion Criteria)
-L1–L10 của phiếu sàng lọc: bệnh tim mạch hoặc tăng/hạ huyết áp đã chẩn đoán (L1);
+L1–L9 của phiếu sàng lọc: bệnh tim mạch hoặc tăng/hạ huyết áp đã chẩn đoán (L1);
 thuốc tim mạch hoặc thần kinh giao cảm (L2); máy tạo nhịp, thiết bị cấy ghép (L3);
 mang thai (L4); tổn thương da tại vị trí đeo, dán điện cực, quấn cuff (L5); dị ứng
 băng dán, gel, kim loại (L6); không đo được huyết áp tay phải (L7); ngất, động kinh,
-khó thở khi gắng sức (L8); Raynaud hoặc bệnh bàn chân khi có M3 (L9); cà phê, thuốc
-lá, vận động mạnh trong 2 giờ trước buổi đo (L10, hoãn buổi).
+khó thở khi gắng sức (L8); cà phê, thuốc lá, vận động mạnh trong 2 giờ trước buổi đo
+(L9, hoãn buổi). L9 cũ (Raynaud, bệnh bàn chân, chỉ cần cho M3) bỏ ngày 2026-10-29
+cùng M3; L10 cũ đổi số thành L9.
 
 **Đo hai tay (chốt 2026-10-29; ngưỡng là đề xuất, chờ thầy/bác sĩ):** ở buổi 1, trước
 khi gắn thiết bị, đo huyết áp mỗi tay một lần bằng máy cuff của nghiên cứu. Cuff luôn
@@ -174,12 +176,12 @@ lên ngón tay. Chiều dài dây và việc dây không kéo bo PPG kiểm trê
 | M0 Nghỉ ngồi | Không | Yên trên bàn | Yên trên bàn |
 | M1 Thở chậm có hướng dẫn | Hô hấp | Yên | Yên |
 | M2 Tính nhẩm | Không (nhẩm im lặng; chỉ nói đáp án ngoài khoảng im lặng ở 6.4) | Yên | Yên |
-| M3 Ngâm bàn chân vào nước lạnh | Một bàn chân (bên chưa chốt) | Yên | Yên |
-| M4 Đạp xe nhẹ tư thế ngồi, đo khi hồi phục | Hai chân | Yên trên bàn | Yên trên bàn |
+| ~~M3 Ngâm bàn chân vào nước lạnh~~ | Một bàn chân | Bỏ 2026-10-29 (6.4) | Bỏ |
+| ~~M4 Đạp xe nhẹ tư thế ngồi~~ | Hai chân | Bỏ 2026-10-29 (6.4) | Bỏ |
 | ~~M5 Bóp tay tĩnh~~ | Một tay | Loại (5.4) | Loại (5.4) |
 
 ### 5.3. Tư thế người tham gia
-- Ngồi tựa lưng thoải mái trên ghế có tựa, hai bàn chân đặt phẳng trên sàn, hai chân không bắt chéo (trừ khi làm M3/M4).
+- Ngồi tựa lưng thoải mái trên ghế có tựa, hai bàn chân đặt phẳng trên sàn, hai chân không bắt chéo, trong mọi nghiệm pháp.
 - Cả hai cẳng tay đặt thả lỏng trên mặt bàn có đệm êm, giữ cho cổ tay đeo thiết bị và vùng đo bắp tay nằm **ngang mức tim**.
 - Không nói chuyện, không cử động ngón tay hay thay đổi tư thế trong suốt quá trình ghi tín hiệu và bơm xả cuff.
 - M2 không vi phạm quy tắc trên: người tham gia nhẩm im lặng và chỉ nói đáp án
@@ -194,19 +196,19 @@ hoạch 28 tuần.
 | # | Quy tắc | Kết quả với phương án A | Còn phải làm |
 | --- | --- | --- | --- |
 | K1 | Cuff không cùng tay đeo PPG | **Đạt:** cuff tay phải, PPG tay trái | — |
-| K2 | Không nghiệm pháp nào làm chuyển động tay đeo PPG | **Đạt trên giấy** cho M0–M2. **Chưa kiểm chứng** cho M3: thao tác đưa và rút chân, đau do lạnh có thể làm người tham gia cử động thân hoặc bám tay vào bàn. **Đạt có điều kiện** cho M4: thân người chuyển động khi đạp, nên chỉ lấy cửa sổ tín hiệu và đo cuff sau khi dừng đạp và chờ thân yên, tay vẫn đặt trên bàn (trục thời gian ở 6.4). **Không đạt** cho M5 nếu bóp bằng tay trái | IMU BMI270 kiểm chuyển động thực tế |
-| K3 | Tránh nhiễu cơ trên chi gắn điện cực ECG | Đạo trình I cần điện cực ở **cả hai tay**, nên mọi hoạt động cơ tay đều gây nhiễu. **Không đạt** cho M5 với bất kỳ tay nào → loại M5. **Chưa kiểm chứng** cho M3 (đau do lạnh có thể làm người tham gia gồng cả người) và cho lúc cuff bơm (căng cơ tay phải). **Chưa đánh giá:** M1 (thở sâu làm trôi nền, có thể làm cửa sổ bị loại có hệ thống theo quy tắc SQI ở mục 7), M2 (nói, cơ hô hấp), M4 (tì tay, mồ hôi, thở mạnh sau đạp) | Xem ECG trong M1–M4 và lúc cuff bơm ở G2 |
+| K2 | Không nghiệm pháp nào làm chuyển động tay đeo PPG | **Đạt trên giấy** cho M0–M2. **Không đạt** cho M5 nếu bóp bằng tay trái. M3, M4 đã bỏ (2026-10-29), không còn phải xét | IMU BMI270 kiểm chuyển động thực tế |
+| K3 | Tránh nhiễu cơ trên chi gắn điện cực ECG | Đạo trình I cần điện cực ở **cả hai tay**, nên mọi hoạt động cơ tay đều gây nhiễu. **Không đạt** cho M5 với bất kỳ tay nào → loại M5. **Chưa kiểm chứng** cho lúc cuff bơm (căng cơ tay phải). **Chưa đánh giá:** M1 (thở sâu làm trôi nền, có thể làm cửa sổ bị loại có hệ thống theo quy tắc SQI ở mục 7), M2 (nói, cơ hô hấp) | Xem ECG trong M1, M2 và lúc cuff bơm ở G2 |
 | K4 | ECG có tín hiệu tại thời điểm đo cuff | **Đạt về thiết kế:** điện cực dán, không cần chạm chủ động. Với đạo trình I, tay đeo cuff **luôn** mang một điện cực (RA ở cổ tay phải); đổi vị trí điện cực không xử lý được. Pha cuff bơm được loại khỏi phân tích chính (6.2, giai đoạn 2). **Chưa kiểm chứng** ảnh hưởng của cuff bơm lên ECG | Bản ghi có cuff bơm ở G2, sau khi được phép |
 | K5 | Dây điện cực và cáp không đè hay kéo bo PPG | Chưa kiểm (chưa có module). Tay trái mang cáp dẹt PPG và hai dây LA, RL | Kiểm trên thành viên nhóm ở lần đeo đầu tiên (G2), trước buổi pilot đầu tiên; không dùng tay giả (chốt 2026-10-29) |
-| K6 | Chân dùng cho M3/M4 không ảnh hưởng tay | **Đạt trên giấy** cho M3 (xem K2). **Có điều kiện** cho M4: đạp làm thân người chuyển động (K2) | IMU kiểm ở G2 |
+| K6 | Chân dùng cho nghiệm pháp không ảnh hưởng tay | **Không còn áp dụng:** không còn nghiệm pháp nào dùng chân sau khi bỏ M3, M4 (2026-10-29). Nếu sau này xin sửa đổi thêm nghiệm pháp dùng chân (6.4, "Dự phòng") thì xét lại | — |
 
-Kết luận (trên giấy, 2026-10-22):
+Kết luận (trên giấy, 2026-10-22; sửa 2026-10-29 khi bỏ M3, M4):
 
-- K1 đạt; M5 bị loại.
-- K2 đạt trên giấy cho M0–M2, chưa kiểm chứng cho M3, có điều kiện cho M4.
-- K3, K4, K5 chưa kiểm chứng; K3 chưa đánh giá M1, M2, M4.
-- Vì vậy **chưa thể nói** phương án A không còn xung đột với M0–M4. Cần bản ghi
-  G2. Trục thời gian M2–M4 đã có ở 6.4 (2026-10-29).
+- K1 đạt; M5 bị loại; M3, M4 bỏ vì khó thực hiện ở phòng thí nghiệm (6.4).
+- K2 đạt trên giấy cho M0–M2.
+- K3, K4, K5 chưa kiểm chứng; K3 chưa đánh giá M1, M2.
+- Vì vậy **chưa thể nói** phương án A không còn xung đột với M0–M2. Cần bản ghi
+  G2. Trục thời gian M2 đã có ở 6.4 (2026-10-29).
 
 ---
 
@@ -286,9 +288,17 @@ trẻ cho ΔBP nhỏ và baseline zero-change khó bị vượt (mục 3). Mukka
 toàn văn, [tổng quan bổ sung S2](../literature/literature_update_2026-10-14.md))
 đề xuất đánh giá thiết bị có hiệu chuẩn với ít nhất ba can thiệp làm BP thay đổi.
 
+**Bộ nghiệm pháp từ 2026-10-29: M0, M1, M2.** M3 (ngâm chân nước lạnh) và M4 (đạp
+xe tư thế ngồi) bị bỏ vì khó thực hiện ở phòng thí nghiệm của nhóm. Bộ còn lại chỉ có hai can thiệp: M1 làm BP giảm nhẹ, M2 làm BP tăng. Cộng thêm biến
+thiên tự nhiên giữa các ngày, bộ này vẫn chưa đạt mức ít nhất ba can thiệp mà
+Mukkamala 2021 đề xuất; đây là giới hạn phải nêu trong bài báo. Dải ΔBP dự kiến hẹp
+hơn, nên RQ1 kém nhạy hơn và khả năng kết quả rơi vào "chưa kết luận" tăng
+([RQ](../research_questions_v0.1.md) mục 4.E–4.F). Không thay bằng nghiệm pháp mới
+trong hồ sơ lần này; hướng bổ sung ở mục "Dự phòng" bên dưới.
+
 **Endpoint chính của RQ1 (đề xuất của nhóm 2026-10-29, chờ thầy xác nhận):**
 
-- Tập đánh giá gồm mọi lần cuff hợp lệ ở phiên ≥ 2, cả M0 và M1–M4.
+- Tập đánh giá gồm mọi lần cuff hợp lệ ở phiên ≥ 2, cả M0, M1 và M2.
 - Với mỗi lần cuff: $\Delta\text{BP}$ = giá trị cuff − $\text{BP}_0$, trong đó
   $\text{BP}_0$ là trung bình các lần cuff M0 hợp lệ của phiên 1 (mục 3).
 - Nghiệm pháp là biến phân tầng: sai số báo cả tổng và theo từng nghiệm pháp.
@@ -308,59 +318,80 @@ protocol của nhóm.
 | Mã | Nghiệm pháp | Mục đích | Hướng BP dự kiến và nguồn | Thời lượng | Rủi ro | Dừng khi |
 | --- | --- | --- | --- | --- | --- | --- |
 | M0 | Nghỉ ngồi | Mốc hiệu chuẩn, so sánh | Ổn định (mục 6.1) | ≥ 10 phút nghỉ, rồi ≥ 2 lượt cuff | Tối thiểu | Quy tắc chung |
-| M1 | Thở chậm có hướng dẫn | ΔBP âm | **Giảm.** Adler 2019 ([10.1152/japplphysiol.00442.2019](https://doi.org/10.1152/japplphysiol.00442.2019)): 22 người trẻ huyết áp bình thường, 15 phút thở chậm do thiết bị RESPeRATE hướng dẫn, SBP giảm 3,2 ± 0,8 mmHg (đo 5 phút cuối). Biên độ nhỏ, có thể không vượt sai số cuff | 15 phút theo nguồn; nhịp thở cụ thể **chưa có nguồn** (abstract không nêu) | Chóng mặt, tê đầu ngón | Chóng mặt, tê, khó chịu khi thở |
-| M2 | Tính nhẩm | ΔBP dương do stress tâm lý | **Tăng** (nguồn chỉ **ủng hộ gián tiếp**). Carroll 2012 ([10.1111/j.1469-8986.2012.01463.x](https://doi.org/10.1111/j.1469-8986.2012.01463.x)) đo phản ứng SBP/DBP với tính nhẩm (431 người, 63 tuổi; câu hỏi về tiên lượng); Jern 1991 ([10.1042/cs0810593](https://doi.org/10.1042/cs0810593)): phản ứng HR/BP lặp lại tốt ở 14 nam trẻ. Abstract không nêu chiều hay biên độ ở người trẻ; cần nguồn trực tiếp. Stress cũng làm đổi PEP, nên PAT có thể đổi mà BP không đổi ([RQ](../research_questions_v0.1.md), mục F) | **Chưa có nguồn** | Căng thẳng, lo âu | Người tham gia muốn dừng, căng thẳng rõ |
-| M3 | Ngâm một bàn chân vào nước lạnh | ΔBP dương do kích thích lạnh | **Tăng SBP và DBP.** Korhonen 2006 ([10.3402/ijch.v65i2.18090](https://doi.org/10.3402/ijch.v65i2.18090)): 20 nam khỏe, cold pressor ở tay và **ở chân** đều làm tăng SBP, DBP. Velasco 1997 ([10.1097/00045391-199701000-00008](https://doi.org/10.1097/00045391-199701000-00008), tổng quan): giải phóng norepinephrine gây co tiểu động mạch, tăng BP. Dùng chân để hai tay (PPG, cuff, ECG) không tham gia. **Yếu tố nhiễu:** co mạch ngoại vi do lạnh có thể làm đổi PPG và PAT ở cổ tay độc lập với BP (Velasco 1997; [RQ](../research_questions_v0.1.md), mục F), nên sai số phải báo theo từng nghiệm pháp, không gộp, và dự kiến SQI có thể giảm trong M3 | Nhiệt độ nước và trần thời lượng **chưa có nguồn**; trục thời gian bên dưới cần ngâm khoảng 1,5–2 phút | Đau buốt, gồng người (K3), phản ứng giao cảm | Đau không chịu được, yêu cầu; rút chân ngay |
-| M4 | Đạp xe nhẹ tư thế ngồi, đo trong pha hồi phục | ΔBP dương do vận động | Tăng khi gắng sức; **ở pha hồi phục chưa chắc**. Stergiou 2023 (khuyến cáo ESH về validation thiết bị không cuff, [10.1097/HJH.0000000000003483](https://doi.org/10.1097/HJH.0000000000003483), S1) có phép thử vận động là phép thử BP tăng, nhưng không nói đo lúc nào. Mukkamala 2021 (toàn văn PMC8516718, đọc 2026-10-22) ghi BP sau gắng sức có thể **thấp hơn** trước gắng sức, và thay đổi BP do gắng sức có thể tương đối dễ phát hiện vì HR và biên độ mạch tăng rõ, nên mô hình có thể chỉ bám HR. Esmaili 2017 (ma trận #6, toàn văn) ghi tín hiệu trong hồi phục sau gắng sức; Zhang 2017 (#8) dùng đạp xe nằm | Cường độ, thời lượng **chưa có nguồn** | Mệt, khó thở; chuyển động thân (K2) | Mệt, khó thở, đau; hết thời lượng duyệt |
+| M1 | Thở chậm có hướng dẫn | ΔBP âm | **Giảm.** Adler 2019 ([10.1152/japplphysiol.00442.2019](https://doi.org/10.1152/japplphysiol.00442.2019)): 22 người trẻ huyết áp bình thường, 15 phút thở chậm do thiết bị RESPeRATE hướng dẫn, SBP giảm 3,2 ± 0,8 mmHg (đo 5 phút cuối). Biên độ nhỏ, có thể không vượt sai số cuff | 15 phút theo nguồn; nhịp 6 lần mỗi phút là đề xuất của nhóm 2026-10-29, **chưa có nguồn** (abstract không nêu nhịp) | Chóng mặt, tê đầu ngón | Chóng mặt, tê, khó chịu khi thở |
+| M2 | Tính nhẩm im lặng: trừ liên tiếp 13 từ một số có bốn chữ số do người vận hành đọc, cuối cùng nói số đạt được. Dạng bài theo Hove et al. 2024 ([10.3389/fmedt.2024.1464473](https://doi.org/10.3389/fmedt.2024.1464473), N7, đọc đoạn Methods ngày 2026-10-30): trừ 13 liên tiếp từ 1.079 trong 5 phút, có báo lỗi và metronome 2 Hz để tạo căng thẳng. Nhóm làm im lặng, không báo lỗi trong lúc đo, nên đáp ứng BP có thể yếu hơn; bản im lặng chưa có nguồn | ΔBP dương do stress tâm lý | **Tăng** (nguồn chỉ **ủng hộ gián tiếp**). Carroll 2012 ([10.1111/j.1469-8986.2012.01463.x](https://doi.org/10.1111/j.1469-8986.2012.01463.x)) đo phản ứng SBP/DBP với tính nhẩm (431 người, 63 tuổi; câu hỏi về tiên lượng); Jern 1991 ([10.1042/cs0810593](https://doi.org/10.1042/cs0810593)): phản ứng HR/BP lặp lại tốt ở 14 nam trẻ. Abstract không nêu chiều hay biên độ ở người trẻ; cần nguồn trực tiếp. Stress cũng làm đổi PEP, nên PAT có thể đổi mà BP không đổi ([RQ](../research_questions_v0.1.md), mục F) | Khoảng 3 phút (đề xuất của nhóm 2026-10-29, suy từ trục thời gian bên dưới; **chưa có nguồn**) | Căng thẳng, lo âu | Người tham gia muốn dừng, căng thẳng rõ |
+| ~~M3~~ | ~~Ngâm một bàn chân vào nước lạnh~~ | — | Tăng SBP và DBP (Korhonen 2006, [10.3402/ijch.v65i2.18090](https://doi.org/10.3402/ijch.v65i2.18090): cold pressor ở tay và ở chân; Velasco 1997, [10.1097/00045391-199701000-00008](https://doi.org/10.1097/00045391-199701000-00008)). Co mạch ngoại vi do lạnh có thể đổi PPG và PAT độc lập với BP | — | — | **Bỏ 2026-10-29:** khó thực hiện ở phòng thí nghiệm của nhóm; trần thời lượng ngâm và nhiệt độ nước cũng chưa có nguồn |
+| ~~M4~~ | ~~Đạp xe nhẹ tư thế ngồi, đo trong pha hồi phục~~ | — | Tăng khi gắng sức, ở pha hồi phục chưa chắc (Stergiou 2023, [10.1097/HJH.0000000000003483](https://doi.org/10.1097/HJH.0000000000003483); Mukkamala 2021 ghi BP sau gắng sức có thể thấp hơn trước gắng sức) | — | — | **Bỏ 2026-10-29:** khó thực hiện ở phòng thí nghiệm của nhóm; cường độ và thời lượng cũng chưa có nguồn |
 | ~~M5~~ | ~~Bóp tay tĩnh~~ | — | Tăng (Mark 1985, [10.1161/01.res.57.3.461](https://doi.org/10.1161/01.res.57.3.461): HR và BP tăng ở phút 1–2 khi bóp 30% lực tối đa) | — | — | **Loại**: không đạt K2/K3 ở 5.4 |
 
 Không đưa vào: đổi tư thế ngồi–đứng (tay đeo PPG di chuyển và đổi độ cao so với
-tim, vi phạm K2).
+tim, vi phạm K2). M3, M4 bỏ ngày 2026-10-29 (xem đầu mục); muốn thêm nghiệm pháp thay
+thế thì đi qua sửa đổi đạo đức (mục "Dự phòng").
 
-Thứ tự đề xuất trong một buổi: M0 → M1 → nghỉ → M2 → nghỉ → M3 → nghỉ → M4 → nghỉ.
-Nếu trung bình M0 của buổi ≥ 140/90 mmHg thì không làm M1–M4; có lần cuff nào ≥
+Thứ tự trong một buổi (đề xuất của nhóm 2026-10-29, chưa có nguồn): M0 → M1 → nghỉ
+ít nhất 5 phút → M2 → nghỉ. Thứ tự cố định: thở chậm làm trước để căng thẳng do tính
+nhẩm không kéo sang lúc thở chậm.
+Nếu trung bình M0 của buổi ≥ 140/90 mmHg thì không làm M1, M2; có lần cuff nào ≥
 180/110 mmHg thì dừng buổi ([an toàn buổi đo](../ethics/session_safety_stopping_v0.1.md)
 mục 3, đề xuất 2026-10-29, chờ thầy).
-Thứ tự cố định hay đổi chéo, thời gian nghỉ giữa nghiệm pháp và tiêu chí "BP đã
-về gần nền": **chưa khóa, chưa có nguồn**. Mỗi lần đo cuff vẫn là một nhãn; nhiều
+Tiêu chí "BP đã về gần nền" trước M2: **chưa khóa, chưa có nguồn**. Mỗi lần đo cuff vẫn là một nhãn; nhiều
 cửa sổ trong cùng nghiệm pháp không thành nhiều nhãn.
 
 **Trục thời gian đo cuff** (chốt 2026-10-29, đóng hai mâu thuẫn ghi nhận
 2026-10-22; các khoảng chờ là đề xuất của nhóm, chưa có nguồn, chờ thầy). Ký hiệu
 như 6.2: `t0` là lúc bấm cuff, cửa sổ tín hiệu là `[t0 − L, t0)`.
 
-- **M1:** cuff ở phút cuối của 15 phút thở chậm; cửa sổ nằm trọn trong lúc thở chậm.
-- **M2:** người tham gia nhẩm im lặng. Trong khoảng im lặng `[t0 − 60 s, lúc cuff
-  xả xong]` họ vẫn nhẩm nhưng không nói; đáp án chỉ nói ngoài khoảng đó. Cuff đo khi
-  đang nhẩm, nên không trái quy tắc không nói ở 5.3.
-- **M3:** đưa chân vào nước → chờ 15–30 s cho thân yên → cửa sổ 30 s → bấm cuff
-  (`t0`) → rút chân khi cuff xả xong. Tổng thời gian ngâm khoảng 1,5–2 phút; trần
-  thời lượng ngâm phải có nguồn trước khi nộp hồ sơ.
-- **M4:** dừng đạp (ghi thời điểm `t_stop`) → chờ 30 s, IMU xác nhận tay và thân
-  yên (`motion-sqi-v0`) → cửa sổ 30 s → bấm cuff (`t0`). Độ trễ `t0 − t_stop` lưu
-  thành biến và sai số M4 được báo theo biến này, vì BP hồi phục thay đổi nhanh.
-  `t_stop` ghi bằng lệnh đánh dấu sự kiện mã 4 từ PC, như `CUFF_END` ở 6.2.
-- Với M3 và M4, cửa sổ chính vẫn là 20–30 s. Ứng viên 60 s của phân tích độ nhạy
-  (6.2) chồng lên lúc đưa chân vào hoặc pha chờ sau đạp, nên không dùng cho hai
-  nghiệm pháp này.
+- **M1:** người vận hành ghi lúc bắt đầu thở chậm bằng sự kiện mã 4
+  (`OPERATOR_MARK`) từ PC. Nhịp thở 6 lần mỗi phút (hít vào 4 s, thở ra 6 s) theo âm
+  thanh hướng dẫn phát từ laptop; nhịp này là đề xuất của nhóm 2026-10-29, chưa có
+  nguồn. Cuff ở phút cuối của 15 phút thở chậm; cửa sổ nằm trọn trong lúc thở chậm.
+- **M2:** người vận hành đọc số bắt đầu và ghi sự kiện mã 4 → người tham gia nhẩm
+  im lặng → sau 90 s nhẩm thì bấm cuff (`t0`), nên cửa sổ `[t0 − 60 s, t0)` nằm trọn
+  trong lúc nhẩm → nhẩm tiếp tới khi cuff xả xong → nói số đạt được. Tổng khoảng 3
+  phút; mốc 90 s và tổng 3 phút là đề xuất của nhóm 2026-10-29, chưa có nguồn. Trong
+  khoảng im lặng `[t0 − 60 s, lúc cuff xả xong]` người tham gia vẫn nhẩm nhưng không
+  nói; đáp án chỉ nói sau khoảng đó. Cuff đo khi đang nhẩm, nên không trái quy tắc
+  không nói ở 5.3. Độ trễ `t0` so với sự kiện mã 4 lưu cùng lượt đo để kiểm cửa sổ
+  nằm trọn trong lúc nhẩm. Người vận hành ghi số bắt đầu và số người tham gia nói
+  ra. Hai số này cho biết người tham gia có nhẩm suốt thời gian đo hay không, nên dùng
+  để kiểm mức tham gia; không dùng để loại lượt đo khỏi phân tích chính.
 
-**Dự phòng (chốt 2026-10-29):** nếu thầy chưa duyệt trục thời gian trong Tuần 6, hồ
-sơ lần này bỏ M2 và M4 (và M3 nếu chưa có nguồn cho trần thời lượng ngâm), rồi bổ
-sung bằng sửa đổi đạo đức.
+**Dự phòng (chốt 2026-10-29; sửa cùng ngày khi bỏ M3, M4):**
 
-**Số lần bơm cuff và thời lượng buổi đo (chốt 2026-10-29; ghi vào phiếu thông tin
-và tiêu chí chọn số 4):**
+- Nếu thầy chưa duyệt trục thời gian M2 trong Tuần 6: hồ sơ lần này chỉ có M0 và
+  M1; bổ sung M2 bằng sửa đổi đạo đức.
+- Nếu P2 ở pilot (6.5) cho thấy dải ΔBP quá hẹp: báo thầy và rà protocol trước thu
+  chính. Một hướng là xin sửa đổi đạo đức để thêm một nghiệm pháp tăng BP không dùng
+  tay. Ứng viên nhóm thấy hợp nhất là duỗi gối tĩnh ở tư thế ngồi. Koba et al. 2004
+  ([10.2170/jjphysiol.54.471](https://doi.org/10.2170/jjphysiol.54.471), abstract):
+  9 người giữ duỗi gối 2 phút ở 20% lực tối đa, MAP tăng 24 ± 3 mmHg (trung bình ±
+  SE); abstract không nêu tư thế. Muốn dùng thì phải thiết kế xong mới nộp sửa đổi:
+  ghế có tựa, lực cản cố định có phản hồi lực, mức lực và thời lượng cố định, thở
+  bình thường (không nín thở), quy tắc dừng khi gắng sức, kiểm K2, K3, K6 (không gồng
+  tay, không tì tay) trên thành viên nhóm. Đã cân nhắc và không chọn: kẹp bóng giữa
+  hai gối (khó chuẩn hóa lực); chườm lạnh mặt (đáp ứng BP không chắc); Stroop (trả
+  lời bằng tay vi phạm K2/K3).
+- Sửa đổi chỉ áp dụng trước khi bắt đầu thu chính, sau pilot; người pilot không vào
+  vòng đánh giá (9.1). Nếu sửa đổi được duyệt khi thu chính đã bắt đầu, nghiệm pháp
+  mới chỉ vào phân tích phụ; endpoint chính và δ của RQ1 giữ trên M0–M2. Phiên bản
+  protocol của từng buổi ghi vào nhật ký buổi.
+- Không tăng cường độ hay thời lượng M1, M2 ngoài bản đã duyệt để đạt P2 (P4 ở 6.5).
 
-- Theo kế hoạch: M0 hai lần, mỗi nghiệm pháp M1–M4 một lần, tổng 6 lần mỗi buổi.
-  Trần là 8 lần mỗi buổi, gồm tối đa 2 lần đo lại khi máy xả bình thường nhưng
+**Số lần bơm cuff và thời lượng buổi đo (chốt 2026-10-29, sửa cùng ngày khi bỏ M3,
+M4; ghi vào phiếu thông tin và tiêu chí chọn số 4):**
+
+- Theo kế hoạch: M0 hai lần, M1 và M2 mỗi nghiệm pháp một lần, tổng 4 lần mỗi buổi.
+  Trần là 6 lần mỗi buổi, gồm tối đa 2 lần đo lại khi máy xả bình thường nhưng
   không ra kết quả, hoặc lượt bị cử động. Lỗi bơm không xả, bơm quá mức hay lỗi
   phần cứng của máy thì dừng buổi theo
   [an toàn buổi đo](../ethics/session_safety_stopping_v0.1.md) mục 2, không đo lại.
   Buổi chỉ có M0: tối đa 4 lần.
-- Buổi 1 thêm 2 lần đo hai tay khi sàng lọc (mục 4).
+- Buổi 1 thêm 2 lần đo hai tay khi sàng lọc (mục 4). Tổng buổi 1: kế hoạch 6 lần,
+  trần 8 lần; buổi 1 chỉ có M0: trần 6 lần.
 - Giữa hai lần bơm nghỉ ít nhất 2 phút (6.2).
-- Trần thời lượng 120 phút mỗi buổi. Ước tính thô khi đủ M0–M4 là khoảng 90–100
-  phút, chưa có nguồn. Sau buổi diễn tập trần này chỉ được giảm.
+- Trần thời lượng 120 phút mỗi buổi, giữ nguyên khi bỏ M3, M4. Ước tính thô khi đủ
+  M0–M2 là khoảng 60–80 phút; buổi 1 dài hơn vì có sàng lọc, đo hai tay và chỉnh
+  LED. Ước tính chưa có nguồn. Sau buổi diễn tập trần này chỉ được giảm.
 - Tối đa 3 buổi mỗi người, trong cửa sổ 4 tuần (mục 3).
 
 ### 6.5. Tiêu chí biên độ ΔBP kiểm ở pilot — **ĐỀ XUẤT, KHÓA TRƯỚC PILOT**
@@ -373,7 +404,7 @@ $m_s$ = median của $|\Delta\text{SBP}|$ trên các lần cuff không dùng đ�
 chỉ số là median của $m_s$ qua các người. Hai chỉ số dùng cùng thống kê này nhưng
 có mốc so sánh riêng:
 
-- **P2 (pilot, một buổi):** các lần cuff M1–M4, so với trung bình M0 cùng buổi.
+- **P2 (pilot, một buổi):** các lần cuff M1, M2, so với trung bình M0 cùng buổi.
 - **R3 (cổng G4, [kịch bản bài báo](../paper_scenarios_v0.1.md)):** mọi lần cuff
   hợp lệ ở phiên ≥ 2, so với $\text{BP}_0$ của phiên 1. Đây đúng là nhãn của RQ1
   (6.4), nên R3 đo được độ nhạy của RQ1.
@@ -383,10 +414,27 @@ hơn max nhiều: các lần M0 ở phiên sau và M1 thường có $|\Delta\tex
 Ngưỡng 15 mmHg vốn đặt cho câu chữ cũ, nên phải xem lại ngưỡng cùng thầy trước khi
 khóa ở pilot.
 
+Từ 2026-10-29 bộ nghiệm pháp chỉ còn M1, M2 (6.4), nên việc xem lại ngưỡng không còn
+là tùy chọn. Suy luận của nhóm, chưa có số liệu:
+- Ở pilot, $m_s$ chỉ là trung bình $|\Delta\text{SBP}|$ của hai lần cuff M1 và M2,
+  mà M1 chỉ làm SBP giảm khoảng 3 mmHg (Adler 2019). Muốn P2 đạt 15 mmHg thì M2 phải
+  làm SBP tăng gần 27 mmHg ở người đứng giữa.
+- R3 tính thêm cả M0 các phiên sau, nên còn khó đạt hơn P2.
+
+Ngưỡng mới và nhánh "≥ 15 người đạt chuẩn nhưng R3 dưới ngưỡng" ở
+[kịch bản bài báo](../paper_scenarios_v0.1.md) phải chốt cùng thầy trước pilot,
+kèm lý do. Đề xuất của nhóm: suy ngưỡng từ mô phỏng độ nhạy ở
+[RQ](../research_questions_v0.1.md) mục 4.E, tức dải ΔBP cần có để CI của $d_s$ phân
+biệt được với $\pm\delta$, làm riêng cho SBP và DBP. Không chọn một con số theo cảm
+tính, và không chọn ngưỡng sau khi xem dữ liệu pilot. δ chính thức chỉ chốt sau pilot,
+từ độ lặp lại của các lần cuff M0 (RQ mục 4.E). Vì vậy mô phỏng để đặt ngưỡng P2/R3
+dùng vài kịch bản δ khai báo trước, mỗi kịch bản ghi giá trị giả định và lý do. Ngưỡng
+P2/R3 không đổi lại sau khi δ chính thức được chốt.
+
 | # | Tiêu chí | Nguồn của ngưỡng |
 | --- | --- | --- |
 | P1 | Báo cáo theo người và theo nghiệm pháp: median, IQR của ΔSBP/ΔDBP và tỷ lệ lần cuff có hướng thay đổi đúng như 6.4 | Hướng: nguồn ở 6.4. Không có ngưỡng đạt/không đạt cho tỷ lệ (**chưa có nguồn**) |
-| P2 | Median qua người của $m_s$ (median \|ΔSBP\| của các lần cuff M1–M4 so với M0 cùng buổi) **≥ 15 mmHg**; thấp hơn thì báo giảng viên và rà protocol trước thu chính | Lấy từ dấu hiệu R3 của kế hoạch 28 tuần (tài liệu nội bộ ngoài repo, áp dụng ở thu chính) — **ngưỡng nội bộ, không có nguồn khoa học**. Thống kê chung với R3 nhưng mốc so sánh khác (chốt 2026-10-29, xem trên). Ngưỡng cần xem lại vì median chặt hơn max |
+| P2 | Median qua người của $m_s$ (median \|ΔSBP\| của các lần cuff M1, M2 so với M0 cùng buổi) **≥ 15 mmHg** (phải đặt lại trước pilot, xem trên); thấp hơn thì báo giảng viên và rà protocol trước thu chính | Lấy từ dấu hiệu R3 của kế hoạch 28 tuần (tài liệu nội bộ ngoài repo, áp dụng ở thu chính) — **ngưỡng nội bộ, không có nguồn khoa học**. Thống kê chung với R3 nhưng mốc so sánh khác (chốt 2026-10-29, xem trên). Ngưỡng cần xem lại vì median chặt hơn max |
 | P3 | Báo SD của ΔBP tham chiếu và tỷ lệ \|ΔBP\| > 5 mmHg | [RQ, mục 4](../research_questions_v0.1.md) (quy ước nội bộ) |
 | P4 | Không tăng cường độ hay thời lượng nghiệm pháp ngoài bản đã duyệt để đạt P2 | Kế hoạch 28 tuần (nội bộ) |
 
@@ -450,8 +498,8 @@ Bốn tiêu chí 1–4 dưới đây là ứng viên của v0.1–v0.2, giữ đ
      bản ghi G2 của thành viên nhóm (nghỉ so với cử động theo hướng dẫn, có nhãn
      chuyển động độc lập), ghi ngày và commit, trước khi thu chính.
    - Giới hạn: không chứng nhận tín hiệu sạch. Bóp hay gồng tay có thể làm hỏng PPG
-     mà gần như không tạo gia tốc hay xoay; cử động chậm (nâng tay, lắc thân khi đạp
-     M4) bị lọc 0,5 Hz làm yếu; IMU tay trái không phản ánh nhiễu cơ ở tay phải (RA).
+     mà gần như không tạo gia tốc hay xoay; cử động chậm (nâng tay, lắc thân) bị lọc
+     0,5 Hz làm yếu; IMU tay trái không phản ánh nhiễu cơ ở tay phải (RA).
    - Phân tích chính không loại hay giảm trọng số cuff event theo cờ này (chốt
      2026-10-29, xem đầu mục). Với RQ3, so mọi chiến lược trên cùng tập cuff event,
      báo coverage trên toàn bộ event, không coi phần còn lại sau lọc chuyển động là
@@ -501,7 +549,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
    - Với người test của mỗi lượt ngoài:
      - `Session 1`: chỉ dùng làm mốc hiệu chuẩn ($\text{BP}_0$, $\text{PAT}_0$, $\text{Features}_0$, lấy từ M0; mục 3).
      - Phiên 2 trở đi: mọi lần cuff hợp lệ dùng để kiểm tra dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ (endpoint ở 6.4).
-     - Cuff nghiệm pháp M1–M4 ở phiên 1 (đề xuất 2026-10-29, chờ thầy): vòng ngoài sinh dự đoán cho các lần này trong cùng lần chạy, chỉ dùng cho RQ2b (cùng phiên so với khác phiên, [RQ](../research_questions_v0.1.md) mục 5.B); không dùng để hiệu chuẩn và không vào endpoint của RQ1.
+     - Cuff nghiệm pháp M1, M2 ở phiên 1 (đề xuất 2026-10-29, chờ thầy): vòng ngoài sinh dự đoán cho các lần này trong cùng lần chạy, chỉ dùng cho RQ2b (cùng phiên so với khác phiên, [RQ](../research_questions_v0.1.md) mục 5.B); không dùng để hiệu chuẩn và không vào endpoint của RQ1.
    - Tuyệt đối không xáo trộn ngẫu nhiên dữ liệu giữa các phiên đo.
 
 ### 9.2. Kế hoạch thống kê và Kiểm định giả thuyết
@@ -521,7 +569,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 
 - Trường hợp một lượt đo bị mất nhãn cuff (do lỗi máy đo bắp tay): Toàn bộ lượt đo đó bị hủy, không đưa vào tập huấn luyện hay kiểm thử.
 - Trường hợp tín hiệu ECG bị nhiễu không bắt được đỉnh R nhưng PPG đạt chuẩn: lượt đo bị loại khỏi phép so sánh chính PPG-only vs PPG + PAT (để hai mô hình được đánh giá trên cùng tập), nhưng được giữ cho phân tích phụ PPG-only trên toàn bộ lượt đo. Ghi rõ tỷ lệ lượt đo mất ECG theo từng người, vì mất ECG không ngẫu nhiên có thể làm lệch kết quả.
-- Lượt đo bị dừng vì an toàn (chốt 2026-10-29): lượt đã có nhãn cuff đầy đủ thì giữ trong phân tích, kể cả khi buổi đo dừng sau đó. Lượt không có nhãn theo quy tắc mất nhãn cuff ở trên. Báo số lượt bị dừng theo nghiệm pháp và theo người, và làm phân tích độ nhạy loại các lượt mang cờ dừng. Lượt dừng thường rơi vào M3/M4, đúng chỗ ΔBP lớn, nên loại hết sẽ làm lệch dải ΔBP.
+- Lượt đo bị dừng vì an toàn (chốt 2026-10-29): lượt đã có nhãn cuff đầy đủ thì giữ trong phân tích, kể cả khi buổi đo dừng sau đó. Lượt không có nhãn theo quy tắc mất nhãn cuff ở trên. Báo số lượt bị dừng theo nghiệm pháp và theo người, và làm phân tích độ nhạy loại các lượt mang cờ dừng. Lượt dừng hay rơi vào nghiệm pháp, đúng chỗ ΔBP lớn, nên loại hết sẽ làm lệch dải ΔBP.
 - Không áp dụng phương pháp tự điền nhãn huyết áp bằng trung bình (imputation) cho biến đầu ra.
 
 ---
@@ -532,7 +580,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 |---|---|---|---|
 | ECG đạo trình I nhiễu, SNR thấp | Cao | Cao | Điện cực dán Ag/AgCl đạo trình I qua hai tay (LA mặt lòng cổ tay trái, RA mặt lòng cổ tay phải, RL cẳng tay trái; mục 5.2); thiết kế lọc dải thông khoảng $0.5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn); thiết bị theo [custom_board_proposal.md, Phần A](../../configs/hardware/custom_board_proposal.md). Trên người chỉ dùng Ag/AgCl có gel; điện cực khô không thuộc hồ sơ lần này (mục 5.1). |
 | Nhiễu trôi đường nền PPG do lỏng dây đeo | Trung bình | Trung bình | Bổ sung cơ chế hiển thị SQI trực quan trên giao diện thu thập; hướng dẫn kỹ thuật viên siết chặt vòng vừa đủ trước khi bắt đầu đếm ngược 60 giây. |
-| Biên độ biến thiên huyết áp tự nhiên giữa các phiên quá nhỏ ($< 5\text{ mmHg}$) | Trung bình | Cao | Nghiệm pháp ở mục 6.4 và tiêu chí kiểm ở pilot (6.5), chỉ khi đã được duyệt đạo đức. |
+| Biên độ biến thiên huyết áp tự nhiên giữa các phiên quá nhỏ ($< 5\text{ mmHg}$) | Cao (từ 2026-10-29, khi chỉ còn M1, M2) | Cao | Nghiệm pháp M1, M2 ở mục 6.4 và tiêu chí kiểm ở pilot (6.5), chỉ khi đã được duyệt đạo đức; báo SD của ΔBP tham chiếu và sai số baseline zero-change (mục 3); P2 thấp thì rà protocol cùng thầy, có thể xin sửa đổi thêm nghiệm pháp (6.4, "Dự phòng"). |
 | Người tham gia cử động tay trong khi đo | Cao | Trung bình | Hiển thị SQI và cờ cử động (`motion-sqi-v0`) cho người vận hành; khi có cử động trong cửa sổ trước cuff, người vận hành đánh dấu (sự kiện mã 4) và có thể đo lại sau thời gian nghỉ theo quy tắc an toàn. Mọi lượt, kể cả lượt cử động, vẫn giữ trong raw kèm cờ. Phân tích chính không loại theo SQI; lọc SQI là phân tích phụ đăng ký trước (7.3, chốt 2026-10-29), không quyết lúc đang đo, để RQ3 có dữ liệu SQI kém (sửa 2026-10-26; bản trước ghi tự động hủy lượt đo). Đánh dấu bằng lệnh sự kiện mã 4 từ PC. |
 
 ---
@@ -544,7 +592,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 > 1. [x] Phân bổ tay/điện cực (mục 5.2): phương án A, ba điện cực LA cổ tay trái, RA cổ tay phải, RL cẳng tay trái; cực tính LA → ECGP (chốt 2026-10-23). Còn kiểm K3–K5 ở mục 5.4 trên thành viên nhóm ở G2.
 > 2. [ ] Định danh trong dữ liệu: `SESSION_ID`, timestamp vi giây và sự kiện cuff (packet `0xC1`; SBP/DBP nhập ở PC theo `event_id`) đã có trong Packet Schema V0.1/V0.2; `subject_id`, `session_id` buổi nghiên cứu và mã LED đã khóa nằm trong metadata phiên `packet-session-metadata-v1` của logger `packet-logger-v3` (chốt 2026-10-29).
 > 3. [ ] Chọn nhãn hiệu và model máy đo huyết áp bắp tay đối chứng (tiêu chí ở 5.1, 2026-10-29); chọn trước khi nộp hồ sơ.
-> 4. [ ] Làm rõ quy trình nộp hồ sơ hội đồng đạo đức trước khi tuyển tình nguyện viên. Trước khi nộp, mang các mục ghi "đề xuất của nhóm, chờ thầy" trong v0.3 tới buổi gặp thầy Tuần 6 (endpoint RQ1, trục thời gian M2–M4, trần tuyển, tiêu chí chọn/loại và đo hai tay, máy cuff, cùng các mục của hồ sơ đạo đức); thầy xác nhận xong thì mới nộp.
+> 4. [ ] Làm rõ quy trình nộp hồ sơ hội đồng đạo đức trước khi tuyển tình nguyện viên. Trước khi nộp, mang các mục ghi "đề xuất của nhóm, chờ thầy" trong v0.3 tới buổi gặp thầy Tuần 6 (endpoint RQ1, bộ nghiệm pháp thu gọn M0–M2 và trục thời gian M2, trần tuyển, tiêu chí chọn/loại và đo hai tay, máy cuff, cùng các mục của hồ sơ đạo đức); thầy xác nhận xong thì mới nộp.
 > 5. [x] Đối chiếu khác biệt sampling, timestamp lấy mẫu/FIFO/nhận gói, clock và marker cuff với packet schema: chốt trong Packet Schema V0.1 mục 5 và V0.2 mục 7 (2026-10-23/24).
 > 6. [ ] Kiểm tra căn cứ cỡ mẫu, cửa sổ, SQI, kiểm định và mọi tiêu chí an toàn/vận động dự thảo; không dùng outline để tự triển khai đo trên người.
-> 7. [ ] Tìm nguồn cho trần thời lượng ngâm M3, nhiệt độ nước, cường độ và thời lượng đạp ở M4, thời gian nghỉ giữa các nghiệm pháp. Xem lại ngưỡng 15 mmHg của P2/R3 khi chuyển sang thống kê median (6.5).
+> 7. [ ] Tìm nguồn cho thời lượng và dạng bài M2, thời gian nghỉ giữa các nghiệm pháp (M3, M4 đã bỏ ngày 2026-10-29, không cần nguồn nữa). Đặt lại ngưỡng 15 mmHg của P2/R3 trước pilot: với bộ M0–M2 ngưỡng này rất khó đạt (6.5).

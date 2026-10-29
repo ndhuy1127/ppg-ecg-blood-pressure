@@ -21,7 +21,7 @@ Người tham gia đánh dấu từng ô (☐ → ☒) và ký cuối phiếu:
 | 5 | Tôi hiểu việc tham gia là tự nguyện; tôi có thể dừng một nghiệm pháp, dừng buổi đo hoặc rút lui bất cứ lúc nào mà không cần nêu lý do và không bị ảnh hưởng. Khi rút lui, tôi được chọn xóa hoặc giữ dữ liệu đã thu; yêu cầu xóa chỉ thực hiện được trước ngày khóa dữ liệu ghi trong phiếu thông tin mục 6. | ☐ |
 | 6 | Tôi đồng ý để dữ liệu tín hiệu và số đo huyết áp được lưu dưới mã nghiên cứu, theo kế hoạch quản lý dữ liệu, và chỉ công bố ở dạng tổng hợp không nhận ra cá nhân. | ☐ |
 | 7 | Tôi đã khai trung thực phiếu sàng lọc và sẽ báo nếu tình trạng sức khỏe thay đổi giữa các buổi. | ☐ |
-| 8 | **[Tùy chọn, chỉ khi được duyệt]** Tôi đồng ý thực hiện các nghiệm pháp làm thay đổi huyết áp: thở chậm ☐ · tính nhẩm ☐ · ngâm bàn chân vào nước lạnh ☐ · đạp xe nhẹ tư thế ngồi ☐ | |
+| 8 | **[Tùy chọn, chỉ khi được duyệt]** Tôi đồng ý thực hiện các nghiệm pháp làm thay đổi huyết áp: thở chậm ☐ · tính nhẩm ☐ | |
 | 9 | **[Tùy chọn]** Tôi đồng ý được liên hệ lại cho các buổi đo tiếp theo của nghiên cứu này. | ☐ |
 | 10 | **[Tùy chọn, chờ thầy/hội đồng quyết định có đưa vào không]** Tôi đồng ý để dữ liệu đã giả danh hóa được dùng trong nghiên cứu tiếp theo của nhóm về cùng chủ đề. | ☐ |
 

@@ -39,18 +39,19 @@ thì theo mục này.
 
 1. Thầy trả lời bốn câu mang từ Tuần 5.
 2. Thầy xác nhận các mục protocol tự ghi phải quyết trước khi nộp:
-   - endpoint RQ1 và trục thời gian M2–M4 (protocol 6.4);
-   - tiêu chí chọn/loại thống nhất với L1–L10 và đo hai tay (mục 4);
+   - bộ nghiệm pháp thu gọn M0–M2, endpoint RQ1 và trục thời gian M2 (protocol 6.4);
+   - tiêu chí chọn/loại thống nhất với L1–L9 và đo hai tay (mục 4);
    - điện cực trên người (5.1);
    - trần tuyển 25 người;
    - ngưỡng BP dừng phiên và đầu mối y tế;
    - phương pháp đo dòng rò;
    - mốc khóa dữ liệu khi rút lui.
-3. Chọn model máy cuff và có nguồn cho trần thời lượng ngâm M3.
+3. Chọn model máy cuff.
 
-Thầy không duyệt kịp trục thời gian trong tuần thì nộp bộ nghiệm pháp thu gọn (bỏ
-M2, M4, và M3 nếu thiếu nguồn), bổ sung bằng sửa đổi. Không nộp bản còn ghi "chưa
-quyết định".
+Ngày 2026-10-29 bỏ M3 (ngâm chân nước lạnh) và M4 (đạp xe) vì khó thực hiện ở phòng
+thí nghiệm, nên không còn cần nguồn cho trần thời lượng ngâm. Thầy không duyệt kịp
+trục thời gian M2 trong tuần thì nộp chỉ M0 và M1, bổ sung M2 bằng sửa đổi. Không
+nộp bản còn ghi "chưa quyết định".
 
 ## Mục tiêu và ranh giới
 

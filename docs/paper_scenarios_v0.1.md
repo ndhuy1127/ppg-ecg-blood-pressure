@@ -3,7 +3,8 @@
 > Huy, 2026-10-21; sửa 2026-10-22 (tiêu chí G5 theo RQ mục E); v0.2 ngày
 > 2026-10-29 (định nghĩa R3 thống nhất với P2, nghĩa của "test khóa tới G5" theo
 > LOSO lồng); v0.3 ngày 2026-10-29 (tiêu chí G5, cách đọc kết quả âm tính và RQ trả
-> lời theo RQ v0.4; đề xuất, chờ thầy). Tên file giữ `v0.1` để không làm gãy liên kết. R2/R3/R5 ở đây là
+> lời theo RQ v0.4; đề xuất, chờ thầy; cùng ngày ghi hệ quả của việc bỏ M3, M4 lên R3).
+> Tên file giữ `v0.1` để không làm gãy liên kết. R2/R3/R5 ở đây là
 > dấu hiệu của kế hoạch 28 tuần, không phải quy tắc K1–K6 của protocol mục
 > 5.4. Phác thảo để chuẩn bị cổng G4 (Tuần 20); **chưa có dữ liệu
 > người**, chưa chọn kịch bản. Ngưỡng kích hoạt lấy từ kế hoạch 28 tuần (tài liệu
@@ -19,10 +20,14 @@ protocol mục 7.3, chốt 2026-10-29). Phiên khác không đạt hay thiếu k
 không được tính ([protocol v0.3](protocol/protocol_outline_v0.2.md) mục 9.1).
 
 **R3 (chốt 2026-10-29):** với mỗi người đạt chuẩn $s$, tính $m_s$ = median của
-|ΔSBP| trên mọi lần cuff hợp lệ ở phiên ≥ 2 (M0 và M1–M4), so với $\text{BP}_0$ =
+|ΔSBP| trên mọi lần cuff hợp lệ ở phiên ≥ 2 (M0, M1, M2), so với $\text{BP}_0$ =
 trung bình M0 phiên 1. Chỉ số R3 là median của $m_s$ qua các người. P2 của protocol
 mục 6.5 dùng cùng thống kê nhưng so với M0 cùng buổi ở pilot. Ngưỡng 15 mmHg đặt
-từ trước cho câu chữ cũ, phải xem lại trước khi khóa vì median chặt hơn max.
+từ trước cho câu chữ cũ, phải xem lại trước khi khóa vì median chặt hơn max. Từ
+2026-10-29 bộ nghiệm pháp chỉ còn M0–M2 (bỏ M3 ngâm chân nước lạnh, M4 đạp xe;
+protocol 6.4), nên R3 ≥ 15 mmHg rất khó đạt và P A gần như không thể kích hoạt nếu
+giữ ngưỡng này (suy luận, chưa có số liệu). Ngưỡng R3 và nhánh "R3 dưới ngưỡng" phải
+chốt cùng thầy trước pilot.
 
 | | **P A — đủ dữ liệu** | **P B — thiếu dữ liệu** | **P C — kết quả âm tính** |
 | --- | --- | --- | --- |

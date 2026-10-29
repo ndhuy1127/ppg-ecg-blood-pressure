@@ -11,8 +11,8 @@
 ## 1. Tiêu chuẩn chọn
 
 1. Từ 18 đến 35 tuổi, đủ năng lực tự quyết định tham gia. Giới hạn tuổi là đề
-   xuất của nhóm, chưa có nguồn: giữ quần thể đồng nhất và giảm rủi ro khi làm
-   nghiệm pháp nước lạnh và đạp xe.
+   xuất của nhóm, chưa có nguồn: giữ quần thể đồng nhất và giảm rủi ro chung khi
+   làm nghiệm pháp.
 2. Tự nguyện ký phiếu đồng thuận sau khi đã có phiếu thông tin ít nhất 24 giờ.
 3. Tự khai không có bệnh tim mạch đã được chẩn đoán.
 4. Có thể ngồi yên trong buổi đo dài tối đa 120 phút và tham gia ít nhất 2, tối đa
@@ -31,9 +31,11 @@ Loại nếu có **bất kỳ** điều sau (tự khai; nhóm không khám):
 | L5 | Vết thương hở, viêm da, kích ứng tại cổ tay hoặc cẳng tay trái, cổ tay phải hoặc bắp tay phải | Vị trí đeo thiết bị, dán điện cực và quấn cuff (protocol v0.2 mục 5.2) |
 | L6 | Dị ứng với băng dán, keo y tế, gel điện cực hoặc kim loại (niken) | Điện cực Ag/AgCl dán có keo và gel; trên người chỉ dùng loại này (chốt 2026-10-29) |
 | L7 | Không được đo huyết áp ở tay phải (ví dụ phẫu thuật vú/nách bên phải, phù bạch huyết, cầu nối mạch máu ở tay phải) | Cuff ở bắp tay phải; đề xuất, **cần chuyên môn y tế xác nhận** |
-| L8 | Tiền sử ngất, động kinh, hoặc khó thở khi gắng sức | Đề xuất cho nghiệm pháp vận động/thở chậm; cần xác nhận |
-| L9 | **Chỉ khi có nghiệm pháp nước lạnh:** hội chứng Raynaud, không chịu lạnh, vết thương/bệnh ở bàn chân | Đề xuất; cần xác nhận |
-| L10 | Uống cà phê/trà, hút thuốc hoặc vận động mạnh trong 2 giờ trước buổi đo | Protocol v0.1 mục 6.1; **hoãn buổi**, không loại hẳn |
+| L8 | Tiền sử ngất, động kinh, hoặc khó thở khi gắng sức | Đề xuất cho nghiệm pháp thở chậm (có thể gây chóng mặt) và an toàn chung của buổi đo; cần xác nhận |
+| L9 | Uống cà phê/trà, hút thuốc hoặc vận động mạnh trong 2 giờ trước buổi đo | Protocol v0.1 mục 6.1; **hoãn buổi**, không loại hẳn |
+
+Ngày 2026-10-29 bỏ tiêu chí L9 cũ (hội chứng Raynaud, không chịu lạnh, bệnh bàn
+chân) cùng nghiệm pháp ngâm chân nước lạnh; L10 cũ đổi số thành L9.
 
 Chu vi bắp tay phải ngoài cỡ vòng bít có sẵn: không đo được bằng máy đó, ghi là
 không đủ điều kiện kỹ thuật (cỡ vòng bít: [theo model cuff đã chọn]).
@@ -65,16 +67,15 @@ L5  Tổn thương da tại cổ tay, cẳng tay trái / cổ tay phải / bắp
 L6  Dị ứng băng dán / gel / kim loại                                 ☐ có ☐ không
 L7  Lý do không đo HA tay phải                                       ☐ có ☐ không
 L8  Ngất / động kinh / khó thở khi gắng sức                          ☐ có ☐ không
-L9  Raynaud / không chịu lạnh / bệnh bàn chân (nếu có nghiệm pháp lạnh) ☐ có ☐ không ☐ không áp dụng
-L10 Cà phê, trà, thuốc lá, vận động mạnh trong 2 giờ qua             ☐ có ☐ không
+L9  Cà phê, trà, thuốc lá, vận động mạnh trong 2 giờ qua             ☐ có ☐ không
 Chu vi bắp tay phải: ____ cm   Cỡ vòng bít dùng: ____
 Chỉ buổi 1 — Lý do không đo HA tay trái ☐ có (bỏ đo tay trái) ☐ không
              HA tay phải: ___/___   HA tay trái: ___/___   Chênh SBP ≥ 10 mmHg ☐ (gắn cờ, không loại)
 
-Kết luận:  ☐ đủ điều kiện   ☐ không đủ (ghi mã tiêu chí: ____)   ☐ hoãn buổi (L10)
+Kết luận:  ☐ đủ điều kiện   ☐ không đủ (ghi mã tiêu chí: ____)   ☐ hoãn buổi (L9)
 ```
 
-Mọi câu "có" ở L1–L9 là không đủ điều kiện; nhóm không đánh giá mức độ. Người
+Mọi câu "có" ở L1–L8 là không đủ điều kiện; nhóm không đánh giá mức độ. Người
 tham gia không phải giải thích chi tiết. Số người sàng lọc, không đủ điều kiện
 (theo mã tiêu chí) và rút lui được báo cáo tổng hợp, không kèm danh tính.
 
