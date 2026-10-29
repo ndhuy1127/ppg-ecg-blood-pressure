@@ -5,23 +5,32 @@ The operator appends JSON lines to the recording's own ``command_inbox.jsonl``
 read of the port, bytes or not, and ``observe`` with the packets it decoded. One
 command is outstanding at a time: sent, then sent again with the same CMD_SEQ
 and bytes after 500 ms without its 0xD3, at most 3 times; after that its outcome
-is unknown, not a failure. Any two sends, new or repeated, are at least 500 ms
-apart (at most 2 per second). A change of SESSION_ID (MCU restart) cancels the
-command in flight. CMD_SEQ is never reused within a recording: after 65 536
-commands the rest are refused. Every step goes to the journal
-(``commands_sent.jsonl``). The raw stream and its decode do not depend on any of
-this. Clock and port write are passed in, so the logic runs without a device.
+is unknown, not a failure. SET_PPG_LED is called unknown only 2.5 s after its
+first send, since the firmware may take up to 2 s to answer it (decided
+2026-10-29). Any two sends, new or repeated, are at least 500 ms apart (at most 2
+per second). A change of SESSION_ID (MCU restart) cancels the command in flight.
+A 0xD3 that comes after its command was called unknown is still matched by
+CMD_SEQ and journaled as ``late_ack``; the unknown entry stays as it was.
+CMD_SEQ is never reused within a recording: after 65 536 commands the rest are
+refused. Every step goes to the journal (``commands_sent.jsonl``) with the PC
+time (``pc_monotonic_s``), never a device time. The raw stream and its decode
+do not depend on any of this. Clock and port write are passed in, so the logic
+runs without a device.
 """
 
 import json
 import secrets
 
-from software.data_io.command_wire import command_from_json, encode_command
+from software.data_io.command_wire import COMMANDS, command_from_json, encode_command
 from software.data_io.packet_receiver import decode_command_ack
 from software.data_io.packet_wire import COMMAND_ACK_CHANNEL
 
 RETRY_S = 0.5
 ATTEMPTS = 3
+# Shortest time from the first send to "unknown", per CMD_ID; others: after the
+# last attempt's RETRY_S. SET_PPG_LED: the PPG reader may take the request up to
+# 2 s after it came (then it is withdrawn with BUSY), plus margin.
+ACK_WAIT_S = {COMMANDS["set_ppg_led"]: 2.5}
 MAX_LINE = 1024
 
 
@@ -35,6 +44,7 @@ class CommandDesk:
         self.skipping = False  # inside a line longer than MAX_LINE
         self.inbox_open = True
         self.queue, self.pending, self.session_id = [], None, None
+        self.unknown = {}  # (session, CMD_SEQ) -> command given up, for late_ack
         self.next_send = float("-inf")
 
     def _log(self, event, **fields):
@@ -48,17 +58,25 @@ class CommandDesk:
             if self.session_id is not None and packet.session_id != self.session_id:
                 self._cancel_on_new_session(packet.session_id)
             self.session_id = packet.session_id
-            if packet.channel_id != COMMAND_ACK_CHANNEL or self.pending is None:
+            if packet.channel_id != COMMAND_ACK_CHANNEL:
                 continue
             ack, problem = decode_command_ack(packet)
-            p = self.pending
-            if problem is None and ack["cmd_id"] == p["cmd_id"] and (
-                ack["cmd_seq"] == p["cmd_seq"] and packet.session_id == p["session"]
+            if problem is not None:
+                continue
+            p, key = self.pending, (packet.session_id, ack["cmd_seq"])
+            if p is not None and ack["cmd_id"] == p["cmd_id"] and (
+                key == (p["session"], p["cmd_seq"])
             ):
                 self._log("acked", line=p["line"], cmd_seq=p["cmd_seq"],
                           result=ack["result"], generation=ack["generation"],
                           ack_seq=packet.seq)
                 self.pending = None
+            elif key in self.unknown and self.unknown[key]["cmd_id"] == ack["cmd_id"]:
+                late = self.unknown.pop(key)
+                self._log("late_ack", line=late["line"], cmd_seq=late["cmd_seq"],
+                          result=ack["result"], generation=ack["generation"],
+                          ack_seq=packet.seq,
+                          after_first_send_s=round(self.clock() - late["first_sent"], 6))
 
     def _cancel_on_new_session(self, new_session):
         if self.pending is not None:
@@ -104,6 +122,8 @@ class CommandDesk:
         p = self.pending
         p["attempt"] += 1
         p["sent_at"] = self.clock()
+        if p["attempt"] == 1:
+            p["first_sent"] = p["sent_at"]
         self.next_send = p["sent_at"] + RETRY_S
         try:
             written = self.write(p["frame"])
@@ -121,9 +141,10 @@ class CommandDesk:
         if p is not None and now >= self.next_send:
             if p["attempt"] < ATTEMPTS:
                 self._send()
-            else:
+            elif now >= p["first_sent"] + ACK_WAIT_S.get(p["cmd_id"], 0.0):
                 self._log("unknown", line=p["line"], cmd_seq=p["cmd_seq"],
                           attempts=p["attempt"])
+                self.unknown[(p["session"], p["cmd_seq"])] = p
                 self.pending = None
         while self.pending is None and self.queue and self.issued >= 1 << 16:
             line, _ = self.queue.pop(0)
@@ -137,6 +158,7 @@ class CommandDesk:
             self.seq = (self.seq + 1) & 0xFFFF
             self.pending = {"line": line, "cmd_id": cmd_id, "cmd_seq": self.seq,
                             "session": self.session_id, "attempt": 0, "sent_at": 0.0,
+                            "first_sent": 0.0,
                             "frame": encode_command(cmd_id, self.seq, params)}
             self._send()
 

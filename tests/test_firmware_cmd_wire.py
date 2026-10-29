@@ -181,9 +181,29 @@ def test_inbox_lines_to_frames():
                                                        36]))
     with pytest.raises(ValueError):  # no target session
         command_from_json({"cmd": "set_ppg_led", "green": 18, "red": 36, "ir": 36})
+    # MARK_EVENT (amendment 2026-10-29): one byte, code 2 or 4, no session.
+    assert command_from_json({"cmd": "mark_event", "event": "cuff_end"}) == (3, b"\x02")
+    assert command_from_json({"cmd": "mark_event", "event": "operator"}) == (3, b"\x04")
+    # The study ceiling 0x7F is enforced on the PC too, unless the line asks for
+    # the bring-up check of the firmware's own refusal.
+    top = {"cmd": "set_ppg_led", "green": 0x7F, "red": 0x7F, "ir": 0x7F}
+    assert command_from_json(top, 1)[1][4:] == bytes([0x7F] * 3)
+    over = {"cmd": "set_ppg_led", "green": 0x12, "red": 0x80, "ir": 0x24}
+    with pytest.raises(ValueError, match="ceiling"):
+        command_from_json(over, 1)
+    assert command_from_json({**over, "allow_over_firmware_limit": True}, 1)[1][4:] \
+        == bytes([0x12, 0x80, 0x24])
+    with pytest.raises(ValueError, match="ceiling"):
+        command_from_json({**over, "allow_over_firmware_limit": False}, 1)
     for bad in ({"cmd": "ping", "x": 1}, {"cmd": "set_ppg_led", "green": 18},
                 {"cmd": "set_ppg_led", "green": 256, "red": 0, "ir": 0},
                 {"cmd": "set_ppg_led", "green": True, "red": 0, "ir": 0},
+                {**over, "allow_over_firmware_limit": 1},
+                {"cmd": "set_ppg_led", "green": 1, "red": 1,
+                 "allow_over_firmware_limit": True},
+                {"cmd": "mark_event"}, {"cmd": "mark_event", "event": "t0"},
+                {"cmd": "mark_event", "event": 2},
+                {"cmd": "mark_event", "event": "cuff_end", "code": 2},
                 {"cmd": "reboot"}, ["ping"]):
         with pytest.raises(ValueError):
             command_from_json(bad, 1)

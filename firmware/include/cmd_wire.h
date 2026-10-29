@@ -21,16 +21,19 @@
 
 #define CMD_ID_PING 0x01u
 #define CMD_ID_SET_PPG_LED 0x02u
+#define CMD_ID_MARK_EVENT 0x03u /* amendment 2026-10-29 */
 
 /* DATA[3] of the 0xD3 acknowledgement. */
 #define CMD_RESULT_OK 0
 #define CMD_RESULT_UNKNOWN 1
 #define CMD_RESULT_BAD_LENGTH 2
 #define CMD_RESULT_NO_CHIP 3
-#define CMD_RESULT_BUSY 4
+#define CMD_RESULT_BUSY 4 /* not done: chip busy, or the event queue full (MARK_EVENT) */
 #define CMD_RESULT_CHIP_ERROR 5
 #define CMD_RESULT_REQUEST_REUSED 6
 #define CMD_RESULT_WRONG_SESSION 7
+/* A parameter out of range: an LED code above the ceiling (SET_PPG_LED), an
+ * event code other than 2 or 4 (MARK_EVENT). */
 #define CMD_RESULT_OUT_OF_RANGE 8
 
 typedef struct {

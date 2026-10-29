@@ -10,7 +10,11 @@
 > receiver, simulator và firmware (nguồn giả và driver MAX30101 chưa chạy trên chip).
 > Sửa đổi 2026-10-25: packet cấu hình AFE `0xD2` (mục 12), lệnh từ PC và xác nhận
 > `0xD3` (mục 13), đã triển khai ở codec, receiver, logger và firmware (chưa chạy trên
-> chip).**
+> chip).
+> Sửa đổi 2026-10-29 (mục 13): lệnh `MARK_EVENT` cho sự kiện mã 2 và 4; trần mã LED
+> `0x7F` cho cả nghiên cứu, PC cũng chặn; PC chờ `SET_PPG_LED` 2,5 s và ghi `late_ack`.
+> Đã triển khai ở codec, receiver, logger, `device_command.py` và firmware (chưa chạy
+> trên chip). Mục 10: quy ước offset giữa các khe PPG.**
 > V0.2 là bản sửa đổi của [V0.1](Packet_Schema_V0.1.md): mọi mục của V0.1 giữ
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
@@ -56,7 +60,9 @@
 
 - Trục là **trục cảm biến** BMI270. Raw giữ nguyên trục cảm biến; phân tích dùng
   khung cổ tay qua ma trận cảm biến → cổ tay ghi trong metadata (mục 8), xác nhận
-  dấu và trục bằng bench. Không tự suy dấu từ việc module gắn ở mặt dưới bo.
+  dấu và trục bằng trọng lực khi thử trên bàn với PCB V1, không người
+  (`hardware/test_reports/v1_bringup_procedure.md` mục 8 bước 5). Không tự suy dấu
+  từ việc module gắn ở mặt dưới bo.
 - `DATA[i]` = giá trị int16 của thanh ghi FIFO, mở rộng dấu thành int32. Receiver
   kiểm −32 768 ≤ `DATA[i]` ≤ 32 767 cho `0xA1`–`0xA6` (ECG/PPG giữ dải không dấu
   của V0.1). Không dùng −32 768 làm giá trị đánh dấu thiếu mẫu: đó là mẫu hợp lệ.
@@ -401,7 +407,11 @@ trên chip thật ở bring-up.
   hoặc `packet-v0.2`), không ghi cứng `packet-v0.1`, và chép `device_info` theo từng
   `SESSION_ID` khi một raw có nhiều lần khởi động lại. Bản sao metadata đầu vào giữ
   nguyên, không ghi đè.
-- Logger giữ `packet-logger-v1` (chưa phát hành bản nào khác); từ 2026-10-25 là `packet-logger-v2` (`docs/protocol/packet_logger.md`).
+- Phần đọc V0.2 được thêm vào `packet-logger-v1` ngày 2026-10-24, không nâng version
+  (chưa phát hành bản nào khác); từ 2026-10-25 logger là `packet-logger-v2`, từ
+  2026-10-29 là `packet-logger-v3` với metadata phiên `packet-session-metadata-v1`
+  (thêm `subject_id`, `session_id`, `ppg_led_lock`, `cuff_log`; các khóa kênh giữ như
+  v0) (`docs/protocol/packet_logger.md`).
 - Kênh nhiệt độ `0xB1` (mục 11.2): khóa metadata `0xB1`, `latency_l_us` và
   `latency_source` null kèm lý do.
 
@@ -460,30 +470,42 @@ sau.
    từng phiên; và output `decode.json`, `packets.csv`, `samples.csv` giống từng byte
    khi đọc nguồn theo khối 1 byte, khối lẫn lộn hay 4 096 byte.
 4. **Sau khi có bo** (driver MAX30001, MAX30101 và BMI270 đã viết 2026-10-25, chưa
-   chạy trên chip): chạy driver BMI270 (nạp microcode, cấu hình mục 3), đo `L` và
-   kiểm dấu trục trên bench. Driver MAX30001/MAX30101: kiểm xung `SAMP` đầu
-   tiên ứng với mẫu đầu tiên của FIFO, cực tính và độ rộng xung, `PPG_RDY` ở chế độ
-   ba khe; đo `L_ECG,SAMP` với kích thích quét pha (mục 7.5).
+   chạy trên chip): chạy driver BMI270 (nạp microcode, cấu hình mục 3), đo `L` (chưa
+   có bước đo, mục 10) và kiểm dấu trục (bring-up mục 8 bước 5). Driver
+   MAX30001/MAX30101: kiểm xung `SAMP` đầu tiên ứng với mẫu đầu tiên của FIFO, cực
+   tính và độ rộng xung, `PPG_RDY` ở chế độ ba khe; đo `L_ECG,SAMP` với kích thích
+   quét pha (mục 7.5).
 
 ## 10. Việc còn mở
 
-- `L` của gia tốc và con quay (đo bench); có cần sensortime để ánh xạ clock BMI270
-  hay không (chưa bắt buộc ở V1 nếu đo được ngân sách sai số timing).
+- `L` của gia tốc và con quay (đo khi thử trên bàn với PCB V1, không người; bring-up
+  và kế hoạch đo 10 phút chưa có bước đo này); có cần sensortime để ánh xạ clock
+  BMI270 hay không (chưa bắt buộc ở V1 nếu đo được ngân sách sai số timing).
 - Ma trận cảm biến → cổ tay và quy ước khung cổ tay (đề xuất: +X hướng ngón tay, +Z
-  ra mặt lưng bàn tay, +Y theo quy tắc tay phải), xác nhận trên bench.
+  ra mặt lưng bàn tay, +Y theo quy tắc tay phải); dấu trục kiểm bằng trọng lực ở
+  `hardware/test_reports/v1_bringup_procedure.md` mục 8 bước 5.
 - Mục 7: dung sai anchor `SAMP` (tạm 200 µs) và dung sai tốc độ ECG (tạm ±1 000 ppm)
   chỉnh theo số đo; chi tiết thanh ghi `EN_INT2`/`CLR_SAMP` đối chiếu datasheet
   MAX30001; nếu `PPG_RDY` không chạy ở chế độ ba khe thì chuyển sang đọc theo timer.
   Phía firmware: dung sai một khoảng cạnh tạm 22 µs (20 µs cộng 1 000 ppm của một chu
   kỳ); MCPWM capture thật (`samp_capture.c`) chưa chạy trên chip: kiểm cực tính,
-  độ rộng xung, thử nối vòng GPIO trên DevKitC trần, đo sai số quy đổi và tỉ lệ cặp
-  kẹp bị loại (đọc `esp_timer` hai lần cách nhau 2 µs trở lên).
-- Kiểm tải: với ECG 512 sps (N = 16), PPG ba khe 200 sps (chốt 2026-10-24) và IMU
-  sáu trục 100 Hz (N = 10): PPG N = 4 cho khoảng 242 packet/s, 17,0 kB/s (ECG 3,4 +
-  PPG 8,7 + IMU 4,9 kB/s), hàng đợi MCU 64 packet chịu khoảng 0,26 s khi USB không
-  nhận; PPG N = 8 cho 167 packet/s, 13,9 kB/s, hàng đợi chịu khoảng 0,38 s. Nguồn
-  giả của firmware chạy PPG 200 sps, N = 8. Cần test burst, host ngừng đọc và
-  timeout 20 ms.
+  độ rộng xung (bring-up mục 7 bước 4), thử nối vòng GPIO trên bo Waveshare đứng
+  riêng (bring-up mục 2 chưa có bước này), đo sai số quy đổi và tỉ lệ cặp kẹp bị loại
+  (đọc `esp_timer` hai lần cách nhau 2 µs trở lên).
+- Kiểm tải: PPG đọc khi có 8 mẫu, N = 8 (chốt 2026-10-24, mục 7.6; firmware
+  `PPG_BATCH`). Với ECG 512 sps (N = 16), PPG ba khe 200 sps (N = 8) và IMU sáu trục
+  100 Hz (N = 10): khoảng 167 packet/s, 13,9 kB/s; hàng đợi MCU 64 packet chịu khoảng
+  0,38 s khi USB không nhận. Còn phải thử tải: burst, host ngừng đọc và timeout 20 ms.
+- **Offset thời gian giữa ba khe PPG: quy ước đã chốt 2026-10-29**
+  ([V0.1](Packet_Schema_V0.1.md) mục 7), không còn mở:
+  - raw giữ nguyên, ba khe chung `FIRST_SAMPLE_INDEX` và `T_ANCHOR_US`;
+  - phân tích offline cộng (j − 1) · Δ(PW) vào mốc thời gian của khe j, gốc là khe 1;
+  - Δ suy từ độ rộng xung trong `SPO2_CONFIG` của packet `0xD2` (MAX30101) của phiên;
+  - quy ước gắn với version của feature hay config dùng nó.
+
+  Chỉ còn mở giá trị Δ: nó phụ thuộc độ rộng xung, mà độ rộng xung chờ bring-up mục 8.
+  Danh định 1 107 µs (411 µs) và 720 µs (215 µs), theo
+  [custom_board_proposal.md](custom_board_proposal.md) A.6 mục 3.
 
 ## 11. Kênh nhiệt độ `0xB1` (sửa đổi 2026-10-25)
 
@@ -692,6 +714,7 @@ lần khởi động (không ghi NVM).
 | --- | --- | --- | --- |
 | `0x01` | `PING` | không | Chỉ xác nhận; kiểm đường lệnh |
 | `0x02` | `SET_PPG_LED` | 7 byte: `SESSION_ID` đích (uint32), mã xanh **mỗi nhánh** (LED3 và LED4), mã đỏ, mã IR; bước 0,2 mA | Cấu hình lại MAX30101 với các dòng mới (mục dưới), tăng thế hệ, gửi `0xD2` |
+| `0x03` | `MARK_EVENT` (sửa đổi 2026-10-29) | 1 byte: mã sự kiện, chỉ nhận 2 (`CUFF_END`) hay 4 (`OPERATOR_MARK`) | Gửi packet sự kiện `0xC1` mang mã đó, mốc là lúc thiết bị nhận lệnh (mục dưới) |
 
 - Thiết bị bỏ qua (không xác nhận) khung có CRC sai, `CMD_VERSION` khác 1 hay
   `LEN` > 16, và tìm `SYNC` lại từ byte sau byte `SYNC` đầu của khung đó; một khung dở
@@ -709,24 +732,78 @@ lần khởi động (không ghi NVM).
 - **Lặp lại an toàn:** thiết bị nhớ yêu cầu gần nhất đã xong (`CMD_ID`, `CMD_SEQ`, tham
   số, kết quả, thế hệ). Khung giống hệt nó được xác nhận lại với kết quả cũ, không chạm
   phần cứng; cùng `CMD_SEQ` mà `CMD_ID` hay tham số khác bị từ chối (kết quả 6) và yêu
-  cầu đã nhớ vẫn giữ nguyên. Kết quả 4 (bận) nghĩa là **chưa làm** và không được nhớ:
+  cầu đã nhớ vẫn giữ nguyên. "Gần nhất" tính theo thứ tự **nhận** (sửa 2026-10-29): một
+  `SET_PPG_LED` xong sau một yêu cầu nhận sau nó (PC đã ghi nó "không biết" rồi gửi
+  lệnh khác) không thay yêu cầu đó trong bộ nhớ, nên lần gửi lại của yêu cầu sau (ví dụ
+  một `MARK_EVENT` bị mất xác nhận) vẫn nhận kết quả cũ, không chạy lần hai. Kết quả 4 (bận) nghĩa là **chưa làm** và không được nhớ:
   lần thử sau dùng `CMD_SEQ` mới.
 - **Yêu cầu đang làm:** task điều khiển giao `SET_PPG_LED` cho task PPG kèm một token và
   không đứng chờ (vẫn đọc cổng và gửi `0xD2`); xác nhận chỉ gửi khi có trả lời mang đúng
-  token đó. Trong lúc đó, khung giống hệt bị bỏ qua (xác nhận sẽ tới khi xong), yêu cầu
-  LED khác nhận kết quả 4. Task PPG chưa nhận yêu cầu sau 2 s thì yêu cầu được rút lại
+  token đó. Trong lúc đó, khung giống hệt bị bỏ qua (xác nhận sẽ tới khi xong), khung
+  cùng `CMD_SEQ` mà byte khác nhận kết quả 6 (thêm 2026-10-29), yêu cầu LED khác nhận
+  kết quả 4. Task PPG chưa nhận yêu cầu sau 2 s thì yêu cầu được rút lại
   (kết quả 4, chưa làm); đã nhận thì chờ tới khi có trả lời, không bao giờ tự đặt ra kết
   quả khi quá hạn.
 - **Gắn với phiên:** `SET_PPG_LED` có `SESSION_ID` khác phiên hiện tại bị từ chối (kết
   quả 7), nên lệnh gửi lại sau khi MCU khởi động lại không chạy nhầm.
-- **Giới hạn dòng LED (tạm):** mỗi mã ≤ `0x7F` (25,4 mA mỗi nhánh; xanh tổng 50,8 mA);
-  vượt thì kết quả 8, không làm gì. Đây là lớp chặn tạm, không phải bằng chứng an toàn;
-  xét lại sau khi đo trên bench (mức ADC 30–70 % thang đo ở cổ tay thường cần dưới mức
-  này). Độ rộng xung và tốc độ do bản build quyết định, không đổi được bằng lệnh.
+- **Trần dòng LED (chốt 2026-10-29):** mỗi mã ≤ `0x7F` (25,4 mA mỗi nhánh; xanh tổng
+  50,8 mA); vượt thì kết quả 8, không làm gì.
+  - `0x7F` là trần trên cho cả nghiên cứu, ghi trong hồ sơ đạo đức.
+  - Sau bring-up mục 8 (trên bàn, không người), hạ trần xuống mức cần thiết cộng phần
+    dư. Con số chờ số đo: dòng và nguồn ở mã cao
+    (`hardware/test_reports/v1_bringup_procedure.md` mục 8 bước 2, 3, 9); mức ADC ở cổ
+    tay chỉ đo được trên người, sau phê duyệt đạo đức, ở pilot (mức 30–70 % thang đo
+    thường cần dưới trần).
+  - Chỉ được nâng trần bằng một sửa đổi có ngày của spec này. Đổi trần thì đổi cùng
+    lúc `CMD_LED_CODE_MAX` (firmware) và `LED_CODE_MAX`
+    (`software/data_io/command_wire.py`).
+  - Trần là lớp chặn, không phải bằng chứng an toàn. PC là lớp chặn thứ hai: dòng hộp
+    thư có mã > `0x7F` bị từ chối trước khi gửi, trừ khi dòng ghi
+    `"allow_over_firmware_limit": true` (`device_command.py set-ppg-led
+    --allow-over-firmware-limit`). Cờ này chỉ dùng ở bring-up, không người, để kiểm
+    firmware tự từ chối (kết quả 8).
+  - Độ rộng xung và tốc độ do bản build quyết định, không đổi được bằng lệnh.
+- **`MARK_EVENT` (sửa đổi 2026-10-29):** người vận hành đánh dấu một sự kiện từ PC,
+  ví dụ lúc cuff xả xong (`CUFF_END`, mã 2) hay một ghi chú (`OPERATOR_MARK`, mã 4).
+  - `LEN` khác 1: kết quả 2. Mã khác 2 và 4: kết quả 8, không phát sự kiện. Lệnh
+    không phát được mã 1 (`t0` vẫn là nút SW1) hay mã 3 (xung kích thích do MCU tự
+    phát). Lệnh không gắn với phiên và không phụ thuộc chip PPG.
+  - Task điều khiển lấy `esp_timer` ngay sau lần đọc cổng trả về các byte của khung:
+    đó là **lúc thiết bị nhận lệnh**. Nó đưa sự kiện vào hàng đợi sự kiện của nút SW1,
+    nên task sự kiện phát packet `0xC1` như với mã 1: cùng số thứ tự sự kiện trong
+    phiên, cùng quy tắc bit 1 (V0.1 mục 10), `T_ANCHOR_US` = `T_FIRST_US` = lúc nhận.
+    Rồi nó gửi `0xD3` (kết quả 0, `DATA[4]` = 0).
+  - Hàng đợi sự kiện đầy: kết quả 4 (chưa làm, không có sự kiện); PC gửi lại bằng
+    `CMD_SEQ` mới nếu cần.
+  - Gửi lại cùng byte (cùng `CMD_SEQ`) được xác nhận lại với kết quả cũ, **không** phát
+    sự kiện thứ hai. Nếu khung đầu không tới mà lần gửi lại tới, mốc là lúc lần gửi lại
+    tới thiết bị.
+  - Mốc là lúc thiết bị nhận lệnh, không phải lúc người vận hành gõ lệnh. Độ trễ
+    PC → thiết bị (đọc hộp thư tối đa mỗi 0,1 s, USB, bộ đệm RX, task điều khiển)
+    **chưa đo**: không dùng mốc này cho việc cần chính xác tới ms. `t0` vẫn là SW1.
+  - Kết quả 0 nghĩa là sự kiện đã vào hàng đợi sự kiện, không bảo đảm packet `0xC1`
+    tới PC: bỏ ở hàng đợi MCU thì packet sự kiện sau có bit 1 và số thứ tự nhảy
+    (`events_lost_before_send`), mất trên USB thì thiếu `SEQ`. `0xC1` và `0xD3` có thể
+    tới PC theo thứ tự bất kỳ.
+  - Xác nhận không mang số thứ tự sự kiện. Khi phân tích, ghép một xác nhận kết quả 0
+    (mã đã gửi lấy từ nhật ký lệnh theo `CMD_SEQ`) với sự kiện mang mã đó có
+    `T_ANCHOR_US` không sau `T_ANCHOR_US` của xác nhận này và sau `T_ANCHOR_US` của xác
+    nhận `MARK_EVENT` kết quả 0 trước đó trong phiên (với `CMD_SEQ` khác). PC gửi một
+    lệnh mỗi lần, cách nhau ít nhất 0,5 s, nên mỗi khoảng chỉ có sự kiện của lệnh đó.
+    Không có đúng một sự kiện như vậy, hay logger báo mất sự kiện hay thiếu `SEQ` của
+    `0xC1` trong khoảng đó, thì ghi là không ghép được; không đoán.
 - PC (logger) gửi một lệnh mỗi lần, chờ xác nhận 500 ms, thử tối đa 3 lần cùng
   `CMD_SEQ` (cùng byte), không quá 2 lần gửi mỗi giây; hết lượt thì kết quả là **không
   biết**, không phải lỗi hay thành công. `SESSION_ID` đổi giữa chừng thì lệnh đang chờ
   bị hủy.
+  - **`SET_PPG_LED` (chốt 2026-10-29):** firmware có thể mất tới 2 s mới trả lời (yêu
+    cầu task PPG chưa nhận sau 2 s thì bị rút lại với kết quả 4). Vì vậy PC chỉ ghi
+    "không biết" khi đã qua **2,5 s** kể từ lần gửi đầu; ba lần gửi vẫn cách nhau
+    500 ms, và lần gửi lại trong lúc firmware đang làm bị bỏ qua (mục "Yêu cầu đang
+    làm"). Firmware không đổi.
+  - `0xD3` tới sau khi PC đã ghi "không biết" vẫn được khớp theo `CMD_SEQ` (cùng phiên,
+    cùng `CMD_ID`) và ghi sự kiện `late_ack` vào nhật ký lệnh, một lần mỗi lệnh. Dòng
+    "không biết" giữ nguyên: nó nói đúng điều PC biết lúc ghi.
 
 | Kết quả | Ý nghĩa |
 | --- | --- |
@@ -734,11 +811,11 @@ lần khởi động (không ghi NVM).
 | 1 | `CMD_ID` không biết |
 | 2 | `LEN` sai cho lệnh đó |
 | 3 | Không có chip (bản build dùng PPG giả, hay chip đã bị bỏ) |
-| 4 | Bận: chip đang chờ cấu hình lại hay đang làm lệnh khác; chưa làm |
+| 4 | Bận: chip đang chờ cấu hình lại, đang làm lệnh khác, hay hàng đợi sự kiện đầy (`MARK_EVENT`); chưa làm |
 | 5 | Cấu hình với dòng mới không xong; chip đang được cấu hình lại bằng dòng cũ đã chấp nhận (thử mỗi 100 ms), `0xD2` cho biết lúc xong |
 | 6 | `CMD_SEQ` đã dùng cho yêu cầu khác |
 | 7 | `SESSION_ID` không phải phiên hiện tại |
-| 8 | Mã dòng LED vượt giới hạn |
+| 8 | Tham số ngoài miền: mã dòng LED vượt trần (`SET_PPG_LED`), mã sự kiện không phải 2 hay 4 (`MARK_EVENT`, sửa đổi 2026-10-29); `CMD_ID` của xác nhận cho biết là trường hợp nào |
 
 **Packet xác nhận `0xD3`** (thiết bị → PC):
 
@@ -751,27 +828,36 @@ lần khởi động (không ghi NVM).
 | `FS_NOMINAL_MHZ` | 0 |
 | `SAMPLE_COUNT` | 5 |
 | `STATUS` | 0; cho phép bit 1 |
-| `DATA` | `[0]` layout = 1; `[1]` `CMD_ID` (0 … 255); `[2]` `CMD_SEQ` (0 … 65 535); `[3]` kết quả (0 … 8); `[4]` thế hệ MAX30101 sau lệnh với `SET_PPG_LED` xong (≥ 1), 0 với mọi trường hợp khác |
+| `DATA` | `[0]` layout = 1; `[1]` `CMD_ID` (0 … 255); `[2]` `CMD_SEQ` (0 … 65 535); `[3]` kết quả (0 … 8); `[4]` thế hệ MAX30101 sau lệnh với `SET_PPG_LED` xong (≥ 1), 0 với mọi trường hợp khác (kể cả `MARK_EVENT`) |
 
 **Logger:**
 
 - `record` tạo một file hộp thư **mới** trong thư mục output (`command_inbox.jsonl`) lúc
   bắt đầu. `scripts/device_command.py` ghi thêm một dòng JSON mỗi lệnh (`{"cmd":
-  "ping"}`, `{"cmd": "set_ppg_led", "green": 18, "red": 36, "ir": 36}`) bằng một lần ghi
-  rồi flush. Vòng ghi xem hộp thư sau mỗi lần đọc cổng, kể cả khi cổng không có byte nào
+  "ping"}`, `{"cmd": "set_ppg_led", "green": 18, "red": 36, "ir": 36}`, `{"cmd":
+  "mark_event", "event": "cuff_end"}` hay `"operator"`) bằng một lần ghi rồi flush.
+  `set_ppg_led` có mã > `0x7F` bị từ chối ở cả `device_command.py` và vòng ghi, trừ khi
+  dòng có `"allow_over_firmware_limit": true` (chỉ cho bring-up, xem "Trần dòng LED").
+  Vòng ghi xem hộp thư sau mỗi lần đọc cổng, kể cả khi cổng không có byte nào
   (timeout 0,1 s); giữ phần dòng chưa có ký tự xuống dòng; dòng dài quá 1 024 byte hay
   sai kiểu bị ghi là bị từ chối; file bị cắt ngắn thì ngừng đọc hộp thư và ghi lại.
   `SESSION_ID` đích lấy từ packet gần nhất; chưa có packet nào thì lệnh chờ.
 - Mọi bước ghi vào `commands_sent.jsonl` (thời điểm PC, dòng hộp thư, `CMD_SEQ`, phiên
-  đích, lần thử, byte gửi, ghi xong hay không, kết quả khớp được hay "không biết"). File
-  này và `command_inbox.jsonl` có hash trong manifest. `CMD_SEQ` bắt đầu từ một giá trị
-  ngẫu nhiên mỗi lần ghi.
+  đích, lần thử, byte gửi, ghi xong hay không, kết quả khớp được, "không biết" hay
+  `late_ack`). Thời điểm PC (`pc_monotonic_s`) chỉ để tham khảo, không bao giờ là mốc
+  sự kiện: mốc của `MARK_EVENT` là `T_ANCHOR_US` của packet `0xC1`. File này và
+  `command_inbox.jsonl` có hash trong manifest. `CMD_SEQ` bắt đầu từ một giá trị ngẫu
+  nhiên mỗi lần ghi.
 - `0xD3`: kiểm `SAMPLE_COUNT = 5`, layout 1, `FS_NOMINAL_MHZ = 0`,
-  `T_FIRST_US = T_ANCHOR_US`, bit `STATUS` ngoài bit 1, miền của từng trường, `PING` xong
-  thì thế hệ 0, `SET_PPG_LED` xong thì thế hệ ≥ 1 và có `0xD2` của MAX30101 cùng thế hệ
-  trong phiên (sai: `command_ack_invalid` / `command_ack_without_config`); số thứ tự so
-  với `SEQ` như `0xD1`; mỗi phiên có `commands` (các xác nhận hợp lệ theo `SEQ`); kết
-  quả khác 0 báo `command_failed` (kèm tên kết quả).
+  `T_FIRST_US = T_ANCHOR_US`, bit `STATUS` ngoài bit 1, miền của từng trường, `PING` và
+  `MARK_EVENT` xong thì thế hệ 0, `SET_PPG_LED` xong thì thế hệ ≥ 1 và có `0xD2` của
+  MAX30101 cùng thế hệ trong phiên (sai: `command_ack_invalid` /
+  `command_ack_without_config`); số thứ tự so với `SEQ` như `0xD1`; mỗi phiên có
+  `commands` (các xác nhận hợp lệ theo `SEQ`); kết quả khác 0 báo `command_failed`
+  (kèm tên kết quả).
+- Sự kiện mã 2 và 4 của `MARK_EVENT` là packet `0xC1` thường (V0.1 mục 10), nằm trong
+  `events` của phiên cùng mã 1 và 3. Logger không ghép xác nhận với sự kiện; ghép theo
+  quy tắc ở mục `MARK_EVENT` trên khi phân tích.
 - Raw chỉ có chiều thiết bị → PC. Kết quả giải mã (`decode.json`, `packets.csv`,
   `samples.csv`) chỉ phụ thuộc raw, nên replay không cần nhật ký lệnh; việc khớp lệnh
   với xác nhận nằm trong `commands_sent.jsonl`.

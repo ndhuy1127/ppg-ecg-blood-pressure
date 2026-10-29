@@ -6,7 +6,9 @@ the register values of the driver tests and Packet Schema V0.2 section 3. The
 command decisions (firmware/app/cmd_exec.c) follow section 13: a retry with the
 same bytes gets the remembered answer, a reused CMD_SEQ with other bytes is
 refused, BUSY is not remembered, the target SESSION_ID and the LED limit are
-checked first. SYNTHETIC only. Without a host C compiler the test is skipped.
+checked first. MARK_EVENT (amendment 2026-10-29) takes one byte, only codes 2 and
+4, whatever the PPG chip does, and a retry never marks a second event. SYNTHETIC
+only. Without a host C compiler the test is skipped.
 """
 
 import os
@@ -78,13 +80,14 @@ int main(void)
             pkt_command_ack_data((uint8_t)id, (uint16_t)seq, (uint8_t)result, gen, data);
             print_data(data, PKT_COMMAND_ACK_COUNT);
         } else if (cmd[0] == 'X' || cmd[0] == 'D') {
-            /* X session ppg id seq len params... ; D result gen id seq len params... */
-            unsigned long session = 0;
+            /* X session ppg id seq len params...;
+             * D result gen ticket id seq len params... */
+            unsigned long session = 0, ticket = 0;
             unsigned ppg = 0, result = 0, gen = 0, id, seq, len, b;
             if (cmd[0] == 'X') {
                 scanf("%lu %u", &session, &ppg);
             } else {
-                scanf("%u %u", &result, &gen);
+                scanf("%u %u %lu", &result, &gen, &ticket);
             }
             scanf("%u %u %u", &id, &seq, &len);
             cmd_frame_t f = {.id = (uint8_t)id, .seq = (uint16_t)seq, .len = (uint8_t)len};
@@ -95,10 +98,11 @@ int main(void)
             if (cmd[0] == 'X') {
                 cmd_action_t a = cmd_exec_decide(&e, &f, (uint32_t)session,
                                                  (cmd_ppg_state_t)ppg);
-                printf("%d %u %u %u %u %lu %d\n", a.apply_led, a.green, a.red, a.ir,
-                       a.result, (unsigned long)a.generation, a.repeat);
+                printf("%d %u %u %u %u %lu %d %d %u %lu\n", a.apply_led, a.green, a.red,
+                       a.ir, a.result, (unsigned long)a.generation, a.repeat,
+                       a.mark_event, a.event_code, (unsigned long)a.ticket);
             } else {
-                cmd_exec_done(&e, &f, (uint8_t)result, gen);
+                cmd_exec_done(&e, &f, (uint8_t)result, gen, (uint32_t)ticket);
                 printf("ok\n");
             }
         }
@@ -143,12 +147,16 @@ class Run:
     def decide(self, session, ppg, cmd_id, seq, params=()):
         out = self(f"X {session} {ppg} {cmd_id} {seq} {len(params)} "
                    + " ".join(f"{b:02x}" for b in params))
-        apply, g, r, i, result, gen, repeat = map(int, out.split())
+        apply, g, r, i, result, gen, repeat, mark, code, ticket = map(int, out.split())
+        self.ticket = ticket
         return {"apply": apply, "codes": (g, r, i), "result": result,
-                "generation": gen, "repeat": repeat}
+                "generation": gen, "repeat": repeat, "mark": mark, "event_code": code,
+                "ticket": ticket}
 
-    def done(self, result, gen, cmd_id, seq, params=()):
-        self(f"D {result} {gen} {cmd_id} {seq} {len(params)} "
+    def done(self, result, gen, cmd_id, seq, params=(), ticket=None):
+        """Answer sent; ``ticket`` defaults to that of the last decision."""
+        ticket = self.ticket if ticket is None else ticket
+        self(f"D {result} {gen} {ticket} {cmd_id} {seq} {len(params)} "
              + " ".join(f"{b:02x}" for b in params))
 
     def close(self):
@@ -235,3 +243,57 @@ def test_retries_get_the_remembered_answer(run):
     # A failed one is remembered like a done one.
     run.done(CHIP_ERROR, 0, 2, 101, led(s))
     assert run.decide(s, READY, 2, 101, led(s))["result"] == CHIP_ERROR
+
+
+def test_mark_event_takes_only_the_operator_codes(run):
+    s = 7
+    for code in (2, 4):
+        for ppg in (NONE, PPG_BUSY, READY):  # independent of the PPG chip
+            d = run.decide(s, ppg, 3, 10 * code + ppg, (code,))
+            assert (d["mark"], d["event_code"], d["apply"]) == (1, code, 0)
+    # t0 (1) stays the SW1 button and 3 the sync stimulus; other codes too.
+    for seq, code in enumerate((0, 1, 3, 5, 0x7F, 0xFF), start=40):
+        d = run.decide(s, READY, 3, seq, (code,))
+        assert (d["mark"], d["result"]) == (0, RANGE)
+    for seq, params in ((50, ()), (51, (2, 0)), (52, (2,) * 16)):
+        d = run.decide(s, READY, 3, seq, params)
+        assert (d["mark"], d["result"]) == (0, BAD_LENGTH)
+    ack, problem = decode_command_ack(packet(run("A 3 52 0 0"), 0xD3))
+    assert problem is None and (ack["cmd"], ack["result"], ack["generation"]) == (
+        "mark_event", "ok", 0)
+
+
+def test_a_mark_event_retry_never_marks_twice(run):
+    s = 7
+    assert run.decide(s, READY, 3, 200, (2,))["mark"] == 1
+    run.done(OK, 0, 3, 200, (2,))
+    again = run.decide(s, READY, 3, 200, (2,))
+    assert (again["mark"], again["result"], again["repeat"]) == (0, OK, 1)
+    # The same CMD_SEQ with the other code: refused, no event.
+    other = run.decide(s, READY, 3, 200, (4,))
+    assert (other["mark"], other["result"]) == (0, REUSED)
+    # A full event queue answers BUSY, which is not remembered: the same CMD_SEQ
+    # is decided afresh and marks then.
+    assert run.decide(s, READY, 3, 201, (4,))["mark"] == 1
+    run.done(BUSY, 0, 3, 201, (4,))
+    assert run.decide(s, READY, 3, 201, (4,))["mark"] == 1
+
+
+def test_a_late_led_answer_does_not_displace_a_later_mark(run):
+    # The PC gave up on an LED change still in flight (unknown after 2.5 s) and
+    # sent a MARK_EVENT, which was done; then the LED change finishes. A retry of
+    # the mark (its answer was lost) must get the remembered answer, not a second
+    # event: the later-received request stays remembered.
+    s = 7
+    change = run.decide(s, READY, 2, 300, led(s))
+    assert change["apply"] == 1
+    mark = run.decide(s, READY, 3, 301, (2,))
+    assert mark["mark"] == 1 and mark["ticket"] > change["ticket"]
+    run.done(OK, 0, 3, 301, (2,), ticket=mark["ticket"])
+    run.done(OK, 5, 2, 300, led(s), ticket=change["ticket"])
+    again = run.decide(s, READY, 3, 301, (2,))
+    assert (again["mark"], again["result"], again["repeat"]) == (0, OK, 1)
+    # In arrival order a later request still replaces the remembered one.
+    assert run.decide(s, READY, 1, 302)["result"] == OK
+    run.done(OK, 0, 1, 302)
+    assert run.decide(s, READY, 3, 301, (2,))["mark"] == 1

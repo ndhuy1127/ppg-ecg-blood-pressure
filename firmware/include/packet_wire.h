@@ -49,7 +49,9 @@
 #define PKT_STATUS_BACKLOG_CHUNK (1u << 7)
 #define PKT_STATUS_ANCHOR_SAMP (1u << 8)
 
-/* Event codes carried in DATA[0] of a 0xC1 packet, schema section 10. */
+/* Event codes carried in DATA[0] of a 0xC1 packet, schema section 10: 1 from the
+ * SW1 button, 3 from the sync stimulus, 2 and 4 from the PC command MARK_EVENT
+ * (V0.2 section 13, decided 2026-10-29), timed when the device receives it. */
 #define PKT_EVENT_T0 1
 #define PKT_EVENT_CUFF_END 2
 #define PKT_EVENT_SYNC_PULSE 3

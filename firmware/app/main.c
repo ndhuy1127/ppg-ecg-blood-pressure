@@ -176,13 +176,14 @@ typedef struct {
  * 5 marks the re-anchor that the next packet continues (V0.2 section 5). */
 #define CARRY_BITS (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_MCU_BUFFER_OVERFLOW                     | PKT_STATUS_INDEX_REANCHORED)
 
-/* One event edge (the t0 button, or a sync stimulus pulse), with the edges of
- * its source that the queue dropped just before it. */
+/* One event (the t0 button, a sync stimulus pulse, or a MARK_EVENT command),
+ * with the edges of its source that the queue dropped just before it (always 0
+ * for a command: a full queue answers it BUSY instead). */
 typedef struct {
     int64_t t_us;
     uint32_t lost_before;
-    uint8_t code; /* PKT_EVENT_T0 or PKT_EVENT_SYNC_PULSE */
-} t0_edge_t;
+    uint8_t code; /* PKT_EVENT_T0, PKT_EVENT_SYNC_PULSE, or 2 / 4 from MARK_EVENT */
+} event_edge_t;
 
 static QueueHandle_t s_tx_queue;
 static QueueHandle_t s_event_queue;
@@ -1230,8 +1231,8 @@ static void t0_isr(void *arg)
         return;
     }
     last_us = now;
-    const t0_edge_t edge = {.t_us = now, .lost_before = lost_since_queued,
-                            .code = PKT_EVENT_T0};
+    const event_edge_t edge = {.t_us = now, .lost_before = lost_since_queued,
+                               .code = PKT_EVENT_T0};
     BaseType_t woken = pdFALSE;
     if (xQueueSendFromISR(s_event_queue, &edge, &woken) == pdTRUE) {
         lost_since_queued = 0;
@@ -1250,13 +1251,16 @@ static void t0_isr(void *arg)
  * confirmed events of the session (every code), FS_NOMINAL_MHZ 0, STATUS bit 4
  * off. An edge the queue dropped was never confirmed, so it does not take an
  * ordinal; the next event packet sets bit 1 instead (possible lost event). The
- * t0 button is debounced; a sync pulse (code 3) is the MCU's own edge.
+ * t0 button is debounced; a sync pulse (code 3) is the MCU's own edge; a
+ * MARK_EVENT (code 2 or 4, V0.2 section 13) carries the time the control task
+ * read the command frame, and comes through here so that 0xC1 keeps one
+ * producer and one ordinal count.
  */
 static void event_task(void *arg)
 {
     uint32_t ordinal = 0;
     bool edges_lost = false;
-    t0_edge_t edge;
+    event_edge_t edge;
     for (;;) {
         xQueueReceive(s_event_queue, &edge, portMAX_DELAY);
         if (edge.lost_before > 0) {
@@ -1284,6 +1288,9 @@ static void event_task(void *arg)
         if (edge.code == PKT_EVENT_T0) {
             ESP_LOGI(TAG, "t0 event %" PRIu32 " at %" PRId64 " us", p.first_sample_index,
                      edge.t_us);
+        } else if (edge.code != PKT_EVENT_SYNC_PULSE) {
+            ESP_LOGI(TAG, "MARK_EVENT code %u, event %" PRIu32 " at %" PRId64 " us",
+                     (unsigned)edge.code, p.first_sample_index, edge.t_us);
         }
     }
 }
@@ -1315,8 +1322,8 @@ static void stim_rise(void *arg)
     gpio_set_level(BOARD_STIM_GPIO, 1);
     int64_t now = esp_timer_get_time(); /* right after the edge */
     esp_timer_start_once(s_stim_fall, STIM_WIDTH_US);
-    const t0_edge_t edge = {.t_us = now, .lost_before = lost_since_queued,
-                            .code = PKT_EVENT_SYNC_PULSE};
+    const event_edge_t edge = {.t_us = now, .lost_before = lost_since_queued,
+                               .code = PKT_EVENT_SYNC_PULSE};
     if (xQueueSend(s_event_queue, &edge, 0) == pdTRUE) {
         lost_since_queued = 0;
     } else {
@@ -1355,10 +1362,13 @@ static void stim_start(void)
  * drops a partial frame idle for CTL_PARTIAL_US, and answers each frame
  * (cmd_exec.c decides). An LED change is handed to the PPG reader and answered
  * when its reply with the same token comes, without blocking this loop; a retry
- * of that request meanwhile is ignored, another LED request gets BUSY. A request
+ * of that request meanwhile is ignored, its CMD_SEQ with other bytes gets
+ * REQUEST_REUSED, another LED request gets BUSY. A request
  * the PPG reader has not taken after LED_TAKE_US is withdrawn (BUSY: not done);
- * one it took is waited for, never given a made-up result. Each AFE's 0xD2 goes
- * out on every state transition and every AFE_CONFIG_PERIOD_US.
+ * one it took is waited for, never given a made-up result. A MARK_EVENT is
+ * queued for the event task with the time its frame was read (rx_us), then
+ * answered; a full event queue answers BUSY (not done, no event). Each AFE's 0xD2
+ * goes out on every state transition and every AFE_CONFIG_PERIOD_US.
  */
 #define CTL_RX_MS 10
 #define CTL_PARTIAL_US 100000LL
@@ -1370,8 +1380,12 @@ typedef struct {
     uint32_t ack_ordinal;
     bool inflight; /* an LED request handed to the PPG reader */
     cmd_frame_t inflight_frame;
+    uint32_t inflight_ticket; /* its arrival order (cmd_exec.h) */
     uint32_t token;
     int64_t inflight_since_us;
+    /* esp_timer right after the USB read that returned the bytes being parsed:
+     * the time a MARK_EVENT was received (V0.2 section 13). */
+    int64_t rx_us;
 } ctl_t;
 
 static bool same_frame(const cmd_frame_t *a, const cmd_frame_t *b)
@@ -1403,6 +1417,12 @@ static void ctl_on_frame(void *ctx, const cmd_frame_t *f)
     if (c->inflight && same_frame(f, &c->inflight_frame)) {
         return; /* a retry of the request being applied: answered when it is done */
     }
+    if (c->inflight && f->seq == c->inflight_frame.seq) {
+        /* The CMD_SEQ of the request being applied with other bytes: refused as a
+         * reused CMD_SEQ (result 6), the request in flight is not touched. */
+        ctl_ack(c, f, CMD_RESULT_REQUEST_REUSED, 0);
+        return;
+    }
     cmd_action_t a = cmd_exec_decide(&c->exec, f, s_session_id,
                                      c->inflight ? CMD_PPG_BUSY : s_ppg_cmd_state);
     if (a.apply_led) {
@@ -1411,14 +1431,24 @@ static void ctl_on_frame(void *ctx, const cmd_frame_t *f)
         if (xQueueSend(s_led_request, &req, 0) == pdTRUE) {
             c->inflight = true;
             c->inflight_frame = *f;
+            c->inflight_ticket = a.ticket;
             c->inflight_since_us = esp_timer_get_time();
             return;
         }
         a.result = CMD_RESULT_BUSY;
         a.generation = 0;
     }
+    if (a.mark_event) {
+        /* Through the queue of the t0 button, so the event task stays the only
+         * producer of 0xC1 and counts this event with the others. */
+        const event_edge_t edge = {.t_us = c->rx_us, .lost_before = 0,
+                                   .code = a.event_code};
+        a.result = xQueueSend(s_event_queue, &edge, 0) == pdTRUE ? CMD_RESULT_OK
+                                                                  : CMD_RESULT_BUSY;
+        a.generation = 0;
+    }
     if (!a.repeat) {
-        cmd_exec_done(&c->exec, f, a.result, a.generation);
+        cmd_exec_done(&c->exec, f, a.result, a.generation, a.ticket);
     }
     ctl_ack(c, f, a.result, a.generation);
 }
@@ -1432,7 +1462,8 @@ static void ctl_led_progress(ctl_t *c, int64_t now)
             continue; /* not the request in flight */
         }
         c->inflight = false;
-        cmd_exec_done(&c->exec, &c->inflight_frame, reply.result, reply.generation);
+        cmd_exec_done(&c->exec, &c->inflight_frame, reply.result, reply.generation,
+                      c->inflight_ticket);
         ctl_ack(c, &c->inflight_frame, reply.result, reply.generation);
     }
     led_request_t untaken;
@@ -1506,6 +1537,7 @@ static void ctl_task(void *arg)
         int64_t now = esp_timer_get_time();
         if (n > 0) {
             last_rx = now;
+            c.rx_us = now;
             cmd_parser_feed(&parser, rx, (size_t)n, ctl_on_frame, &c);
         } else if (parser.n > 0 && now - last_rx > CTL_PARTIAL_US) {
             parser.n = 0; /* a frame that never finished */
@@ -1641,7 +1673,7 @@ void app_main(void)
     ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb));
 
     s_tx_queue = xQueueCreate(TX_QUEUE_LEN, sizeof(pkt_t));
-    s_event_queue = xQueueCreate(EVENT_QUEUE_LEN, sizeof(t0_edge_t));
+    s_event_queue = xQueueCreate(EVENT_QUEUE_LEN, sizeof(event_edge_t));
     s_led_request = xQueueCreate(1, sizeof(led_request_t));
     s_led_reply = xQueueCreate(2, sizeof(led_reply_t));
     s_afe_queue = xQueueCreate(AFE_QUEUE_LEN, sizeof(afe_state_t));

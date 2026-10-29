@@ -1,5 +1,5 @@
 {
-  "schema_version": "packet-logger-v2",
+  "schema_version": "packet-logger-v3",
   "packet_schemas": ["packet-v0.1", "packet-v0.2"],
   "status": "NOT_HARDWARE_VALIDATED",
   "wire_versions": [1, 2],

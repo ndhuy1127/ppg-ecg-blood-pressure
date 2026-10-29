@@ -1,10 +1,10 @@
-# Logger packet phía máy tính (Packet Schema V0.1)
+# Logger packet phía máy tính (Packet Schema V0.1/V0.2)
 
 ## Phạm vi và ranh giới
 
 Logger đọc luồng byte theo [Packet Schema V0.1](../../configs/hardware/Packet_Schema_V0.1.md)
 (mục 6), làm các kiểm tra ở mục 12 theo **từng phiên và từng kênh**, ghi raw bất
-biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger-v2`
+biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger-v3`
 (config `configs/hardware/packet_logger.json` cùng version).
 
 - **Đã có (2026-10-21):** decoder, kiểm tra, runner `record`/`replay`, test với
@@ -42,6 +42,22 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
 
   Replay một phiên ghi bằng v1 thì dùng config v2; manifest ghi rõ `logger_version`
   của mỗi bên.
+- **`packet-logger-v3` (chốt 2026-10-29):** metadata, manifest và
+  `decode.json` đổi, nên nâng version (config chỉ đổi `schema_version`; config v2 bị
+  từ chối vì khác version):
+  - metadata phiên `packet-session-metadata-v1` (mục "Metadata phiên"): `subject_id`,
+    `session_id` (buổi nghiên cứu), `ppg_led_lock`, `cuff_log`;
+  - manifest gọi `SESSION_ID` của firmware là `device_session_id`
+    (`device_session_ids`, `sessions[].device_session_id`); trước đó là `session_id`,
+    `session_ids`, `sessions[].session_id`. Trường `SESSION_ID` trên wire giữ nguyên;
+  - kiểm mã LED đã khóa so với `0xD2` (mục "Mã LED đã khóa");
+  - dữ liệu người chỉ ghi vào `data/raw/<subject_id>/<session_id>/<recording>/`
+    (mục "Nơi ghi").
+
+  Replay một phiên ghi bằng v2 thì dùng config v3. Replay đọc được metadata v0 và
+  manifest v2: nó chỉ dùng hash và `logger_version`, không dùng các khóa đã đổi tên.
+  `decode.json` của v3 khác v2 (thêm `ppg_led_lock` ở mỗi phiên), nên so với manifest
+  v2 sẽ lệch hash `decode.json` và `logger_version`.
 - **Đọc cổng serial trực tiếp** (2026-10-24, `pyserial==3.5` được duyệt):
   `record --port ... --duration-s ...` (mục Nguồn byte). **Chờ:** chạy 10 phút với
   firmware khung trên bo thật.
@@ -56,6 +72,7 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
 | `scripts/packet_logger.py` | I/O: `record` từ nguồn byte, `replay` từ raw, provenance, manifest |
 | `configs/hardware/packet_logger.json` | Dung sai và kích thước đọc; `status: NOT_HARDWARE_VALIDATED` |
 | `tests/test_packet_logger.py`, `tests/fixtures/packet_v3_expected.json` | Test với đáp án độc lập |
+| `tests/test_packet_study_metadata.py` | Metadata v1, nơi ghi, mã LED đã khóa, đọc output cũ |
 
 ## Nguồn byte
 
@@ -79,7 +96,7 @@ theo từng đoạn bất kỳ: test xác nhận kết quả giống hệt nhau 
 
 1. Dò `SYNC` `0xA5 0x5A`. Byte không thuộc packet hợp lệ nào được gom thành từng
    đoạn liền nhau, mỗi đoạn một issue `skipped_bytes`.
-2. Kiểm theo thứ tự: `VERSION` = `0x01`, rồi `1 ≤ SAMPLE_COUNT ≤ 32`, rồi đủ
+2. Kiểm theo thứ tự: `VERSION` thuộc `wire_versions` của config (`0x01`, `0x02`), rồi `1 ≤ SAMPLE_COUNT ≤ 32`, rồi đủ
    `42 + 4N` byte, rồi CRC16 trên byte 2 … 39 + 4N, rồi `CHANNEL_ID` ∈ {`0xE1`,
    `0xF1`–`0xF4`, `0xC1`}.
 3. Lỗi (`unsupported_version`, `bad_sample_count`, `crc_mismatch`) thì bỏ **một**
@@ -315,32 +332,63 @@ Config `wire_versions` = `[1, 2]`, `packet_schemas` = `["packet-v0.1", "packet-v
   `DEVICE`, theo từng AFE có kênh khai báo trong metadata: `afe_config_missing`,
   `afe_not_configured`, `afe_fake_source`.
 - **Xác nhận lệnh `0xD3` (spec mục 13):** kiểm miền từng trường và quan hệ giữa kết
-  quả và thế hệ (`command_ack_invalid`); `SET_PPG_LED` xong mà phiên không có `0xD2` của
-  MAX30101 cùng thế hệ báo `command_ack_without_config`; kết quả khác 0 báo
-  `command_failed` kèm tên kết quả. Mỗi phiên có `commands`.
+  quả và thế hệ (`command_ack_invalid`: chỉ `SET_PPG_LED` xong mới có thế hệ, `PING` và
+  `MARK_EVENT` luôn 0); `SET_PPG_LED` xong mà phiên không có `0xD2` của MAX30101 cùng
+  thế hệ báo `command_ack_without_config`; kết quả khác 0 báo `command_failed` kèm tên
+  kết quả. Mỗi phiên có `commands`. Tên lệnh: `ping`, `set_ppg_led`, `mark_event` (từ
+  2026-10-29).
 
 ## Lệnh xuống thiết bị (spec mục 13, từ 2026-10-25)
 
 `record --port ... --duration-s ... --commands` tạo `command_inbox.jsonl` (rỗng) trong
 thư mục output. Trong lúc ghi, người vận hành dùng:
 
+Bản ghi có người nằm ở `data/raw/SUB###/S###/<recording>`; thay đường dẫn trong ví dụ cho đúng (`record --commands` in đường dẫn ra stderr lúc bắt đầu).
+
 ```powershell
 .\.venv\Scripts\python.exe scripts/device_command.py --recording runs/packet_logger/<thư mục> ping
 .\.venv\Scripts\python.exe scripts/device_command.py --recording runs/packet_logger/<thư mục> set-ppg-led --green 18 --red 36 --ir 36
+.\.venv\Scripts\python.exe scripts/device_command.py --recording runs/packet_logger/<thư mục> mark --event cuff_end
+.\.venv\Scripts\python.exe scripts/device_command.py --recording runs/packet_logger/<thư mục> mark --event operator
 ```
 
-Mã dòng LED theo bước 0,2 mA, xanh là mã **mỗi nhánh** (LED3 và LED4); firmware từ chối
-mã > 127. "queued" chỉ nghĩa là đã ghi vào hộp thư. Vòng ghi xem hộp thư sau mỗi lần đọc
-cổng (kể cả khi không có byte), lấy `SESSION_ID` đích từ packet gần nhất, gửi một lệnh
-mỗi lần, chờ `0xD3` 500 ms, gửi lại cùng byte tối đa 3 lần, rồi ghi kết quả "không biết".
-Hai lần gửi bất kỳ (lệnh mới hay gửi lại) cách nhau ít nhất 0,5 s. `CMD_SEQ` không lặp
-trong một lần ghi: sau 65 536 lệnh, các lệnh sau bị từ chối. Dòng hộp thư dài quá
-1 024 byte bị bỏ tới hết ký tự xuống dòng.
-`SESSION_ID` đổi (MCU khởi động lại) thì lệnh đang chờ bị hủy. Mọi bước ghi vào
-`commands_sent.jsonl` (`queued`, `rejected`, `sent`, `acked`, `unknown`,
-`session_changed`, `inbox_truncated`, `not_sent`); hai file này có hash trong manifest
-(`commands`). `decode.json`, `packets.csv`, `samples.csv` chỉ phụ thuộc `raw.bin`, nên
-replay không cần nhật ký lệnh.
+| Lệnh | Dòng hộp thư | Thiết bị |
+| --- | --- | --- |
+| `ping` | `{"cmd": "ping"}` | Chỉ xác nhận |
+| `set-ppg-led` | `{"cmd": "set_ppg_led", "green": 18, "red": 36, "ir": 36}` | Đổi dòng LED PPG, `0xD2` thế hệ mới |
+| `mark --event cuff_end` / `operator` | `{"cmd": "mark_event", "event": "cuff_end"}` / `"operator"` | `MARK_EVENT` (từ 2026-10-29): packet sự kiện `0xC1` mã 2 / mã 4 |
+
+- **Mã dòng LED** theo bước 0,2 mA, xanh là mã **mỗi nhánh** (LED3 và LED4). Trần cho
+  cả nghiên cứu là `0x7F` (127; chốt 2026-10-29, spec mục 13). Mã lớn hơn bị từ chối
+  ngay ở `device_command.py` (không ghi gì vào hộp thư, thoát mã 1) và ở vòng ghi;
+  firmware cũng từ chối (kết quả 8, `out_of_range`). Cờ
+  `--allow-over-firmware-limit` cho mã lớn hơn đi qua PC (dòng hộp thư có thêm
+  `"allow_over_firmware_limit": true`, nằm lại trong nhật ký). Cờ này chỉ dùng ở
+  bring-up, không người, để kiểm firmware tự từ chối.
+- **`mark`** cho mốc là **lúc thiết bị nhận lệnh** (`T_ANCHOR_US` của packet `0xC1`),
+  không phải lúc gõ lệnh. Độ trễ PC → thiết bị (hộp thư đọc tối đa mỗi 0,1 s, USB,
+  firmware) chưa đo: đủ cho mốc cỡ giây như lúc cuff xả xong, không dùng cho mốc cần
+  chính xác tới ms; `t0` vẫn là nút SW1. Gửi lại cùng byte không tạo sự kiện thứ hai.
+  `0xD3` kết quả 0 nghĩa là sự kiện đã vào hàng đợi của firmware; packet `0xC1` vẫn có
+  thể mất (logger báo như mọi sự kiện mất). Sự kiện mã 2 và 4 nằm trong `events` của
+  phiên trong `decode.json`.
+- "queued" chỉ nghĩa là đã ghi vào hộp thư. Vòng ghi xem hộp thư sau mỗi lần đọc cổng
+  (kể cả khi không có byte), lấy `SESSION_ID` đích từ packet gần nhất, gửi một lệnh mỗi
+  lần, chờ `0xD3` 500 ms, gửi lại cùng byte tối đa 3 lần, rồi ghi kết quả "không biết".
+  Riêng `set_ppg_led` chỉ ghi "không biết" khi đã 2,5 s từ lần gửi đầu, vì firmware có
+  thể mất tới 2 s mới trả lời (chốt 2026-10-29). Hai lần gửi bất kỳ (lệnh mới hay gửi
+  lại) cách nhau ít nhất 0,5 s.
+- `0xD3` tới sau khi đã ghi "không biết" vẫn được khớp theo `CMD_SEQ` và ghi
+  `late_ack` (kèm kết quả, thế hệ, `after_first_send_s`), một lần mỗi lệnh; dòng
+  "không biết" giữ nguyên.
+- `CMD_SEQ` không lặp trong một lần ghi: sau 65 536 lệnh, các lệnh sau bị từ chối. Dòng
+  hộp thư dài quá 1 024 byte bị bỏ tới hết ký tự xuống dòng. `SESSION_ID` đổi (MCU khởi
+  động lại) thì lệnh đang chờ bị hủy.
+- Mọi bước ghi vào `commands_sent.jsonl` (`queued`, `rejected`, `sent`, `acked`,
+  `unknown`, `late_ack`, `session_changed`, `inbox_truncated`, `not_sent`), kèm thời
+  điểm PC `pc_monotonic_s`. Thời điểm PC chỉ để tham khảo, không phải mốc sự kiện. Hai
+  file có hash trong manifest (`commands`). `decode.json`, `packets.csv`, `samples.csv`
+  chỉ phụ thuộc `raw.bin`, nên replay không cần nhật ký lệnh.
 
 ## Lệch kênh: chỉ có nghĩa trong mô phỏng
 
@@ -369,15 +417,70 @@ Từ Git root, PowerShell, môi trường đã cài theo repo:
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider tests/test_packet_logger.py
 ```
 
+Ghi trên người tham gia (mã ví dụ, cổng ví dụ):
+
+```powershell
+.\.venv\Scripts\python.exe scripts/packet_logger.py record --port COM5 --duration-s 3600 --commands --metadata <metadata v1 của SUB001, buổi S001> --subject-id SUB001 --session-id S001
+```
+
 Không truyền `--output` thì output là `runs/packet_logger/<UTC>_record` hoặc
-`_replay`. Mọi thư mục output phải là thư mục mới; mọi file được mở bằng
-exclusive create (`xb`). Exit 1 nghĩa là input/config/metadata sai, hoặc replay
-khác manifest. Exit 0 **không** có nghĩa là luồng sạch: phải đọc `issue_counts`.
+`_replay`; với `--subject-id` dạng `SUB###` là `data/raw/<subject_id>/<session_id>/<UTC>`
+(mục "Nơi ghi"). Với `--commands`, logger in thư mục bản ghi ra stderr lúc bắt đầu,
+để dùng cho `device_command.py --recording`. Mọi thư mục output phải là thư mục
+mới; mọi file được mở bằng exclusive create (`xb`). Exit 1 nghĩa là
+input/config/metadata/nơi ghi sai, hoặc replay khác manifest. Exit 0 **không** có
+nghĩa là luồng sạch: phải đọc `issue_counts`.
+
+## Nơi ghi (chốt 2026-10-29)
+
+| Dữ liệu | Nơi ghi |
+| --- | --- |
+| Người tham gia (`subject_id` = `SUB###`) | Chỉ `data/raw/<subject_id>/<session_id>/<recording>/`, một `raw.bin` mỗi lần ghi |
+| Bring-up không người (`subject_id` null), SYNTHETIC (null hoặc `SYN_*`) | Ngoài `data/raw/`; mặc định `runs/packet_logger/` |
+| Output của `replay` | Ngoài `data/raw/` (dữ liệu dẫn xuất); mặc định `runs/packet_logger/` |
+
+- Với dữ liệu người, `record` cần `--subject-id` và `--session-id` **bằng** giá trị
+  trong metadata. Nhờ vậy metadata cũ của người khác bị bắt trước khi đọc byte nào.
+- `<recording>` là một tên thư mục, bắt đầu bằng chữ hoặc số; mặc định là giờ UTC.
+- Đường dẫn sai, kể cả bất kỳ chỗ nào trong `runs/`, thì `record` từ chối trước khi
+  tạo thư mục.
+- `data/raw/` có thể là một liên kết (symlink, junction) tới ổ khác, ví dụ ổ mã hóa.
+  Thư mục người hay buổi bên trong mà là liên kết ra ngoài `data/raw/` thì bị từ chối.
+  Bản ghi không có người bị từ chối nếu nằm trong `data/raw/` theo đường dẫn đã gõ
+  hoặc sau khi giải liên kết.
+- Bản ghi `DEVICE` mới cần metadata v1: bring-up phải ghi rõ `subject_id` null kèm
+  lý do. Metadata v0 chỉ còn dùng cho SYNTHETIC (generator) và để replay bản cũ.
+- Raw vẫn bất biến, không ghi đè. Một buổi có nhiều lần ghi (hiệu chuẩn, ghi đo, ghi
+  lại sau sự cố) thì có nhiều `<recording>` trong cùng thư mục buổi.
+- Output của `replay` trên dữ liệu người vẫn chứa tín hiệu của người đó (`samples.csv`).
+  Khi người đó rút lui và chọn xóa, phải xóa cả các output này
+  ([quy ước dữ liệu](../quy_uoc_du_lieu.md) mục 1).
 
 ## Metadata phiên (đầu vào, mục 11)
 
-`--metadata` là JSON `packet-session-metadata-v0`, gồm:
+`--metadata` là JSON `packet-session-metadata-v1` (chốt 2026-10-29). Logger vẫn đọc
+`packet-session-metadata-v0` (generator v3, bản ghi cũ), coi bốn trường nghiên cứu
+dưới đây là null; `record` từ chối v0 khi `source_type` là `DEVICE`. Metadata gồm:
 
+- bốn trường nghiên cứu (chỉ v1):
+  - `subject_id`: mã giả danh `SUB` + 3 chữ số (`SUB001`), bắt buộc với dữ liệu người
+    và chỉ đi với `DEVICE`. `SYN_*` (ví dụ `SYN_A`) là mã test, chỉ đi với `SYNTHETIC`.
+    Null kèm lý do khi không có người (bring-up, SYNTHETIC);
+  - `session_id`: mã **buổi nghiên cứu** `S` + 3 chữ số (`S001`); có khi và chỉ khi có
+    `subject_id`. Đây không phải `SESSION_ID` của firmware: manifest gọi cái đó là
+    `device_session_id`, và một buổi có thể có nhiều `device_session_id` (MCU khởi
+    động lại);
+  - `ppg_led_lock`: mã LED đã khóa cho người này (protocol mục 6.1), object
+    `{"green", "red", "ir", "outside_dc_range"}`. Ba mã là số nguyên 0 … 127 (`0x7F`,
+    trần của nghiên cứu), bước 0,2 mA, xanh là mã mỗi nhánh. `outside_dc_range` liệt
+    kê các màu chưa vào khoảng DC sau 6 vòng chỉnh (protocol mục 6.1 bước 4), rỗng
+    nếu không có. Cần một kênh PPG trong `channels`. Null kèm lý do ở bản ghi hiệu
+    chuẩn của buổi đầu (chưa khóa) và ở bring-up. Kiểm ở mục "Mã LED đã khóa";
+  - `cuff_log`: đường dẫn tương đối tới tệp nhật ký cuff của buổi (`event_id` ↔
+    SBP/DBP ↔ nghiệm pháp), tính từ `data/raw/<subject_id>/<session_id>/`, ví dụ
+    `cuff_log.csv`. Cần `session_id`. Định dạng tệp chưa chốt (protocol mục 6.2 mới
+    ghi "biểu mẫu nghiên cứu"); logger không đọc và không hash tệp này, vì nó được
+    điền trong hoặc sau lúc ghi. Null kèm lý do khi chưa có tệp số (chỉ có phiếu giấy);
 - `source_type` (`SYNTHETIC` hoặc `DEVICE`), `clock_id`, `firmware_version`,
   `firmware_commit`, `device_id`, `operator`, `electrode_type`,
   `electrode_placement`;
@@ -412,6 +515,34 @@ Với firmware khung (`firmware/README.md`), lấy các giá trị sau:
   báo `channel_without_metadata`.
 - `afe_config` của PPG ghi cả ánh xạ khe → LED (schema mục 7, 11).
 
+## Mã LED đã khóa (`ppg_led_lock`, chốt 2026-10-29)
+
+Firmware khởi động với mã LED mặc định và không lưu mã qua lần khởi động (Packet
+Schema V0.2 mục 13). Vì vậy PC gửi lại mã đã khóa ở đầu mỗi `SESSION_ID`. Khi
+metadata có `ppg_led_lock`, logger so mã đó với `LED1_PA`–`LED4_PA` (`0x0C` đỏ, `0x0D`
+IR, `0x0E` và `0x0F` xanh) trong các trạng thái MAX30101 của `0xD2` (nguồn chip, đang
+chạy), theo từng `SESSION_ID`:
+
+- Trạng thái đầu tiên mang đúng mã khóa (cả hai nhánh xanh) là lúc mã khóa có hiệu
+  lực: `decode.json` → `sessions[].ppg_led_lock.applied` (`seq`, `t_anchor_us`,
+  `generation`). Manifest chép lại trong `sessions[]`. Lượt đo chỉ bắt đầu sau mốc
+  này (protocol mục 6.1).
+- Các trạng thái trước mốc đó (mã mặc định lúc khởi động, lúc chỉnh) không bị báo.
+- Sau mốc đó, một trạng thái có mã khác báo `ppg_led_lock_mismatch` (`seq`,
+  `generation`, `led_codes`). Ví dụ: lần chỉnh lại ở buổi sau, là sai lệch protocol.
+- Một `SESSION_ID` không có trạng thái nào mang mã khóa báo
+  `ppg_led_lock_not_applied` (`after_session_change`, `last_led_codes`).
+  `after_session_change` = true khi `SESSION_ID` đã đổi trong luồng: MCU khởi động
+  lại giữa buổi và chưa ai gửi lại mã. Phiên V0.1 (không có `0xD2`) luôn báo issue này.
+- Trong `record --commands`, mỗi khi gặp một `SESSION_ID` mới, logger in ra stderr
+  một dòng nhắc kèm lệnh `device_command.py ... set-ppg-led` với đúng mã khóa. Logger
+  không tự gửi lệnh.
+
+Không có `ppg_led_lock` thì `sessions[].ppg_led_lock` là null và không kiểm gì.
+Một `SESSION_ID` quay lại sau một `SESSION_ID` khác được gộp làm một phiên, như mọi kiểm
+khác của logger. Firmware lấy `SESSION_ID` ngẫu nhiên 32 bit mỗi lần khởi động
+(`esp_random`), nên việc này gần như không xảy ra.
+
 ## Đầu ra
 
 `record` ghi các file sau. Hai bản sao đầu vào được ghi **trước** byte đầu tiên,
@@ -429,13 +560,19 @@ kiểm tra, không xóa. Bản sao đầu vào chỉ giúp khi tiến trình b�
 | `packets.csv` | Mỗi packet đã giải mã theo thứ tự đến: trường header (kể cả `version`), `seq_ext`, `sample_index_ext`, `chain_id`, `disposition`. `chain_id` để trống với bản trùng, xung đột và packet `0xC1`/`0xD1` |
 | `samples.csv` | Mẫu của packet được nhận: phiên, kênh, `chain_id`, `seq_ext`, `sample_index_ext`, giá trị, `version` (cột cuối, từ 2026-10-24). Sắp theo (phiên, version, kênh, `chain_id`, `sample_index_ext`); khóa này là duy nhất, kể cả khi một phiên trộn hai version, còn `sample_index_ext` có thể lặp giữa hai chuỗi khi neo lại lùi. Không có cột thời gian |
 | `logger_config.json`, `session_metadata.json` | Bản sao đầu vào, ghi trước khi đọc nguồn |
-| `session_manifest.json` | Trường mục 11 (`packet_schemas` của luồng, `sessions` với `packet_schema` và `device_info` của từng phiên, `session_id`/`session_ids`, `clock_id`, firmware, thiết bị, giờ PC lúc bắt đầu/kết thúc, metadata kênh, `null_reasons`); SHA-256 raw và mọi output; `issue_counts`; hash config/metadata; git commit/dirty, hash code (LF), Python; `source_type` |
+| `session_manifest.json` | Trường mục 11 (`packet_schemas` của luồng, `session_metadata_version`, `subject_id`, `session_id` (buổi nghiên cứu), `ppg_led_lock`, `cuff_log`, `device_session_id`/`device_session_ids` (`SESSION_ID` của firmware), `sessions` với `device_session_id`, `packet_schema`, `device_info` và `ppg_led_lock` của từng phiên, `clock_id`, firmware, thiết bị, giờ PC lúc bắt đầu/kết thúc, metadata kênh, `null_reasons`); SHA-256 raw và mọi output; `issue_counts`; hash config/metadata; git commit/dirty, hash code (LF), Python; `source_type`. Với metadata v0, bốn trường nghiên cứu là null kèm lý do `not in packet-session-metadata-v0`. Manifest của logger v2 trở về trước dùng `session_id`/`session_ids`/`sessions[].session_id` cho `SESSION_ID` của firmware |
+
+`decode.json`, `packets.csv`, `samples.csv` giữ tên trường wire `session_id` cho
+`SESSION_ID` của firmware (chính là `device_session_id` của manifest), không phải buổi
+nghiên cứu.
 
 Trong `record`, decode chạy trực tiếp theo từng đoạn đọc. Sau đó `raw.bin` được
 đọc lại từ đĩa và decode lần nữa. Hai kết quả phải giống từng byte, nếu không thì
 dừng (`live_equals_offline_decode`). `replay` ghi `decode.json`, `packets.csv`,
-`samples.csv` và `replay_report.json`. Với `--expect`, hash raw, ba output decode
-và hash config/metadata được so với manifest.
+`samples.csv` và `replay_report.json`. Report có `session_metadata_version` và bốn
+trường nghiên cứu của metadata (từ 2026-10-29), để biết output là tín hiệu của ai mà
+không cần mở manifest gốc. Với `--expect`, hash raw, ba output decode và hash
+config/metadata được so với manifest.
 
 ## Giới hạn
 
@@ -451,7 +588,7 @@ và hash config/metadata được so với manifest.
   xuất hiện trước packet đầu của phiên, và reset có thể cắt cụt packet đang gửi:
   packet đó hỏng CRC (`crc_mismatch`) và bị bỏ cùng chữ ROM sau nó trong một
   `skipped_bytes`. Packet bị cắt là `SEQ` cuối của kênh trong phiên cũ nên không có
-  khoảng trống nào chỉ ra nó. Manifest ghi `session_ids` và `sessions` theo từng
+  khoảng trống nào chỉ ra nó. Manifest ghi `device_session_ids` và `sessions` theo từng
   `SESSION_ID` (`packet_schema`, `device_info`); firmware nạp lại giữa hai phiên hiện
   thành hai định danh ở hai phiên, không phải `device_info_changed`. Kiểm bằng
   `tests/test_packet_v02.py` (ba lần khởi động trong một raw, 2026-10-24).
@@ -483,8 +620,11 @@ PCB V1.
 - **D1.** Byte order của CRC16: little-endian như các trường khác (đang giả định)
   hay big-endian? → **Little-endian.**
 - **D2.** Firmware có lúc nào gửi `VERSION` khác `0x01` trên cùng cổng không? Đổi
-  layout thì có tăng `VERSION` (mục 2) không? → **Luôn `0x01`; đổi layout thì
-  tăng `VERSION` cùng bản firmware mới, không trộn trong một phiên.**
+  layout thì có tăng `VERSION` (mục 2) không? → **Từ 2026-10-24 firmware gửi
+  `VERSION = 0x02` (Packet Schema V0.2, `firmware/include/packet_wire.h`); firmware
+  cũ gửi `0x01`. Logger đọc cả hai (`wire_versions` = `[1, 2]`). Đổi layout thì tăng
+  `VERSION` cùng bản firmware mới, không trộn trong một phiên (trộn thì logger báo
+  `version_mixed_in_session`).** (Sửa 2026-10-29: bản trước ghi "luôn `0x01`".)
 - **D3.** Bit 0/5 bật ở packet nào so với khoảng mất (packet đọc lúc phát hiện
   tràn hay packet đã neo lại)? `SEQ` được gán trước hay sau bộ đệm MCU (bit 1)?
   → **Bit 0 bật ở packet đọc lúc phát hiện tràn; packet kế có index nhảy. `SEQ`

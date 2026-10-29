@@ -667,7 +667,8 @@ def test_record_replay_three_boots_keeps_device_info_per_session(tmp_path, sim):
     assert manifest["issue_counts"] == {"crc_mismatch": 2, "session_change": 2,
                                         "skipped_bytes": 3}
     assert manifest["decode"]["packets_decoded"] == 229
-    assert manifest["session_ids"] == [100, 101, 102] and manifest["session_id"] is None
+    assert manifest["device_session_ids"] == [100, 101, 102]
+    assert manifest["device_session_id"] is None
     sessions = manifest["sessions"]
     assert [s["packet_schema"] for s in sessions] == ["packet-v0.2"] * 3
     # Device info per SESSION_ID; the reflash is a new session, not a change.

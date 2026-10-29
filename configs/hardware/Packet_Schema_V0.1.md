@@ -6,7 +6,8 @@
 
 ## 1. Mục đích
 
-Quy định dữ liệu ESP32-S3 gửi về PC khi thu ECG/PPG ở V0. Mục tiêu:
+Quy định dữ liệu ESP32-S3 gửi về PC khi thu ECG/PPG trên thiết bị V1 (PCB
+V1-module; bench V0 đã bỏ ngày 2026-10-24). Mục tiêu:
 
 - truyền ổn định;
 - phát hiện mất, trùng, đảo thứ tự packet và mất mẫu bên trong AFE;
@@ -111,7 +112,8 @@ khi cờ FIFO bật (15 µs). Thời điểm lấy mẫu analog sớm hơn cạn
 trễ bộ lọc số ở bảng của datasheet (mục 5.3) cộng **1,003 ms** trễ lấy mẫu ADC
 (1,020 ms nếu FMSTR 32 000 Hz). Dù vậy, chụp `esp_timer` tại cạnh xung vẫn cho
 mỗi mẫu một mốc trên clock MCU với jitter rất nhỏ, không phụ thuộc độ trễ đọc
-FIFO. Chưa kiểm trên MAX30001; phép đo bench phải xác nhận độ trễ này. KiCad
+FIFO. Chưa kiểm trên MAX30001; phép đo đồng bộ 10 phút
+(`hardware/test_reports/sync_10min_test_plan.md`) phải xác nhận độ trễ này. KiCad
 V1-module, pin map chuẩn của V1, nối INT2B vào GPIO47
 (`configs/hardware/custom_board_proposal.md` mục A.6, A.7). Từ V0.2 (chốt
 2026-10-24): firmware bật `SAMP` luôn và dùng làm mốc ECG (Packet Schema V0.2 mục 7);
@@ -132,14 +134,14 @@ t_last_us      = T_ANCHOR_US − δ − d_pipe_us
     19,836 ms không LPF / 31,555 ms có LPF; 500 sps: 20,313 / 32,313 ms;
     128 sps: 102,844 / 149,719 ms; 125 sps: 105,313 / 153,313 ms. Bảng này chỉ là
     độ trễ bộ lọc số; ghi chú ADI cho MAX30003 (mục 5.2) đo thêm khoảng 1,0 ms trễ
-    lấy mẫu ADC (512 sps: 20,839 / 32,558 ms tính tới lúc mẫu vào FIFO). Dùng số
-    đo bench `L_ECG`, không dùng thẳng bảng datasheet.
+    lấy mẫu ADC (512 sps: 20,839 / 32,558 ms tính tới lúc mẫu vào FIFO). Dùng
+    `L_ECG` đo trong phép đo đồng bộ 10 phút, không dùng thẳng bảng datasheet.
   - MAX3010x: datasheet không cho độ trễ. Khi bật `SMP_AVE`, chip lấy trung bình
     N mẫu liền kề rồi giảm tốc độ (MAX30102 tr. 17, Bảng 3); độ trễ thêm ước lượng
     khoảng (N−1)/2 chu kỳ lấy mẫu gốc, **phải đo**.
 
-Trên thực tế không tách riêng được `δ` và `d_pipe` cho từng packet. Phép đo bench
-(`hardware/test_reports/sync_10min_test_plan.md`) cho **độ trễ hiệu dụng**
+Trên thực tế không tách riêng được `δ` và `d_pipe` cho từng packet. Phép đo đồng bộ
+10 phút (`hardware/test_reports/sync_10min_test_plan.md`) cho **độ trễ hiệu dụng**
 `L_us = d_pipe_us + E[δ]` của từng kênh và cấu hình. Khi phân tích, tính thời điểm
 tạm với `δ = d_pipe = 0` rồi trừ `L_us`; phần dao động còn lại của `δ` là jitter.
 
@@ -216,10 +218,25 @@ Phân biệt **số khe** và **loại LED**:
 `FIRST_SAMPLE_INDEX` và `T_ANCHOR_US`, nhưng **không** cùng thời điểm phát LED:
 khoảng cách cạnh lên giữa hai khe liên tiếp là 427 / 525 / 720 / 1 107 µs với độ
 rộng xung 69 / 118 / 215 / 411 µs (MAX30102 tr. 25, Bảng 14; MAX30101 tr. 22,
-Bảng 11). Khe thứ j lệch khoảng (j−1) lần giá trị này so với khe 1. Logger hiện
-không dựng thời gian từng khe (`samples.csv` chỉ có chỉ số mẫu), nên chưa cộng độ
-lệch này; cộng ở bước nào và theo quy ước nào còn mở (sửa 2026-10-25: bản
-trước ghi receiver đã cộng).
+Bảng 11). Khe thứ j lệch khoảng (j−1) lần giá trị này so với khe 1.
+
+**Quy ước offset giữa các khe (chốt 2026-10-29; trước đó còn mở):**
+
+- Raw giữ nguyên. Packet, logger và `samples.csv` không cộng độ lệch: ba khe chung
+  `FIRST_SAMPLE_INDEX` và `T_ANCHOR_US`, `samples.csv` chỉ có chỉ số mẫu (sửa
+  2026-10-25: bản trước ghi receiver đã cộng).
+- Phân tích offline lấy khe 1 làm gốc. Mốc thời gian dựng theo mục 5.3 là mốc của
+  khe 1; mẫu ở khe j có mốc đó cộng (j − 1) · Δ(PW).
+- Δ(PW) là khoảng cách cạnh lên giữa hai khe liên tiếp, suy từ độ rộng xung
+  (`LED_PW`) trong `SPO2_CONFIG` của packet `0xD2` của MAX30101 trong phiên
+  (Packet Schema V0.2 mục 12), không lấy từ metadata gõ tay hay từ mặc định của
+  firmware. Phiên không có `0xD2` hợp lệ của MAX30101 thì không cộng được: ghi là
+  thiếu, không đoán.
+- Giá trị Δ phụ thuộc độ rộng xung, mà độ rộng xung (411 hay 215 µs) còn chờ
+  bring-up. Danh định: 1 107 µs với 411 µs, 720 µs với 215 µs
+  ([custom_board_proposal.md](custom_board_proposal.md) A.6 mục 3, bảng trên).
+- Quy ước gắn với version của feature hay config dùng thời gian theo khe: ghi
+  version đó cùng kết quả; đổi gốc, công thức hay nguồn của Δ là đổi version.
 
 ## 8. Dữ liệu và đơn vị
 
@@ -247,7 +264,7 @@ trước ghi receiver đã cộng).
 | 1 | Bộ đệm phía MCU tràn: có packet bị bỏ trước khi gửi |
 | 2 | ECG lead-off (`DCLOFFINT`, MAX30001 tr. 41) |
 | 3 | Lỗi cấu hình hoặc giao tiếp AFE (ví dụ đọc lại thanh ghi không khớp, con trỏ FIFO bất thường) |
-| 4 | Độ trễ hiệu dụng `L` của cấu hình hiện tại chưa được đo (bật cho tới khi có kết quả bench) |
+| 4 | Độ trễ hiệu dụng `L` của cấu hình hiện tại chưa được đo (bật cho tới khi có kết quả phép đo đồng bộ 10 phút) |
 | 5 | Đếm lại sau khoảng mất mẫu **không biết chính xác độ dài**: `FIRST_SAMPLE_INDEX` được neo lại |
 | 6 | PPG: tràn khử ánh sáng môi trường (`ALC_OVF`, MAX30102 tr. 12) |
 | 7–15 | Dự trữ, gửi 0 |
@@ -287,10 +304,17 @@ nhận packet thì firmware không biết và không chuyển bit.
 ## 10. Packet sự kiện
 
 `CHANNEL_ID = 0xC1`, `SAMPLE_COUNT = 1`, `DATA[0]` là mã sự kiện, `T_ANCHOR_US`
-là thời điểm MCU ghi nhận sự kiện (cạnh GPIO hoặc lệnh). Mã đề xuất: `1` bắt đầu
-bơm cuff (`t0`), `2` kết thúc đo cuff, `3` xung kích thích đồng bộ (dùng trong
-phép đo 10 phút), `4` người vận hành đánh dấu. Giá trị SBP/DBP của cuff được nhập
-ở PC theo `event_id`, không đi trong packet.
+là thời điểm MCU ghi nhận sự kiện (cạnh GPIO hoặc lệnh). Mã sự kiện:
+
+| Mã | Sự kiện | Nguồn và mốc |
+| ---: | --- | --- |
+| `1` | Bắt đầu bơm cuff (`t0`) | Nút SW1 (GPIO4), cạnh xuống đầu tiên |
+| `2` | Kết thúc đo cuff (`CUFF_END`) | Lệnh PC `MARK_EVENT` (Packet Schema V0.2 mục 13, chốt 2026-10-29); mốc là lúc thiết bị nhận lệnh, độ trễ PC → thiết bị chưa đo |
+| `3` | Xung kích thích đồng bộ (phép đo 10 phút) | MCU tự phát trên GPIO6, `esp_timer` ngay sau cạnh lên |
+| `4` | Người vận hành đánh dấu (`OPERATOR_MARK`) | Như mã 2 |
+
+Mốc cần chính xác tới ms vẫn là `t0` (mã 1). Giá trị SBP/DBP của cuff được nhập ở
+PC theo `event_id`, không đi trong packet.
 
 Các trường còn lại (chốt 2026-10-23, [firmware/README.md](../../firmware/README.md)):
 
@@ -312,7 +336,8 @@ Bắt buộc: `schema_version` (`packet-v0.1`), `session_id`, `clock_id`, phiên
 commit firmware, mã thiết bị, ngày giờ PC lúc bắt đầu (chỉ để tham chiếu).
 
 Với **mỗi kênh**: `CHANNEL_ID`, cảm biến, `fs` danh định, độ trễ hiệu dụng `L` và
-nguồn của nó (datasheet hay phép đo bench, kèm mã báo cáo), công thức đổi đơn vị.
+nguồn của nó (datasheet hay phép đo đồng bộ 10 phút, kèm mã báo cáo), công thức đổi
+đơn vị.
 
 - ECG: `FMSTR`, `ECG_RATE`, `ECG_GAIN`, `ECG_DHPF`, `ECG_DLPF`, `EFIT`, `INTB_TYPE`,
   `SAMP_IT` nếu dùng INT2B.
@@ -345,7 +370,7 @@ vào file riêng.
 
 ## 13. Truyền USB/Serial
 
-V0 dùng binary packet để thu raw data. Log dạng text chỉ để debug, đi cổng hoặc
+Thiết bị V1 dùng binary packet để thu raw data. Log dạng text chỉ để debug, đi cổng hoặc
 file riêng, không trộn vào luồng packet.
 
 ## 14. Đối chiếu với mô phỏng `synthetic-packet-v2`
@@ -389,15 +414,20 @@ v2 ở bảng trên giữ nguyên.
 | `DATA` int32 | ECG: word 24 bit, ETAG/PTAG = 0; PPG: 18 bit không dấu | Số ngẫu nhiên, không phải waveform |
 | `CRC16` CCITT-FALSE | Có; đọc/ghi little-endian | Firmware cũng ghi little-endian (D1). Known-answer `0x29B1` |
 | Packet `0xC1` (mục 10) | `SAMPLE_COUNT` 1, mã 1–4. `FIRST_SAMPLE_INDEX` = thứ tự sự kiện trong phiên (0, 1, …), `FS_NOMINAL_MHZ` = 0, `T_FIRST_US` = `T_ANCHOR_US` | Logger bỏ bước 6 cho `0xC1`; bước 4 kiểm số thứ tự sự kiện so với `SEQ` (từ 2026-10-23). Firmware gửi đúng các giá trị này (mục 10, D6) |
-| Metadata phiên (mục 11) | `session_metadata.json` (`packet-session-metadata-v0`), trường chưa biết là `null` kèm lý do; manifest `schema_version` `packet-v0.1` | |
+| Metadata phiên (mục 11) | `session_metadata.json` (`packet-session-metadata-v0`; từ 2026-10-29 là v1, thêm `subject_id`, `session_id`, `ppg_led_lock`, `cuff_log`: [packet_logger.md](../../docs/protocol/packet_logger.md)), trường chưa biết là `null` kèm lý do; manifest `schema_version` `packet-v0.1` | |
 | `t_rx` (mục 3) | File riêng `rx_chunks.csv`, `t_rx_packets.csv`; không vào kết quả decode | |
 
 ## 15. Việc còn mở
 
 - Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up (V1 chốt
-  multi-LED ba khe ở 200 sps, `SMP_AVE = 1`, 2026-10-24).
+  multi-LED ba khe ở 200 sps, `SMP_AVE = 1`, 2026-10-24). Quy ước offset giữa các
+  khe không còn mở (chốt 2026-10-29, mục 7); chỉ giá trị Δ còn chờ độ rộng xung.
 - Độ trễ hiệu dụng `L` của từng cấu hình (đo theo kế hoạch đo 10 phút), kể cả
   khoảng 1,0 ms trễ lấy mẫu ADC của MAX30001 ngoài bảng datasheet (mục 5.2, 5.3).
 
 - Câu hỏi D8 (`d_ptr_us`/`d_word_us`) và D10 (tốc độ mẫu thật lệch bao nhiêu so
-  với danh định) trong `docs/protocol/packet_logger.md`: chờ phép đo bench.
+  với danh định) trong `docs/protocol/packet_logger.md`: D8 chờ số đo khi bring-up
+  trên PCB V1 (thử trên bàn, không người;
+  `hardware/test_reports/v1_bringup_procedure.md` chưa có bước riêng); D10 chờ phép
+  đo đồng bộ 10 phút (`hardware/test_reports/sync_10min_test_plan.md` mục 5, tốc độ
+  thực `fs_c`).

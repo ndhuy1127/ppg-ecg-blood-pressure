@@ -62,8 +62,10 @@ AFES = {
          0x7D), 8),
 }
 # Section 13: acknowledgement layout 1, five words; command and result names.
+# MARK_EVENT (0x03) from the amendment of 2026-10-29. Result 8 (out_of_range) is
+# an LED code above the ceiling or an event code other than 2 or 4.
 COMMAND_ACK_LAYOUT = 1
-COMMAND_NAMES = {0x01: "ping", 0x02: "set_ppg_led"}
+COMMAND_NAMES = {0x01: "ping", 0x02: "set_ppg_led", 0x03: "mark_event"}
 COMMAND_RESULTS = {
     0: "ok", 1: "unknown_command", 2: "bad_length", 3: "no_chip", 4: "busy",
     5: "chip_error", 6: "request_reused", 7: "wrong_session", 8: "out_of_range",

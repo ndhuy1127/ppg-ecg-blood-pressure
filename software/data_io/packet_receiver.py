@@ -10,10 +10,13 @@ verified on hardware.
 """
 
 import json
+import re
 from bisect import bisect_left, bisect_right
 from collections import Counter
 from fractions import Fraction
+from pathlib import PurePosixPath
 
+from software.data_io.command_wire import LED_CODE_MAX
 from software.data_io.packet_wire import (
     AFE_CONFIG_CHANNEL, AFE_CONFIG_LAYOUT, AFES, COMMAND_ACK_CHANNEL,
     COMMAND_ACK_LAYOUT, COMMAND_NAMES, COMMAND_RESULTS,
@@ -28,11 +31,31 @@ from software.data_io.packet_wire import (
 # its section 7 (SAMP anchor, bit 8) the same day and section 11 (die temperature
 # 0xB1) on 2026-10-25. v0 was committed in 250139d. v2 (2026-10-25): sections 12-13
 # (0xD2, 0xD3), channel_holes with two new required config keys, 0xD1 phase check.
-LOGGER_VERSION = "packet-logger-v2"
+# v3 (2026-10-29): session metadata v1 (study ids, locked LED codes), the locked
+# codes checked against the MAX30101 0xD2 states (``ppg_led_lock`` per session).
+LOGGER_VERSION = "packet-logger-v3"
 DEVICE_INFO_PERIOD_US = 10_000_000  # V0.2 section 6: one 0xD1 every 10 s
 PACKET_SCHEMAS = {WIRE_VERSION: "packet-v0.1", WIRE_VERSION_V02: "packet-v0.2"}
-METADATA_VERSION = "packet-session-metadata-v0"
+# v1 (2026-10-29) adds STUDY_FIELDS; v0 (the generator's, and every recording
+# before v1) is still read, with those fields taken as null.
+METADATA_VERSION = "packet-session-metadata-v1"
+METADATA_V0 = "packet-session-metadata-v0"
 SOURCE_TYPES = ("SYNTHETIC", "DEVICE")
+# Study identifiers (docs/quy_uoc_du_lieu.md): a participant is SUB + 3 digits and
+# only ever DEVICE data; SYN_* is test data and only ever SYNTHETIC. session_id is
+# the study session (S + 3 digits), not the firmware SESSION_ID, which the manifest
+# calls device_session_id; one study session may span several of those.
+SUBJECT_PATTERN = re.compile(r"SUB[0-9]{3}")
+SYNTHETIC_SUBJECT_PATTERN = re.compile(r"SYN_[A-Za-z0-9_]+")
+STUDY_SESSION_PATTERN = re.compile(r"S[0-9]{3}")
+STUDY_FIELDS = ("subject_id", "session_id", "ppg_led_lock", "cuff_log")
+# Locked PPG LED codes (protocol 6.1): 0.2 mA steps, green per sink. MAX30101
+# registers (firmware/include/max30101.h): LED1_PA red, LED2_PA IR, LED3_PA and
+# LED4_PA green, both driven with the green code.
+LED_COLORS = ("green", "red", "ir")
+LED_LOCK_FIELDS = {*LED_COLORS, "outside_dc_range"}
+LED_REGISTERS = {"red": "0x0C", "ir": "0x0D", "green_led3": "0x0E",
+                 "green_led4": "0x0F"}
 UINT32 = 1 << 32
 # Provisional rules, pending Duc Anh (docs/protocol/packet_logger.md): a
 # FIRST_SAMPLE_INDEX jump of known length is explained by STATUS bit 0 or 1, a
@@ -121,6 +144,10 @@ LIMITATIONS = [
     "A SAMP check that would also pass a one-sample shift at some rate and anchor "
     "error inside the tolerance (a long gap), or a SAMP packet with no other SAMP "
     "packet in its chain, is reported as anchor_check_weak, not as checked",
+    "ppg_led_lock is checked against the MAX30101 states of 0xD2 only: states "
+    "before the first one with the locked codes in a session (boot defaults, "
+    "calibration) are not reported; whether a subject wears the device is not "
+    "known to the logger",
 ]
 
 
@@ -185,13 +212,21 @@ def validate_config(config):
 
 
 def validate_metadata(metadata):
-    """Session metadata (schema section 11): unknown values are null with a reason."""
+    """Session metadata (schema section 11): unknown values are null with a reason.
+
+    v1 adds the study fields (``STUDY_FIELDS``); v0 has none of them."""
+    if not isinstance(metadata, dict):
+        raise ValueError("Session metadata must be a JSON object")
+    version = metadata.get("schema_version")
+    if version not in (METADATA_V0, METADATA_VERSION):
+        raise ValueError(f"Unsupported session metadata version {version!r}")
     fields = {"schema_version", "source_type", *TEXT_FIELDS, "channels",
               "simulation", "null_reasons"}
-    if not isinstance(metadata, dict) or set(metadata) != fields:
-        raise ValueError("Session metadata has missing or unsupported fields")
-    if metadata["schema_version"] != METADATA_VERSION:
-        raise ValueError("Unsupported session metadata version")
+    if version == METADATA_VERSION:
+        fields.update(STUDY_FIELDS)
+    if set(metadata) != fields:
+        raise ValueError(f"Session metadata has missing or unsupported fields for "
+                         f"{version}")
     if metadata["source_type"] not in SOURCE_TYPES:
         raise ValueError("source_type must be SYNTHETIC or DEVICE")
     nulls = set()
@@ -232,12 +267,73 @@ def validate_metadata(metadata):
             raise ValueError("simulation metadata has missing or extra fields")
         if not isinstance(simulation["common_index_epoch"], bool):
             raise ValueError("common_index_epoch must be a boolean")
+    if version == METADATA_VERSION:
+        nulls |= _validate_study_fields(metadata)
     reasons = metadata["null_reasons"]
     if not isinstance(reasons, dict) or set(reasons) != nulls or not all(
         isinstance(text, str) and text.strip() for text in reasons.values()
     ):
         raise ValueError("null_reasons must give a reason for exactly the null fields")
     return True
+
+
+def _validate_study_fields(metadata):
+    """Checks of the v1 study fields; returns the names that are null."""
+    subject, session = metadata["subject_id"], metadata["session_id"]
+    lock, cuff_log = metadata["ppg_led_lock"], metadata["cuff_log"]
+    if subject is not None:
+        if not isinstance(subject, str):
+            raise ValueError("subject_id must be text or null")
+        if SUBJECT_PATTERN.fullmatch(subject):
+            if metadata["source_type"] != "DEVICE":
+                raise ValueError("A participant subject_id (SUB###) needs DEVICE")
+        elif SYNTHETIC_SUBJECT_PATTERN.fullmatch(subject):
+            if metadata["source_type"] != "SYNTHETIC":
+                raise ValueError("A SYN_* subject_id needs SYNTHETIC")
+        else:
+            raise ValueError("subject_id must be SUB + 3 digits (participant), "
+                             "SYN_* (test) or null")
+    if session is not None and (
+        not isinstance(session, str) or not STUDY_SESSION_PATTERN.fullmatch(session)
+    ):
+        raise ValueError("session_id must be S + 3 digits (study session) or null")
+    if (subject is None) != (session is None):
+        raise ValueError("subject_id and session_id are both set or both null")
+    if lock is not None:
+        if not isinstance(lock, dict) or set(lock) != LED_LOCK_FIELDS:
+            raise ValueError(f"ppg_led_lock must have exactly "
+                             f"{sorted(LED_LOCK_FIELDS)}")
+        for color in LED_COLORS:
+            _integer(lock[color], f"ppg_led_lock.{color}", 0, LED_CODE_MAX)
+        outside = lock["outside_dc_range"]
+        if not isinstance(outside, list) or any(
+            color not in LED_COLORS for color in outside
+        ) or len(set(outside)) != len(outside):
+            raise ValueError("ppg_led_lock.outside_dc_range must list distinct colors "
+                             "of green, red, ir")
+        if not {channel_key(c) for c in PPG_CHANNELS} & set(metadata["channels"]):
+            raise ValueError("ppg_led_lock needs a declared PPG channel")
+    if cuff_log is not None:
+        path = PurePosixPath(cuff_log) if isinstance(cuff_log, str) else None
+        if (path is None or not cuff_log or cuff_log.strip() != cuff_log
+                or "\\" in cuff_log or ":" in cuff_log or path.is_absolute()
+                or ".." in path.parts):
+            raise ValueError("cuff_log must be a relative path (inside the study "
+                             "session directory) or null")
+        if session is None:
+            raise ValueError("cuff_log needs a study session_id")
+    return {name for name in STUDY_FIELDS if metadata[name] is None}
+
+
+def study_metadata(metadata):
+    """The study fields of validated metadata; all null for v0."""
+    return {name: metadata.get(name) for name in STUDY_FIELDS}
+
+
+def is_participant(metadata):
+    """True for participant data (a SUB### subject_id); never for v0 metadata."""
+    subject = metadata.get("subject_id")
+    return subject is not None and bool(SUBJECT_PATTERN.fullmatch(subject))
 
 
 def _unwrap(value, reference):
@@ -325,6 +421,8 @@ def analyze_stream(decoded, decoder, config, metadata):
         state["rows"][seq] = row
 
     result_sessions, samples = [], []
+    lock = study_metadata(metadata)["ppg_led_lock"]
+    first_session = decoded[0].packet.session_id if decoded else None
     for (session_id, version), channels in sessions.items():
         summaries, events, firsts, records = {}, [], {}, {}
         for channel_id in sorted(channels):
@@ -349,6 +447,9 @@ def analyze_stream(decoded, decoder, config, metadata):
             issue("channel_missing", session_id=session_id, version=version,
                   channel=key)
         holes = _channel_holes(session_id, version, channels, config, metadata, issue)
+        control = _session_control(session_id, version,
+                                   records.get(AFE_CONFIG_CHANNEL, []),
+                                   records.get(COMMAND_ACK_CHANNEL, []), metadata, issue)
         result_sessions.append({
             "session_id": session_id, "packet_schema": PACKET_SCHEMAS[version],
             "channels": summaries, "channels_missing": missing,
@@ -356,9 +457,9 @@ def analyze_stream(decoded, decoder, config, metadata):
             "device_info": _session_device_info(
                 session_id, version, records.get(DEVICE_INFO_CHANNEL, []), metadata,
                 issue),
-            **_session_control(session_id, version,
-                               records.get(AFE_CONFIG_CHANNEL, []),
-                               records.get(COMMAND_ACK_CHANNEL, []), metadata, issue),
+            **control,
+            "ppg_led_lock": _led_lock(session_id, version, control["afe_config"], lock,
+                                      session_id != first_session, issue),
             "channel_offset": _channel_offset(session_id, firsts, config, metadata,
                                               issue),
         })
@@ -682,7 +783,10 @@ def decode_afe_config(packet):
 
 
 def decode_command_ack(packet):
-    """Payload of a V0.2 0xD3 packet (section 13) as ``(ack, problem)``."""
+    """Payload of a V0.2 0xD3 packet (section 13) as ``(ack, problem)``.
+
+    Only a SET_PPG_LED that was done carries a generation (>= 1); every other
+    answer, PING and MARK_EVENT included, carries 0."""
     data = [word & 0xFFFFFFFF for word in packet.data]
     if packet.fs_nominal_mhz != 0 or packet.t_first_us != packet.t_anchor_us:
         return None, "header"
@@ -780,6 +884,48 @@ def _session_control(session_id, version, configs, acks, metadata, issue):
     return {"afe_config": {name: by_afe.get(name, [])
                            for name, _, _, _ in AFES.values()},
             "commands": commands}
+
+
+def _led_codes(registers):
+    """LED codes of a configured MAX30101 register image (V0.2 section 12)."""
+    return {name: int(registers[address], 16)
+            for name, address in LED_REGISTERS.items()}
+
+
+def _led_lock(session_id, version, afe_config, lock, after_change, issue):
+    """Session ``ppg_led_lock``: where the locked LED codes (metadata, protocol 6.1)
+    take effect in the MAX30101 states of 0xD2; None without a lock.
+
+    The PC sends the locked codes at the start of every device session, since the
+    firmware boots with its defaults (V0.2 section 13). States before the first
+    locked one (boot defaults, calibration) are not reported. A configured chip
+    state with other codes after it is ``ppg_led_lock_mismatch``; a session with
+    no locked state at all, a V0.1 one included (no 0xD2), is
+    ``ppg_led_lock_not_applied``, with ``after_session_change`` when the SESSION_ID
+    changed within the raw stream (an MCU restart: the codes must be sent again).
+    """
+    if lock is None:
+        return None
+    where = {"session_id": session_id, "version": version}
+    locked = {"red": lock["red"], "ir": lock["ir"], "green_led3": lock["green"],
+              "green_led4": lock["green"]}
+    applied, last = None, None
+    states = [] if afe_config is None else [
+        state for state in afe_config[AFES[2][0]]
+        if state["source"] == "chip" and state["configured"]
+    ]
+    for state in states:
+        last = _led_codes(state["registers"])
+        if applied is None and last == locked:
+            applied = {"seq": state["first_seq"], "t_anchor_us": state["t_anchor_us"],
+                       "generation": state["generation"]}
+        elif applied is not None and last != locked:
+            issue("ppg_led_lock_mismatch", **where, seq=state["first_seq"],
+                  generation=state["generation"], led_codes=last)
+    if applied is None:
+        issue("ppg_led_lock_not_applied", **where, after_session_change=after_change,
+              last_led_codes=last)
+    return {"applied": applied}
 
 
 def _channel_holes(session_id, version, channels, config, metadata, issue):

@@ -662,8 +662,12 @@ def test_a_saved_v1_config_is_refused_by_its_version():
           "anchor_rate_tolerance_ppm": 30000, "ecg_anchor_rate_tolerance_ppm": 1000,
           "samp_anchor_tolerance_us": 200, "temp_anchor_tolerance_us": 150000,
           "channel_offset_tolerance_us": 1000, "read_chunk_bytes": 4096}
-    with pytest.raises(ValueError, match="packet-logger-v1.*packet-logger-v2"):
+    with pytest.raises(ValueError, match="packet-logger-v1.*packet-logger-v3"):
         validate_config(v1)
+    # The v2 config differs from v3 only by its version, and is refused by it.
+    v2 = {**json.loads(LOGGER_CONFIG.read_bytes()), "schema_version": "packet-logger-v2"}
+    with pytest.raises(ValueError, match="packet-logger-v2.*packet-logger-v3"):
+        validate_config(v2)
 
 
 @pytest.mark.parametrize("field,value", [
@@ -695,7 +699,11 @@ def test_record_replay_identical_and_no_overwrite(tmp_path):
     # Raw keeps every received byte, including the corrupt packet.
     assert (session / "raw.bin").read_bytes() == stream
     assert manifest["issue_counts"] == EXPECTED["cases"]["crc"]["issue_counts"]
-    assert manifest["session_id"] == 1 and manifest["source_type"] == "SYNTHETIC"
+    assert manifest["device_session_id"] == 1 and manifest["source_type"] == "SYNTHETIC"
+    # Generator metadata is v0: no study fields, each null with a reason.
+    assert manifest["session_metadata_version"] == "packet-session-metadata-v0"
+    assert manifest["subject_id"] is None and manifest["session_id"] is None
+    assert manifest["null_reasons"]["subject_id"] == "not in packet-session-metadata-v0"
     for name, digest in manifest["outputs_sha256"].items():
         assert hashlib.sha256((session / name).read_bytes()).hexdigest() == digest
     assert b"t_rx" not in (session / "decode.json").read_bytes()
@@ -704,7 +712,7 @@ def test_record_replay_identical_and_no_overwrite(tmp_path):
     result = replay(session / "raw.bin", replayed, LOGGER_CONFIG, metadata, ROOT,
                     session / "session_manifest.json")
     assert result["expected_manifest"]["mismatches"] == []
-    assert manifest["logger_version"] == result["logger_version"] == "packet-logger-v2"
+    assert manifest["logger_version"] == result["logger_version"] == "packet-logger-v3"
     # A manifest written by another logger version is named as a mismatch.
     older = tmp_path / "older_manifest.json"
     older.write_text(json.dumps({**manifest, "logger_version": "packet-logger-v0"}),
@@ -790,8 +798,10 @@ def test_session_restart_manifest_lists_both_sessions(tmp_path):
     with (generated / "stream.bin").open("rb") as source:
         manifest = record(source, tmp_path / "session", LOGGER_CONFIG,
                           generated / "session_metadata.json", ROOT, "stream.bin")
-    assert manifest["session_ids"] == [1, 2] and manifest["session_id"] is None
-    assert "session_id" in manifest["null_reasons"]
+    assert manifest["device_session_ids"] == [1, 2]
+    assert manifest["device_session_id"] is None
+    assert "device_session_ids" in manifest["null_reasons"]["device_session_id"]
+    assert [s["device_session_id"] for s in manifest["sessions"]] == [1, 2]
 
 
 class FakePort:

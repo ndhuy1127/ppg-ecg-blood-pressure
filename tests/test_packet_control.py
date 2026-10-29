@@ -234,3 +234,31 @@ def test_invalid_acknowledgement(sim, logger, data, problem):
     invalid = [i for i in result["issues"] if i["code"] == "command_ack_invalid"]
     assert [i["problem"] for i in invalid] == [problem]
     assert session(result)["commands"] == []
+
+
+def test_mark_event_acknowledgements_and_events(sim, logger):
+    # MARK_EVENT (0x03, amendment 2026-10-29): done answers carry generation 0;
+    # a refused code is result 8; the events it makes are codes 2 and 4 on 0xC1,
+    # counted with the t0 event.
+    def event(seq, code, t):
+        return Packet(2, 0xC1, 1, seq, seq, t, t, 0, 0, (code,))
+
+    packets = [ppg(0), event(0, 1, 1_000_100), event(1, 2, 1_500_000),
+               ack(0, 0, 0x03, 7), ack(1, 1, 0x03, 8, result=8),
+               event(2, 4, 2_200_000), ack(2, 2, 0x03, 9)]
+    result, rows, _ = analyze(packets, sim, logger, metadata(sim, "0xF1", "0xC1"))
+    assert result["issue_counts"] == {"command_failed": 1}
+    assert [i["result"] for i in result["issues"]] == ["out_of_range"]
+    s = session(result)
+    assert [(c["cmd"], c["cmd_seq"], c["result"], c["generation"])
+            for c in s["commands"]] == [("mark_event", 7, "ok", 0),
+                                        ("mark_event", 8, "out_of_range", 0),
+                                        ("mark_event", 9, "ok", 0)]
+    assert [(e["event_ordinal"], e["data"]) for e in s["events"]] == [
+        (0, [1]), (1, [2]), (2, [4])]
+    assert {r["disposition"] for r in rows if r["channel_id"] == "0xC1"} == {"event"}
+    # A done MARK_EVENT never carries a generation.
+    result, _, _ = analyze([ppg(0), ack(0, 0, 0x03, 7, gen=1)], sim, logger,
+                           metadata(sim, "0xF1"))
+    invalid = [i for i in result["issues"] if i["code"] == "command_ack_invalid"]
+    assert [i["problem"] for i in invalid] == ["generation"]

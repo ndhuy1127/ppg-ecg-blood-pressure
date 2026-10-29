@@ -13,16 +13,23 @@
 > MAX30001 (mục "Driver MAX30001"), bật bằng bản build `esp32s3_devkitc_ecg_real`;
 > **chưa chạy trên chip**. Driver MAX30101 (mục "Driver MAX30101") bật bằng
 > `esp32s3_devkitc_ppg_real`, cũng chưa chạy trên chip. Driver BMI270 (mục "Driver
-> BMI270") bật bằng `esp32s3_devkitc_imu_real`, cũng chưa chạy trên chip.
+> BMI270") bật bằng `esp32s3_devkitc_imu_real`, cũng chưa chạy trên chip. Từ
+> 2026-10-29: lệnh PC `MARK_EVENT` (sự kiện mã 2 và 4, mục "Cấu hình AFE `0xD2` và
+> lệnh từ PC") và bản build `esp32s3_devkitc_all_real` (ba chip thật, mục "Bản
+> build"); chưa chạy trên chip.
 
 - **app/**: `main.c` (task, hàng đợi, cổng USB, nút t0, thông tin thiết bị, đọc
-  IMU, đọc ECG có mốc `SAMP`), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet
+  IMU, đọc ECG có mốc `SAMP`, task điều khiển), `imu_plan.c` (chỉ số, `STATUS` và cách chia packet
   của một lần đọc FIFO BMI270 theo V0.2 mục 3–5; C thuần), `samp_map.c` (ánh xạ
   xung `SAMP` ↔ mẫu ECG, kiểm danh tính, chính sách khởi động lại; V0.2 mục 7.2–7.3;
   C thuần),
   `packet_wire.c` (encoder Packet Schema V0.2, đóng gói payload `0xD1` và phép tự
   kiểm lúc khởi động; C thuần, không phụ thuộc ESP-IDF; tên giống codec Python
-  `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`).
+  `software/data_io/packet_wire.py`, trước 2026-10-24 là `packet_v01.c`). Các file C
+  thuần khác, mỗi file có test trên máy tính: `ecg_read.c`, `ecg_loop.c` (đọc ECG),
+  `ppg_read.c` (đọc PPG), `die_temp.c` (nhiệt độ `0xB1`), `stim_plan.c` (lịch xung
+  kích thích), `cmd_wire.c` (tách khung lệnh), `cmd_exec.c` (quyết định lệnh),
+  `afe_order.c` (thứ tự `0xD2`).
 - **drivers/**: `max30001.c` (driver MAX30001 lõi, C thuần, không phụ thuộc
   ESP-IDF), `max30001_esp.c` (SPI và ngắt INTB trên ESP32-S3); `max30101.c` (driver
   MAX30101 lõi, C thuần), `max30101_esp.c` (I²C và ngắt INT); `bmi270.c` (driver
@@ -35,9 +42,12 @@
   capture thật trên GPIO47 và quy đổi sang `esp_timer` (chưa chạy trên chip).
 - **boards/**: `board_v1_module.h`, GPIO theo bảng A.7 của
   [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md).
-- **include/**: `packet_wire.h`, `imu_plan.h`, `samp_map.h`, `samp_edges.h`,
-  `samp_capture.h`, `fake_afe.h`, `max30001.h`, `max30001_esp.h`, `packet_kat.h`
-  (known-answer V0.2 của encoder).
+- **include/**: header của từng file trong `app/` và `drivers/`: `packet_wire.h`,
+  `packet_kat.h` (known-answer V0.2 của encoder), `imu_plan.h`, `samp_map.h`,
+  `ecg_read.h`, `ecg_loop.h`, `ppg_read.h`, `die_temp.h`, `stim_plan.h`, `cmd_wire.h`,
+  `cmd_exec.h`, `afe_order.h`, `samp_edges.h`, `samp_capture.h`, `fake_afe.h`,
+  `max30001.h`, `max30001_esp.h`, `max30101.h`, `max30101_esp.h`, `bmi270.h`,
+  `bmi270_config.h`, `bmi270_esp.h`.
 - **tests/**: chưa có test chạy trên bo. Known-answer của encoder được dựng lại
   độc lập (Python `struct` và `binascii.crc_hqx`) và đối chiếu với codec Python bằng
   [tests/test_firmware_packet_kat.py](../tests/test_firmware_packet_kat.py) (không
@@ -59,8 +69,8 @@ Không commit khóa hoặc thông tin kết nối thật.
 
 | Mục | Giá trị |
 | --- | --- |
-| Board | ESP32-S3-DevKitC-1-N8R8 chính hãng (dòng 6 của [danh sách mua](../hardware/bom/purchase_list_v1_module.md), chốt 2026-10-24) |
-| Board PlatformIO | `esp32-s3-devkitc-1`. Image khai báo flash 2 MB (mặc định ESP-IDF), không bật PSRAM, nên nạp được lên bo 8 MB |
+| Board | Waveshare ESP32-S3-DEV-KIT-N8R8-M, module Espressif ESP32-S3-WROOM-1-N8R8, một cổng USB-C (đặt 2026-10-27, thay bản DevKitC-1-N8R8 chốt 2026-10-24; dòng 6 của [danh sách mua](../hardware/bom/purchase_list_v1_module.md), [custom_board_proposal.md](../configs/hardware/custom_board_proposal.md) A.2) |
+| Board PlatformIO | `esp32-s3-devkitc-1` (định nghĩa của PlatformIO; bo Waveshare có thứ tự chân giống DevKitC-1). Image khai báo flash 2 MB (mặc định ESP-IDF), không bật PSRAM, nên nạp được lên bo 8 MB |
 | Toolchain | PlatformIO Core 6.1.19, platform `espressif32@6.13.0`, ESP-IDF 5.5.3 (`framework-espidf` 3.50503.0), GCC xtensa 14.2.0 |
 | Cấu hình | [platformio.ini](platformio.ini), [sdkconfig.defaults](sdkconfig.defaults) |
 
@@ -75,25 +85,74 @@ Chạy từ Git root. Nếu `pio` chưa có trong PATH, dùng
 `%USERPROFILE%\.platformio\penv\Scripts\pio.exe`.
 
 ```powershell
-pio run -d firmware                                   # build
-pio run -d firmware -e esp32s3_devkitc_imu_stall      # build có dừng đọc IMU (mục "IMU giả")
-pio run -d firmware -e esp32s3_devkitc_samp_faults    # build có lỗi xung SAMP giả (mục "Mốc SAMP")
-pio run -d firmware -e esp32s3_devkitc_ppg_delay      # build có đọc PPG trễ (mục "Đọc PPG")
-pio run -d firmware -t upload --upload-port COM5      # nạp (COM5 là ví dụ)
-pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0
+pio run -d firmware                                   # build bản mặc định
+pio run -d firmware -e esp32s3_devkitc_all_real       # build một env (bảng dưới)
+pio run -d firmware -e <env> -t upload --upload-port COM5   # nạp (COM5 là ví dụ)
+pio device monitor -d firmware -p COM6 -b 115200      # log chữ trên UART0 (cổng CH343)
 ```
+
+Build nhiều env thì ghi tên từng env (`-e a -e b …`). Build lâu (vài phút mỗi env
+lần đầu): chạy nền, và không sửa mã C trong lúc build.
+
+## Bản build
+
+Mọi env dùng chung firmware; chỉ cờ build khác nhau (`platformio.ini`). Env có chip
+thật mà chạy trên bo Waveshare đứng riêng thì chip đó khởi động lỗi và bị bỏ.
+
+| Env | Nguồn ECG / PPG / IMU | Cờ | Dùng khi |
+| --- | --- | --- | --- |
+| `esp32s3_devkitc` (mặc định) | giả / giả / giả | — | Bring-up mục 2 bước 3–5 và 7: kiểm đường packet, logger và lệnh từ PC, chưa cần chip |
+| `esp32s3_devkitc_imu_stall` | giả / giả / giả | `FAKE_IMU_STALLS=1` | Bring-up mục 2 bước 6: IMU cố ý dừng đọc (bit 7, FIFO đầy, neo lại) |
+| `esp32s3_devkitc_samp_faults` | giả / giả / giả | `FAKE_SAMP_FAULTS=1` | Bring-up mục 2 bước 6: xung `SAMP` giả mất và thừa |
+| `esp32s3_devkitc_ppg_delay` | giả / giả / giả | `FAKE_PPG_DELAY=1` | Bring-up mục 2 bước 6: PPG đọc trễ, N > 8 |
+| `esp32s3_devkitc_ecg_real` | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_SAMP_CAPTURE=1` | Bring-up mục 7: breakout ECG trên bo đế. Bit 8 tắt (`BOARD_SAMP_VERIFIED` mặc định 0); chỉ thêm `-DBOARD_SAMP_VERIFIED=1` sau khi kiểm xong mục 7 bước 4 |
+| `esp32s3_devkitc_ppg_real` | giả / MAX30101 / giả | `BOARD_PPG_REAL=1` | Bring-up mục 8 bước 4, 6, 10: MAX30101 qua cáp |
+| `esp32s3_devkitc_imu_real` | giả / giả / BMI270 | `BOARD_IMU_REAL=1` | Bring-up mục 8 bước 5: BMI270 qua cáp, dấu trục |
+| `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 75 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO |
+| `esp32s3_devkitc_sync10` | MAX30001 / MAX30101 / BMI270 | như `all_real` nhưng `BOARD_SAMP_VERIFIED=1`, thêm `BOARD_STIM=1` | Chỉ phép đo đồng bộ 10 phút, **sau** khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xung đầu tiên khớp mẫu đầu FIFO, và sau khi đã chốt độ rộng xung LED |
+
+**Giá trị đo ở bring-up truyền lúc build, không sửa `platformio.ini`.** Hai giá trị
+chưa chốt: cực tính cạnh `SAMP` (`BOARD_SAMP_RISING_EDGE`, 0 cạnh xuống là mặc định,
+1 cạnh lên; đo ở bring-up mục 7 bước 4) và độ rộng xung LED (`BOARD_PPG_LED_PW_US`,
+411 mặc định hay 215; chọn ở bring-up mục 8). PlatformIO nối biến môi trường
+`PLATFORMIO_BUILD_FLAGS` vào `build_flags` của env, nên:
+
+```powershell
+$env:PLATFORMIO_BUILD_FLAGS = "-DBOARD_SAMP_RISING_EDGE=1 -DBOARD_PPG_LED_PW_US=215"
+pio run -d firmware -e esp32s3_devkitc_sync10
+Remove-Item Env:PLATFORMIO_BUILD_FLAGS   # để bản build sau không mang cờ cũ
+```
+
+- Đã kiểm 2026-10-29 với PlatformIO 6.1.19, build `esp32s3_devkitc_all_real` vào một
+  thư mục build riêng (`PLATFORMIO_BUILD_DIR`): với
+  `-DBOARD_SAMP_RISING_EDGE=1 -DBOARD_PPG_LED_PW_US=215` thì dòng `build_flags` của env
+  có thêm hai cờ, lệnh biên dịch `app/main.c` và mọi file khác mang hai cờ, build xong;
+  với `-DBOARD_PPG_LED_PW_US=300` thì build dừng ở `main.c` bằng `#error` của
+  `board_v1_module.h`. Chưa nạp lên chip.
+- Biến này vào cả checksum cấu hình của PlatformIO (`compute_project_checksum`), nên
+  mỗi lần đặt, đổi hay bỏ nó, lần build kế tiếp xóa cả `.pio/build` (mọi env) và
+  biên dịch lại từ đầu, vài phút mỗi env. Không phải lỗi; chỉ tốn thời gian.
+- `board_v1_module.h` từ chối build khi `BOARD_SAMP_RISING_EDGE` khác 0/1 hay
+  `BOARD_PPG_LED_PW_US` khác 411/215 (driver sẽ lặng lẽ dùng 411 với mọi giá trị khác
+  215); test [tests/test_firmware_board.py](../tests/test_firmware_board.py).
+- Cờ truyền bằng biến môi trường không nằm trong commit. Ghi nguyên văn giá trị của
+  `PLATFORMIO_BUILD_FLAGS` vào báo cáo cùng commit và ELF SHA-256 (packet `0xD1`); ELF
+  SHA-256 là thứ định danh bản đã nạp. Độ rộng xung còn thấy được trong `SPO2_CONFIG`
+  của packet `0xD2`; cực tính `SAMP` thì không có trong luồng packet.
 
 ## Hai cổng USB
 
 | Cổng | Nội dung |
 | --- | --- |
-| USB native (USB Serial/JTAG của ESP32-S3) | Packet nhị phân V0.2. Lúc khởi động, trước packet đầu tiên có thể có chữ của ROM và bootloader; decoder bỏ qua và báo là byte bị bỏ. Khi đã chạy, firmware không ghi chữ ra cổng này |
-| UART0 (cổng COM qua chip cầu USB–UART), 115 200 baud | Log chữ: tên và phiên bản firmware, ESP-IDF, ELF SHA-256, kết quả tự kiểm encoder, `SESSION_ID`, thống kê mỗi 10 s |
+| USB native (USB Serial/JTAG của ESP32-S3, VID:PID `303A:1001`) | Packet nhị phân V0.2. Lúc khởi động, trước packet đầu tiên có thể có chữ của ROM và bootloader; decoder bỏ qua và báo là byte bị bỏ. Khi đã chạy, firmware không ghi chữ ra cổng này |
+| UART0 (cổng COM qua cầu USB–UART CH343), 115 200 baud | Log chữ: tên và phiên bản firmware, ESP-IDF, ELF SHA-256, kết quả tự kiểm encoder, `SESSION_ID`, thống kê mỗi 10 s |
 
-Bo chính hãng có hai cổng Micro-USB: theo
-[hướng dẫn DevKitC-1 v1.1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html),
-cổng USB-to-UART (nhãn UART) đi qua chip cầu, cổng còn lại (nhãn USB) là USB native
-của ESP32-S3. **Chưa kiểm trên bo**: đọc nhãn in cạnh cổng khi nhận hàng. Không cần
+Bo Waveshare có một cổng USB-C đi qua hub CH334; sau hub là cầu USB–UART CH343 (UART0)
+và USB native của ESP32-S3. Một cáp cho laptop thấy hai cổng COM: chọn cổng theo
+VID:PID trong Device Manager như
+[bring-up](../hardware/test_reports/v1_bringup_procedure.md) mục 2 (`303A:1001` là cổng
+packet, cổng của CH343 là log). Số COM do Windows gán, nên các số COM5/COM6 ở mục "Lệnh"
+chỉ là ví dụ. **Chưa kiểm trên bo.** Không cần
 đọc log UART0 để điền metadata phiên: phiên bản ứng dụng và ELF SHA-256 đi trong packet
 `0xD1`, `SESSION_ID` trong mọi packet; `firmware_version` của metadata chỉ là phiên bản
 ứng dụng ([packet_logger.md](../docs/protocol/packet_logger.md), mục Metadata phiên).
@@ -111,7 +170,7 @@ thái nháy nhanh. Known-answer V0.1 vẫn nằm trong fixture làm bản cũ.
 | `0xE1` | ECG giả, giống MAX30001, kèm một xung `SAMP` mỗi mẫu | 512 000 | 1 953 µs (≈ 512,03 Hz, lệch +64 ppm so với danh định) | 16 | Word 24 bit: mẫu 18 bit bù hai `(k mod 2048) − 1024` ở bit 23…6, ETAG = PTAG = 0 |
 | `0xF1`–`0xF3` | PPG giả, giống MAX30101 chế độ multi-LED 3 khe ở tốc độ V1 (200 sps), báo ngắt mỗi mẫu như `PPG_RDY` | 200 000 | 5 000 µs | 8 (nhiều hơn khi đọc trễ) | `(k mod 4096) + 32 768 × s`, `s` = 1, 2, 3 theo khe |
 | `0xA1`–`0xA6` | IMU giả, giống BMI270 cấu hình V1 (V0.2 mục 3): gia tốc X/Y/Z, con quay X/Y/Z | 100 000 | 10 000 µs; FIFO 170 frame, watermark 10 | 10 (tới 32 mỗi packet khi tồn đọng) | Int16 có dấu `((k · 257 + s · 8191) mod 65 536) − 32 768`, `s` = 0…5 theo trục; chạm cả hai biên −32 768 và 32 767 |
-| `0xC1` | Nút t0 | 0 | — | 1 | Mã sự kiện `1` |
+| `0xC1` | Nút t0; lệnh PC `MARK_EVENT`; xung kích thích (env `sync10`) | 0 | — | 1 | Mã sự kiện `1` (t0), `2` và `4` (`MARK_EVENT`), `3` (xung) |
 | `0xD1` | Thông tin thiết bị (V0.2 mục 6) | 0 | Một lần ngay sau khi driver USB khởi động, rồi mỗi 10 s | 25 | Layout 1, ELF SHA-256, `esp_app_desc_t.version`, `esp_app_desc_t.idf_ver` |
 
 `DATA` là hàm của chỉ số mẫu, nên receiver kiểm được từng mẫu. Độ lệch +64 ppm của
@@ -222,16 +281,16 @@ Trả lời các câu hỏi D trong [hướng dẫn logger](../docs/protocol/pac
 | D3 | `SEQ` gán **lúc gửi**, khi lấy packet ra khỏi hàng đợi MCU. Thiếu `SEQ`: packet mất sau hàng đợi (USB không nhận trong 20 ms). Hàng đợi MCU đầy: packet bị bỏ trước khi có `SEQ`; packet kế của kênh đó bật bit 1 và có `FIRST_SAMPLE_INDEX` nhảy, `SEQ` vẫn liên tục. FIFO AFE tràn: bit 0 bật ở packet đọc lúc phát hiện, khoảng mất nằm sau mẫu cuối của packet đó, packet kế có `FIRST_SAMPLE_INDEX` nhảy. Nếu packet mang bit 0, 1 hoặc 5 bị bỏ ở hàng đợi, hoặc firmware gửi thất bại (driver USB không nhận đủ packet trong 20 ms), các bit đó chuyển sang packet gửi được kế tiếp của kênh (sửa 2026-10-23; trước đó chỉ chuyển bit 1 và chỉ khi gửi thất bại; bit 5 thêm 2026-10-24 theo V0.2 mục 5), để bước nhảy index vẫn có lời giải thích theo R2 và packet kế vẫn mở chuỗi mới. Packet đã vào bộ đệm driver mà sau đó mất trên đường USB thì firmware không biết, nên không chuyển bit; logger vẫn thấy khoảng `SEQ`. Firmware sinh bit 5 khi neo lại (ECG khởi động lại, IMU và PPG đọc lại; các mục dưới) |
 | D4 | Bit 4 bật trên mọi packet ECG/PPG cho tới khi đo xong độ trễ hiệu dụng `L` của cấu hình; không bật trên `0xC1` |
 | D5 | `SEQ` (riêng từng kênh) và `FIRST_SAMPLE_INDEX` bắt đầu từ 0 ở mỗi phiên. `SESSION_ID` là số ngẫu nhiên 32 bit lấy lúc khởi động. `0xD1`: `FIRST_SAMPLE_INDEX` là số thứ tự packet thông tin, đếm cả packet bị bỏ ở hàng đợi; `STATUS` = 0, có thể có bit 1 |
-| D6 | `0xC1`: `SEQ` đếm riêng; `FIRST_SAMPLE_INDEX` = số thứ tự sự kiện trong phiên (0, 1, …); `FS_NOMINAL_MHZ` = 0; `T_ANCHOR_US` = `T_FIRST_US` = thời điểm cạnh xuống đầu tiên của nút |
+| D6 | `0xC1`: `SEQ` đếm riêng; `FIRST_SAMPLE_INDEX` = số thứ tự sự kiện trong phiên (0, 1, …), chung mọi mã; `FS_NOMINAL_MHZ` = 0; `T_ANCHOR_US` = `T_FIRST_US` = thời điểm cạnh xuống đầu tiên của nút (mã 1), lúc task điều khiển đọc được khung lệnh `MARK_EVENT` (mã 2, 4; từ 2026-10-29), ngay sau cạnh lên của xung kích thích (mã 3) |
 | D7 | Không bao giờ gửi `SAMPLE_COUNT = 0` |
-| D8 | Chờ bench |
+| D8 | Chờ số đo khi thử trên bàn với PCB V1 (không người): `d_word_us` khi đọc FIFO ECG ở bring-up mục 7, `d_ptr_us` khi đọc con trỏ PPG ở bring-up mục 8 bước 4; bring-up chưa có dòng ghi riêng hai số này |
 | D9 | USB Serial/JTAG không có baud. Bộ đệm TX của driver 8 192 byte, hàng đợi MCU 64 packet, timeout ghi 20 ms. Firmware không ghi chữ ra cổng packet; lúc khởi động có thể có chữ của ROM và bootloader |
 | D10 | Chờ phép đo 10 phút |
 
 ## Nút t0
 
 GPIO4, tích cực mức thấp, có kéo lên trong chip (bo đế V1 có thêm 10 kΩ và
-100 nF). Trên DevKitC trần: nối công tắc giữa GPIO4 và GND. Thời điểm sự kiện là
+100 nF). Trên bo Waveshare đứng riêng (chưa cắm bo đế): nối công tắc giữa GPIO4 và GND. Thời điểm sự kiện là
 cạnh xuống đầu tiên; bỏ qua cạnh trong 200 ms sau đó, và chỉ nhận nếu nút vẫn
 được giữ sau 20 ms (lọc dội khi nhả). `FIRST_SAMPLE_INDEX` của `0xC1` chỉ đếm sự
 kiện đã qua lọc dội. Nếu hàng đợi của ISR (8 cạnh) đầy, cạnh đó bị bỏ trước khi lọc
@@ -246,7 +305,9 @@ Cho phép đo đồng bộ 10 phút
 ([sync_10min_test_plan.md](../hardware/test_reports/sync_10min_test_plan.md) mục
 3–4). Bật bằng `BOARD_STIM=1`; bản build `esp32s3_devkitc_sync10` bật cùng lúc ba chip
 thật, capture `SAMP` có bit 8 (`BOARD_SAMP_VERIFIED=1`) và xung. Chỉ nạp bản này sau
-khi bring-up mục 7 đã xác nhận cạnh `SAMP` khớp mẫu đầu tiên của FIFO.
+khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận cạnh `SAMP` khớp mẫu
+đầu tiên của FIFO, và build với cực tính đo được cùng độ rộng xung LED đã chốt
+(mục "Bản build": `PLATFORMIO_BUILD_FLAGS`).
 
 - GPIO6 (J3 chân 1) lên mức cao 2 s sau khi khởi động, rồi cứ 1 s cộng độ lệch đều
   trong [0; 1 953) µs (một chu kỳ mẫu ECG), xuống sau 50 ms. Hai one-shot
@@ -284,6 +345,12 @@ khi bring-up mục 7 đã xác nhận cạnh `SAMP` khớp mẫu đầu tiên c�
    `samp_resumed_without_reanchor`. Bản `esp32s3_devkitc_ppg_delay`: mỗi 10 s một
    packet PPG mỗi khe có khoảng 10 mẫu, logger không báo gì.
 5. Bấm t0 vài lần: có packet `0xC1` tương ứng.
+6. Lệnh từ PC (bring-up mục 2 bước 7): ghi với `--commands`, gửi `ping`,
+   `mark --event cuff_end`, `mark --event operator`, rồi `set-ppg-led` với mã 128 và
+   `--allow-over-firmware-limit`. Chờ đợi: `0xC1` mã 2 và 4 với `T_ANCHOR_US` không
+   sau `T_ANCHOR_US` của `0xD3` tương ứng, `0xD3` kết quả 0 cho `ping` và `mark`, kết
+   quả 8 (`out_of_range`) cho mã 128, kể cả với PPG giả (kiểm trần đứng trước kiểm
+   chip).
 
 ## Driver MAX30001 (2026-10-25, chưa chạy trên chip)
 
@@ -466,7 +533,7 @@ và PPG vẫn là nguồn giả. Dùng ở bring-up mục 8, bước 5. Datashee
 BST-BMI270-DS000-08 rev 1.6 (3/2026, SHA-256
 `f68ce3c74f011a80bbe4b0279c4abe9609a71a5dcda75a951381d77112e005fb`).
 
-- **Bus:** SPI bus 2 của V1-module (GPIO10 CS phần cứng, 11 MOSI, 12 SCK, 13 MISO),
+- **Bus:** bus SPI IMU của V1-module (GPIO10 CS phần cứng, 11 MOSI, 12 SCK, 13 MISO),
   `SPI3_HOST` có DMA nên đọc 170 frame trong một giao dịch, chế độ 0, 1 MHz
   (`BOARD_IMU_SPI_HZ`, lên 2 MHz sau khi đo scope). Chip khởi động ở I²C; cạnh lên
   của CSB chuyển sang SPI sau 200 µs, lại như vậy sau soft reset; mỗi lần đọc có
@@ -541,15 +608,37 @@ Packet Schema V0.2 mục 12–13.
   thái mới, mất mát được giữ tới khi một `0xD2` mang bit 1, số thứ tự 64 bit. Thanh ghi
   lấy từ `max30001_config_words`, `max30101_config_words`, `bmi270_config_words`.
 - **`PING` và `SET_PPG_LED`:** `cmd_exec.c` (C thuần) quyết định: kiểm `SESSION_ID`
-  đích, giới hạn mã 127 (`CMD_LED_CODE_MAX`, tạm), trạng thái chip; nhớ yêu cầu gần
+  đích, trần mã 127 (`CMD_LED_CODE_MAX`, trần cho cả nghiên cứu, chốt 2026-10-29: hạ
+  được sau bring-up, chỉ nâng bằng sửa đổi spec có ngày), trạng thái chip; nhớ yêu cầu gần
   nhất nên gửi lại cùng byte được trả lại kết quả cũ mà không chạm chip. Task PPG (chủ
   bus I²C) đổi dòng bằng `max30101_start` với dòng mới: `RESET` xóa FIFO, packet PPG kế
   tiếp neo lại (bit 5); lỗi thì cấu hình lại bằng dòng cũ (kết quả 5). Yêu cầu và trả lời
   mang token, nên trả lời muộn không bị gán cho yêu cầu khác; yêu cầu task PPG chưa nhận
-  sau 2 s được rút lại (kết quả 4). Bản build PPG giả trả "không có chip".
+  sau 2 s được rút lại (kết quả 4). Bản build PPG giả trả "không có chip". Vì vậy
+  firmware có thể mất tới 2 s mới trả lời; logger chờ `SET_PPG_LED` 2,5 s (phía PC,
+  chốt 2026-10-29; firmware không đổi).
+- **`MARK_EVENT` (`CMD_ID` 0x03, chốt 2026-10-29, chưa chạy trên chip):** tham số
+  1 byte; `cmd_exec.c` chỉ nhận mã 2 (`CUFF_END`) và 4 (`OPERATOR_MARK`), `LEN` khác 1
+  là kết quả 2, mã khác là kết quả 8, không phụ thuộc chip PPG. Task điều khiển lấy
+  `esp_timer` ngay sau lần `usb_serial_jtag_read_bytes` trả về byte của khung (lúc
+  nhận; hàm này trả về ngay khi có byte, không chờ đủ 64 byte), đưa sự kiện vào hàng
+  đợi của nút t0 (`s_event_queue`), rồi gửi `0xD3` kết quả 0. Task sự kiện phát
+  packet `0xC1` mang mã đó như với t0 (không lọc dội, cùng số thứ tự sự kiện, cùng
+  quy tắc bit 1), nên `0xC1` vẫn chỉ có một producer. Hàng đợi sự kiện đầy: kết quả 4,
+  không có sự kiện, không tính là sự kiện mất. Gửi lại cùng byte nhận lại kết quả cũ,
+  không phát sự kiện thứ hai. Độ trễ PC → thiết bị chưa đo; log UART0 in
+  `MARK_EVENT code …`.
+- **Bộ nhớ yêu cầu theo thứ tự nhận (2026-10-29, sau review của Codex):** mỗi quyết định
+  của `cmd_exec_decide` lấy một vé (`ticket`) tăng dần; `cmd_exec_done` không thay yêu
+  cầu đã nhớ bằng một yêu cầu nhận sớm hơn. Nhờ vậy một `SET_PPG_LED` xong muộn (PC đã
+  ghi nó "không biết" và gửi `MARK_EVENT`) không đẩy `MARK_EVENT` ra khỏi bộ nhớ, và lần
+  gửi lại của `MARK_EVENT` không đánh dấu lần hai. Khung cùng `CMD_SEQ` với yêu cầu LED
+  đang làm mà byte khác nhận kết quả 6.
 - **Test:** [tests/test_firmware_cmd_wire.py](../tests/test_firmware_cmd_wire.py) (tách
   khung, so với bộ mã hóa Python), [tests/test_firmware_control.py](../tests/test_firmware_control.py)
-  (`DATA` của `0xD2` qua bộ kiểm của receiver; quyết định lệnh),
+  (`DATA` của `0xD2` qua bộ kiểm của receiver; quyết định lệnh, gồm `MARK_EVENT`: chỉ
+  mã 2/4, `LEN` 1, gửi lại không đánh dấu lần hai kể cả khi một `SET_PPG_LED` xong
+  muộn chen giữa, kết quả 4 không được nhớ),
   [tests/test_firmware_afe_order.py](../tests/test_firmware_afe_order.py) (thứ tự và
   bit 1 của `0xD2`, gồm hàng đợi đầy rồi im, mất mát thấy sau khi trạng thái mới đã đi,
   số thứ tự quá 32 bit). Task điều khiển, hàng đợi và cổng USB trong `main.c` chỉ kiểm
@@ -557,7 +646,10 @@ Packet Schema V0.2 mục 12–13.
 
 ## Chưa có
 
-- Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên DevKitC trần, rồi
-  INT2B của MAX30001); kiểm `PPG_RDY` ở chế độ ba khe của MAX30101 thật.
+- Chạy thử MCPWM capture thật trên chip (nối vòng GPIO trên bo Waveshare đứng riêng,
+  chưa có bước trong bring-up; rồi INT2B của MAX30001 ở bring-up mục 7 bước 4); kiểm
+  `PPG_RDY` ở chế độ ba khe của MAX30101 thật (bring-up mục 8 bước 6).
 - Quét dòng LED tự động khi hiệu chuẩn; lệnh bắt đầu/dừng và đổi cấu hình khác.
+- Đo độ trễ PC → thiết bị của `MARK_EVENT` (chưa có bước đo; mốc của nó chỉ dùng cho
+  việc cỡ giây).
 
