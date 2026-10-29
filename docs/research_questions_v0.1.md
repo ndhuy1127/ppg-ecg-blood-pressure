@@ -1,10 +1,12 @@
-# Câu hỏi nghiên cứu (Research Questions) — v0.3
+# Câu hỏi nghiên cứu (Research Questions) — v0.4
 
 > **Người thực hiện:** Nguyễn Đức Huy
 >
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 >
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline)
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline), 2026-10-29 (v0.4: dẫn các nghiên cứu gần nhất; estimand RQ1; tiêu chí kết luận dùng CI cho cả so sánh với zero-change; mức hiệu ứng nhỏ nhất đáng quan tâm δ; rủi ro áp lực tiếp xúc; RQ2a chuyển thành kiểm tra rò rỉ ở phụ lục, RQ2b đổi thành đánh giá cùng phiên so với khác phiên; RQ3 thành phân tích thăm dò)
+>
+> Các thay đổi của v0.4 là **đề xuất của nhóm ngày 2026-10-29, chờ thầy xác nhận**; phải khóa trước khi chạy vòng ngoài của LOSO lồng.
 >
 > Tên file giữ `v0.1` để không làm gãy liên kết.
 
@@ -14,11 +16,13 @@
 
 Thiết bị đo huyết áp không vòng bít (cuffless) dựa trên PPG ở cổ tay thường cần hiệu chuẩn bằng một lần đo cuff, sau đó theo dõi thay đổi so với mốc này. Có ba vấn đề làm cho việc đánh giá các thiết bị này khó:
 
-1. **Mốc hiệu chuẩn tự nó đã là một dự đoán tốt.** Nếu BP ít thay đổi sau hiệu chuẩn, chỉ cần giữ nguyên giá trị cuff ban đầu cũng cho sai số nhỏ. Mukkamala et al. (2021) chỉ ra điểm này bằng mô phỏng, và dự án Aurora (1.125 người) không tìm thấy mô hình dạng sóng nào dự đoán BP ngày hôm sau tốt hơn rõ rệt so với baseline chỉ dùng BP hiệu chuẩn (Mukkamala et al., 2023). Xem [tổng quan bổ sung](literature/literature_update_2026-10-14.md), S2–S3.
+1. **Mốc hiệu chuẩn tự nó đã là một dự đoán tốt.** Nếu BP ít thay đổi sau hiệu chuẩn, chỉ cần giữ nguyên giá trị cuff ban đầu cũng cho sai số nhỏ. Mukkamala et al. (2021) chỉ ra điểm này bằng mô phỏng, và dự án Aurora (1.125 người) không tìm thấy mô hình dạng sóng nào dự đoán BP ngày hôm sau tốt hơn rõ rệt so với baseline chỉ dùng BP hiệu chuẩn (Mukkamala et al., 2023). Xem [tổng quan bổ sung](literature/literature_update_2026-10-14.md), S2–S3. Tổng quan gần nhất của cùng nhóm tác giả (Mukkamala et al., 2025; abstract) cho rằng đến nay chưa có bằng chứng thuyết phục là phân tích dạng sóng hay PAT thêm được giá trị đáng kể ngoài cuff hiệu chuẩn hoặc dữ liệu nhân khẩu học ([N8](literature/literature_update_2026-10-29.md)).
 2. **PAT không phải PTT.** ECG cho phép đo PAT (R-peak → chân sóng PPG), nhưng PAT chứa thời gian tiền tống máu (PEP), vốn thay đổi theo trạng thái giao cảm. Payne et al. (2006) cho thấy PEP chiếm 12–35% khoảng R → xung ngón tay. Vì vậy, việc thêm ECG có giúp hơn PPG đơn lẻ hay không là câu hỏi thực nghiệm, không suy ra được từ lý thuyết PTT.
 3. **Cách chia dữ liệu làm kết quả đẹp giả.** Khi cửa sổ của cùng một người nằm ở cả tập huấn luyện và tập kiểm tra, sai số giảm đáng kể so với khi chia theo người (Yoshizawa et al., 2023; Mehta et al., 2024).
 
-**Mục tiêu nghiên cứu:** xây dựng nguyên mẫu vòng đeo cổ tay thu đồng bộ ECG và PPG, và dùng nó để kiểm tra, trên một nhóm nhỏ người khỏe mạnh, liệu PAT có làm giảm sai số dự đoán ΔSBP/ΔDBP ở các phiên đo sau hiệu chuẩn so với chỉ dùng PPG hay không. Đánh giá phải có baseline zero-change, chia dữ liệu theo người và theo thời gian, và khoảng tin cậy theo người.
+**Các nghiên cứu gần nhất (v0.4).** So sánh trực tiếp PPG với PAT có baseline zero-change và đánh giá theo người đã có, nhưng trong các nguồn nhóm đã đọc chỉ ở **một buổi đo**, với PPG ở ngón tay, ngón chân hoặc tai: Finnegan et al. (2023) so các bộ đặc trưng PPG, ECG và PAT khi truyền phenylephrine, không có mô hình PPG + PAT; Natarajan et al. (2021) đánh giá đặc trưng PPG cộng PAT dưới các nghiệm pháp ([N1, N2](literature/literature_update_2026-10-29.md)). Các nghiên cứu nhiều ngày trên thiết bị cổ tay có quy mô lớn (Mieloszyk et al., 2022, [S4](literature/literature_update_2026-10-14.md); Liu et al., 2023, N6), nhưng phần nhóm đã đọc (abstract) chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT so với baseline chỉ hiệu chuẩn. Nhận định này phải kiểm lại sau khi đọc toàn văn S4 và N6, và không được viết thành "chưa có nghiên cứu nào".
+
+**Mục tiêu nghiên cứu:** xây dựng nguyên mẫu đo ở cổ tay (nối USB với máy tính, điện cực ECG dán ở hai cổ tay) thu đồng bộ ECG và PPG, và dùng nó để kiểm tra, trên một nhóm nhỏ người khỏe mạnh, liệu PAT có làm giảm sai số dự đoán ΔSBP/ΔDBP ở các phiên đo sau hiệu chuẩn so với chỉ dùng PPG hay không. Đánh giá phải có baseline zero-change, chia dữ liệu theo người và theo thời gian, và khoảng tin cậy theo người.
 
 Mục tiêu triển khai (chế tạo prototype, firmware, pipeline) là điều kiện để trả lời câu hỏi, không phải câu hỏi nghiên cứu.
 
@@ -37,22 +41,31 @@ Mục tiêu triển khai (chế tạo prototype, firmware, pipeline) là điều
 
 | | Yếu tố khảo sát | So sánh với | Chỉ số chính | Dữ liệu cần | Làm được khi nào |
 |---|---|---|---|---|---|
-| **RQ1** (chính) | Thêm PAT (từ ECG) vào mô hình PPG | Cùng mô hình chỉ dùng PPG; zero-change | Chênh lệch MAE theo người cho ΔSBP, ΔDBP, kèm CI 95% bootstrap theo người | Prototype, 15–20 người, ≥ 2 phiên/người, nhãn cuff | Sau khi có phần cứng, phê duyệt đạo đức và thu dữ liệu |
-| **RQ2** | Cách chia dữ liệu | Chia ngẫu nhiên theo cửa sổ vs theo người vs theo phiên | Chênh lệch MAE giữa các cách chia | (a) PulseDB: theo cửa sổ vs theo người; (b) prototype: theo phiên | (a) làm được ngay với code hiện có; (b) cần dữ liệu prototype |
-| **RQ3** | Từ chối dự đoán theo SQI và độ bất định | Không từ chối; từ chối ngẫu nhiên cùng coverage; SQI đơn lẻ | Đường cong risk–coverage, MAE tại coverage chọn trên validation | Dữ liệu có cả đoạn tốt và đoạn nhiễu tự nhiên, có nhãn | Phụ thuộc nguồn dữ liệu (xem 6.G) |
+| **RQ1** (chính, xác nhận) | Thêm PAT (từ ECG) vào mô hình PPG | Cùng mô hình chỉ dùng PPG; zero-change | Trung bình theo người của chênh lệch MAE cho ΔSBP, ΔDBP, kèm CI 95% bootstrap theo người, đọc theo mức δ khóa trước (mục 4.E) | Prototype, ≥ 15 người đạt chuẩn, ≥ 2 phiên/người, nhãn cuff | Sau khi có phần cứng, phê duyệt đạo đức và thu dữ liệu |
+| **RQ2** (phụ) | (a) Cách chia dữ liệu; (b) đánh giá cùng phiên so với khác phiên | (a) Chia ngẫu nhiên theo cửa sổ vs theo người; (b) cuff nghiệm pháp phiên 1 vs phiên ≥ 2 | Chênh lệch MAE, CI theo người | (a) PulseDB train ∪ val; (b) prototype, cùng dữ liệu RQ1 | (a) làm được ngay, báo ở phụ lục; (b) cần dữ liệu prototype |
+| **RQ3** (thăm dò) | Từ chối dự đoán theo SQI và độ bất định | Không từ chối; từ chối ngẫu nhiên cùng coverage; SQI đơn lẻ; độ bất định đơn lẻ | Đường cong risk–coverage, MAE tại coverage chọn ở vòng trong | Dữ liệu có cả đoạn tốt và đoạn nhiễu tự nhiên, có nhãn | Phụ thuộc nguồn dữ liệu (xem 6.G) |
 
 ---
 
 ## 4. RQ1: Giá trị gia tăng của PAT sau hiệu chuẩn cá nhân
 
-> **Câu hỏi:** Sau khi hiệu chuẩn bằng cuff ở phiên đầu, việc thêm PAT (tính từ ECG) vào mô hình đặc trưng PPG có làm giảm sai số dự đoán $`\Delta\text{SBP}`$ và $`\Delta\text{DBP}`$ ở các phiên đo sau so với cùng mô hình chỉ dùng PPG hay không?
+> **Câu hỏi:** Ở người khỏe mạnh 18–35 tuổi không có trong dữ liệu huấn luyện, sau khi hiệu chuẩn bằng trung bình các lần cuff M0 ở phiên 1, việc thêm PAT (tính từ ECG) vào mô hình đặc trưng PPG có làm giảm sai số dự đoán $`\Delta\text{SBP}`$ và $`\Delta\text{DBP}`$ ở các phiên đo sau (phiên 2–3) so với cùng mô hình chỉ dùng PPG, và giảm bao nhiêu?
 
 ### A. Giả thuyết
 
 - **$H_{0,\text{RQ1}}$:** Với mỗi đầu ra (SBP, DBP), MAE theo người của mô hình PPG + PAT không thấp hơn MAE của mô hình PPG-only trên các phiên sau.
 - **$H_{1,\text{RQ1}}$:** MAE theo người của mô hình PPG + PAT thấp hơn mô hình PPG-only.
+- **So với zero-change (v0.4):** $H^{\text{ZC}}_{0,\text{RQ1}}$: MAE theo người của PPG + PAT không thấp hơn zero-change; $H^{\text{ZC}}_{1,\text{RQ1}}$: thấp hơn. Kết luận chính cần bác bỏ cả $H_{0,\text{RQ1}}$ lẫn $H^{\text{ZC}}_{0,\text{RQ1}}$ (mục E).
 
 SBP và DBP được kiểm định riêng. Bằng chứng hiện có (Payne 2006: PAT gần như không giải thích DBP khi chưa trừ PEP; Aurora: mô hình dạng sóng không vượt baseline hiệu chuẩn) cho thấy không bác bỏ được $H_0$ là một khả năng thực tế. Kết quả đó vẫn được báo cáo đầy đủ.
+
+**Estimand (v0.4, đề xuất 2026-10-29, chờ thầy):** $`\theta = \mathbb{E}_s[d_s]`$, trung bình qua người của $`d_s = \text{MAE}_s(\text{PPG+PAT}) - \text{MAE}_s(\text{PPG})`$, tính riêng cho ΔSBP và ΔDBP.
+
+- **Quần thể:** người khỏe mạnh 18–35 tuổi thuộc vòng ngoài của LOSO lồng, tức không có trong dữ liệu huấn luyện của lượt đó và không phải người pilot.
+- **Điều kiện:** hiệu chuẩn bằng $`\text{BP}_0`$ của phiên 1 (mục B), đánh giá trên endpoint ở mục B.
+- **Trọng số:** trong một người, mỗi lần cuff có trọng số như nhau; khi tính $\theta$, mỗi người có trọng số như nhau, người nhiều lần cuff không chi phối kết quả.
+- **Phạm vi kết luận:** chỉ cho các lần đo tính được PAT (mục C); tỷ lệ lần đo mất ECG báo kèm.
+- **Ý nghĩa:** vì endpoint gộp M0–M4, $\theta$ đo khả năng theo dõi cả đáp ứng nghiệm pháp lẫn biến thiên lúc nghỉ ở phiên sau. Phân tích phụ chỉ M0 cho biết riêng phần biến thiên lúc nghỉ.
 
 ### B. Biến nghiên cứu
 
@@ -80,6 +93,7 @@ Tính riêng cho ΔSBP và ΔDBP:
 
 - MAE, ME ± SD của sai số (sai số = dự đoán − tham chiếu), tổng hợp đều theo người (như `evaluate_bp`).
 - **Hiệu ứng chính:** $`d_s = \text{MAE}_s(\text{PPG+PAT}) - \text{MAE}_s(\text{PPG})`$ cho từng người $s$; báo cáo trung bình của $d_s$ và CI 95% bootstrap theo người (`software/evaluation/subject_bootstrap.py`). Wilcoxon signed-rank trên $d_s$ là phân tích hỗ trợ.
+- **So với zero-change (v0.4):** $`d^{0}_s = \text{MAE}_s(\text{PPG+PAT}) - \text{MAE}_s(\text{zero-change})`$; báo trung bình và CI 95% bootstrap theo người như $d_s$, dùng cùng các lượt bootstrap.
 - Pearson $r$ giữa ΔBP tham chiếu và ΔBP dự đoán (không xác định cho zero-change vì dự đoán là hằng).
 - Tỷ lệ lần đo có $|e| \le 5$ và $\le 10$ mmHg, chỉ để mô tả; không phải tiêu chí AAMI/ISO.
 - **Bắt buộc báo cáo kèm:** SD của ΔBP tham chiếu và tỷ lệ lần đo có $|\Delta\text{BP}| > 5$ mmHg. Nếu ΔBP tham chiếu rất hẹp, mọi so sánh MAE đều kém nhạy, và người đọc cần biết điều đó.
@@ -87,60 +101,86 @@ Tính riêng cho ΔSBP và ΔDBP:
 
 ### E. Tiêu chí kết luận
 
-- **Ủng hộ $H_1$** khi: (1) mô hình PPG + PAT có MAE thấp hơn zero-change; và (2) CI 95% bootstrap theo người của trung bình $d_s$ nằm hoàn toàn dưới 0, với hướng hiệu ứng nhất quán. Đánh giá riêng SBP và DBP.
-- Hai đầu ra tạo hai phép kiểm định; cách xử lý đa kiểm định (ví dụ Holm) phải được chọn trước khi mở test.
-- Nếu nhóm muốn dùng ngưỡng ý nghĩa thực tiễn (ví dụ "giảm ít nhất X mmHg"), ngưỡng đó phải có căn cứ từ pilot hoặc tài liệu và được khóa trước khi mở test. Bản v0.1 từng nêu 1,5/1,0 mmHg; con số này chưa có căn cứ và **không** được dùng.
-- Nếu không đạt các điều kiện trên: không bác bỏ $H_0$, báo cáo ước lượng hiệu ứng và CI, không khẳng định PAT có lợi.
+Viết lại ở v0.4 (đề xuất 2026-10-29, chờ thầy; khóa trước khi chạy vòng ngoài). Bản v0.3 chỉ đòi "MAE thấp hơn zero-change" mà không có CI, trong khi so với PPG-only lại đòi CI: hai chuẩn bằng chứng lệch nhau.
+
+- **Kết luận chính, riêng cho từng đầu ra (SBP, DBP):** "thêm PAT làm giảm sai số so với PPG-only và vượt zero-change" chỉ khi **cả hai** điều kiện đạt (mức độ lợi ích đọc theo δ ở dưới; chỉ gọi là lợi ích đáng quan tâm khi $U < -\delta$):
+  1. CI 95% bootstrap theo người của trung bình $d^{0}_s$ (PPG + PAT so với zero-change) nằm hoàn toàn dưới 0;
+  2. CI 95% bootstrap theo người của trung bình $d_s$ (PPG + PAT so với PPG-only) nằm hoàn toàn dưới 0.
+
+  Mức 95% ở đây là trước hiệu chỉnh; mức thực dùng theo phương án đa kiểm định bên dưới.
+- **Đa kiểm định, chọn một phương án trước khi chạy vòng ngoài:**
+  - **Phương án A (đề xuất):** với mỗi đầu ra, kết luận chính là giao của hai điều kiện trên (kiểm định giao–hợp, intersection–union): mỗi điều kiện xét bằng CI hai phía ở cùng một mức, không hiệu chỉnh thêm trong cùng đầu ra, vì kết luận chỉ đúng khi cả hai cùng đạt; giữa SBP và DBP dùng Holm, nên mức CI của từng đầu ra theo thứ tự Holm. Kết luận riêng lẻ khác (ví dụ chỉ vượt PPG-only) là phân tích phụ, không dùng để tuyên bố.
+  - **Phương án B:** Holm trên bốn phép so sánh (2 đầu ra × 2 đối chứng).
+  - Phương án nào cũng báo CI tương ứng với mức hiệu chỉnh đã chọn.
+- **Mức hiệu ứng nhỏ nhất đáng quan tâm δ** ($`\delta_{\text{SBP}}`$, $`\delta_{\text{DBP}}`$, mmHg): khóa trước vòng ngoài, căn cứ vào độ lặp lại của cuff tham chiếu (chênh lệch giữa các lần cuff M0 liền nhau ở pilot) và lý do ứng dụng. Không dùng lại 1,5/1,0 mmHg của bản v0.1 vì con số đó chưa có căn cứ. Đọc CI của trung bình $d_s$ (cùng mức với kết luận chính), ký hiệu $[L; U]$:
+  - $U < -\delta$: thêm PAT giảm sai số ít nhất δ.
+  - $U < 0$ và $L < -\delta \le U$: thêm PAT có lợi, nhưng chưa chắc đạt δ.
+  - $-\delta \le L$ và $U \le \delta$: PPG-only và PPG + PAT tương đương trong phạm vi δ; đây là kết quả âm tính có thông tin. Nếu đồng thời $U < 0$ thì có lợi nhưng nhỏ hơn mức đáng quan tâm; nếu $L > 0$ thì sai số tăng nhưng nhỏ hơn δ. Cách đọc này dùng CI hai phía ở mức trên, nên thận trọng hơn kiểm định TOST thông thường (TOST ở mức 5% tương ứng CI 90%).
+  - $L > 0$ và $U > \delta$: thêm PAT làm sai số tăng; báo như một kết quả.
+  - Các trường hợp còn lại (CI chứa 0 và vượt ra ngoài $[-\delta; \delta]$): **chưa kết luận**, phép so sánh thiếu độ nhạy; không viết là "PAT không giúp".
+- **Độ nhạy dự kiến:** trước khi thu chính, ước lượng độ rộng CI kỳ vọng bằng mô phỏng theo nhiều mức phương sai của $d_s$ (dùng số liệu pilot nếu có), để biết với ≥ 15 người có loại trừ được δ hay không.
+- Nếu không đạt đồng thời hai điều kiện: không tuyên bố kết luận chính và không khẳng định PAT có lợi. Vẫn báo trạng thái từng phép so sánh (so với PPG-only, so với zero-change) như phân tích phụ, kèm ước lượng và CI theo cách đọc ở trên; một phép so sánh đạt riêng lẻ không đủ để tuyên bố.
 
 ### F. Rủi ro phương pháp
 
 - **PEP thay đổi giữa các phiên** (căng thẳng, tư thế, nhiệt độ) làm PAT thay đổi mà BP không đổi.
 - **PAT ở cổ tay chịu ảnh hưởng của co cơ trơn mạch ngoại vi**, độc lập với mức BP (Mukkamala et al., 2023).
 - **ΔBP giữa các phiên nhỏ** ở người trẻ khỏe mạnh đo lúc nghỉ, làm zero-change khó bị vượt và giảm độ nhạy của so sánh.
+- **Áp lực tiếp xúc và cách đeo thay đổi giữa các phiên (v0.4).** Natarajan et al. (2021, [N2](literature/literature_update_2026-10-29.md)) ghi nhận dạng sóng PPG chịu ảnh hưởng của áp lực tiếp xúc nhiều hơn PAT. Nếu độ chặt dây hay vị trí đeo ở các phiên sau khác phiên 1, PPG-only có thể kém đi vì lý do kỹ thuật, làm PAT trông có lợi mà không do sinh lý. Giảm rủi ro bằng cách chuẩn hóa cách đeo trong protocol (vị trí, nấc dây) và ghi lại ở mỗi phiên; khi diễn giải $d_s$ phải nêu rủi ro này.
 - **ECG đạo trình I giữa hai cổ tay (điện cực dán, chốt 2026-10-23) có biên độ nhỏ hơn ECG ngực và dễ nhiễu khi một trong hai tay cử động**, gây sai lệch R-peak. Lần đo mất ECG không ngẫu nhiên có thể làm lệch tập đánh giá; vì vậy phải so trên cùng tập (mục C).
 - **Độ phân giải thời gian:** ECG 512 sps (khoảng 1,95 ms mỗi mẫu) và PPG 200 sps mỗi khe (5 ms mỗi mẫu; chốt 2026-10-24); sai số định vị mốc, nhất là chân sóng PPG, và đồng bộ hai kênh cộng trực tiếp vào PAT.
 
 ### G. Dữ liệu tối thiểu và tính khả thi
 
 - Mục tiêu ≥ 15 người đạt chuẩn, tuyển tối đa 25 người (trần đề xuất của nhóm, chờ thầy). Mục tiêu 3 phiên mỗi người, tối thiểu 2 (1 phiên hiệu chuẩn + ≥ 1 phiên đánh giá), mọi phiên trong 4 tuần kể từ phiên 1 (protocol v0.3 mục 3, chốt 2026-10-29). Mỗi phiên có ít nhất 2 lần cuff hợp lệ. Đơn vị phân tích cho kiểm định là người.
-- Các con số này là đề xuất khả thi, chưa dựa trên phân tích power; cần tính lại từ pilot.
+- Các con số này là đề xuất khả thi, chưa dựa trên phân tích power; cần tính lại từ pilot và mô phỏng độ nhạy ở mục E.
 - **Hiện trạng:** chưa có prototype, phê duyệt đạo đức hay dữ liệu cuff. PulseDB **không** trả lời được RQ1: nhãn là ABP xâm lấn chứ không phải cuff, và không có cấu trúc phiên theo thời gian. PulseDB chỉ dùng để phát triển và kiểm tra đặc trưng.
 
 ---
 
-## 5. RQ2: Ảnh hưởng của cách chia dữ liệu
+## 5. RQ2 (phụ): Cách chia dữ liệu và đánh giá cùng phiên so với khác phiên
 
-> **Câu hỏi:** Sai số ước lượng BP thay đổi bao nhiêu khi chuyển từ chia ngẫu nhiên theo cửa sổ sang chia theo người, và (với dữ liệu nhiều phiên) sang chia theo phiên đo?
+> **Câu hỏi:** (a) Trên PulseDB, sai số ước lượng BP tăng bao nhiêu khi chuyển từ chia ngẫu nhiên theo cửa sổ sang chia theo người? (b) Trên dữ liệu prototype, đánh giá ở cùng phiên hiệu chuẩn cho sai số lạc quan hơn bao nhiêu so với đánh giá ở các phiên khác ngày?
+
+**Thay đổi ở v0.4 (đề xuất 2026-10-29, chờ thầy):** RQ2a là kiểm tra rò rỉ, báo ở phụ lục của bài. RQ2b đổi từ "chia theo phiên" (trùng với thiết kế của RQ1) thành so sánh cùng phiên với khác phiên. Phần lớn các nghiên cứu gần nhất chỉ đánh giá trong một buổi (N1, N2, N7 ở [tổng quan 2026-10-29](literature/literature_update_2026-10-29.md)), nên RQ2b đo được mức lạc quan của cách đánh giá đó trên dữ liệu của nhóm.
 
 ### A. Giả thuyết
 
-- **$H_{0,\text{RQ2}}$:** MAE không khác nhau giữa chia ngẫu nhiên theo cửa sổ và chia theo người/theo phiên.
-- **$H_{1,\text{RQ2}}$:** MAE khi chia theo người/theo phiên cao hơn khi chia ngẫu nhiên theo cửa sổ.
+- **$H_{0,\text{RQ2a}}$:** MAE không khác nhau giữa chia ngẫu nhiên theo cửa sổ và chia theo người.
+- **$H_{1,\text{RQ2a}}$:** MAE khi chia theo người cao hơn khi chia ngẫu nhiên theo cửa sổ.
+- **$H_{0,\text{RQ2b}}$:** MAE trên cuff nghiệm pháp ở phiên ≥ 2 không cao hơn MAE trên cuff nghiệm pháp ở phiên 1.
+- **$H_{1,\text{RQ2b}}$:** MAE ở phiên ≥ 2 cao hơn.
 
-Hiệu ứng này đã được ghi nhận trong y văn (Yoshizawa 2023, Mehta 2024, Moulaeifard 2025). RQ2 là **kiểm chứng lại và lượng hóa** hiệu ứng trong pipeline của nhóm, không phải phát hiện mới. Chênh lệch sai số giữa các cách chia không tự chứng minh nguyên nhân duy nhất là mô hình nhận dạng người.
+Hiệu ứng của RQ2a đã được ghi nhận trong y văn (Yoshizawa 2023, Mehta 2024, Moulaeifard 2025). RQ2a là **kiểm chứng lại và lượng hóa** hiệu ứng trong pipeline của nhóm, không phải phát hiện mới. Chênh lệch sai số giữa các cách chia không tự chứng minh nguyên nhân duy nhất là mô hình nhận dạng người.
 
 ### B. Các cách chia
 
 1. **A — Ngẫu nhiên theo cửa sổ (đối chứng có rò rỉ):** chia ngẫu nhiên các cửa sổ/đoạn, cùng người có thể nằm ở nhiều tập. Chỉ dùng để minh họa rò rỉ, không dùng để chọn mô hình hay báo cáo hiệu năng chính.
 2. **B — Theo người:** mỗi người chỉ nằm trong một tập (train/validation/test cố định theo `subject_id`, hoặc k-fold/LOSO theo người).
-3. **C — Theo phiên (chỉ với dữ liệu prototype):** mô hình chung học trên người thuộc tập train; với người thuộc tập test, chỉ dùng phiên 1 để hiệu chuẩn rồi đánh giá các phiên sau. Không dùng phiên sau để huấn luyện, hiệu chuẩn hay tuning.
+3. **C — Cùng phiên so với khác phiên (RQ2b, chỉ với dữ liệu prototype; thay cách chia "theo phiên" của v0.3):**
+   - Dùng chính dự đoán vòng ngoài của LOSO lồng ở RQ1, không huấn luyện hay tuning thêm. Dự đoán cho cuff nghiệm pháp phiên 1 của người test phải được sinh trong cùng lần chạy vòng ngoài và khai báo trong commit khóa.
+   - Với mỗi người $s$: **tập cùng phiên** là các lần cuff nghiệm pháp M1–M4 ở phiên 1; **tập khác phiên** là các lần cuff M1–M4 ở phiên ≥ 2. Cả hai so với cùng $`\text{BP}_0`$ (trung bình M0 phiên 1). Chỉ so cuff nghiệm pháp; báo kèm phân bố nghiệm pháp của từng tập.
+   - **Chuẩn hóa theo nghiệm pháp:** với mỗi người, MAE của mỗi tập tính riêng cho từng nghiệm pháp rồi lấy trung bình đều trên các nghiệm pháp có mặt ở **cả hai** tập của người đó; các phiên ≥ 2 gộp chung. Người không có nghiệm pháp chung nào thì không tính. Như vậy $e_s$ không tăng chỉ vì nghiệm pháp khó chiếm tỷ trọng lớn hơn ở phiên sau. Bản thô (gộp theo số cuff thực có) báo kèm như phân tích phụ, ghi rõ là gồm cả thay đổi cơ cấu nghiệm pháp.
+   - Tập cùng phiên **không** thay đổi endpoint của RQ1: cuff nghiệm pháp phiên 1 vẫn không dùng để hiệu chuẩn và không vào tập đánh giá của RQ1.
+   - Chênh lệch không chỉ do hiệu chuẩn trôi theo thời gian: còn do đeo lại thiết bị, BP nền khác nhau giữa các ngày và PEP. Không quy toàn bộ chênh lệch cho một nguyên nhân.
 
-Giữ nguyên cách tạo cửa sổ, đặc trưng và thuật toán giữa các cách chia; chỉ thay đổi cách chia.
+Với RQ2a, giữ nguyên cách tạo cửa sổ, đặc trưng và thuật toán giữa các cách chia; chỉ thay đổi cách chia.
 
 ### C. Mô hình so sánh
 
-- Cùng một mô hình (B3 XGBoost, đã có trong code, xem mục 7; hoặc Ridge) trên các cách chia A, B (và C).
-- B0 (trung bình train) trên từng cách chia để biết mức sai số khi không dùng tín hiệu.
+- **RQ2a:** cùng một mô hình (B3 XGBoost, đã có trong code, xem mục 7; hoặc Ridge) trên cách chia A và B; B0 (trung bình train) trên từng cách chia để biết mức sai số khi không dùng tín hiệu.
+- **RQ2b:** các mô hình của RQ1 (zero-change, PPG-only, PPG + PAT), cùng dự đoán vòng ngoài.
 
 ### D. Chỉ số
 
-- MAE, RMSE, ME ± SD cho SBP và DBP; $`\Delta\text{MAE} = \text{MAE}_{\text{B hoặc C}} - \text{MAE}_{\text{A}}`$ và tỷ lệ suy giảm $`(\text{MAE}_{\text{nghiêm}} - \text{MAE}_{\text{ngẫu nhiên}}) / \text{MAE}_{\text{ngẫu nhiên}} \times 100\%`$.
+- **RQ2a:** MAE, RMSE, ME ± SD cho SBP và DBP; $`\Delta\text{MAE} = \text{MAE}_{\text{B}} - \text{MAE}_{\text{A}}`$ và tỷ lệ suy giảm $`(\text{MAE}_{\text{nghiêm}} - \text{MAE}_{\text{ngẫu nhiên}}) / \text{MAE}_{\text{ngẫu nhiên}} \times 100\%`$.
+- **RQ2b:** $`e_s = \text{MAE}_s(\text{khác phiên}) - \text{MAE}_s(\text{cùng phiên})`$, với MAE chuẩn hóa theo nghiệm pháp (mục B), cho từng mô hình; trung bình và CI 95% bootstrap theo người; báo riêng SBP, DBP và theo nghiệm pháp.
 - CI bootstrap theo người cho từng MAE.
 - Bland–Altman: độ lệch trung bình và **giới hạn đồng thuận 95%** (LoA), không gọi là khoảng tin cậy; với dữ liệu đo lặp cần phương pháp LoA cho đo lặp (chưa khóa).
 
 ### E. Tiêu chí kết luận
 
-Báo cáo ΔMAE với CI theo người, riêng SBP và DBP. Mức suy giảm 40% và ngưỡng $p < 0{,}001$ trong bản v0.1 là đề xuất chưa có căn cứ và **không** được dùng làm tiêu chí. Kế hoạch kiểm định phải được duyệt trước khi mở test.
+Báo cáo ΔMAE (RQ2a) và $e_s$ (RQ2b) với CI theo người, riêng SBP và DBP; không đặt ngưỡng đạt/không đạt. RQ2a báo ở phụ lục như kiểm tra rò rỉ. Mức suy giảm 40% và ngưỡng $p < 0{,}001$ trong bản v0.1 là đề xuất chưa có căn cứ và **không** được dùng làm tiêu chí. Kế hoạch kiểm định phải được duyệt trước khi mở test.
 
 ### F. Rủi ro
 
@@ -156,11 +196,13 @@ Báo cáo ΔMAE với CI theo người, riêng SBP và DBP. Mức suy giảm 40%
   - Hàm chia ngẫu nhiên theo đoạn phải từ chối mọi dòng có `split = test`; viết kèm test cho điều này trước khi viết hàm.
   - Không dùng CalBased Test: tập này cùng người với Train, đã loại trong quyết định pool ngày 2026-10-24 ([provenance](pulsedb_provenance.md)).
   - Theo Bảng 4 của bài báo PulseDB (Wang et al., 2023), phần VitalDB có 1.293 người ở cả Train và CalBased Test, 144 người ở CalFree Test; các con số 2.506 và 279 là tổng MIMIC-III + VitalDB.
-- **Phần (b):** cần dữ liệu prototype có cấu trúc `subject_id → session_id → event_id → window_id`, tối thiểu khoảng 30–40 phiên trên ít nhất 15 người, có biến thiên BP tự nhiên giữa các phiên.
+- **Phần (b):** dùng đúng dữ liệu của RQ1 (cấu trúc `subject_id → session_id → event_id → window_id`), không cần thêm phiên; chỉ tính trên người có cuff nghiệm pháp ở cả phiên 1 và phiên ≥ 2. Nếu hội đồng không duyệt nghiệm pháp M1–M4 thì RQ2b không làm được theo định nghĩa trên.
 
 ---
 
-## 6. RQ3: Từ chối dự đoán theo SQI và độ bất định
+## 6. RQ3 (thăm dò): Từ chối dự đoán theo SQI và độ bất định
+
+**Thay đổi ở v0.4 (đề xuất 2026-10-29, chờ thầy):** RQ3 là phân tích thăm dò, không phải câu hỏi xác nhận. Protocol yêu cầu ngồi yên lúc đo nên có thể có ít đoạn nhiễu tự nhiên (mục G); không đủ dữ liệu thì không dùng RQ3 để tuyên bố trong bài.
 
 > **Câu hỏi:** Từ chối dự đoán dựa trên SQI của tín hiệu đầu vào kết hợp với độ bất định của mô hình có cho sai số trên phần được giữ lại thấp hơn so với từ chối ngẫu nhiên và so với chỉ dùng SQI, ở cùng tỷ lệ giữ lại (coverage) hay không?
 
@@ -195,12 +237,13 @@ Mức từ chối 15–20% và mức giảm MAE 20% trong bản v0.1 là đề x
 - Tương quan hạng Spearman giữa điểm số từ chối và $|e|$.
 - Tỷ lệ phát hiện các quan sát có $|e| > 10$ mmHg, chỉ để mô tả.
 - Báo cáo coverage theo từng người: một chiến lược có thể đạt coverage tổng 80% nhưng từ chối gần hết dữ liệu của vài người.
+- **Phân bố |ΔBP| tham chiếu của các lần cuff bị từ chối so với được giữ (v0.4):** nếu chiến lược chủ yếu loại các lần BP thay đổi lớn, MAE giảm không chứng minh được rằng nó phát hiện tín hiệu kém.
 
 Lưu ý: "coverage" ở đây là **tỷ lệ quan sát được giữ lại**, khác với coverage của khoảng dự đoán trong conformal prediction.
 
 ### E. Tiêu chí kết luận
 
-Ủng hộ $H_1$ khi đường cong của chiến lược đề xuất nằm dưới đường của từ chối ngẫu nhiên và SQI đơn lẻ trên phần lớn dải coverage, và CI bootstrap theo người của chênh lệch MAE tại mức coverage đã chọn trên validation nằm dưới 0. Mức vận hành chỉ được chọn trên validation.
+Ủng hộ $H_1$ khi đường cong của chiến lược đề xuất nằm dưới đường của từ chối ngẫu nhiên và SQI đơn lẻ trên phần lớn dải coverage, và CI bootstrap theo người của chênh lệch MAE tại mức coverage đã chọn trên validation nằm dưới 0. Mức vận hành chỉ được chọn trên validation; với dữ liệu prototype, validation là vòng trong của LOSO lồng. Vì RQ3 là thăm dò (v0.4), kết quả chỉ báo như vậy, không thêm vào kết luận chính.
 
 ### F. Rủi ro
 
@@ -211,7 +254,7 @@ Lưu ý: "coverage" ở đây là **tỷ lệ quan sát được giữ lại**, 
 ### G. Dữ liệu và tính khả thi
 
 - Cần dữ liệu có cả đoạn tốt và đoạn kém chất lượng tự nhiên, có nhãn BP. Protocol prototype yêu cầu ngồi yên lúc đo, nên số đoạn kém có thể ít. PulseDB là dữ liệu đã làm sạch, nên dải chất lượng hẹp.
-- Các lựa chọn cần nhóm quyết định: (a) ghi nhận các lần đo kém tự nhiên trong protocol thay vì đo lại ngay; (b) xin truy cập dataset có nhãn chất lượng như CardioWave-Portable (cần credentialed access và DUA); (c) giới hạn RQ3 thành phân tích thăm dò.
+- Các lựa chọn cần nhóm quyết định: (a) ghi nhận các lần đo kém tự nhiên trong protocol thay vì đo lại ngay; (b) xin truy cập dataset có nhãn chất lượng như CardioWave-Portable (cần credentialed access và DUA); (c) giới hạn RQ3 thành phân tích thăm dò (đã chọn ở v0.4, chờ thầy xác nhận); (a) và (b) vẫn có thể làm thêm.
 
 ---
 
@@ -219,9 +262,9 @@ Lưu ý: "coverage" ở đây là **tỷ lệ quan sát được giữ lại**, 
 
 | Tên trong RQ | Tên trong code / kế hoạch | Bài toán | Trạng thái |
 |---|---|---|---|
-| — | **B0** `PopulationMeanBaseline` (trung bình nhãn train; trong b3-pipeline-v1 là trung bình các trung bình theo người) | BP tuyệt đối, người mới; dùng cho RQ2 | Đã cài; chạy sơ bộ trên CSV PulseDB (Tuần 3, lịch sử), rồi cùng B3 trên raw PulseDB VitalDB Train 400 người ngày 2026-10-25, chỉ chấm val |
+| — | **B0** `PopulationMeanBaseline` (trung bình nhãn train; trong b3-pipeline-v1 là trung bình các trung bình theo người) | BP tuyệt đối, người mới; dùng cho RQ2a | Đã cài; chạy sơ bộ trên CSV PulseDB (Tuần 3, lịch sử), rồi cùng B3 trên raw PulseDB VitalDB Train 400 người ngày 2026-10-25, chỉ chấm val |
 | **Zero-change** | **B1** `PersonalMeanBaseline`, khi $`\text{BP}_0`$ là trung bình các lần cuff hiệu chuẩn | $`\widehat{\text{BP}} = \text{BP}_0`$, tương đương $`\Delta\widehat{\text{BP}} = 0`$; RQ1 | Đã cài, mới kiểm tra bằng dữ liệu giả lập |
-| — | **B3** `XGBoostBaseline` (`software/models/xgboost_baseline.py`), đặc trưng `pulsedb-simple-stats-v0`; pipeline `software/pulsedb/pipeline.py`, runner `scripts/run_b3_pulsedb.py` | BP tuyệt đối (không phải ΔBP) trên PulseDB; RQ2 | Đã cài: fit trên train, chỉ đánh giá val (không trích đặc trưng tập test); đã chạy trên raw PulseDB ngày 2026-10-25 (val 40 người), chưa chấm test |
+| — | **B3** `XGBoostBaseline` (`software/models/xgboost_baseline.py`), đặc trưng `pulsedb-simple-stats-v0`; pipeline `software/pulsedb/pipeline.py`, runner `scripts/run_b3_pulsedb.py` | BP tuyệt đối (không phải ΔBP) trên PulseDB; RQ2a | Đã cài: fit trên train, chỉ đánh giá val (không trích đặc trưng tập test); đã chạy trên raw PulseDB ngày 2026-10-25 (val 40 người), chưa chấm test |
 | — | **B2** nhân khẩu học + HR từ ECG (`software/pulsedb/pipeline_b2.py`, `features_b2.py`; runner `scripts/run_b2_pulsedb.py`; định nghĩa [b2_pulsedb_definition.md](protocol/b2_pulsedb_definition.md)) | BP tuyệt đối trên PulseDB | Có code và test SYNTHETIC; định nghĩa chưa duyệt, runner từ chối chạy, chưa có kết quả |
 | PAT-only, PPG-only, PPG + PAT | Chưa có | ΔBP; RQ1 | Chưa triển khai, cần dữ liệu prototype |
 | Không từ chối / ngẫu nhiên / SQI / SQI + độ bất định | Cờ SQI `features-sqi-v1`/`v2` trong `week04.py`, cờ cử động `motion-sqi-v0` (`motion_sqi.py`); chưa có cơ chế từ chối | RQ3 | Mới có cờ SQI, chưa có ngưỡng khóa |
@@ -236,7 +279,10 @@ Tên B0/B1/B3 trong code không trùng với số thứ tự "Baseline 1/2/3" c�
 > - [ ] **Đại lượng dự đoán:** xác nhận dự đoán ΔSBP/ΔDBP có hiệu chuẩn cá nhân, không làm BP tuyệt đối không hiệu chuẩn trong RQ1.
 > - [ ] **Phép so sánh chính của RQ1:** PPG-only so với PPG + PAT trên cùng tập lần đo, cùng thuật toán.
 > - [ ] **Endpoint RQ1 khi có nghiệm pháp M0–M4** (đề xuất của nhóm 2026-10-29, mục 4.B): mọi lần cuff hợp lệ ở phiên ≥ 2 so với $`\text{BP}_0`$ = trung bình M0 phiên 1; nghiệm pháp là biến phân tầng; chỉ M0 là phân tích phụ.
-> - [ ] **Cỡ mẫu và kiểm định:** trần tuyển 25 người và số phiên (mục 4.G, đề xuất 2026-10-29); cách xử lý đa kiểm định cho SBP/DBP, có dùng ngưỡng ý nghĩa thực tiễn hay không; tất cả khóa trước khi mở test, dựa trên pilot.
+> - [ ] **Cỡ mẫu và kiểm định:** trần tuyển 25 người và số phiên (mục 4.G, đề xuất 2026-10-29); tất cả khóa trước khi mở test, dựa trên pilot.
+> - [ ] **Tiêu chí kết luận RQ1 v0.4** (mục 4.E, đề xuất 2026-10-29): cùng chuẩn CI cho so sánh với zero-change và với PPG-only; chọn phương án đa kiểm định A (giao–hợp, Holm giữa SBP/DBP) hay B (Holm trên bốn so sánh); giá trị δ và cách lấy từ độ lặp lại của cuff ở pilot; estimand (mục 4.A).
 > - [x] **RQ2:** phần (a) dùng train ∪ val của split v2, không dùng test, CalFree hay CalBased (chốt 2026-10-29, mục 5.G); random split chỉ là đối chứng minh họa.
-> - [ ] **RQ3:** nguồn dữ liệu có đoạn nhiễu tự nhiên (mục 6.G); phương pháp đo độ bất định; mức coverage chọn trên validation.
+> - [ ] **RQ2 v0.4** (đề xuất 2026-10-29): RQ2a báo ở phụ lục; RQ2b đổi thành cùng phiên so với khác phiên (mục 5.B), cần sinh dự đoán cho cuff nghiệm pháp phiên 1 trong cùng lần chạy vòng ngoài.
+> - [ ] **RQ3:** là phân tích thăm dò (v0.4, đề xuất 2026-10-29); nguồn dữ liệu có đoạn nhiễu tự nhiên (mục 6.G); phương pháp đo độ bất định; mức coverage chọn ở vòng trong.
+> - [ ] **Rủi ro áp lực tiếp xúc** (mục 4.F): cách chuẩn hóa vị trí và nấc dây đeo trong protocol.
 > - [ ] **Mốc PEP:** PEP thường tính từ Q/QRS, còn PAT của dự án tính từ R; không đồng nhất hai mốc khi diễn giải.

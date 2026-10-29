@@ -4,9 +4,15 @@ Lưu ma trận tài liệu, chiến lược tìm kiếm, tiêu chí chọn lọc
 Mọi trích dẫn phải có nguồn và thông tin thư mục rõ ràng; mọi số liệu phải ghi
 mức đã đọc (toàn văn hay abstract).
 
-- [Ma trận tổng quan 12 bài (Tuần 1, cập nhật 2026-10-14)](week_01_literature_matrix.md):
-  PAT và PTT, hiệu chuẩn cá nhân, rò rỉ dữ liệu, SQI và từ chối dự đoán; khoảng
-  trống nghiên cứu và đóng góp dự kiến. Tổng quan sơ bộ, chưa phải systematic review.
+- [Ma trận tổng quan 12 bài (Tuần 1, v0.3 ngày 2026-10-29)](week_01_literature_matrix.md):
+  PAT và PTT, hiệu chuẩn cá nhân, rò rỉ dữ liệu, SQI và từ chối dự đoán; phân tầng
+  nguồn (nền tảng, bằng chứng chính, hạ xuống, chưa đọc); khoảng trống nghiên cứu viết
+  lại theo các nghiên cứu gần nhất và đóng góp dự kiến. Tổng quan sơ bộ, chưa phải
+  systematic review.
 - [Tổng quan bổ sung 2015–2026](literature_update_2026-10-14.md): chiến lược
   tìm kiếm và 14 nguồn bổ sung (khuyến cáo ESH/AHA, dự án Aurora, benchmark,
   SQI, risk–coverage, dataset), cùng ảnh hưởng tới RQ1–RQ3.
+- [Các bài gần nhất với RQ1 (2026-10-29)](literature_update_2026-10-29.md): nhật
+  ký tìm kiếm, 17 nguồn N1–N17 (N11–N17 mới có metadata) so với thiết kế RQ1, mức
+  độ mới trong phạm vi đã tra và các bài phải đọc toàn văn trước khi viết khoảng trống
+  nghiên cứu.

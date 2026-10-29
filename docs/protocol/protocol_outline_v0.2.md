@@ -14,6 +14,7 @@
 - Mục 6.4: endpoint chính của RQ1 tính trên mọi lần cuff hợp lệ ở phiên ≥ 2; trục thời gian M2, M3, M4.
 - Mục 6.5: P2 và R3 dùng cùng thống kê (median |ΔSBP|), mỗi chỉ số có mốc so sánh riêng.
 - Mục 9.1: LOSO lồng. Mục 10: quy tắc cho lượt đo bị dừng vì an toàn.
+- Bổ sung cùng ngày theo RQ v0.4 (đề xuất, chờ thầy): 9.1 thêm dự đoán vòng ngoài cho cuff nghiệm pháp phiên 1, chỉ dùng cho RQ2b; 9.2 trỏ tiêu chí kết luận, đa kiểm định và δ về RQ mục 4.E.
 
 **Changelog v0.2 (2026-10-21, Huy):**
 
@@ -500,6 +501,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
    - Với người test của mỗi lượt ngoài:
      - `Session 1`: chỉ dùng làm mốc hiệu chuẩn ($\text{BP}_0$, $\text{PAT}_0$, $\text{Features}_0$, lấy từ M0; mục 3).
      - Phiên 2 trở đi: mọi lần cuff hợp lệ dùng để kiểm tra dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ (endpoint ở 6.4).
+     - Cuff nghiệm pháp M1–M4 ở phiên 1 (đề xuất 2026-10-29, chờ thầy): vòng ngoài sinh dự đoán cho các lần này trong cùng lần chạy, chỉ dùng cho RQ2b (cùng phiên so với khác phiên, [RQ](../research_questions_v0.1.md) mục 5.B); không dùng để hiệu chuẩn và không vào endpoint của RQ1.
    - Tuyệt đối không xáo trộn ngẫu nhiên dữ liệu giữa các phiên đo.
 
 ### 9.2. Kế hoạch thống kê và Kiểm định giả thuyết
@@ -510,7 +512,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 - **Kiểm định giả thuyết (chưa khóa):**
   - Phép so sánh chính của RQ1 là mô hình PPG-only với mô hình PPG + PAT, cùng thuật toán và trên **cùng tập lần đo** tính được cả PAT và đặc trưng PPG (xem [RQ](../research_questions_v0.1.md), mục 4.C), lấy từ endpoint ở 6.4; không lọc thêm theo ngưỡng SQI (7.3). Sai số báo cả tổng và theo từng nghiệm pháp; phân tích chỉ M0 là phân tích phụ định trước.
   - Hiệu ứng chính là chênh lệch MAE theo từng người; báo cáo trung bình và CI 95% bootstrap theo người. Wilcoxon signed-rank cặp theo người ($\alpha = 0.05$) là phân tích hỗ trợ.
-  - SBP và DBP là hai phép kiểm định; cách hiệu chỉnh đa kiểm định (ví dụ Holm) phải chọn trước khi mở test.
+  - Tiêu chí kết luận theo [RQ v0.4](../research_questions_v0.1.md) mục 4.E (đề xuất 2026-10-29, chờ thầy): so sánh với zero-change cũng phải có CI theo người như so sánh với PPG-only; chọn phương án đa kiểm định (A: giao–hợp cho từng đầu ra, Holm giữa SBP và DBP; B: Holm trên bốn so sánh) và mức hiệu ứng nhỏ nhất đáng quan tâm δ trước khi chạy vòng ngoài.
   - Luôn báo cáo kèm baseline zero-change và SD của $\Delta\text{BP}$ tham chiếu.
 
 ---
