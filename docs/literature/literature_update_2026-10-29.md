@@ -7,10 +7,12 @@
 > theo góp ý của Codex (một trợ lý AI khác, chỉ đọc), và ghi lại các việc ở mục 5.3 đã làm.
 > **Cập nhật 2026-10-30, lần 2:** đọc toàn văn N6 từ bản PDF (CC BY) do nhóm tải bằng trình duyệt
 > thường; sửa dòng N6 ở bảng 3 và các mục 2, 4, 5, 6 theo kết quả này.
+> **Cập nhật 2026-10-30, lần 3:** đọc toàn văn S4 từ bản PDF miễn phí trên trang Microsoft Research;
+> thêm mục 3.3 và sửa các mục 2, 3.1, 4, 5, 6 theo kết quả này.
 >
 > **Cách làm:** trợ lý AI (Claude Code) tìm, sàng lọc và tóm tắt qua API PubMed E-utilities,
 > Europe PMC REST và OpenAlex; toàn văn được đọc qua Europe PMC, BioC (NCBI), trang PMC, kho của
-> ETH Zurich và bản PDF do nhóm tải (N6). Chỉ có một bên sàng lọc là trợ lý AI; chưa có thành viên
+> ETH Zurich, bản PDF do nhóm tải (N6) và bản PDF trên trang Microsoft Research (S4). Chỉ có một bên sàng lọc là trợ lý AI; chưa có thành viên
 > nào của nhóm đối chiếu từng đoạn. **Mọi con số phải được đối chiếu với nguyên văn trước khi đưa
 > vào bản thảo.**
 >
@@ -45,8 +47,9 @@ bảng 3, đã cập nhật sau lần thứ hai.
 
 **Đính chính về truy cập.** Lần thứ nhất ghi cả S4 và N6 là "IEEE, toàn văn có phí". Thực tế:
 
-- S4 có phí. Theo quyết định ngày 2026-10-29, nhóm không lấy toàn văn qua thư viện mà chỉ dùng
-  abstract.
+- S4: bản trên IEEE có phí, nên ngày 2026-10-29 nhóm quyết định không lấy qua thư viện mà chỉ dùng
+  abstract. Ngày 2026-10-30 trợ lý tìm được bản PDF miễn phí trên trang Microsoft Research và đã đọc
+  toàn văn (mục 2.2 và 3.3).
 - N6 là bài truy cập mở dạng hybrid: theo Crossref, bản đã xuất bản có giấy phép CC BY 4.0. Tải
   tự động bị chặn (mục 2.2); ngày 2026-10-30 nhóm tải bản PDF bằng trình duyệt thường và trợ lý đã
   đọc toàn văn từ bản này.
@@ -188,6 +191,12 @@ C4  cites:W4377142751 (N6)   C5 cites:W4409443090 (N8)
   chữ được trích bằng `pdftotext`. Bảng trong tệp không trích được thành chữ, nên trợ lý xem dưới
   dạng ảnh dựng từ PDF: xem kỹ Bảng IV, A1, A2 và Hình 5, 6, 8; xem lướt Bảng II, III, V và Hình 7,
   A1; chưa xem Bảng I, VI, VII và Hình 1–4.
+- Đọc ngày 2026-10-30: S4, bản PDF 12 trang (bản IEEE đã xuất bản) trên trang Microsoft Research
+  (đường dẫn ở mục 3.3); SHA-256 của tệp
+  `c96abd7fd662b76c54d2bee89b118ebf238951c387dc84b5164066ad1de3b8ba`. Phần chữ được trích bằng
+  PyMuPDF. Bảng và hình không trích được thành chữ, nên trợ lý xem dưới dạng ảnh dựng từ PDF: xem
+  kỹ Bảng I–VII và Hình 1, 3–7; chưa xem Hình 2 (ví dụ dạng sóng) và chưa đọc kỹ danh mục tài liệu
+  tham khảo.
 - Ngoài bài báo: bản ghi dataset Aurora-BP trên Zenodo (phần mô tả và danh sách tệp; chưa đọc tệp
   Data Use Agreement).
 
@@ -201,9 +210,10 @@ C4  cites:W4377142751 (N6)   C5 cites:W4409443090 (N8)
     tra của Cloudflare: truy cập tự động bị trả 403, còn trình duyệt trong app hiện ô "Verify you
     are human". Trợ lý không vượt qua bước kiểm tra này.
   - Ngày 2026-10-30 nhóm tải thủ công bằng trình duyệt thường (xem danh sách bài đã mở ở trên).
-- S4 có toàn văn trả phí. Crossref chỉ có giấy phép IEEE; Europe PMC có PMID 35201992 nhưng không
-  có PMCID; trang publication của Microsoft Research trả HTTP 403. Theo quyết định ngày
-  2026-10-29, nhóm không lấy qua thư viện, S4 chỉ dùng abstract.
+- S4: bản trên IEEE có phí. Crossref chỉ có giấy phép IEEE; Europe PMC có PMID 35201992 nhưng
+  không có PMCID; ngày 2026-10-29 trang publication của Microsoft Research trả HTTP 403, nên nhóm
+  quyết định chỉ dùng abstract. Ngày 2026-10-30 trang này mở được và có bản PDF tải tự do; trợ lý
+  đã đọc toàn văn (danh sách bài đã mở ở trên).
 - Europe PMC `fullTextXML` trả HTTP 500 với PMC8221527, PMC12331212 và PMC9154072; các bài này
   được đọc thay qua BioC hoặc trang PMC. BioC không có N8 vì bài nằm ngoài tập truy cập mở.
 - Trang item của ETH Research Collection trả HTTP 500; văn bản được lấy qua REST API của kho.
@@ -273,8 +283,8 @@ một bài không có nghĩa là bài đó không tồn tại.
 
 S3 (bài tổng kết của Aurora) và S4 (Mieloszyk 2022, dataset Aurora-BP: 1.125 người, đồng hồ
 PPG + ECG, tonometry, 24 giờ) trong [tổng quan 2026-10-14](literature_update_2026-10-14.md) vẫn là
-nguồn lớn nhất về ECG + PPG cổ tay qua nhiều thời điểm. Theo quyết định ngày 2026-10-29, S4 chỉ
-dùng abstract (toàn văn có phí, nhóm không lấy qua thư viện).
+nguồn lớn nhất về ECG + PPG cổ tay qua nhiều thời điểm. S4 được đọc toàn văn ngày 2026-10-30; kết
+quả ở mục 3.3.
 
 ### 3.1. Các bài dùng dataset Aurora-BP (chủ đề T6)
 
@@ -303,10 +313,12 @@ Theo abstract (riêng N16 theo toàn văn), các bài 2022–2026 dưới đây 
   ([10.22489/cinc.2024.038](https://doi.org/10.22489/cinc.2024.038): màu da và độ chính xác phân
   loại).
 
-**Kết luận cho T6** (trong phạm vi các abstract đã đọc): chỉ N19 so mô hình dựa trên PAT với
-baseline. Chưa thấy bài nào trên Aurora-BP so ghép cặp PPG-only với PPG + PAT, đối chiếu với
-baseline chỉ hiệu chuẩn, ở ngày hôm sau. Chưa loại trừ được S4 (chỉ dùng abstract theo quyết định
-ngày 2026-10-29), N19 và N20 (chưa đọc toàn văn).
+**Kết luận cho T6** (trong phạm vi các abstract đã đọc, cộng toàn văn S4): trong các bài ở trên,
+chỉ N19 so mô hình dựa trên PAT với baseline. S4 (mục 3.3) có so nhóm đặc trưng chỉ PPG với nhóm
+thêm rPAT và đặc trưng ECG ở buổi quay lại, đối chiếu với baseline zero và static, nhưng hai nhóm
+khác nhau ở nhiều đặc trưng ECG chứ không riêng PAT, và không so ghép cặp theo người. Chưa thấy bài
+nào trên Aurora-BP so ghép cặp PPG-only với PPG + PAT, đối chiếu với baseline chỉ hiệu chuẩn, ở ngày
+hôm sau. Chưa loại trừ được N19 và N20 (chưa đọc toàn văn).
 
 **Truy cập dữ liệu:** Aurora-BP có bản ghi mở trên Zenodo
 ([10.5281/zenodo.19099165](https://doi.org/10.5281/zenodo.19099165), tạo ngày 2026-03-18), kèm tệp
@@ -376,17 +388,89 @@ trống thêm so với các dòng N ở trên. DOI đã được kiểm qua Open
   Parati G et al. 2026, *Eur J Prev Cardiol*
   ([10.1093/eurjpc/zwag058](https://doi.org/10.1093/eurjpc/zwag058): tuyên bố khoa học năm 2026).
 
+### 3.3. S4: kết quả đọc toàn văn (2026-10-30)
+
+Mieloszyk R et al. *IEEE J Biomed Health Inform* 2022;26(7):2864–2875,
+[10.1109/jbhi.2022.3153259](https://doi.org/10.1109/jbhi.2022.3153259). Bản đã đọc là bản IEEE đã
+xuất bản, đăng tự do trên trang Microsoft Research
+([PDF](https://www.microsoft.com/en-us/research/wp-content/uploads/2022/07/A_Comparison_of_Wearable_Tonometry_Photoplethysmography_and_Electrocardiography_for_Cuffless_Measurement_of_Blood_Pressure_in_an_Ambulatory_Setting.pdf)).
+Số ghi "khoảng" do trợ lý đọc ước lượng từ hình, không phải số in trong bài; các số còn lại chép từ
+bảng. Chờ thầy xem.
+
+**Thiết kế**
+
+- 1.125 người được phân tích: 642 ở nhánh nghe tim, 483 ở nhánh dao động kế; tuổi trung bình 45,1,
+  34,3% có tiền sử tăng huyết áp (Bảng II). Mỗi người làm hai buổi trong phòng thí nghiệm cách
+  nhau ít nhất 24 giờ; nhánh dao động kế đo thêm lưu động giữa hai buổi (Bảng I).
+- Thiết bị (mục II.A, Hình 1): PPG cổ tay dùng MAX30101, cùng chip PPG với V1 của nhóm. ECG qua
+  ADS1292, điện cực âm ở ngực, điện cực dương ở cẳng tay đeo thiết bị; cuff ở tay đối diện. ECG không
+  đo giữa hai cổ tay.
+- Mô hình (mục II.E): dự đoán thay đổi BP so với giá trị hiệu chuẩn ở buổi đầu (tư thế nằm), cho BP
+  lúc nghỉ ở buổi quay lại. Bài chỉ báo ridge, vì GAM, cây tăng cường và các mô hình khác không tốt
+  hơn (Bảng VI). Hai baseline: "zero" giữ nguyên BP hiệu chuẩn; "static" là ridge chỉ trên BP hiệu
+  chuẩn và giờ trong ngày, không dùng tín hiệu.
+- Thống kê: kiểm định chéo giữ nguyên người; 100 lần bootstrap, mỗi lần lấy 90% số người; các nhóm
+  được so bằng Welch t-test trên các giá trị bootstrap. Bài báo bias và SD, không báo MAE, không có
+  hiệu ghép cặp theo người và không có δ. Cửa sổ có điểm chất lượng dưới ngưỡng bị loại (mục II.C).
+
+**Nhóm đặc trưng (Bảng IV)**
+
+| Nhóm | Đặc trưng |
+| --- | --- |
+| "Smart watch" | dP/dt từ PPG; HR và HRV từ PPG; chất lượng PPG; góc tay; giờ trong ngày. Không có ECG |
+| "Optical" | dP/dt từ PPG; HR từ PPG và từ ECG; HRV từ ECG; rPAT và 1/rPAT quang; độ dài nhịp; chất lượng PPG; góc tay; giờ trong ngày |
+| "ECG" | Độ dài nhịp; HR và HRV từ ECG; giờ trong ngày |
+
+"Optical" khác "smart watch" ở rPAT, 1/rPAT, độ dài nhịp và HR, HRV tính từ ECG, nên phép so hai
+nhóm này không phải phép bỏ riêng PAT. Đặc trưng hình dạng PPG của cả hai nhóm chỉ có dP/dt.
+
+**Kết quả ở buổi quay lại (Bảng V)**, SD sai số SBP / DBP (mmHg), tham chiếu nghe tim:
+
+| Nhóm người | Optical | Smart watch | Static | Zero |
+| --- | --- | --- | --- | --- |
+| Tất cả | 10,0 / 7,60 | 10,1 / 7,66 | 10,2 / 7,87 | 10,3 / 8,12 |
+| ≤ 35 tuổi | 7,95 / 7,86 | 8,02 / 8,03 | 8,18 / 8,07 | 8,20 / 8,50 |
+
+- Ở mọi ô của Bảng V (cả hai loại tham chiếu, ba nhóm người), SD của nhóm optical chênh với nhóm
+  smart watch không quá 0,25 mmHg, và có ô nhóm optical còn cao hơn 0,1 mmHg. Tác giả viết nhóm
+  optical chỉ có lợi "marginal" so với baseline static và zero (mục III.C.5).
+- Với tham chiếu dao động kế, SD SBP cao hơn tham chiếu nghe tim 0,8–4,0 mmHg tùy nhóm đặc trưng và
+  nhóm người, kể cả zero (tính từ Bảng V). Lời văn mục III.C.2 viết "ít nhất 1 mmHg", không khớp vài
+  ô của nhóm "Tất cả" (0,8–0,9 mmHg). Ở nhánh này, zero có bias SBP −5,79 và DBP −7,96 mmHg (nhóm "Tất cả"), còn
+  static chỉ −0,69 và −0,18 mmHg: static gỡ được độ lệch hệ thống mà zero mắc phải.
+- Ở tư thế nằm, trùng tư thế hiệu chuẩn, SD SBP của nhóm ≤ 35 tuổi là 7,00–7,30 mmHg với mọi nhóm
+  đặc trưng và cả hai baseline (Bảng VII). Tác giả lưu ý người trẻ và người bình áp ở tư thế nằm đạt
+  tiêu chí I của ANSI/AAMI với mọi nhóm, kể cả baseline, và cảnh báo rằng đánh giá trên người trẻ,
+  khỏe cho kết quả quá lạc quan (mục III.C.1).
+
+**Biến thiên BP và tỷ lệ dữ liệu**
+
+- |ΔSBP| (nghe tim) giữa hai buổi tăng theo tuổi và theo SBP lúc nghỉ (Hình 3). Trung vị khoảng
+  3 mmHg ở 21–30 tuổi, khoảng 5 mmHg ở 31–50 tuổi, khoảng 8,5 mmHg ở 51–70 tuổi và khoảng 14 mmHg ở
+  71–80 tuổi.
+- SD của ΔSBP ở nhóm dưới 36 tuổi, trong phòng thí nghiệm, khoảng 8,6 mmHg với tham chiếu nghe tim
+  và khoảng 11 mmHg với dao động kế (Hình 4).
+- Trong phòng thí nghiệm, tỷ lệ phép đo dùng được khoảng 0,99 với ECG, 0,74 với PPG và 0,65 với
+  tonometry (Hình 5). Theo giờ trong ngày, tỷ lệ trích được đặc trưng quang khoảng 0,83–0,94 với
+  rPAT, 0,56–0,71 với sườn lên tâm thu và 0,29–0,43 với dicrotic notch (Hình 6).
+
+**Hạn chế do tác giả nêu (mục IV):** thiết bị quang không phải PPG hiện đại nhất; protocol không
+được thiết kế theo chuẩn của FDA cho thiết bị cuffless; chỉ dùng mô hình diễn giải được.
+
+**Lưu ý khi trích:** mục I của S4 viết PTT bằng tổng của rPAT và PEP. Quan hệ đúng, theo quy ước của
+dự án, là PAT = PEP + PTT, nên không trích câu này.
+
 ## 4. So sánh với thiết kế của nhóm
 
 | Đặc điểm của RQ1 | Đã có trong các nguồn đã đọc |
 | --- | --- |
-| Baseline zero-change hoặc chỉ hiệu chuẩn, đánh giá theo người | N1 (zero-change, LOSO lồng); N2 (baseline không đổi); N18 (baseline naïve, tức trung bình các lần cuff ban đầu, sau 1 năm); N19 (baseline models, theo abstract); N6 (baseline AdaBoost học từ BP ban đầu + nhân khẩu học; \|ΔBP\| so với ngày D có ở Hình 5 nhưng không được so với mô hình); S3/S4 (baseline "khó") |
-| So PPG với PAT trên cùng người | N1 (từng bộ đặc trưng riêng); N2 (PPG + PAT); N18 (mô hình PAT, PAT + đặc trưng PPG và chỉ PPG, mỗi mô hình một đầu ra khác nhau); N25, N26 (PAT theo từng nghiệm pháp); N6 (chỉ ở mô hình không hiệu chuẩn, chỉ SBP: PPG hồng ngoại so với ECG + PPG hồng ngoại, không kiểm định) |
+| Baseline zero-change hoặc chỉ hiệu chuẩn, đánh giá theo người | N1 (zero-change, LOSO lồng); N2 (baseline không đổi); N18 (baseline naïve, tức trung bình các lần cuff ban đầu, sau 1 năm); N19 (baseline models, theo abstract); N6 (baseline AdaBoost học từ BP ban đầu + nhân khẩu học; \|ΔBP\| so với ngày D có ở Hình 5 nhưng không được so với mô hình); S3; S4 (baseline zero và static, mục 3.3) |
+| So PPG với PAT trên cùng người | N1 (từng bộ đặc trưng riêng); N2 (PPG + PAT); N18 (mô hình PAT, PAT + đặc trưng PPG và chỉ PPG, mỗi mô hình một đầu ra khác nhau); N25, N26 (PAT theo từng nghiệm pháp); N6 (chỉ ở mô hình không hiệu chuẩn, chỉ SBP: PPG hồng ngoại so với ECG + PPG hồng ngoại, không kiểm định); S4 (nhóm chỉ PPG so với nhóm thêm rPAT và HR, HRV từ ECG; không tách riêng PAT, không ghép cặp theo người) |
 | Nghiệm pháp tạo ΔBP không dùng thuốc | N2, N3, N4, N7, N18 (thở chậm, tính nhẩm, ngâm lạnh, có thêm nitroglycerin), N25, N26, N28 |
-| PPG và ECG cùng ở cổ tay | N5 (ECG giữa cổ tay và ngón tay bàn tay kia, SCG ở ngực); N6 (ECG giữa cổ tay trái và ngón cái tay phải, PPG ở ngón trỏ tay phải ấn lên đồng hồ, PPW ở động mạch quay); S4/N19/N20 (Aurora); N10; N42 (dataset); N41 (mới thử trên bàn) |
-| Đánh giá ở phiên khác ngày sau hiệu chuẩn | N4 (ngày hôm sau, nhóm nhỏ); N6 (D+7, D+14, D+21 sau hiệu chuẩn ở ngày D); N7 (11 người, ngày hôm sau, chỉ PPG); N18 (1 năm); N21 (từ 30 ngày trở lên, chỉ PPG); N23, N31–N34 (1–6 tuần, chỉ PPG); S3/S4 (ngày hôm sau) |
+| PPG và ECG cùng ở cổ tay | N5 (ECG giữa cổ tay và ngón tay bàn tay kia, SCG ở ngực); N6 (ECG giữa cổ tay trái và ngón cái tay phải, PPG ở ngón trỏ tay phải ấn lên đồng hồ, PPW ở động mạch quay); S4/N19/N20 (Aurora; ở S4 điện cực ECG âm đặt ở ngực); N10; N42 (dataset); N41 (mới thử trên bàn) |
+| Đánh giá ở phiên khác ngày sau hiệu chuẩn | N4 (ngày hôm sau, nhóm nhỏ); N6 (D+7, D+14, D+21 sau hiệu chuẩn ở ngày D); N7 (11 người, ngày hôm sau, chỉ PPG); N18 (1 năm); N21 (từ 30 ngày trở lên, chỉ PPG); N23, N31–N34 (1–6 tuần, chỉ PPG); S3/S4 (buổi quay lại sau ít nhất 24 giờ) |
 | Đầu ra thiết bị bám gần mốc hiệu chuẩn | N22 (PAT, 24 giờ); N23, N24, N33 (PPG); N8 có tổng hợp |
-| **Tất cả cùng lúc: thiết bị chỉ ở cổ tay; PPG-only so với PPG + PAT, ghép cặp theo người, cùng thuật toán; các phiên cách vài ngày đến 4 tuần; so với zero-change; có nghiệm pháp** | **Không thấy** trong các nguồn đã mở. Gần nhất là N18: nhiều phiên và có baseline naïve, nhưng không đo ở cổ tay, hiệu chuẩn nhiều điểm cho từng người, các phiên cách nhau 1 năm, và không so ghép cặp trên cùng một đầu ra. N6 (đọc toàn văn ngày 2026-10-30, chờ thầy xem) có nhiều phiên trong 1 tháng và baseline học từ BP ban đầu, nhưng chỉ so tổ hợp tín hiệu ở mô hình không hiệu chuẩn, PPG đo ở ngón tay và không có nghiệm pháp. Chưa loại trừ được: S4, vì chỉ có abstract (quyết định ngày 2026-10-29); N19 và N20, vì chưa đọc toàn văn |
+| **Tất cả cùng lúc: thiết bị chỉ ở cổ tay; PPG-only so với PPG + PAT, ghép cặp theo người, cùng thuật toán; các phiên cách vài ngày đến 4 tuần; so với zero-change; có nghiệm pháp** | **Không thấy** trong các nguồn đã mở. Gần nhất là N18: nhiều phiên và có baseline naïve, nhưng không đo ở cổ tay, hiệu chuẩn nhiều điểm cho từng người, các phiên cách nhau 1 năm, và không so ghép cặp trên cùng một đầu ra. N6 (đọc toàn văn ngày 2026-10-30, chờ thầy xem) có nhiều phiên trong 1 tháng và baseline học từ BP ban đầu, nhưng chỉ so tổ hợp tín hiệu ở mô hình không hiệu chuẩn, PPG đo ở ngón tay và không có nghiệm pháp. S4 (đọc toàn văn ngày 2026-10-30, mục 3.3) gần nhất về thiết kế: cổ tay, buổi quay lại sau ít nhất 24 giờ, ridge, baseline zero và static, kiểm định chéo theo người; nhưng nhóm chỉ PPG và nhóm có rPAT khác nhau ở nhiều đặc trưng ECG, ECG có điện cực ở ngực, kết quả báo bằng bias/SD với Welch t-test trên bootstrap, không có hiệu ghép cặp theo người hay δ, và không có nghiệm pháp. Chưa loại trừ được: N19 và N20, vì chưa đọc toàn văn |
 
 ## 5. Đánh giá mức độ mới
 
@@ -409,7 +493,8 @@ ghép cặp, đăng ký trước, giữa PPG-only và PPG + PAT, thỏa cùng l�
 2. Các phiên cách nhau vài ngày đến 4 tuần.
 3. Hiệu chuẩn chỉ bằng offset từ M0 của phiên 1, hệ số chung cho mọi người học bằng LOSO lồng. N18
    thì khác: mỗi người có hệ số riêng, lập từ cả bộ nghiệm pháp.
-4. Hai mô hình dùng cùng thuật toán, cùng tập lần đo và cùng đầu ra.
+4. Hai mô hình dùng cùng thuật toán, cùng tập lần đo và cùng đầu ra, và chỉ khác nhau ở PAT (ý cuối
+   thêm ngày 2026-10-30 sau khi đọc S4, chờ thầy xem).
 5. Luôn so với zero-change, có CI bootstrap theo người và mức δ khóa trước.
 
 **Đối chiếu N6 với năm điều kiện** (đọc toàn văn ngày 2026-10-30, chờ thầy xem): N6 thỏa một phần
@@ -419,18 +504,34 @@ nền ngày D theo α = 0,6, chọn theo sai số của chính các mô hình đ
 tín hiệu chỉ ở mô hình không hiệu chuẩn, chỉ SBP) và điều kiện 5 (baseline là mô hình học từ BP ban
 đầu + nhân khẩu học; không có CI theo người).
 
+**Đối chiếu S4 với năm điều kiện** (đọc toàn văn ngày 2026-10-30, chờ thầy xem; chi tiết ở mục
+3.3). S4 thỏa một phần điều kiện 2 (một buổi quay lại sau ít nhất 24 giờ) và gần thỏa điều kiện 3
+(dự đoán thay đổi so với BP hiệu chuẩn bằng hệ số chung học trên những người khác, kiểm định chéo giữ
+nguyên người; bài không mô tả LOSO lồng). S4 không thỏa điều kiện 1 (điện cực ECG âm ở ngực), điều
+kiện 4 (cùng thuật toán ridge và cùng đầu ra, nhưng nhóm chỉ PPG và nhóm có rPAT khác nhau ở nhiều
+đặc trưng ECG) và điều kiện 5 (có baseline zero và bootstrap theo người, nhưng các nhóm được so bằng
+Welch t-test trên các giá trị bootstrap, không có hiệu ghép cặp theo người và không có δ). S4 cũng
+không có nghiệm pháp. Điểm phân biệt rõ nhất với S4 là ý "chỉ khác nhau ở PAT" của điều kiện 4. Điều
+kiện 2 chỉ khác S4 nếu SAP khóa khoảng cách tối thiểu giữa phiên 1 và phiên 2, vì protocol hiện cho
+phép phiên 2 cách phiên 1 một ngày.
+
 **Không được viết** "đầu tiên" hay "chưa có nghiên cứu nào". Nên viết như sau: "Trong các nguồn
 đã tra (PubMed, Europe PMC, OpenAlex, giai đoạn 2022–2026, tra ngày 2026-10-29; chưa tra IEEE
-Xplore, Scopus, Web of Science; S4 chỉ đọc abstract; N6 đọc toàn văn ngày 2026-10-30), chưa thấy nghiên
-cứu so sánh ghép cặp PPG-only với PPG + PAT trên cùng một thiết bị cổ tay, ở các phiên khác ngày,
-đối chiếu với zero-change. Yavarimanesh et al. (2022) đã đánh giá mô hình có PAT và mô hình đặc
+Xplore, Scopus, Web of Science; S4 và N6 đọc toàn văn ngày 2026-10-30), chưa thấy nghiên cứu so
+sánh ghép cặp theo người giữa PPG-only và PPG + PAT, hai mô hình chỉ khác nhau ở PAT, trên cùng một
+thiết bị cổ tay, ở các phiên khác ngày, đối chiếu với zero-change. Yavarimanesh et al. (2022) đã đánh giá mô hình có PAT và mô hình đặc
 trưng PPG qua hai phiên cách nhau một năm, so với baseline chỉ dùng cuff hiệu chuẩn, nhưng PPG đo
 ở tai, ngón tay, ngón chân, mỗi người được hiệu chuẩn nhiều điểm, và mỗi mô hình có đầu ra riêng."
 Câu về N6 nên thêm vào đoạn trên (đề xuất ngày 2026-10-30, chờ thầy xem): "Liu et al. (2023) đánh
 giá 3.077 người ở các ngày D+7 đến D+21 sau hiệu chuẩn và so với baseline, nhưng chỉ so các tổ hợp
 tín hiệu ở mô hình không hiệu chuẩn, và PPG được đo ở ngón tay ấn lên đồng hồ."
-Vì nhóm đã quyết định ngày 2026-10-29 bỏ qua toàn văn S4, bài báo phải nêu rõ giới hạn: khoảng
-trống chưa được kiểm với toàn văn S4.
+Câu về S4 nên thêm vào đoạn trên (đề xuất ngày 2026-10-30, chờ thầy xem): "Mieloszyk et al. (2022)
+so nhóm đặc trưng chỉ từ PPG với nhóm thêm rPAT và nhịp tim, HRV từ ECG trên cùng thiết bị cổ tay ở
+buổi quay lại sau ít nhất 24 giờ (1.125 người), và thấy nhóm có rPAT chỉ hơn các baseline dựa trên BP
+hiệu chuẩn một chút; tuy vậy hai nhóm khác nhau ở nhiều đặc trưng ECG chứ không riêng PAT, ECG dùng
+điện cực ở ngực, và các nhóm được so qua bias và SD chứ không theo hiệu ghép cặp từng người."
+Ngày 2026-10-29 nhóm quyết định bỏ qua toàn văn S4 vì tưởng S4 chỉ có bản trả phí. Từ ngày
+2026-10-30 khoảng trống đã được kiểm với toàn văn S4, nên bài báo không cần nêu giới hạn này nữa.
 
 **Kết quả âm tính vẫn là đóng góp** theo khung của N8, và sau lần tra thứ hai, khả năng ra kết quả
 âm tính cao hơn:
@@ -454,8 +555,11 @@ thể gặp cùng vấn đề.
 - cỡ mẫu nhỏ hơn nhiều so với N6 (3.077 người) và S4 (1.125 người);
 - N18 ước tính cần 31 người cho một so sánh tương tự (mô hình ngón tay so với naïve sau 1 năm),
   nhiều hơn mục tiêu ≥ 15 người của RQ1;
-- tham chiếu là cuff đo ngắt quãng, trong khi N7 và N4 dùng tham chiếu liên tục;
-- người tham gia trẻ và khỏe, nên dải ΔBP hẹp.
+- tham chiếu là cuff đo ngắt quãng, trong khi N7 và N4 dùng tham chiếu liên tục; S4 cho thấy với
+  cuff dao động kế, SD sai số SBP cao hơn tham chiếu nghe tim 0,8–4,0 mmHg tùy nhóm (mục 3.3);
+- người tham gia trẻ và khỏe, nên dải ΔBP hẹp. Ở S4, trung vị |ΔSBP| giữa hai buổi chỉ khoảng 3 mmHg
+  ở người 21–30 tuổi, và ở nhóm ≤ 35 tuổi mọi nhóm đặc trưng lẫn baseline có SD sai số sát nhau; tác
+  giả cảnh báo đánh giá trên người trẻ, khỏe cho kết quả quá lạc quan (mục 3.3).
 
 Người phản biện sẽ hỏi vì sao nhóm không dùng Aurora-BP, vì dataset này nay đã có bản mở trên
 Zenodo kèm Data Use Agreement (mục 3.1).
@@ -482,6 +586,20 @@ thêm nghiệm pháp. Các ý về PEP, áp lực tiếp xúc và cỡ mẫu đ�
 - **Tư thế tay:** N12 cho thấy độ cao của cảm biến so với tim làm đổi chất lượng PPG cổ tay, nên cần
   cố định tư thế tay ở mọi phiên.
 - **Cỡ mẫu:** con số 31 người của N18 nên được đưa vào mô phỏng độ nhạy ở RQ mục 4.E.
+- **Baseline "static" (S4, bổ sung 2026-10-30):** ở S4, baseline chỉ dùng BP hiệu chuẩn và giờ trong
+  ngày gỡ được độ lệch hệ thống mà zero-change mắc phải, và các nhóm đặc trưng chỉ hơn nó rất ít (mục
+  3.3). Gợi ý của trợ lý, chưa được nhóm hay thầy quyết định: cân nhắc thêm một baseline kiểu static
+  vào SAP (chỉ BP hiệu chuẩn và hệ số chặn học bằng LOSO lồng, không dùng tín hiệu), để tách phần
+  "vượt zero-change" nhờ tín hiệu khỏi phần nhờ học độ lệch trung bình giữa các phiên. Cần đưa Codex
+  xem trước khi ghi vào SAP.
+- **Dải ΔBP ở người trẻ (S4, Hình 3):** trung vị |ΔSBP| giữa hai buổi khoảng 3 mmHg ở 21–30 tuổi và
+  chỉ tăng rõ từ khoảng 51 tuổi. Có thể dùng các số này làm khoảng cho mô phỏng độ nhạy (RQ mục 4.E)
+  và khi đặt lại ngưỡng R3/P2. Suy luận của trợ lý: nới tuổi tuyển trong phạm vi dưới 50 tuổi khó làm
+  rộng dải ΔBP.
+- **Tỷ lệ dữ liệu PPG cổ tay (S4, Hình 5, 6):** trong phòng thí nghiệm, khoảng 1/4 số phép đo PPG
+  không dùng được; đặc trưng dựa trên dicrotic notch chỉ trích được ở khoảng 30–40% số phép đo. Bộ
+  đặc trưng `features-sqi` của nhóm không dùng dicrotic notch, nhưng nên tính tỷ lệ mất PPG khi dự trù
+  số lần cuff cần thu.
 
 ### 5.3. Đoạn cần sửa trong ma trận và RQ
 
@@ -527,6 +645,9 @@ Danh sách được giữ lại làm nhật ký. Khoảng trống 4 (RQ3) không
     tay … N6 … Phần nhóm đã đọc (abstract)" cần đổi theo toàn văn: thiết bị của N6 đo PPG ở ngón
     tay và ECG qua ngón cái; N6 chỉ so tổ hợp tín hiệu ở mô hình không hiệu chuẩn. Ý "Phải kiểm lại
     sau khi đọc toàn văn N6" cần đổi thành đã đối chiếu, dẫn tới mục 5.1.
+- **Sau khi đọc toàn văn S4 (2026-10-30):** cùng ngày đã sửa ma trận (khoảng trống 1), RQ mục 1, 4.F
+  và 8, README của thư mục tài liệu, và ghi mức đã đọc vào dòng S4 của
+  [tổng quan 2026-10-14](literature_update_2026-10-14.md). Các chỗ sửa chờ thầy xem.
 
 ## 6. Việc cần làm
 
@@ -535,10 +656,10 @@ Danh sách được giữ lại làm nhật ký. Khoảng trống 4 (RQ3) không
 Các bài dưới đây có toàn văn đóng hoặc bị chặn khi tra ngày 2026-10-29, xếp theo mức ảnh hưởng
 tới khoảng trống của RQ1.
 
-**S4 không nằm trong danh sách:** theo quyết định ngày 2026-10-29, nhóm bỏ qua S4 (Mieloszyk 2022,
-[10.1109/jbhi.2022.3153259](https://doi.org/10.1109/jbhi.2022.3153259)), không lấy qua thư viện mà
-chỉ dùng abstract. Vì vậy khoảng trống của RQ1 chưa được kiểm với toàn văn S4, và bài báo phải nêu
-giới hạn này.
+**S4 (xong ngày 2026-10-30):** ngày 2026-10-29 nhóm quyết định bỏ qua S4 (Mieloszyk 2022,
+[10.1109/jbhi.2022.3153259](https://doi.org/10.1109/jbhi.2022.3153259)) vì tưởng S4 chỉ có bản trả
+phí. Ngày 2026-10-30 trợ lý tìm được bản PDF miễn phí trên trang Microsoft Research và đã đọc toàn
+văn; kết quả ở mục 3.3 và 5.1.
 
 1. **N6** – Liu ZD et al. *IEEE J Biomed Health Inform* 2023;27(9):4216–4227,
    [10.1109/jbhi.2023.3278168](https://doi.org/10.1109/jbhi.2023.3278168). **Xong ngày
@@ -585,9 +706,8 @@ giới hạn này.
 1. **N6 (đã đọc toàn văn ngày 2026-10-30):** điều kiện "N6 đã so ghép cặp PPG-only với PPG + PAT
    qua nhiều ngày, có baseline chỉ hiệu chuẩn" không xảy ra; phần đối chiếu ở mục 5.1 chờ thầy xem.
    Còn mở: số trong lời văn mục IV.C của N6 lệch với Hình 5 (dòng N6), nên nếu trích sai số theo
-   ngày của N6 thì phải ghi rõ lấy từ hình hay từ lời văn, hoặc hỏi tác giả. S4 được bỏ qua
-   theo quyết định ngày 2026-10-29, nên khoảng trống chưa được kiểm với toàn văn S4 và bài báo phải
-   nêu giới hạn này.
+   ngày của N6 thì phải ghi rõ lấy từ hình hay từ lời văn, hoặc hỏi tác giả. S4 đã được đọc toàn
+   văn ngày 2026-10-30 (mục 3.3, 5.1).
 2. Đã sửa ma trận (mục 2.1, 4) và RQ (mục 1, 4.F, 4.G) theo mục 5.3 ngày 2026-10-30; các chỗ sửa ở
    RQ vẫn cần được duyệt.
 3. **Aurora-BP:** đọc toàn văn tệp Data Use Agreement trên Zenodo trước khi tải dữ liệu. Phải hiểu
@@ -602,4 +722,5 @@ giới hạn này.
    ghi như ở mục 2.2.
 6. Nhờ một thành viên trong nhóm sàng lọc lại một phần bản ghi bị loại, chọn ngẫu nhiên (ví dụ 100
    bản ghi), để ước lượng tỷ lệ bỏ sót của trợ lý AI.
-7. Đối chiếu với nguyên văn mọi con số trong bảng 3 trước khi trích vào bản thảo.
+7. Đối chiếu với nguyên văn mọi con số trong bảng 3 và mục 3.3 trước khi trích vào bản thảo; các số
+   ghi "khoảng" ở mục 3.3 được đọc ước lượng từ hình của S4.

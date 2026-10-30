@@ -4,7 +4,7 @@
 >
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 >
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint của RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline), 2026-10-29 (v0.4: dẫn các nghiên cứu gần nhất; estimand của RQ1; tiêu chí kết luận dùng CI cho cả phép so sánh với zero-change; mức hiệu ứng nhỏ nhất đáng quan tâm δ; rủi ro áp lực tiếp xúc; RQ2a chuyển thành kiểm tra rò rỉ ở phụ lục, RQ2b đổi thành đánh giá cùng phiên so với khác phiên; RQ3 chuyển thành phân tích thăm dò; cùng ngày bỏ nghiệm pháp M3, M4 theo protocol 6.4, nên endpoint và RQ2b chỉ còn M0–M2, và thêm rủi ro dải ΔBP hẹp ở mục 4.F), 2026-10-30 (sửa mục 1 và 4.F–4.G theo lần tra có hệ thống: N18 đã đánh giá qua nhiều phiên với baseline chỉ hiệu chuẩn, nên khoảng trống hẹp lại; thêm nguồn về PEP và con số 31 người của N18), 2026-10-30 lần 2 (mục 1: thêm kết quả đọc toàn văn N6), 2026-10-30 lần 3 (mục 4.E, 4.G: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, mô phỏng độ nhạy dùng để chốt số người cần tuyển)
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint của RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline), 2026-10-29 (v0.4: dẫn các nghiên cứu gần nhất; estimand của RQ1; tiêu chí kết luận dùng CI cho cả phép so sánh với zero-change; mức hiệu ứng nhỏ nhất đáng quan tâm δ; rủi ro áp lực tiếp xúc; RQ2a chuyển thành kiểm tra rò rỉ ở phụ lục, RQ2b đổi thành đánh giá cùng phiên so với khác phiên; RQ3 chuyển thành phân tích thăm dò; cùng ngày bỏ nghiệm pháp M3, M4 theo protocol 6.4, nên endpoint và RQ2b chỉ còn M0–M2, và thêm rủi ro dải ΔBP hẹp ở mục 4.F), 2026-10-30 (sửa mục 1 và 4.F–4.G theo lần tra có hệ thống: N18 đã đánh giá qua nhiều phiên với baseline chỉ hiệu chuẩn, nên khoảng trống hẹp lại; thêm nguồn về PEP và con số 31 người của N18), 2026-10-30 lần 2 (mục 1: thêm kết quả đọc toàn văn N6), 2026-10-30 lần 3 (mục 4.E, 4.G: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, mô phỏng độ nhạy dùng để chốt số người cần tuyển), 2026-10-30 lần 4 (mục 1, 4.F và 8: thêm kết quả đọc toàn văn S4; thêm ý hai mô hình chỉ khác nhau ở PAT vào phần có thể là đóng góp, chờ thầy xem)
 >
 > Các thay đổi của v0.4 là **đề xuất của nhóm ngày 2026-10-29, chờ thầy xác nhận**. Các thay đổi này phải được khóa trước khi chạy vòng ngoài của LOSO lồng.
 >
@@ -20,7 +20,7 @@ Thiết bị đo huyết áp không vòng bít (cuffless) dựa trên PPG ở c�
 2. **PAT không phải PTT.** Có ECG thì đo được PAT, tức khoảng từ R-peak đến chân sóng PPG. Nhưng PAT chứa cả thời gian tiền tống máu (PEP), vốn thay đổi theo trạng thái giao cảm. Payne et al. (2006) cho thấy PEP chiếm 12–35% khoảng từ đỉnh R đến xung ở ngón tay. Vì vậy, thêm ECG có giúp ích hơn so với chỉ dùng PPG hay không là câu hỏi thực nghiệm, không suy ra được từ lý thuyết PTT.
 3. **Cách chia dữ liệu làm kết quả đẹp giả tạo.** Khi các cửa sổ của cùng một người nằm ở cả tập huấn luyện lẫn tập kiểm tra, sai số thấp hơn đáng kể so với khi chia theo người (Yoshizawa et al., 2023; Mehta et al., 2024).
 
-**Các nghiên cứu gần nhất (v0.4; sửa 2026-10-30 theo lần tra có hệ thống ngày 2026-10-29).** Đã có nghiên cứu đánh giá mô hình dựa trên PPG và mô hình dựa trên PAT so với baseline zero-change hoặc baseline chỉ hiệu chuẩn, đánh giá theo người, kể cả qua nhiều phiên. Tuy vậy, chưa thấy phép so sánh ghép cặp PPG-only với PPG + PAT cho cùng một đầu ra qua nhiều phiên. Các nguồn dưới đây đều có trong [tổng quan 2026-10-29](literature/literature_update_2026-10-29.md):
+**Các nghiên cứu gần nhất (v0.4; sửa 2026-10-30 theo lần tra có hệ thống ngày 2026-10-29 và theo toàn văn N6, S4).** Đã có nghiên cứu đánh giá mô hình dựa trên PPG và mô hình dựa trên PAT so với baseline zero-change hoặc baseline chỉ hiệu chuẩn, đánh giá theo người, kể cả qua nhiều phiên. Tuy vậy, chưa thấy phép so sánh ghép cặp theo người giữa PPG-only và PPG + PAT, hai mô hình chỉ khác nhau ở PAT, cho cùng một đầu ra qua nhiều phiên. Các nguồn dưới đây đều có trong [tổng quan 2026-10-29](literature/literature_update_2026-10-29.md):
 
 - **Trong một buổi đo** (PPG ở ngón tay, ngón chân hoặc tai):
   - Finnegan et al. (2023, N1) so sánh các bộ đặc trưng PPG, ECG và PAT khi truyền phenylephrine, nhưng không có mô hình PPG + PAT.
@@ -32,7 +32,7 @@ Thiết bị đo huyết áp không vòng bít (cuffless) dựa trên PPG ở c�
   - Kết quả: sau một năm, chỉ còn mô hình PAT ngón chân cho SBP là hữu ích.
 - **Trên dữ liệu cổ tay Aurora-BP (đo lưu động):** Cisnal et al. (2025, N19, mới đọc abstract) báo rằng baseline tốt hơn mô hình dựa trên PAT tốt nhất ở SBP và tương đương ở DBP.
 - **Nghiên cứu nhiều ngày, quy mô lớn:**
-  - Mieloszyk et al. (2022, [S4](literature/literature_update_2026-10-14.md)), trên thiết bị cổ tay: phần nhóm đã đọc (abstract) chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT, đối chiếu với baseline chỉ hiệu chuẩn.
+  - Mieloszyk et al. (2022, [S4](literature/literature_update_2026-10-14.md), đọc toàn văn ngày 2026-10-30, chờ thầy xem; chi tiết ở [tổng quan](literature/literature_update_2026-10-29.md) mục 3.3): dataset Aurora-BP, 1.125 người. PPG cổ tay dùng MAX30101; ECG có điện cực âm ở ngực. Mô hình ridge dự đoán thay đổi BP từ lúc hiệu chuẩn tới buổi quay lại sau ít nhất 24 giờ, kiểm định chéo giữ nguyên người, so với baseline zero và baseline "static" (ridge chỉ trên BP hiệu chuẩn và giờ trong ngày). Nhóm đặc trưng chỉ PPG và nhóm thêm rPAT cùng HR, HRV từ ECG có SD sai số gần bằng nhau và chỉ hơn baseline một chút (tham chiếu nghe tim, SD SBP 10,1 và 10,0 so với 10,2 của static và 10,3 của zero). Hai nhóm khác nhau ở nhiều đặc trưng ECG chứ không riêng PAT, kết quả báo bằng bias/SD, và không có so ghép cặp theo người.
   - Liu et al. (2023, N6, đọc toàn văn ngày 2026-10-30, chờ thầy xem): 3.077 người, không có nghiệm pháp; hiệu chuẩn ở ngày D rồi đánh giá ở D+7, D+14, D+21. Baseline có hiệu chuẩn là mô hình AdaBoost học từ BP ban đầu + nhân khẩu học, không phải zero-change. Ba mô hình "PTT" theo cách gọi của bài (PAT theo quy ước dự án), hiệu chuẩn theo từng người, có MAE cao hơn baseline này ở cả SBP và DBP (SBP 9,20–9,26 so với 8,46; DBP 6,59–6,78 so với 5,78 mmHg). Bài chỉ so PPG với ECG + PPG ở mô hình không hiệu chuẩn, chỉ cho SBP, và không kiểm định cặp này. PPG đo ở ngón tay ấn lên đồng hồ và ECG cần ngón cái tay kia, nên thiết bị không thuần cổ tay.
 
 Vì vậy, các yếu tố sau, dù đứng riêng hay gộp một phần, đều không phải điểm mới:
@@ -44,16 +44,18 @@ Vì vậy, các yếu tố sau, dù đứng riêng hay gộp một phần, đề
 
 Phần có thể vẫn là đóng góp thì hẹp hơn ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.1): một phép so sánh ghép cặp, đăng ký trước, giữa PPG-only và PPG + PAT, với các điều kiện sau:
 
-- thiết bị chỉ đặt ở cổ tay;
+- thiết bị chỉ đặt ở cổ tay, ECG giữa hai cổ tay (S4 có điện cực ECG ở ngực);
 - các phiên cách nhau vài ngày đến 4 tuần;
 - hiệu chuẩn bằng offset từ M0 của phiên 1, còn hệ số chung cho mọi người được học bằng LOSO lồng (khác với N18);
+- hai mô hình chỉ khác nhau ở PAT, trên cùng bộ đặc trưng PPG và cùng tập lần đo (thêm ngày 2026-10-30 sau khi đọc S4, chờ thầy xem);
 - luôn so với zero-change.
 
 Giới hạn của nhận định này:
 
 - Nhận định chỉ dựa trên phạm vi đã tra: PubMed, Europe PMC, OpenAlex, giai đoạn 2022–2026. Chưa tra IEEE Xplore và Scopus.
 - Đã đối chiếu với toàn văn N6 ngày 2026-10-30 (chờ thầy xem): N6 chỉ thỏa một phần điều kiện về khoảng cách giữa các phiên, không thỏa các điều kiện còn lại ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.1).
-- S4 chỉ dùng abstract. Ngày 2026-10-29 đã quyết định không lấy toàn văn qua thư viện, nên nhận định chưa được kiểm với toàn văn S4, và bài báo phải nêu rõ giới hạn này.
+- Đã đối chiếu với toàn văn S4 ngày 2026-10-30 (chờ thầy xem): S4 thỏa một phần điều kiện về khoảng cách giữa các phiên và gần thỏa điều kiện về hiệu chuẩn, nhưng không tách riêng PAT, không so ghép cặp theo người, không có δ, ECG có điện cực ở ngực và không có nghiệm pháp ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.1). Ngày 2026-10-29 nhóm đã định chỉ dùng abstract vì tưởng S4 chỉ có bản trả phí; bản miễn phí trên trang Microsoft Research được tìm thấy ngày 2026-10-30.
+- Protocol hiện cho phép phiên 2 cách phiên 1 một ngày, tức trùng mốc 24 giờ của S4. Điều kiện "các phiên cách nhau vài ngày đến 4 tuần" chỉ đứng được nếu SAP khóa khoảng cách tối thiểu (mục 8).
 - Không được viết thành "chưa có nghiên cứu nào".
 
 **Mục tiêu nghiên cứu:** xây dựng nguyên mẫu đo ở cổ tay thu đồng bộ ECG và PPG, rồi dùng nó để kiểm tra trên một nhóm nhỏ người khỏe mạnh xem PAT có làm giảm sai số dự đoán ΔSBP/ΔDBP ở các phiên đo sau hiệu chuẩn so với chỉ dùng PPG hay không. Nguyên mẫu nối USB với máy tính và dùng điện cực ECG dán ở hai cổ tay. Phần đánh giá phải có baseline zero-change, chia dữ liệu theo người và theo thời gian, và có khoảng tin cậy theo người.
@@ -166,7 +168,7 @@ Mục này được viết lại ở v0.4 (đề xuất 2026-10-29, chờ thầy
   - với nhiệm vụ tinh thần, tương quan giữa thay đổi PAT và thay đổi SBP không có ý nghĩa thống kê trong nghiên cứu đó (N25, r = −0,12);
   - khi đau do lạnh, PTT giảm còn PEP không đổi (N29).
 - **PAT ở cổ tay chịu ảnh hưởng của sự co cơ trơn ở mạch ngoại vi**, độc lập với mức BP (Mukkamala et al., 2023).
-- **ΔBP giữa các phiên nhỏ** ở người trẻ, khỏe mạnh, đo lúc nghỉ. Điều này làm zero-change khó bị vượt và làm giảm độ nhạy của phép so sánh.
+- **ΔBP giữa các phiên nhỏ** ở người trẻ, khỏe mạnh, đo lúc nghỉ. Điều này làm zero-change khó bị vượt và làm giảm độ nhạy của phép so sánh. Ở S4 (Hình 3, trợ lý đọc ước lượng), trung vị |ΔSBP| giữa hai buổi cách nhau ít nhất 24 giờ chỉ khoảng 3 mmHg ở người 21–30 tuổi; ở nhóm ≤ 35 tuổi, mọi nhóm đặc trưng và cả hai baseline có SD sai số sát nhau ([tổng quan](literature/literature_update_2026-10-29.md) mục 3.3).
 - **Áp lực tiếp xúc và cách đeo thay đổi giữa các phiên (v0.4).** Natarajan et al. (2021, [N2](literature/literature_update_2026-10-29.md)) ghi nhận rằng dạng sóng PPG chịu ảnh hưởng của áp lực tiếp xúc nhiều hơn PAT. Nếu độ chặt của dây hay vị trí đeo ở các phiên sau khác với phiên 1, PPG-only có thể kém đi vì lý do kỹ thuật, khiến PAT trông như có lợi dù không phải do sinh lý. Rủi ro này được giảm bằng cách chuẩn hóa cách đeo trong protocol (vị trí, nấc dây) và ghi lại ở mỗi phiên. Khi diễn giải $d_s$ phải nêu rủi ro này.
 - **Dải ΔBP hẹp khi chỉ còn M0–M2 (2026-10-29).** M3 (ngâm chân nước lạnh) và M4 (đạp xe) đã bị bỏ vì khó thực hiện ở phòng thí nghiệm ([protocol](protocol/protocol_outline_v0.2.md) mục 6.4). M2 (tính nhẩm im lặng) là nghiệm pháp duy nhất dự kiến làm BP tăng, mà stress tâm lý lại làm PEP đổi, nên PAT có thể đổi trong khi BP không đổi (rủi ro đã nêu ở trên). Theo abstract của N25, SBP thậm chí còn giảm trong nhiệm vụ tinh thần của nghiên cứu đó, nên chưa chắc M2 làm SBP tăng. Dải ΔBP hẹp làm baseline zero-change khó bị vượt, và CI của $d_s$ dễ nằm trong $[-\delta; \delta]$ hoặc rơi vào "chưa kết luận". Mô phỏng độ nhạy ở mục E phải dùng dải ΔBP dự kiến của bộ M0–M2, làm riêng cho SBP và DBP. Khi viết bài phải báo SD của ΔBP tham chiếu theo từng nghiệm pháp, và không suy kết quả ra các tình huống làm BP đổi mạnh (lạnh, gắng sức).
 - **ECG đạo trình I giữa hai cổ tay (điện cực dán, chốt 2026-10-23) có biên độ nhỏ hơn ECG ngực và dễ nhiễu khi một trong hai tay cử động**, gây sai lệch R-peak. Nếu việc mất ECG ở các lần đo không xảy ra ngẫu nhiên, tập đánh giá có thể bị lệch; vì vậy phải so trên cùng một tập (mục C).
@@ -342,3 +344,7 @@ Tên B0/B1/B3 trong code không khớp với số thứ tự "Baseline 1/2/3" c�
 >   - mức coverage chọn ở vòng trong.
 > - [ ] **Rủi ro áp lực tiếp xúc** (mục 4.F): cách chuẩn hóa vị trí và nấc dây đeo trong protocol.
 > - [ ] **Mốc PEP:** PEP thường tính từ Q/QRS, còn PAT của dự án tính từ R; không đồng nhất hai mốc khi diễn giải.
+> - [ ] **Định vị so với S4** (mục 1, đề xuất 2026-10-30 sau khi đọc toàn văn S4):
+>   - thêm điều kiện "hai mô hình chỉ khác nhau ở PAT" vào phần có thể là đóng góp;
+>   - có khóa khoảng cách tối thiểu giữa phiên 1 và phiên 2 trong SAP theo câu hỏi về độ bền hiệu chuẩn không (protocol hiện cho phép 1 ngày);
+>   - có thêm baseline kiểu "static" của S4 (chỉ BP hiệu chuẩn và hệ số chặn, không dùng tín hiệu) vào SAP không; gợi ý của trợ lý, chưa quyết định ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.2).
