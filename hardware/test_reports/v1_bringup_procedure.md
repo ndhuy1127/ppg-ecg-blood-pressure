@@ -331,13 +331,16 @@ rộng xung đã chốt truyền qua `PLATFORMIO_BUILD_FLAGS`.
 
 Đề xuất của nhóm 2026-10-29, chờ thầy duyệt. Phương pháp, giới hạn và biên bản theo
 [session_safety_stopping_v0.1.md](../../docs/ethics/session_safety_stopping_v0.1.md)
-mục 1.
+mục 9 (số mục theo bản viết lại 2026-10-31).
 
 - Dụng cụ: ưu tiên mượn máy phân tích an toàn điện y tế; không mượn được thì dùng
   mạch đo MD theo IEC 60601-1 và đồng hồ vạn năng.
 - Đo trên cấu hình dùng thật: PCB V1 (bo đế, cáp, bo cổ tay) đã lắp đủ, bo Waveshare,
   một cáp USB-C, laptop chạy pin, rút sạc.
 - Loại bộ phận ứng dụng dự kiến là BF (điện cực ECG dán da), chờ xác nhận.
+- Thử nhiệt (đề xuất 2026-10-31, chờ thầy): chạy liên tục 120 phút với mã LED ở trần
+  `0x7F`, ở nhiệt độ phòng đo; đo nhiệt độ bề mặt bo cổ tay ở mặt tiếp xúc da. Giới hạn trích
+  từ IEC 60601-1 khi viết biên bản.
 - Chưa có biên bản đạt thì không gắn điện cực lên người.
 
 ## 11. Ghi kết quả

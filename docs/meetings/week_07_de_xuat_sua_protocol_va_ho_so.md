@@ -2,8 +2,10 @@
 
 > **Ngày lập:** 2026-10-30; sửa cùng ngày theo phản biện của Codex (một trợ lý AI khác, chỉ
 > đọc), rồi thêm các mục 2.6–2.8 và đổi mục 2.5 thành "thiết kế song song, quyết lúc nộp".
-> **Đề xuất của nhóm, chờ thầy quyết.** Protocol v0.3 và năm file hồ sơ chưa bị sửa; mỗi mục
-> chỉ được đưa vào sau khi thầy chọn phương án.
+> **Đề xuất của nhóm, chờ thầy quyết.** Protocol v0.3 và các file hồ sơ chưa được sửa theo các đề
+> xuất này; mỗi mục chỉ được đưa vào sau khi thầy chọn phương án. Ngày 2026-10-31, hồ sơ được viết
+> lại sau rà soát cuối ([README hồ sơ](../ethics/README.md)) nhưng không đưa các đề xuất này vào; số
+> mục của các file hồ sơ dẫn ở dưới đã được sửa theo bản viết lại.
 >
 > **Bối cảnh:**
 >
@@ -26,10 +28,10 @@
 
 | # | Đề xuất | Vì sao | Mức | Chỗ phải sửa |
 | --- | --- | --- | --- | --- |
-| 1 | Mốc thời gian theo lịch kéo dài: phiên đo cuối 2027-05-30, mốc khóa dữ liệu 2027-06-04, nghiên cứu tới tháng 7/2027 | Mốc khóa cũ (cuối tháng 1/2027) sẽ đã qua với người tham gia sau tháng 1 | Bắt buộc nếu kéo dài | Phiếu thông tin mục 6; DMP mục 4 |
-| 2 | Lịch phiên: phiên 2 sau 7–14 ngày, phiên 3 sau 3–6 tuần, cửa sổ 6 tuần | Báo được sai số ở các khoảng cách định trước, từ 1 tới 6 tuần; S4 chỉ có khoảng một ngày giữa hai buổi | Nên làm; giá trị khoa học cao nhất | Protocol mục 3, 6.4; phiếu thông tin mục 2; tiêu chí chọn số 4; RQ 4.G |
-| 3 | Tăng số lần cuff mỗi buổi: phương án B là 6 lần (trần 8); phương án A là 7 lần (trần 9), chỉ xét sau diễn tập | Thêm nhãn ở các phiên đánh giá và thêm một lần M0 cho mốc hiệu chuẩn $\text{BP}_0$ | Nên làm nếu mô phỏng độ nhạy ủng hộ | Protocol 6.4; phiếu thông tin mục 2 và bước 3; RQ 4.A; SAP; kịch bản bài báo |
-| 4 | Thêm mục đồng thuận tùy chọn cho chia sẻ dữ liệu đã giả danh hóa, có kiểm soát | Dữ liệu công bố được là điểm cộng với phản biện; DMP mục 7 đang để trống | Nên làm nếu xây được đủ quy tắc quản trị | Phiếu đồng thuận mục 6 và mục mới; phiếu thông tin mục 5; DMP mục 5, 7 |
+| 1 | Mốc thời gian theo lịch kéo dài: phiên đo cuối 2027-05-30, mốc khóa dữ liệu 2027-06-04, nghiên cứu tới tháng 7/2027 | Mốc khóa cũ (cuối tháng 1/2027) sẽ đã qua với người tham gia sau tháng 1 | Bắt buộc nếu kéo dài | Phiếu thông tin mục 9; DMP mục 6 |
+| 2 | Lịch phiên: phiên 2 sau 7–14 ngày, phiên 3 sau 3–6 tuần, cửa sổ 6 tuần | Báo được sai số ở các khoảng cách định trước, từ 1 tới 6 tuần; S4 chỉ có khoảng một ngày giữa hai buổi | Nên làm; giá trị khoa học cao nhất | Protocol mục 3, 6.4; phiếu thông tin mục 3.1; tiêu chí chọn số 4; RQ 4.G |
+| 3 | Tăng số lần cuff mỗi buổi: phương án B là 6 lần (trần 8); phương án A là 7 lần (trần 9), chỉ xét sau diễn tập | Thêm nhãn ở các phiên đánh giá và thêm một lần M0 cho mốc hiệu chuẩn $\text{BP}_0$ | Nên làm nếu mô phỏng độ nhạy ủng hộ | Protocol 6.4; phiếu thông tin mục 3.1 và 3.4; RQ 4.A; SAP; kịch bản bài báo |
+| 4 | Thêm mục đồng thuận tùy chọn cho chia sẻ dữ liệu đã giả danh hóa, có kiểm soát | Dữ liệu công bố được là điểm cộng với phản biện; DMP mục 9 chưa có quy tắc chia sẻ | Nên làm nếu xây được đủ quy tắc quản trị | Phiếu đồng thuận mục 6 và mục mới; phiếu thông tin mục 8; DMP mục 7, 9 |
 | 5 | Duỗi gối tĩnh (M6): thiết kế song song từ Tuần 7; chỉ đưa vào hồ sơ đầu nếu đạt đủ tiêu chí trước ngày nộp, nếu không thì giữ làm gói sửa đổi | Dải ΔBP hẹp với M0–M2 làm RQ1 kém nhạy; bộ hiện tại chưa đủ ba can thiệp làm BP đổi mà Mukkamala 2021 đề xuất | Nên chuẩn bị; quyết lúc nộp | Protocol 6.4; phiếu thông tin; phiếu đồng thuận mục 8; an toàn buổi đo; tiêu chí chọn/loại |
 | 6 | Hỏi thầy và hội đồng: có được thử kỹ thuật trên thành viên nhóm trước khi có phê duyệt không | Bắt lỗi thiết bị và quy trình trên người thật trước pilot | Câu hỏi | Không sửa hồ sơ; ghi câu trả lời vào biên bản |
 | 7 | Pilot: đề xuất giữ pilot riêng; chỉ viết sẵn pilot nội bộ làm phương án khi duyệt rất muộn | Pilot nội bộ giữ được 2–3 suất người nhưng cần nhiều điều kiện chống thiên lệch | Thầy chọn | Protocol 9.1, 6.5; RQ; kịch bản bài báo (nếu viết sẵn) |
@@ -50,9 +52,9 @@
 
 ### 2.1. Mốc thời gian (bắt buộc nếu kéo dài)
 
-- **Hiện trạng:** [phiếu thông tin](../ethics/participant_information_sheet_v0.1.md) mục 6 và
-  [DMP](../ethics/data_management_plan_v0.1.md) mục 4 ghi mốc khóa dữ liệu "dự kiến tuần
-  2027-01-28 → 2027-02-03", gắn với cổng G4 (Tuần 20) của lịch 28 tuần.
+- **Hiện trạng:** [phiếu thông tin](../ethics/participant_information_sheet_v0.1.md) mục 9 và
+  [DMP](../ethics/data_management_plan_v0.1.md) mục 6 để trống ngày khóa dữ liệu; ghi chú đầu DMP ghi
+  mốc dự kiến tuần 2027-01-28 → 2027-02-03, gắn với cổng G4 (Tuần 20) của lịch 28 tuần.
 - **Đề xuất:** phiên đo cuối 2027-05-30; mốc khóa dữ liệu 2027-06-04 (G4 mới, Tuần 37); thời gian
   thực hiện nghiên cứu tới hết tháng 7/2027, nếu mẫu hồ sơ của hội đồng có ô này. Sửa cả câu gắn mốc
   khóa với "G4 (Tuần 20)" trong DMP.
@@ -65,7 +67,7 @@
 
 **Hiện trạng:** protocol mục 3: phiên 2 cách phiên 1 ít nhất 1 ngày, mọi phiên nằm trong 4 tuần
 kể từ phiên 1; con số 4 tuần chưa có nguồn và được chọn cho lịch thu Tuần 12–18 cũ. Phiếu thông
-tin mục 2 ghi "tất cả trong khoảng 4 tuần"; tiêu chí chọn số 4 ghi "tối đa 3 buổi đo trong 4 tuần".
+tin mục 3.1 ghi "tất cả trong vòng 4 tuần kể từ buổi đầu"; tiêu chí chọn số 4 ghi "tối đa 3 buổi đo trong 4 tuần".
 
 **Đề xuất mặc định:** phiên 2 sau 7–14 ngày; phiên 3 sau 3–6 tuần kể từ phiên 1; cửa sổ 6 tuần.
 
@@ -95,7 +97,7 @@ phiếu thông tin mục 2; tiêu chí chọn số 4; RQ mục 4.G.
 
 ### 2.3. Số lần cuff mỗi buổi
 
-**Hiện trạng** (protocol 6.4; phiếu thông tin bước 3): M0 đo hai lần, M1 và M2 mỗi nghiệm pháp một
+**Hiện trạng** (protocol 6.4; phiếu thông tin mục 3.4): M0 đo hai lần, M1 và M2 mỗi nghiệm pháp một
 lần, tổng 4 lần, trần 6 (gồm tối đa 2 lần đo lại). Buổi 1 có thêm 2 lần đo hai tay khi sàng lọc,
 nên theo kế hoạch là 6 lần, trần 8. Người làm đủ 3 phiên có 8 nhãn ở hai phiên đánh giá; người chỉ
 có 2 phiên có 4 nhãn.
@@ -142,9 +144,9 @@ mất khoảng 45–60 giây):
   et al. 2024 (N7), nhưng bản đó có báo lỗi và metronome, còn bản của nhóm nhẩm im lặng.
 
 **Chỗ phải sửa:** protocol 6.4 (số lần bơm; trục thời gian M1, và M2 nếu chọn A); phiếu thông tin
-mục 2 (thời lượng) và bước 3 (số lần bơm); RQ 4.A; SAP; kịch bản bài báo; README hồ sơ (mục đã xong
-ngày 2026-10-29). [An toàn buổi đo](../ethics/session_safety_stopping_v0.1.md) mục 2 dẫn chiếu
-trần ở protocol 6.4, nên chỉ cần kiểm lại câu chữ.
+mục 3.1 (thời lượng) và 3.4 (số lần bơm); đề cương nộp hội đồng 6.3; số dòng của phiếu ghi buổi đo;
+RQ 4.A; SAP; kịch bản bài báo; README hồ sơ. [An toàn buổi đo](../ethics/session_safety_stopping_v0.1.md)
+mục 3 và mục 4 dẫn chiếu trần ở đề cương 6.3, nên chỉ cần kiểm lại câu chữ.
 
 **Câu hỏi cho thầy:** chọn B (nếu mô phỏng ủng hộ), A (sau diễn tập) hay giữ nguyên.
 
@@ -154,9 +156,9 @@ trần ở protocol 6.4, nên chỉ cần kiểm lại câu chữ.
 
 - [Phiếu đồng thuận](../ethics/consent_form_v0.1.md) mục 6: dữ liệu "chỉ được công bố ở dạng tổng
   hợp". Mục 10 (tùy chọn, chờ quyết) chỉ cho nhóm dùng lại trong nghiên cứu tiếp theo.
-- Phiếu thông tin mục 5: "Kết quả chỉ được công bố ở dạng tổng hợp"; dữ liệu giữ 03 năm rồi xóa.
-- DMP mục 5: tiêu hủy sau thời hạn lưu. DMP mục 7: việc chia sẻ dữ liệu đã giả danh hóa ra ngoài
-  đang để "chờ thầy/hội đồng".
+- Phiếu thông tin mục 8: "Kết quả chỉ được công bố ở dạng tổng hợp"; dữ liệu giữ 03 năm rồi tiêu hủy.
+- DMP mục 7: tiêu hủy sau thời hạn lưu. DMP mục 9: chia sẻ dữ liệu đã giả danh hóa ra ngoài không
+  thuộc hồ sơ này; muốn làm thì cần đồng thuận riêng và chấp thuận của hội đồng (sửa 2026-10-31).
 
 **Đề xuất:**
 
@@ -167,19 +169,19 @@ trần ở protocol 6.4, nên chỉ cần kiểm lại câu chữ.
   nhận phải ký thỏa thuận sử dụng dữ liệu, cam kết không tìm cách nhận diện tôi và không chia sẻ
   tiếp." Chỉ chia sẻ dữ liệu của người đã đánh dấu mục này; không đánh dấu thì việc tham gia không
   bị ảnh hưởng.
-- DMP mục 7 phải ghi đủ các quy tắc quản trị:
+- DMP mục 9 phải ghi đủ các quy tắc quản trị:
   - ai được dùng và cho mục đích gì;
   - dữ liệu được chia sẻ: tín hiệu ECG, PPG, IMU; giá trị cuff; nhãn nghiệm pháp; thời gian tương
     đối trong buổi; tuổi theo nhóm 5 năm; giới. Không có ngày giờ thật, không có ghi chú tự do;
   - cách giả danh hóa trước khi chia sẻ;
   - kho dữ liệu và nơi đặt máy chủ (quốc gia), đơn vị chịu trách nhiệm (trường hoặc khoa), cách
     kiểm soát truy cập;
-  - thời hạn lưu của bản chia sẻ, đối chiếu với lời hứa tiêu hủy sau 03 năm ở DMP mục 5;
+  - thời hạn lưu của bản chia sẻ, đối chiếu với lời hứa tiêu hủy sau 03 năm ở DMP mục 7;
   - giới hạn rút lui: dữ liệu đã chia sẻ không thu hồi được;
   - thời điểm chia sẻ: sau khi bài được nhận hoặc sau buổi bảo vệ.
 
   Thầy duyệt từng yêu cầu truy cập không thay được các quy tắc này.
-- Phiếu thông tin mục 5 thêm phần giải thích việc chia sẻ tùy chọn và giới hạn rút lui.
+- Phiếu thông tin mục 8 thêm phần giải thích việc chia sẻ tùy chọn và giới hạn rút lui.
 
 **Lý do:** dữ liệu và mã công bố được là điểm cộng với phản biện. Dữ liệu ECG + PPG cổ tay có cuff
 qua nhiều phiên cách nhau nhiều ngày là hiếm: HEART-Watch (N42) chỉ có một buổi; Aurora-BP có khoảng
@@ -193,7 +195,7 @@ một ngày giữa hai buổi. Bộ dữ liệu này có thể thành bài mô t
   ([10.1093/ehjdh/ztaf011](https://doi.org/10.1093/ehjdh/ztaf011)) cho thấy ECG 12 chuyển đạo có
   thể dùng để nhận ra cùng một người trong dữ liệu đã ẩn danh. Với ECG một chuyển đạo của nhóm thì
   chưa có số liệu.
-- Nếu không xây được đủ quy tắc ở DMP mục 7 trước khi nộp, nên bỏ đề xuất này thay vì đưa vào một
+- Nếu không xây được đủ quy tắc ở DMP mục 9 trước khi nộp, nên bỏ đề xuất này thay vì đưa vào một
   mục đồng thuận mơ hồ.
 
 **Câu hỏi cho thầy:** có thêm mục này không; trường có đơn vị hoặc kho dữ liệu nào chịu trách nhiệm
@@ -261,8 +263,8 @@ hơn chỉ làm phép so sánh nhạy hơn, không bảo đảm PAT có giá tr�
 
 ### 2.6. Thử kỹ thuật trên thành viên nhóm trước khi có phê duyệt
 
-**Hiện trạng:** [phiếu sàng lọc](../ethics/eligibility_screening_v0.1.md) mục 4 ghi câu hỏi này
-chưa được trả lời, nên tới giờ nhóm không đo trên ai, kể cả thành viên nhóm.
+**Hiện trạng:** ghi chú đầu [phiếu sàng lọc](../ethics/eligibility_screening_v0.1.md) ghi câu hỏi
+này chưa được trả lời (đề cương nộp hội đồng mục 9.8 có đoạn tùy chọn xin ý kiến hội đồng), nên tới giờ nhóm không đo trên ai, kể cả thành viên nhóm.
 
 **Câu hỏi cho thầy và hội đồng:** thử kỹ thuật thiết bị trên thành viên nhóm, có đo cuff và làm thử
 M1, M2, không dùng số liệu cho nghiên cứu, có được làm trước khi có phê duyệt không, hay phải xin
