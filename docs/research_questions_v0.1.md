@@ -4,7 +4,7 @@
 >
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, protocol, tổng quan tài liệu và điều phối bài báo
 >
-> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint của RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline), 2026-10-29 (v0.4: dẫn các nghiên cứu gần nhất; estimand của RQ1; tiêu chí kết luận dùng CI cho cả phép so sánh với zero-change; mức hiệu ứng nhỏ nhất đáng quan tâm δ; rủi ro áp lực tiếp xúc; RQ2a chuyển thành kiểm tra rò rỉ ở phụ lục, RQ2b đổi thành đánh giá cùng phiên so với khác phiên; RQ3 chuyển thành phân tích thăm dò; cùng ngày bỏ nghiệm pháp M3, M4 theo protocol 6.4, nên endpoint và RQ2b chỉ còn M0–M2, và thêm rủi ro dải ΔBP hẹp ở mục 4.F), 2026-10-30 (sửa mục 1 và 4.F–4.G theo lần tra có hệ thống: N18 đã đánh giá qua nhiều phiên với baseline chỉ hiệu chuẩn, nên khoảng trống hẹp lại; thêm nguồn về PEP và con số 31 người của N18)
+> **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (v0.2: thêm phần vấn đề nghiên cứu, làm rõ phép so sánh chính của RQ1, tính khả thi của RQ2/RQ3 và đối chiếu tên baseline với code), 2026-10-29 (v0.3: endpoint của RQ1 và mốc hiệu chuẩn khi có nghiệm pháp M0–M4, LOSO lồng, số phiên và cỡ mẫu theo [protocol v0.3](protocol/protocol_outline_v0.2.md); cập nhật bảng baseline), 2026-10-29 (v0.4: dẫn các nghiên cứu gần nhất; estimand của RQ1; tiêu chí kết luận dùng CI cho cả phép so sánh với zero-change; mức hiệu ứng nhỏ nhất đáng quan tâm δ; rủi ro áp lực tiếp xúc; RQ2a chuyển thành kiểm tra rò rỉ ở phụ lục, RQ2b đổi thành đánh giá cùng phiên so với khác phiên; RQ3 chuyển thành phân tích thăm dò; cùng ngày bỏ nghiệm pháp M3, M4 theo protocol 6.4, nên endpoint và RQ2b chỉ còn M0–M2, và thêm rủi ro dải ΔBP hẹp ở mục 4.F), 2026-10-30 (sửa mục 1 và 4.F–4.G theo lần tra có hệ thống: N18 đã đánh giá qua nhiều phiên với baseline chỉ hiệu chuẩn, nên khoảng trống hẹp lại; thêm nguồn về PEP và con số 31 người của N18), 2026-10-30 lần 2 (mục 1: thêm kết quả đọc toàn văn N6)
 >
 > Các thay đổi của v0.4 là **đề xuất của nhóm ngày 2026-10-29, chờ thầy xác nhận**. Các thay đổi này phải được khóa trước khi chạy vòng ngoài của LOSO lồng.
 >
@@ -31,7 +31,9 @@ Thiết bị đo huyết áp không vòng bít (cuffless) dựa trên PPG ở c�
   - Các mô hình có PAT dự đoán SBP, còn mô hình chỉ dùng PPG dự đoán DBP. Mỗi mô hình được so riêng với baseline, nên đây không phải so sánh ghép cặp cho cùng một đầu ra.
   - Kết quả: sau một năm, chỉ còn mô hình PAT ngón chân cho SBP là hữu ích.
 - **Trên dữ liệu cổ tay Aurora-BP (đo lưu động):** Cisnal et al. (2025, N19, mới đọc abstract) báo rằng baseline tốt hơn mô hình dựa trên PAT tốt nhất ở SBP và tương đương ở DBP.
-- **Nghiên cứu nhiều ngày, quy mô lớn, trên thiết bị cổ tay:** Mieloszyk et al. (2022, [S4](literature/literature_update_2026-10-14.md)) và Liu et al. (2023, N6). Phần nhóm đã đọc (abstract) chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT, đối chiếu với baseline chỉ hiệu chuẩn.
+- **Nghiên cứu nhiều ngày, quy mô lớn:**
+  - Mieloszyk et al. (2022, [S4](literature/literature_update_2026-10-14.md)), trên thiết bị cổ tay: phần nhóm đã đọc (abstract) chưa cho thấy phép so sánh ghép cặp PPG-only với PPG + PAT, đối chiếu với baseline chỉ hiệu chuẩn.
+  - Liu et al. (2023, N6, đọc toàn văn ngày 2026-10-30, chờ thầy xem): 3.077 người, không có nghiệm pháp; hiệu chuẩn ở ngày D rồi đánh giá ở D+7, D+14, D+21. Baseline có hiệu chuẩn là mô hình AdaBoost học từ BP ban đầu + nhân khẩu học, không phải zero-change. Ba mô hình "PTT" theo cách gọi của bài (PAT theo quy ước dự án), hiệu chuẩn theo từng người, có MAE cao hơn baseline này ở cả SBP và DBP (SBP 9,20–9,26 so với 8,46; DBP 6,59–6,78 so với 5,78 mmHg). Bài chỉ so PPG với ECG + PPG ở mô hình không hiệu chuẩn, chỉ cho SBP, và không kiểm định cặp này. PPG đo ở ngón tay ấn lên đồng hồ và ECG cần ngón cái tay kia, nên thiết bị không thuần cổ tay.
 
 Vì vậy, các yếu tố sau, dù đứng riêng hay gộp một phần, đều không phải điểm mới:
 
@@ -50,7 +52,7 @@ Phần có thể vẫn là đóng góp thì hẹp hơn ([tổng quan](literature
 Giới hạn của nhận định này:
 
 - Nhận định chỉ dựa trên phạm vi đã tra: PubMed, Europe PMC, OpenAlex, giai đoạn 2022–2026. Chưa tra IEEE Xplore và Scopus.
-- Phải kiểm lại sau khi đọc toàn văn N6. Bài này truy cập mở, nhưng việc tải tự động bị chặn.
+- Đã đối chiếu với toàn văn N6 ngày 2026-10-30 (chờ thầy xem): N6 chỉ thỏa một phần điều kiện về khoảng cách giữa các phiên, không thỏa các điều kiện còn lại ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.1).
 - S4 chỉ dùng abstract. Ngày 2026-10-29 đã quyết định không lấy toàn văn qua thư viện, nên nhận định chưa được kiểm với toàn văn S4, và bài báo phải nêu rõ giới hạn này.
 - Không được viết thành "chưa có nghiên cứu nào".
 
