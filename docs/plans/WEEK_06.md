@@ -42,7 +42,7 @@ thì theo mục này.
    - bộ nghiệm pháp thu gọn M0–M2, endpoint RQ1 và trục thời gian M2 (protocol 6.4);
    - tiêu chí chọn/loại thống nhất với L1–L9 và đo hai tay (mục 4);
    - điện cực trên người (5.1);
-   - trần tuyển 25 người;
+   - trần tuyển 35 người và mục tiêu ≥ 25 người đạt chuẩn (nâng từ 25 ngày 2026-10-30 theo góp ý của thầy; protocol 4.1);
    - ngưỡng BP dừng phiên và đầu mối y tế;
    - phương pháp đo dòng rò;
    - mốc khóa dữ liệu khi rút lui.

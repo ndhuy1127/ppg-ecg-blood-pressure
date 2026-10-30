@@ -5,7 +5,7 @@
 > [chính sách dữ liệu](../DATA_POLICY.md). Thời hạn lưu, nơi lưu, người quản lý và
 > mốc khóa dữ liệu là đề xuất, chờ thầy/hội đồng. Huy soạn ngày 2026-10-21;
 > cập nhật 2026-10-29 ở các phần rút lui, phiếu giấy có danh tính, gán mã và thời
-> hạn lưu.
+> hạn lưu; 2026-10-30 ở danh sách mã (tới `SUB035`).
 
 ## 1. Dữ liệu thu thập và nơi tạo ra
 
@@ -28,7 +28,8 @@ lưu cùng bảng liên kết (xem bảng trên). Dữ liệu nghiên cứu, t�
 ## 2. Giả danh hóa
 
 - `subject_id` có dạng `SUB001` và được gán ngẫu nhiên (chốt 2026-10-29). Trước khi
-  tuyển, người quản lý dữ liệu tạo danh sách `SUB001`–`SUB025` theo thứ tự xáo trộn
+  tuyển, người quản lý dữ liệu tạo danh sách `SUB001`–`SUB035` (theo trần tuyển 35 người,
+  sửa 2026-10-30) theo thứ tự xáo trộn
   bằng một seed giữ kín, không ghi vào repo và được cất cùng bảng liên kết. Mỗi người
   đăng ký nhận mã kế tiếp trong danh sách, nên không suy ra được mã từ thứ tự đăng ký
   hay từ danh tính. `session_id` và `event_id` theo

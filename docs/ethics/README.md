@@ -33,7 +33,7 @@ Protocol đi kèm là [protocol v0.3](../protocol/protocol_outline_v0.2.md); tê
    - mốc khóa dữ liệu khi rút lui (DMP mục 4);
    - ngưỡng BP 180/110 và 140/90 cùng việc báo số đo (an toàn mục 3); việc hỏi lại triệu chứng sau 5 phút và trước khi người tham gia ra về (an toàn mục 2);
    - endpoint của RQ1 và trục thời gian của M2 (protocol 6.4);
-   - trần tuyển 25 người;
+   - trần tuyển 35 người, mục tiêu ≥ 25 người đạt chuẩn và luật dừng tuyển (protocol 4.1). Trần đã nâng từ 25 lên 35 ngày 2026-10-30, sau khi thầy góp ý nên tăng cỡ mẫu; hai con số này vẫn chờ thầy chốt;
    - tiêu chí chọn/loại và ngưỡng chênh lệch huyết áp giữa hai tay;
    - tiêu chí chọn máy cuff;
    - phương pháp đo dòng rò.

@@ -3,13 +3,13 @@
 > **Phiên bản:** v0.3, thay cho v0.2 (bản trước nữa: [v0.1](protocol_outline_v0.1.md)). Tên file vẫn giữ `v0.2` để không làm gãy liên kết.
 > **Người biên soạn:** Nguyễn Đức Huy
 > **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu
-> **Ngày lập:** 2026-09-22. **Cập nhật:** 2026-10-14 (v0.1: đồng bộ với RQ v0.2, với yêu cầu phần cứng V0 và với nguồn bổ sung); 2026-10-21 (v0.2); 2026-10-22 (sửa theo review); 2026-10-29 (v0.3); 2026-10-30 (dẫn N7 cho dạng bài của M2; ngưỡng P2/R3 dùng các kịch bản δ khai báo trước).
+> **Ngày lập:** 2026-09-22. **Cập nhật:** 2026-10-14 (v0.1: đồng bộ với RQ v0.2, với yêu cầu phần cứng V0 và với nguồn bổ sung); 2026-10-21 (v0.2); 2026-10-22 (sửa theo review); 2026-10-29 (v0.3); 2026-10-30 (dẫn N7 cho dạng bài của M2; ngưỡng P2/R3 dùng các kịch bản δ khai báo trước; mục 4.1: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, giới hạn công suất và luật dừng tuyển).
 > **Lưu ý:** Chưa thu dữ liệu trên người, và chỉ thu sau khi có phê duyệt đạo đức. Phân bổ tay và điện cực ở mục 5.1–5.2 đã được xác nhận về phần cứng ngày 2026-10-23. Các nghiệm pháp ở 6.4–6.5 chưa được hội đồng đạo đức duyệt. Những mục ghi "đề xuất của nhóm, chờ thầy/hội đồng" trong v0.3 là phương án mặc định mang đi xin ý kiến, chưa phải quyết định cuối cùng.
 
 **Changelog v0.3 (2026-10-29):** chốt các mục thiết kế nghiên cứu còn mở để chuẩn bị hồ sơ đạo đức.
 
 - Mục 3: mục tiêu 3 phiên, tối thiểu 2; khoảng cách và cửa sổ tối đa giữa các phiên; phiên nào cũng theo cùng một trình tự (M0, rồi M1–M4 nếu được duyệt).
-- Mục 4: trần tuyển 25 người; tiêu chí chọn/loại chỉ còn một nguồn là phiếu sàng lọc, bỏ tiêu chí "nhịp xoang"; đo hai tay một lần khi sàng lọc.
+- Mục 4: trần tuyển 25 người (ngày 2026-10-30 nâng lên 35, thêm mục tiêu ≥ 25 người đạt chuẩn và luật dừng tuyển; mục 4.1); tiêu chí chọn/loại chỉ còn một nguồn là phiếu sàng lọc, bỏ tiêu chí "nhịp xoang"; đo hai tay một lần khi sàng lọc.
 - Mục 5.1: chỉ dùng điện cực Ag/AgCl trên người; tiêu chí chọn máy cuff; đổi tên bo MCU thành tên chung.
 - Mục 6.4: endpoint chính của RQ1 tính trên mọi lần cuff hợp lệ ở phiên ≥ 2; trục thời gian của M2, M3, M4.
 - Mục 6.5: P2 và R3 dùng cùng một thống kê (median |ΔSBP|), nhưng mỗi chỉ số có mốc so sánh riêng.
@@ -68,8 +68,16 @@
 ## 4. Đối tượng tham gia dự kiến và tiêu chí lựa chọn
 
 ### 4.1. Cỡ mẫu dự kiến
-- Mục tiêu là **≥ 15 người đạt chuẩn** (định nghĩa ở [kịch bản bài báo](../paper_scenarios_v0.1.md)). Tuyển tối đa **25** tình nguyện viên khỏe mạnh (sinh viên hoặc cán bộ tại trường, 18–35 tuổi) để bù cho người bỏ cuộc hoặc mất ECG. Trần 25 là đề xuất của nhóm (2026-10-29), chưa có nguồn, chờ thầy/hội đồng. Trần tuyển được ghi trong hồ sơ, nên muốn tăng về sau thì phải xin sửa đổi. Trần 25 tính mọi người tham gia, kể cả người làm pilot. Mục tiêu ≥ 15 người đạt chuẩn chỉ tính người ngoài pilot, vì người có dữ liệu đã dùng để khóa các lựa chọn thì không vào vòng đánh giá (mục 9.1).
-- Đây là cỡ mẫu khả thi cho giai đoạn thử nghiệm nguyên mẫu (feasibility), chưa dựa trên phân tích power. Với 2–3 phiên mỗi người và ít nhất 2 lần cuff hợp lệ mỗi phiên ([RQ](../research_questions_v0.1.md), mục 4.G), 15 người cho tối thiểu $15 \times 2 \times 2 = 60$ lần cuff hợp lệ, chưa kể cuff nghiệm pháp. Các lần đo này lặp lại trên cùng một người nên **không phải quan sát độc lập**. Đơn vị cho kiểm định cặp là người. Cỡ mẫu chính thức cần được tính lại từ dữ liệu pilot.
+- Mức tối thiểu là **≥ 15 người đạt chuẩn** (định nghĩa ở [kịch bản bài báo](../paper_scenarios_v0.1.md)); **mục tiêu là ≥ 25 người đạt chuẩn**. Tuyển tối đa **35** tình nguyện viên khỏe mạnh (sinh viên hoặc cán bộ tại trường, 18–35 tuổi) để bù cho người bỏ cuộc hoặc mất ECG. Trần 35 tính mọi người tham gia, kể cả người làm pilot. Mức tối thiểu và mục tiêu chỉ tính người ngoài pilot, vì người có dữ liệu đã dùng để khóa các lựa chọn thì không vào vòng đánh giá (mục 9.1). Trần tuyển được ghi trong hồ sơ, nên muốn tăng về sau thì phải xin sửa đổi.
+- **Sửa 2026-10-30:** thầy góp ý nên tăng cỡ mẫu để kết quả đáng tin hơn, nên trần tăng từ 25 lên 35 và thêm mục tiêu ≥ 25 người. Hai con số này là đề xuất của nhóm, chưa có nguồn, chờ thầy/hội đồng chốt. Căn cứ:
+  - Yavarimanesh et al. (2022, N18) ước tính cần 31 người cho một phép so sánh tương tự ([RQ](../research_questions_v0.1.md) mục 4.G);
+  - với trần 25, sau khi trừ 2–3 người pilot và người bỏ cuộc hay bị loại, chỉ còn khoảng 20 người phân tích được (ước tính của nhóm, giả định hao hụt 10–15%, chưa có số liệu).
+- **Giới hạn công suất:** nhóm có một bộ thiết bị, mỗi lúc đo một người. Ước tính của nhóm là khoảng 8–10 buổi mỗi tuần, tức khoảng 50–60 buổi cho đợt thu chính. Ví dụ, 25 người × 2 phiên là 50 buổi, còn 25 người × 3 phiên là 75 buổi. Vì vậy, số buổi là giới hạn thật, và mục tiêu ≥ 25 người có thể buộc một phần người tham gia chỉ làm 2 phiên.
+- **Luật dừng tuyển (đề xuất 2026-10-30, chờ thầy):**
+  - Số người cần tuyển $N$ và cách phân bổ phiên được chốt sau pilot, bằng mô phỏng độ nhạy ở [RQ](../research_questions_v0.1.md) mục 4.E, rồi ghi vào SAP trước khi thu dữ liệu chính. Mô phỏng so cả hai cách dùng cùng một số buổi: nhiều người với 2 phiên, hay ít người hơn với 3 phiên.
+  - Nhóm ngừng tuyển người mới khi đủ $N$ người có phiên 1 đạt, hoặc khi hết cửa sổ thu dữ liệu chính đã lên lịch, tùy điều nào đến trước.
+  - Quyết định dừng hay tuyển tiếp không dựa trên kết quả RQ1. Không xem sai số của mô hình trước khi dừng tuyển, để tránh tuyển thêm cho tới khi kết quả "đẹp".
+- Đây là cỡ mẫu khả thi cho giai đoạn thử nghiệm nguyên mẫu (feasibility), chưa dựa trên phân tích power. Với 2–3 phiên mỗi người và ít nhất 2 lần cuff hợp lệ mỗi phiên ([RQ](../research_questions_v0.1.md), mục 4.G), 15 người cho tối thiểu $15 \times 2 \times 2 = 60$ lần cuff hợp lệ, còn 25 người cho tối thiểu $25 \times 2 \times 2 = 100$ lần, chưa kể cuff nghiệm pháp. Các lần đo này lặp lại trên cùng một người nên **không phải quan sát độc lập**. Đơn vị cho kiểm định cặp là người. Cỡ mẫu chính thức cần được tính lại từ dữ liệu pilot.
 
 Tiêu chí chọn và loại (chốt 2026-10-29) chỉ có một nguồn là
 [eligibility_screening_v0.1.md](../ethics/eligibility_screening_v0.1.md): tiêu chí chọn ở
