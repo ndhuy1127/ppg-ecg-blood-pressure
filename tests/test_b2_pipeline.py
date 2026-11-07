@@ -22,6 +22,7 @@ from software.pulsedb.reader import PulseSegment
 
 REPO = Path(__file__).resolve().parents[1]
 CONFIG_PATH = REPO / "configs/models/b2_pulsedb_v0.json"
+CONFIG_V1_PATH = REPO / "configs/models/b2_pulsedb_v1.json"
 FS = 125.0
 T = np.arange(1250) / FS
 
@@ -362,6 +363,48 @@ def test_runner_refuses_when_the_code_is_not_committed(tmp_path, monkeypatch):
         run(tmp_path / "none.mat", tmp_path / "none", approved_config(tmp_path),
             tmp_path / "out", REPO)
     assert not (tmp_path / "out").exists()
+
+
+def _with_second_visit(segments, manifest, subject_split):
+    """Give the last segment of one subject in ``subject_split`` other demographics
+    (a second surgical case of the same patient: one year older, 2 kg heavier)."""
+    rows = manifest[manifest.split == subject_split].sort_values("raw_index")
+    index = int(rows.raw_index.iloc[-1])
+    s = segments[index]
+    segments = list(segments)
+    segments[index] = dataclasses.replace(s, age=s.age + 1, weight_kg=s.weight_kg + 2,
+                                          bmi_kg_m2=(s.weight_kg + 2) / 1.65 ** 2)
+    inventory = build_inventory(segments, "SYN_SOURCE.mat", "0" * 64)
+    return segments, make_manifest(inventory, seed=72), inventory
+
+
+def test_v0_stops_and_v1_keeps_segment_demographics_and_reports_them():
+    segments, manifest, inventory = make_data()
+    segments, manifest, inventory = _with_second_visit(segments, manifest, "train")
+    with pytest.raises(ValueError, match="Demographics differ"):
+        run_b2(segments, manifest, inventory, small_config())
+    config = load_config(CONFIG_V1_PATH.read_bytes())
+    assert config["schema_version"] == "b2-pipeline-v1"
+    config["bootstrap"]["repetitions"] = 20
+    result = run_b2(segments, manifest, inventory, config)
+    variation = result["demographics_variation"]
+    assert variation["train"]["subjects_with_several_values"] == 1
+    assert variation["val"]["subjects_with_several_values"] == 0
+    ranges = variation["train"]["max_within_subject_range"]
+    assert ranges["age_y"] == pytest.approx(1.0) and ranges["weight_kg"] == pytest.approx(2.0)
+    assert ranges["sex"] == 0.0 and ranges["height_cm"] == 0.0
+    # No row is dropped: the full panel scores every val row that passed QC.
+    val = manifest[manifest.split == "val"]
+    assert set(result["panels"]["full"]["predictions"].sample_id) == set(val.sample_id)
+    assert "SYN_" not in json.dumps(variation)
+
+
+def test_v1_config_differs_from_v0_only_in_version_and_status():
+    v0 = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    v1 = json.loads(CONFIG_V1_PATH.read_text(encoding="utf-8"))
+    for config in (v0, v1):
+        config.pop("schema_version"), config.pop("status")
+    assert v0 == v1
 
 
 def test_hr_panel_without_enough_subjects_stops_before_any_fit(monkeypatch):

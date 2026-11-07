@@ -1,8 +1,11 @@
 # Định nghĩa B2 trên PulseDB: nhân khẩu học cộng HR
 
-> **Trạng thái:** đề xuất ngày 2026-10-26, sửa ngày 2026-11-07 sau review (mục 7),
-> **duyệt nguyên trạng ngày 2026-11-07** bằng commit riêng đổi `status` của config thành
-> `APPROVED_NOT_TEST_EVALUATED`, trước khi có số B2 nào. Code và test SYNTHETIC ở mục 8. Định nghĩa này phải được duyệt và commit **trước** khi tính
+> **Trạng thái:** đề xuất ngày 2026-10-26, sửa ngày 2026-11-07 sau review (mục 7).
+> **v0** (`configs/models/b2_pulsedb_v0.json`) duyệt nguyên trạng ngày 2026-11-07 bằng commit
+> riêng, rồi chạy trên val cùng ngày và **dừng đúng chốt kiểm của mục 2** trước khi fit model
+> nào, nên không có số B2 nào (mục 9). **v1** (`configs/models/b2_pulsedb_v1.json`, đề xuất
+> 2026-11-07, **chưa duyệt**) chỉ đổi quy tắc nhân khẩu học ở mục 2. Code và test SYNTHETIC
+> ở mục 8. Định nghĩa này phải được duyệt và commit **trước** khi tính
 > bất kỳ số B2 nào trên val (kế hoạch Tuần 6, việc 2 của Huy). Sau khi đã thấy kết quả
 > thì không đổi đặc trưng, bộ dò, ngưỡng, learner hay phép so sánh; nếu phải đổi thì
 > tạo version mới và báo cả hai.
@@ -25,8 +28,12 @@
   `bmi_kg_m2`, lấy nguyên từ PulseDB.
   - Giới tính lấy qua `normalize_gender` của reader. Giá trị khác M/F làm run dừng
     (`ValueError`), không mã hóa thành "khác".
-  - Mọi trường phải hữu hạn. Mỗi người phải có cùng giá trị ở mọi đoạn (kiểm và báo,
-    lệch thì dừng).
+  - Mọi trường phải hữu hạn.
+  - v0: mỗi người phải có cùng giá trị ở mọi đoạn (kiểm và báo, lệch thì dừng).
+  - v1 (2026-11-07): mỗi đoạn dùng nhân khẩu học của chính nó. Không loại dòng nào, nên
+    các bảng vẫn dùng đúng các dòng của B0/B3. Report ghi, riêng cho train và val, số người
+    có nhiều hơn một bộ giá trị và độ lệch lớn nhất trong một người của từng trường
+    (`demographics_variation`, không có ID người).
   - Giữ trẻ em: dùng BMI như nguồn cung cấp, không phân loại BMI người lớn, không loại
     theo tuổi.
 - **B2b** (6 đặc trưng, version `pulsedb-demographics-hr-v0`): B2a cộng `hr_bpm`.
@@ -123,8 +130,8 @@ train, refractory 0,25 s, đóng băng mọi lựa chọn trước khi chấm, g
 B3 − B2b không phải phần lợi thêm. Không nhận: `prominence` ở 0,25 s (Codex đề xuất),
 vì kết quả SYNTHETIC Tuần 5 cho thấy nó bắt đỉnh T.
 
-Review trước khi duyệt, 2026-11-07 (Claude và Codex, độc lập, thay cho review của Linh
-theo kế hoạch Tuần 6; chưa có số nào). Codex kết luận "duyệt được sau khi sửa"; cả năm
+Review trước khi duyệt, 2026-11-07 (Claude và Codex, độc lập, là bước review định nghĩa
+của kế hoạch Tuần 6; chưa có số nào). Codex kết luận "duyệt được sau khi sửa"; cả năm
 điểm đã được kiểm trên code và đã sửa:
 
 1. Chốt duyệt chỉ kiểm config và file định nghĩa; mã tính HR, fit và chấm có thể khác
@@ -146,8 +153,9 @@ XGBoost tối ưu sai số bình phương trong khi chỉ số chính là MAE.
 
 - Đặc trưng: `software/pulsedb/features_b2.py` (`HR_CONFIG` đóng băng như mục 3).
 - Hai bảng: `software/pulsedb/pipeline_b2.py` (`run_b2`), config
-  `configs/models/b2_pulsedb_v0.json` (tham số và seed lấy đúng từ B3 v1; test kiểm
-  điều này).
+  `configs/models/b2_pulsedb_v1.json` (mặc định của runner từ 2026-11-07; v0 giữ làm lịch
+  sử; tham số và seed lấy đúng từ B3 v1, v1 chỉ khác v0 ở version và `status`; test kiểm
+  các điều này).
 - Runner: `scripts/run_b2_pulsedb.py --raw <file .mat> --split-dir <thư mục split v2>`,
   ghi `b2_table.md`, `hr_mask.csv`, `predictions_val_<bảng>.csv` (có ID người, ngoài
   Git) và `report.json` vào thư mục mới trong `runs/b2_pulsedb/`, không ghi đè. Phần
@@ -168,3 +176,17 @@ XGBoost tối ưu sai số bình phương trong khi chỉ số chính là MAE.
   đặc trưng dòng test (`verify_inputs` vẫn duyệt mọi dòng để băm lại inventory, như
   B3); nhãn val/test không đổi dự đoán; runner từ chối khi chưa duyệt, chưa commit hay
   split khác; `hr_mask.csv` và output không có ID người).
+
+## 9. Lần chạy v0 và lý do có v1 (2026-11-07)
+
+- v0 chạy trên val ngày 2026-11-07 (commit `1c708df`, worktree sạch) và dừng ở phép kiểm
+  "nhân khẩu học khác nhau giữa các đoạn của một người", sau khi tính đặc trưng và HR của
+  train và val, **trước khi fit** model nào. Không có dự đoán hay số B2 nào.
+- Chẩn đoán chỉ trên train, chỉ số tổng hợp, không xem val/test: 4/320 người train có hai bộ
+  giá trị khác nhau (1.440 đoạn); tuổi lệch tối đa 1 năm, cân nặng 2,1 kg, chiều cao 0,6 cm,
+  BMI 0,9; giới không đổi. Khác biệt có thật, không phải sai số làm tròn; nhiều khả năng là
+  hai ca phẫu thuật của cùng một bệnh nhân (chưa kiểm được trong PulseDB).
+- Quyết định ngày 2026-11-07 (chưa có số nào): v1 dùng giá trị của từng đoạn (mục 2). Các
+  phương án khác đã xét: lấy giá trị đoạn đầu của mỗi người (giữ giả định hằng số theo
+  người), loại những người này (làm tập đánh giá khác B0/B3). Mọi thứ khác giữ như v0.
+- v1 phải được duyệt bằng commit riêng đổi `status` trước khi chạy, như v0.

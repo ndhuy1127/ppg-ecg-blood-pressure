@@ -167,6 +167,10 @@ def main(argv=None):
     parser.add_argument("--output", type=Path,
                         help="New directory; default runs/b3_multiseed/<UTC>")
     args = parser.parse_args(argv)
+    if hasattr(sys.stdout, "reconfigure"):
+        # The table has "−"; a Windows console (cp1252) cannot print it, which
+        # failed the first run after every output was written (2026-11-07).
+        sys.stdout.reconfigure(errors="replace")
     output = args.output or (repo / "runs" / "b3_multiseed"
                              / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"))
     try:

@@ -1,7 +1,9 @@
 """B2 (demographics + HR) beside B0/B3 on a split-v2 PulseDB manifest, val only.
 
-Definition: docs/protocol/b2_pulsedb_definition.md (proposed 2026-10-26, pending
-Huy's approval; no B2 number may be computed on PulseDB before it is approved).
+Definition: docs/protocol/b2_pulsedb_definition.md (no B2 number may be computed
+on PulseDB before its config is approved). v0 stops when a subject's segments
+carry different demographics; v1 (2026-11-07) keeps each segment's own values
+and reports the variation (section 2).
 Two panels fixed in advance (section 4): ``full`` scores B0, B2a and B3 on every
 row that passes label QC; ``hr_available`` refits B0, B2a, B2b and B3 on the
 train rows with a measurable HR and scores them on the val rows with one. Test
@@ -24,7 +26,8 @@ from software.pulsedb.pipeline import (
     V1_FIELDS, label_qc, pulse_pressure_summary, subject_weights, verify_inputs,
 )
 
-VERSION = "b2-pipeline-v0"
+VERSION_V0 = "b2-pipeline-v0"
+VERSION = "b2-pipeline-v1"
 CONFIG_FIELDS = {
     "schema_version", "status", "unit", "split_sha256", "fit_split",
     "evaluation_split", "b3_feature_set", "b2_feature_set", "label_qc",
@@ -49,7 +52,9 @@ def load_config(payload: bytes) -> dict:
     config = json.loads(payload)
     if not isinstance(config, dict) or set(config) != CONFIG_FIELDS:
         raise ValueError("Config must contain exactly the documented fields")
-    if config["schema_version"] != VERSION or config["unit"] != "mmHg":
+    if config["schema_version"] not in (VERSION_V0, VERSION) or (
+        config["unit"] != "mmHg"
+    ):
         raise ValueError("Unsupported schema_version or BP unit")
     if config["status"] not in (PENDING, APPROVED):
         raise ValueError(f"status must be {PENDING} or {APPROVED}")
@@ -170,8 +175,16 @@ def run_b2(segments, manifest, inventory, config) -> dict:
     qc["train_pulse_pressure_before_qc"] = train_pressure
     labelled = manifest[manifest.split.isin(("train", "val"))]
     table = featurize(segments, labelled.raw_index.tolist())
-    features_b2.check_constant_by_subject(
-        labelled.subject_id.tolist(), [table[i][1] for i in labelled.raw_index])
+    variation = None
+    if config["schema_version"] == VERSION_V0:
+        features_b2.check_constant_by_subject(
+            labelled.subject_id.tolist(), [table[i][1] for i in labelled.raw_index])
+    else:  # v1: each segment keeps its own demographics (section 2).
+        variation = {
+            split: features_b2.demographic_variation(
+                labelled[labelled.split == split].subject_id.tolist(),
+                [table[i][1] for i in labelled[labelled.split == split].raw_index])
+            for split in ("train", "val")}
 
     # The HR mask is decided by the ECG alone, before any model sees a label.
     has_hr = [table[i][2] is not None for i in labelled.raw_index]
@@ -199,6 +212,7 @@ def run_b2(segments, manifest, inventory, config) -> dict:
                                  table)
                 for split in ("train", "val")}
     return {"panels": panels, "label_qc": qc, "hr_coverage": coverage,
+            "demographics_variation": variation,
             "rows_without_hr": sorted(no_hr.tolist()), "hr_mask": mask,
             "feature_names": {"B3": list(features.FEATURE_NAMES),
                               "B2a": list(features_b2.DEMOGRAPHIC_NAMES),

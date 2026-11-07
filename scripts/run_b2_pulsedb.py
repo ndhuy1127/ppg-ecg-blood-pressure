@@ -163,6 +163,8 @@ def run(raw_path, split_dir, config_path, output, repo):
                     "sha256_of_sorted_sample_ids": hashlib.sha256(mask).hexdigest(),
                     "file": "hr_mask.csv"},
         "hr_coverage": result["hr_coverage"],
+        # v1: subjects whose segments carry more than one set of demographics.
+        "demographics_variation": result["demographics_variation"],
         "feature_names": result["feature_names"],
         "panels": {name: {"counts": panel["counts"], "b0_constant": panel["b0_constant"],
                           "evaluation": panel["evaluation"]}
@@ -219,7 +221,7 @@ def main():
     parser.add_argument("--split-dir", type=Path, required=True,
                         help="Directory written by scripts/build_pulsedb_split.py")
     parser.add_argument("--config", type=Path,
-                        default=repo / "configs/models/b2_pulsedb_v0.json")
+                        default=repo / "configs/models/b2_pulsedb_v1.json")
     parser.add_argument("--output", type=Path, help="New directory; default runs/")
     args = parser.parse_args()
     output = args.output or (repo / "runs" / "b2_pulsedb"
