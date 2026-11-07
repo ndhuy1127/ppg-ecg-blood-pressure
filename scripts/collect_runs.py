@@ -100,8 +100,9 @@ def write(output, rows, sources, skipped, repo, experiments):
     if output.exists():
         raise FileExistsError("Output directory already exists; refusing overwrite")
     table = markdown_table(rows) if rows else "No model run found.\n"
-    notes = ["", "Commit marked `*`: the workspace had uncommitted changes when the run "
-             "started (code SHA-256 are in its report.json). Seeds: model seed per "
+    notes = ["", "Commit marked `*`: the workspace had uncommitted changes when the runner "
+             "recorded its provenance (code SHA-256 are in its report.json). Seeds: model "
+             "seed per "
              "config section; the bootstrap seed and split are in runs.csv.", ""]
     summaries = [s for s in sources if s["kind"] == "summary"]
     if summaries:

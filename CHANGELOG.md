@@ -6,6 +6,26 @@ sử Git (PR #1–#25 và ba commit đẩy thẳng ngày 2026-10-28) và báo c�
 Changelog không ghi kết quả hiệu năng; test và demo trên dữ liệu SYNTHETIC chỉ
 kiểm tra code. Ngày tính theo giờ Việt Nam (UTC+7).
 
+## Tuần 6 (commit trực tiếp, 2026-10-29 → 2026-11-07)
+
+Chi tiết: [báo cáo Tuần 6](reports/weekly/week_06/README.md).
+
+- `e7336ea`, `6511926` (2026-10-29): lệnh `MARK_EVENT`, `packet-logger-v3` với
+  metadata phiên v1, env `esp32s3_devkitc_all_real`; chọn mốc tay Tuần 5 chỉ trên train.
+- `8e32b06` → `862ade6` (2026-10-29 → 2026-10-30, đẩy lên `develop`/`main`): protocol
+  v0.3, hồ sơ đạo đức, RQ v0.4, tổng quan tài liệu 2026-10-29, đăng ký trước cách chấm
+  test; bỏ M3, M4.
+- `7234430` → `a946373` (2026-10-30 → 2026-10-31): trần tuyển 35, toàn văn S4, đề xuất
+  cho buổi gặp thầy Tuần 7, hồ sơ đạo đức viết lại sau rà soát cuối.
+- `c1c4b48` (2026-11-07): sửa lỗi tài liệu sau review Tuần 6 (cấp cứu, BP cao, quyền
+  xóa, người đạt chuẩn, N6, bring-up 120 phút, trạng thái đơn hàng).
+- `19fc432`, `1c708df`, `450302b`, `a215f07` (2026-11-07): B2 khóa cả mã trước khi chạy;
+  v0 duyệt rồi dừng đúng chốt kiểm trước khi fit; v1 (nhân khẩu học theo từng đoạn) duyệt
+  và chạy trên val.
+- `69089de` (2026-11-07): theo dõi thí nghiệm (`run_registry`, `collect_runs.py`) và B3
+  nhiều seed (`run_b3_multiseed.py`).
+- Báo cáo Tuần 6 và kế hoạch Tuần 7.
+
 ## Tuần 5 (PR #25 và commit trực tiếp, 2026-10-26 → 2026-10-28)
 
 - #25 (2026-10-26): phần cứng V1, firmware khung và Packet Schema.

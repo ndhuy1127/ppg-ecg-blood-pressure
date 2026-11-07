@@ -1,0 +1,55 @@
+{
+  "script_version": "collect-runs-v1",
+  "record_version": "run-record-v1",
+  "source_type": "RUN_REPORTS",
+  "experiments": [
+    "b3_pulsedb",
+    "b2_pulsedb",
+    "b3_multiseed"
+  ],
+  "n_runs": 5,
+  "n_rows": 30,
+  "sources": [
+    {
+      "path": "b3_pulsedb/20261024T193656162418Z/report.json",
+      "sha256": "7e80fd30d285a0fc72d41ca9cabe7796ec41fe440ad4c29b4de7748c5f28a2f1",
+      "kind": "run"
+    },
+    {
+      "path": "b2_pulsedb/20261107T064556Z/report.json",
+      "sha256": "786a551aec38dfb493eb3db6a9fda31a6d180ff1220354174e9e11cf0b11d5bf",
+      "kind": "run"
+    },
+    {
+      "path": "b3_multiseed/20261107T062501Z/report.json",
+      "sha256": "fd4f1cf8d7abab754ad14540d353ba31908dfae140f4005a5e9e2f98bec62cab",
+      "kind": "summary",
+      "status": "DETERMINISTIC"
+    },
+    {
+      "path": "b3_multiseed/20261107T062501Z/seed_42/report.json",
+      "sha256": "d154bbedfa6ec6f79c87187869f1aa556a0caa9e66eb25b62ddddc4069ff6d1d",
+      "kind": "run"
+    },
+    {
+      "path": "b3_multiseed/20261107T062501Z/seed_43/report.json",
+      "sha256": "74c564a81ee39adc2cd0ce925cc84c0223fcdefa4c8381c827c83f29f151630d",
+      "kind": "run"
+    },
+    {
+      "path": "b3_multiseed/20261107T062501Z/seed_44/report.json",
+      "sha256": "72d8674de59c517ed35782e82ea241abdea1bed874c9062453df583d9aee59de",
+      "kind": "run"
+    }
+  ],
+  "skipped": [],
+  "code_provenance": {
+    "git_commit": "a215f072de1ef6f0c36a3a9db8fa899ffdb8c30f",
+    "workspace_has_changes": false
+  },
+  "outputs_sha256": {
+    "runs.csv": "cfdb487c43254adc0959bd28771bc6de3711c13cc4c2be986a6454aea793b4ec",
+    "runs.md": "66914257fe7450724350e784657a7a77c57d15780f529f60831ae593f767031e"
+  },
+  "run_time_utc": "2026-11-07T06:52:25.862412+00:00"
+}

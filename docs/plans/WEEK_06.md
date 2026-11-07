@@ -3,7 +3,8 @@
 ## Cập nhật 2026-10-29
 
 Phần còn lại của file là kế hoạch lúc lập, giữ nguyên làm bản chụp. Khi khác nhau
-thì theo mục này.
+thì theo mục này. Đánh giá mốc đóng tuần (2026-11-07):
+[báo cáo Tuần 6](../../reports/weekly/week_06/README.md) mục 7.
 
 **Đã xong trước hoặc đầu Tuần 6** (không làm lại):
 
