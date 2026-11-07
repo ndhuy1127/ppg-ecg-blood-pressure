@@ -33,6 +33,7 @@ chứa `__init__.py`.
 | [models/xgboost_baseline.py](models/xgboost_baseline.py) | B3: XGBoost riêng SBP/DBP | Đặc trưng + nhãn train → model; đặc trưng val → `[SBP, DBP]` |
 | [pulsedb/features.py](pulsedb/features.py), [pulsedb/pipeline.py](pulsedb/pipeline.py) | 12 đặc trưng ECG/PPG đơn giản; fit B0/B3 trên train, đánh giá val | Đoạn PulseDB + manifest/inventory split v2 → dự đoán và metrics |
 | [evaluation/bp_metrics.py](evaluation/bp_metrics.py) | Tính MAE/bias/SD và tổng hợp theo người | Nhãn tham chiếu + dự đoán + ID người → kết quả đánh giá |
+| [evaluation/run_registry.py](evaluation/run_registry.py) | Đọc `report.json` của runner B2/B3 thành dòng truy vết được (commit, hash config/raw/split, seed, metrics + CI); so độ lệch giữa các seed | `report.json` đã đọc thành dict → dòng bảng, `seed_spread` |
 | [evaluation/subject_bootstrap.py](evaluation/subject_bootstrap.py) | CI bootstrap percentile lấy mẫu theo người; đánh giá bảng dự đoán theo manifest | Dự đoán + manifest/inventory → metrics và CI |
 | [data_io/packet_simulation.py](data_io/packet_simulation.py) | Sinh/replay packet ECG/PPG SYNTHETIC `synthetic-packet-v2` với 6 case lỗi | Config/seed → packet → timeline, gap, offset |
 | [data_io/packet_wire.py](data_io/packet_wire.py) | Codec byte Packet Schema V0.1: CRC-16/CCITT-FALSE, đóng gói, decoder dò `SYNC` theo luồng | Byte (từng đoạn bất kỳ) → packet đã kiểm CRC/header + log lỗi, byte bị bỏ |

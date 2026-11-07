@@ -6,6 +6,11 @@ Ngoài `bp_metrics.py` (dưới đây) và `subject_bootstrap.py`, thư mục c�
 [week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
 mục 4.
 
+[run_registry.py](run_registry.py) (Tuần 6, 2026-11-07): đọc `report.json` của runner
+B2/B3 thành dòng truy vết được và so độ lệch giữa các seed; dùng bởi
+`scripts/collect_runs.py` và `scripts/run_b3_multiseed.py`
+([experiment_tracking.md](../../docs/protocol/experiment_tracking.md)).
+
 [fiducial_gate.py](fiducial_gate.py) (Tuần 5): cổng nghiệm thu mốc đăng ký trước.
 `gate` chấm mọi phương án trên nhóm chọn, giữ phương án đạt mọi ngưỡng có MAE trung
 bình theo người thấp nhất, rồi chỉ chấm phương án đó một lần trên nhóm xác nhận;
