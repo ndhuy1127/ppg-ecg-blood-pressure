@@ -1,6 +1,6 @@
 {
   "schema_version": "b2-pipeline-v1",
-  "status": "PENDING_APPROVAL_NOT_RUN",
+  "status": "APPROVED_NOT_TEST_EVALUATED",
   "unit": "mmHg",
   "split_sha256": {
     "raw": "20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002",

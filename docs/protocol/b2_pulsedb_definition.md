@@ -4,7 +4,8 @@
 > **v0** (`configs/models/b2_pulsedb_v0.json`) duyệt nguyên trạng ngày 2026-11-07 bằng commit
 > riêng, rồi chạy trên val cùng ngày và **dừng đúng chốt kiểm của mục 2** trước khi fit model
 > nào, nên không có số B2 nào (mục 9). **v1** (`configs/models/b2_pulsedb_v1.json`, đề xuất
-> 2026-11-07, **chưa duyệt**) chỉ đổi quy tắc nhân khẩu học ở mục 2. Code và test SYNTHETIC
+> 2026-11-07, **duyệt nguyên trạng ngày 2026-11-07** bằng commit riêng, trước khi có số
+> nào) chỉ đổi quy tắc nhân khẩu học ở mục 2. Code và test SYNTHETIC
 > ở mục 8. Định nghĩa này phải được duyệt và commit **trước** khi tính
 > bất kỳ số B2 nào trên val (kế hoạch Tuần 6, việc 2 của Huy). Sau khi đã thấy kết quả
 > thì không đổi đặc trưng, bộ dò, ngưỡng, learner hay phép so sánh; nếu phải đổi thì
@@ -189,4 +190,4 @@ XGBoost tối ưu sai số bình phương trong khi chỉ số chính là MAE.
 - Quyết định ngày 2026-11-07 (chưa có số nào): v1 dùng giá trị của từng đoạn (mục 2). Các
   phương án khác đã xét: lấy giá trị đoạn đầu của mỗi người (giữ giả định hằng số theo
   người), loại những người này (làm tập đánh giá khác B0/B3). Mọi thứ khác giữ như v0.
-- v1 phải được duyệt bằng commit riêng đổi `status` trước khi chạy, như v0.
+- v1 được duyệt bằng commit riêng đổi `status` ngày 2026-11-07, trước khi chạy, như v0.
