@@ -108,7 +108,7 @@ thật mà chạy trên bo Waveshare đứng riêng thì chip đó khởi độn
 | `esp32s3_devkitc_ecg_real` | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_SAMP_CAPTURE=1` | Bring-up mục 7: breakout ECG trên bo đế. Bit 8 tắt (`BOARD_SAMP_VERIFIED` mặc định 0); chỉ thêm `-DBOARD_SAMP_VERIFIED=1` sau khi kiểm xong mục 7 bước 4 |
 | `esp32s3_devkitc_ppg_real` | giả / MAX30101 / giả | `BOARD_PPG_REAL=1` | Bring-up mục 8 bước 4, 6, 10: MAX30101 qua cáp |
 | `esp32s3_devkitc_imu_real` | giả / giả / BMI270 | `BOARD_IMU_REAL=1` | Bring-up mục 8 bước 5: BMI270 qua cáp, dấu trục |
-| `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 75 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO |
+| `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 120 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO |
 | `esp32s3_devkitc_sync10` | MAX30001 / MAX30101 / BMI270 | như `all_real` nhưng `BOARD_SAMP_VERIFIED=1`, thêm `BOARD_STIM=1` | Chỉ phép đo đồng bộ 10 phút, **sau** khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xung đầu tiên khớp mẫu đầu FIFO, và sau khi đã chốt độ rộng xung LED |
 
 **Giá trị đo ở bring-up truyền lúc build, không sửa `platformio.ini`.** Hai giá trị

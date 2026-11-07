@@ -254,6 +254,8 @@ thường hay không.
 - Dữ liệu được giữ theo [quy định lưu trữ của trường/hội đồng]. Nếu không có quy định, dữ liệu được
   giữ 03 năm rồi tiêu hủy. Thời hạn này tính từ mốc muộn hơn trong hai mốc: khi kết thúc đề tài và
   khi có công bố đầu tiên dùng dữ liệu này; nếu không có công bố thì tính từ khi kết thúc đề tài.
+  Khi áp dụng thời hạn 03 năm này, dữ liệu được tiêu hủy không muộn hơn 05 năm kể từ khi kết thúc
+  đề tài.
 - Dữ liệu của bạn được xử lý theo quy định của pháp luật Việt Nam về bảo vệ dữ liệu cá nhân. Bạn
   có quyền hỏi nhóm đang lưu những dữ liệu gì về bạn, yêu cầu sửa thông tin sai, rút lại sự đồng ý
   bằng văn bản và yêu cầu xóa dữ liệu theo mục 9, và khiếu nại theo đầu mối ở mục 11. Việc rút lại
@@ -274,10 +276,11 @@ Khi bạn rút lui, nhóm ngừng thu dữ liệu của bạn, và bạn chọn 
 
 Nhóm ghi lại lựa chọn của bạn, chỉ kèm mã nghiên cứu. Nếu bạn yêu cầu xóa trước ngày nhóm khóa dữ
 liệu để phân tích, tức ngày [ngày khóa dữ liệu], nhóm xác nhận đã nhận yêu cầu trong 02 ngày làm
-việc và xóa xong trong 20 ngày. Sau ngày đó, dữ liệu đã thu của bạn được giữ trong bộ dữ liệu phân
-tích đã khóa và chỉ dùng cho các phân tích đã định trước
-[cách xử lý yêu cầu xóa sau ngày khóa: chờ thầy và đơn vị chủ trì xác nhận căn cứ]; kết quả đã công
-bố ở dạng tổng hợp thì không thể rút lại. Nhóm không thu thêm dữ liệu của bạn và không dùng dữ liệu
+việc và xóa xong trong 20 ngày. Sau ngày đó, dữ liệu đã thu của bạn đã nằm trong bộ dữ liệu phân
+tích đã khóa. Nhóm đề nghị giữ dữ liệu này chỉ cho các phân tích đã định trước, nếu đơn vị chủ trì
+xác nhận có căn cứ cho việc giữ lại; nếu không có căn cứ thì nhóm xóa theo yêu cầu của bạn và chạy
+lại các phân tích không có dữ liệu của bạn [căn cứ: chờ thầy và đơn vị chủ trì xác nhận]. Kết quả
+đã công bố ở dạng tổng hợp thì không thể rút lại. Nhóm không thu thêm dữ liệu của bạn và không dùng dữ liệu
 của bạn cho mục đích mới nào khác.
 
 Nhóm có thể dừng sự tham gia của bạn, kể cả khi bạn không yêu cầu, nếu: bạn không còn đủ điều kiện

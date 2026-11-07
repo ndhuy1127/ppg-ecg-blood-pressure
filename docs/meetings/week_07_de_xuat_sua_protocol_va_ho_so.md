@@ -256,7 +256,8 @@ hơn chỉ làm phép so sánh nhạy hơn, không bảo đảm PAT có giá tr�
   muộn: chưa xong thì nộp không có M6.
 - Thêm rủi ro an toàn do gắng sức tĩnh làm BP tăng. Phải sửa phiếu thông tin (bước, rủi ro), phiếu
   đồng thuận mục 8, an toàn buổi đo và tiêu chí chọn/loại.
-- Nguồn mới chỉ là một abstract 9 người. Gắng sức cũng làm PEP đổi, như M2, mà PEP không được đo.
+- Nguồn mới chỉ là một nghiên cứu 9 người, đo ở tư thế nửa nằm bằng Finapres, khác điều kiện của
+  nhóm (sửa 2026-11-07: bản trước ghi "abstract", trong khi mục này đã đọc toàn văn trên J-STAGE). Gắng sức cũng làm PEP đổi, như M2, mà PEP không được đo.
 - Buổi đo dài hơn; phải kiểm lại trần 120 phút và thứ tự nghiệm pháp.
 
 **Câu hỏi cho thầy:** có đồng ý thiết kế M6 song song và quyết lúc nộp theo các tiêu chí trên không.

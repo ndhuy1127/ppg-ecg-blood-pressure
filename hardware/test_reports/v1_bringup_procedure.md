@@ -289,14 +289,16 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    - sườn lên I²C ≤ 300 ns ở cả hai phía bộ chuyển mức trên bo SparkFun;
    - sườn giả trên `PPG_SCL`, `T0_BTN`, `ECG_CS` khi `BMI_SCK` và `LED_STAT` đảo
      liên tục.
-9. Chạy cả hệ 75 phút như một buổi đo (chỉ một cáp USB-C, laptop chạy pin, LED PPG ở
+9. Chạy cả hệ 120 phút, bằng buổi đo dài nhất trong hồ sơ đạo đức (sửa 2026-11-07, trước là 75
+   phút theo kế hoạch 28 tuần), như một buổi đo (chỉ một cáp USB-C, laptop chạy pin, LED PPG ở
    mã cao nhất định dùng, chưa gắn lên người), cùng bản build
    `esp32s3_devkitc_all_real` và cùng `PLATFORMIO_BUILD_FLAGS` như bước 8, ghi luồng
    packet bằng `record --commands` suốt buổi; mỗi 15 phút ghi dòng 5 V USB, 3V3 tại
    TP1–TP2 và nhiệt độ vỏ LDO 3,3 V của bo Waveshare (mã LDO đọc khi nhận hàng,
    [power_budget_v1.md](../../configs/hardware/power_budget_v1.md)) (nhiệt kế hồng ngoại hay cặp nhiệt),
    kèm nhiệt độ phòng. Đạt khi dòng và 3V3 ổn định và nhiệt độ LDO thôi tăng trước khi
-   hết buổi; tăng liên tục hay 3V3 sụt thì dừng và xét lại mã LED tối đa
+   hết buổi, pin laptop còn đủ tới hết 120 phút, và `record` ghi xong đủ file đầu ra cùng
+   manifest (ghi đỉnh RAM của tiến trình logger); tăng liên tục hay 3V3 sụt thì dừng và xét lại mã LED tối đa
    ([power_budget_v1.md](../../configs/hardware/power_budget_v1.md) mục 4; thêm
    2026-10-26).
 10. Nhiễu đèn trên PPG (thêm 2026-10-29), không người, sau bước 6 (cần `fs_thực` của

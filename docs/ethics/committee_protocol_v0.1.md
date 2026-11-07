@@ -139,7 +139,8 @@ Người có chu vi bắp tay phải nằm ngoài các cỡ vòng bít của má
   tối thiểu là 15 người đạt chuẩn, mục tiêu là ít nhất 25 người đạt chuẩn, và tuyển tối đa 35 người,
   kể cả 2–3 người đo thử. Một người đạt chuẩn khi đã qua sàng lọc, có buổi hiệu chuẩn đạt và ít nhất
   một buổi sau đạt; một buổi đạt khi có ít nhất 2 lần đo huyết áp hợp lệ tính được cả PAT lẫn đặc
-  trưng PPG.
+  trưng PPG. Buổi sau phải chỉnh lại dòng LED (mục 6.2 bước 4) không vào phân tích chính nên không
+  được tính là buổi sau đạt.
 - Yavarimanesh và cộng sự (2022) ước tính cần 31 người cho một phép so sánh tương tự; với trần 25 người,
   sau khi trừ người đo thử và người bỏ cuộc, nhóm ước tính chỉ còn khoảng 20 người phân tích được. Vì
   vậy trần tuyển là 35 người.
@@ -375,7 +376,7 @@ văn bản chấp thuận của hội đồng.
 | Điện giật, dòng rò | Nguồn một chiều 5 V từ máy tính chạy pin, không nối điện lưới; đo dòng rò theo IEC 60601-1 trước khi dùng; bảng kiểm trước mỗi buổi |
 | Nóng ở bo cổ tay | Trần dòng LED; thử nhiệt 120 phút trước khi dùng; dừng khi bo nóng bất thường |
 | Chóng mặt, tê tay khi thở chậm; căng thẳng khi tính nhẩm | Hướng dẫn thở nhẹ nhàng, không nín thở; người theo dõi suốt nghiệm pháp; quy tắc dừng nghiệm pháp và dừng buổi; nghỉ ít nhất 5 phút giữa hai nghiệm pháp |
-| Huyết áp cao phát hiện trong buổi đo | Ngưỡng 140/90 (không làm nghiệm pháp) và 180/110 mmHg (dừng buổi); báo số đo, khuyên đi khám |
+| Huyết áp cao phát hiện trong buổi đo | Ngưỡng 140/90 (không làm nghiệm pháp) và 180/110 mmHg (dừng buổi); báo số đo, khuyên đi khám; từ 180/110 kèm triệu chứng thì gọi 115, không triệu chứng thì gọi đầu mối y tế ngay trong buổi (Phụ lục 5, mục 6) |
 | Lộ thông tin cá nhân | Giả danh hóa, tách phiếu có họ tên khỏi dữ liệu, mã hóa thiết bị lưu trữ, giới hạn người truy cập (Phụ lục 6) |
 | Áp lực phải tham gia với sinh viên | Tuyển qua thông báo; giảng viên không tuyển sinh viên mình dạy; quyết định của người tham gia không được báo cho giảng viên (mục 4.5) |
 
@@ -390,9 +391,12 @@ dõi thay đổi huyết áp bằng thiết bị đeo ở cổ tay.
 ### 9.3. Tự nguyện và rút lui
 
 Người tham gia có thể từ chối, dừng một nghiệm pháp, dừng buổi đo hoặc rút lui bất cứ lúc nào mà không
-cần nêu lý do. Khi rút lui, người tham gia chọn xóa hay giữ dữ liệu đã thu; yêu cầu xóa thực hiện được
-nếu đưa ra trước ngày khóa dữ liệu [ngày khóa dữ liệu], ngày này được ghi trong bản thông tin từ khi
-tuyển. Các trường hợp nhóm dừng sự tham gia của một người được nêu ở mục 9 của bản thông tin.
+cần nêu lý do. Khi rút lui, người tham gia chọn xóa hay giữ dữ liệu đã thu. Yêu cầu xóa đưa ra trước
+ngày khóa dữ liệu [ngày khóa dữ liệu] được thực hiện trong 20 ngày; ngày này được ghi trong bản thông
+tin từ khi tuyển. Sau ngày khóa, nhóm đề nghị giữ dữ liệu chỉ cho các phân tích đã định trước nếu đơn
+vị chủ trì xác nhận có căn cứ; nếu không có căn cứ thì nhóm xóa và chạy lại các phân tích không có dữ
+liệu của người đó (Phụ lục 6, mục 6). Các trường hợp nhóm dừng sự tham gia của một người được nêu ở
+mục 9 của bản thông tin.
 
 ### 9.4. Bảo mật dữ liệu
 

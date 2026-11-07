@@ -148,8 +148,8 @@ email.
 - Thời hạn lưu theo quy định lưu trữ của trường/hội đồng [quy định áp dụng]. Nếu không có quy định,
   dữ liệu được giữ 03 năm rồi tiêu hủy. Thời hạn này tính từ mốc muộn hơn trong hai mốc: ngày kết
   thúc đề tài và ngày có công bố đầu tiên dùng dữ liệu này. Nếu không có công bố thì tính từ ngày
-  kết thúc đề tài, nên mốc luôn là một ngày cụ thể và không bị kéo dài bởi các công bố sau. Trong
-  mọi trường hợp, dữ liệu được tiêu hủy không muộn hơn 05 năm kể từ ngày kết thúc đề tài.
+  kết thúc đề tài, nên mốc luôn là một ngày cụ thể và không bị kéo dài bởi các công bố sau. Khi áp
+  dụng thời hạn 03 năm này, dữ liệu được tiêu hủy không muộn hơn 05 năm kể từ ngày kết thúc đề tài.
 - Ngoại lệ: hồ sơ sự cố dữ liệu (mục 8) được giữ ít nhất 05 năm kể từ ngày khắc phục xong sự cố
   (Nghị định 356/2025/NĐ-CP, Điều 29), kể cả khi dữ liệu nghiên cứu đã tiêu hủy; hồ sơ này chỉ mang
   mã và không chứa tín hiệu.

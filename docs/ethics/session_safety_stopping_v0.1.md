@@ -22,6 +22,14 @@
 >   gia đồng ý ở mục 9 của phiếu đồng thuận, giữ liên lạc tối đa 30 ngày. Không thêm ngưỡng huyết
 >   áp thấp bằng số: chưa có nguồn, và người trẻ khỏe có thể có huyết áp tâm thu dưới 100 mmHg mà
 >   không có triệu chứng; quy tắc dừng dựa trên triệu chứng vẫn giữ.
+> - 2026-11-07, sau review Tuần 6 (đề xuất của nhóm, chờ đầu mối y tế duyệt): mục 8 ý 3 tách ba
+>   nhánh theo hướng dẫn hồi sinh cơ bản cho người lớn (Resuscitation Council UK 2025): tỉnh lại
+>   nhanh; không tỉnh nhưng thở bình thường (nằm nghiêng an toàn, theo dõi nhịp thở, không ép tim);
+>   không đáp ứng và không thở bình thường (ép tim). Bản trước cho ép tim cả khi người tham gia
+>   chưa tỉnh nhưng vẫn thở bình thường. Mục 6 thêm ý (d)–(f): số đo ≥ 180/110 kèm triệu chứng thì
+>   gọi 115; không triệu chứng thì gọi đầu mối y tế trong buổi; ≥ 140/90 thì khuyên đi khám. Danh
+>   sách triệu chứng ở ý (d) là đề xuất, chưa có nguồn; ESC 2024 yêu cầu đánh giá khả năng cấp cứu
+>   tăng huyết áp khi BP ≥ 180/110 [số trang]. Bộ Word ngày 2026-10-31 phải dựng lại theo file này.
 > - Nguồn của hai ngưỡng huyết áp **chưa đọc nguyên văn**: phải đọc và ghi số trang trước khi
 >   nộp. Europe PMC không có toàn văn; theo OpenAlex (tra 2026-10-29), hướng dẫn ESH 2023
 >   ([10.1097/HJH.0000000000003480](https://doi.org/10.1097/HJH.0000000000003480)) có bản ở kho
@@ -117,7 +125,10 @@ Thứ tự ưu tiên:
 | (a) Bất kỳ lần đo nào, kể cả hai lần đo hai tay ở buổi 1, có huyết áp tâm thu ≥ 180 mmHg hoặc tâm trương ≥ 110 mmHg | Dừng buổi đo (mục 4, ý 6) |
 | (b) Trung bình các lần đo lúc nghỉ (M0) của buổi có huyết áp tâm thu ≥ 140 mmHg hoặc tâm trương ≥ 90 mmHg | Không làm hai nghiệm pháp trong buổi đó; chỉ đo lúc nghỉ |
 | (c) Số đo rơi vào (a) hoặc (b) | Báo số đo cho người tham gia, kèm câu "đây là số đo trong nghiên cứu, không phải chẩn đoán", và khuyên người tham gia đi khám |
-| (d) Đầu mối y tế | [cơ sở y tế/đầu mối y tế, điện thoại] |
+| (d) Số đo rơi vào (a) và người tham gia có đau ngực, khó thở, đau đầu dữ dội, nhìn mờ, yếu hoặc tê nửa người, nói khó, hay lú lẫn | Xử trí như triệu chứng nặng (mục 8): gọi 115 ngay |
+| (e) Số đo rơi vào (a), không có triệu chứng ở ý (d) | Ngồi nghỉ, hỏi lại triệu chứng sau 5 phút (mục 7); gọi đầu mối y tế ngay trong buổi và làm theo hướng dẫn của đầu mối; khuyên người tham gia đi khám trong ngày. [thời hạn đi khám và nơi chuyển: chờ đầu mối y tế duyệt] |
+| (f) Số đo rơi vào (b) | Khuyên người tham gia đi khám để được đo lại theo đúng quy trình chẩn đoán. Buổi sau vẫn làm theo quy tắc của bảng này |
+| (g) Đầu mối y tế | [cơ sở y tế/đầu mối y tế, điện thoại] |
 
 - Hai mức này theo phân độ tăng huyết áp của hướng dẫn ESH 2023 [số trang] và ESC 2024 [số trang]:
   180/110 mmHg là ngưỡng tăng huyết áp độ 3, còn 140/90 mmHg là ngưỡng tăng huyết áp khi đo tại cơ
@@ -134,7 +145,7 @@ Thứ tự ưu tiên:
 - Khi kết thúc, người tham gia ngồi dậy và đứng lên từ từ; nếu thấy chóng mặt khi đứng thì ngồi lại
   nghỉ, và nhóm hỏi lại triệu chứng sau 5 phút.
 - Người tham gia chỉ ra về khi không còn triệu chứng. Khi triệu chứng không hết hoặc số đo bằng hoặc
-  cao hơn ngưỡng ở mục 6, nhóm hướng dẫn người tham gia tới đầu mối y tế (mục 6, ý d).
+  cao hơn ngưỡng ở mục 6, nhóm hướng dẫn người tham gia tới đầu mối y tế (mục 6, ý g).
 - Trước khi ra về, người tham gia được dặn liên hệ nhóm nếu da bị đỏ hay ngứa quá 2 ngày, bị phồng
   rộp, hoặc có bất kỳ khó chịu nào sau buổi đo.
 
@@ -146,11 +157,17 @@ lan rộng. Khi đó [quy trình chờ đầu mối y tế duyệt]:
 1. Dừng mọi việc; tháo vòng bít, điện cực và bo cổ tay.
 2. Một người gọi ngay cấp cứu 115 và [trạm y tế/đầu mối y tế]; người đã học sơ cứu ở cạnh người
    tham gia.
-3. Nếu người tham gia choáng hoặc ngất nhưng vẫn thở bình thường: đặt nằm ngửa ở nơi an toàn, kê cao
-   chân nếu không có chấn thương, và theo dõi tới khi tỉnh hẳn. Nếu người tham gia không tỉnh lại
-   nhanh, hoặc không thở hay thở không bình thường: gọi 115 ngay nếu chưa gọi, và người đã học sơ cứu
-   bắt đầu hồi sinh tim phổi (ép tim) theo hướng dẫn của tổng đài 115 cho tới khi nhân viên cấp cứu
-   tới. Nhóm không cho người tham gia dùng thuốc.
+3. Xử trí theo việc người tham gia có đáp ứng và có thở bình thường hay không:
+   - Choáng hoặc ngất, tỉnh lại nhanh và thở bình thường: đặt nằm ngửa ở nơi an toàn, kê cao chân
+     nếu không có chấn thương, và theo dõi tới khi tỉnh hẳn.
+   - Không tỉnh lại nhanh nhưng vẫn thở bình thường: đặt nằm nghiêng an toàn, gọi 115 nếu chưa gọi,
+     và người đã học sơ cứu theo dõi nhịp thở liên tục cho tới khi nhân viên cấp cứu tới. Nếu người
+     tham gia ngừng thở hoặc thở không bình thường thì làm như ý dưới.
+   - Không đáp ứng và không thở hoặc thở không bình thường (kể cả chỉ thở ngáp từng cơn): gọi 115
+     ngay nếu chưa gọi, và người đã học sơ cứu bắt đầu hồi sinh tim phổi (ép tim) theo hướng dẫn của
+     tổng đài 115 cho tới khi nhân viên cấp cứu tới.
+
+   Nhóm không cho người tham gia dùng thuốc.
 4. Ghi lại thời điểm, diễn biến và việc đã làm.
 5. Báo ngay giảng viên hướng dẫn, rồi báo hội đồng đạo đức theo mục 10.
 
