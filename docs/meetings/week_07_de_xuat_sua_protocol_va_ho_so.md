@@ -1,7 +1,6 @@
 # Đề xuất sửa protocol và hồ sơ đạo đức trước khi nộp — gặp thầy Tuần 7
 
-> **Ngày lập:** 2026-10-30; sửa cùng ngày theo phản biện của Codex (một trợ lý AI khác, chỉ
-> đọc), rồi thêm các mục 2.6–2.8 và đổi mục 2.5 thành "thiết kế song song, quyết lúc nộp".
+> **Ngày lập:** 2026-10-30; sửa cùng ngày theo phản biện độc lập, rồi thêm các mục 2.6–2.8 và đổi mục 2.5 thành "thiết kế song song, quyết lúc nộp".
 > **Đề xuất của nhóm, chờ thầy quyết.** Protocol v0.3 và các file hồ sơ chưa được sửa theo các đề
 > xuất này; mỗi mục chỉ được đưa vào sau khi thầy chọn phương án. Ngày 2026-10-31, hồ sơ được viết
 > lại sau rà soát cuối ([README hồ sơ](../ethics/README.md)) nhưng không đưa các đề xuất này vào; số

@@ -3,14 +3,14 @@
 > **Ngày lập:** 2026-10-29. **Cập nhật cùng ngày:** lần tra thứ hai, có hệ thống và có nhật ký, trên
 > PubMed, Europe PMC và OpenAlex cho giai đoạn 2022–2026; đọc toàn văn N5, N7, N8, N16; thêm
 > N18–N42; viết lại mục 4–6; ghi quyết định ngày 2026-10-29 về S4 và kết quả thử tải N6.
-> **Cập nhật 2026-10-30:** Claude Code viết lại văn phong, sửa ghi chú của vài dòng trong bảng 3
-> theo góp ý của Codex (một trợ lý AI khác, chỉ đọc), và ghi lại các việc ở mục 5.3 đã làm.
+> **Cập nhật 2026-10-30:** Viết lại văn phong, sửa ghi chú của vài dòng trong bảng 3
+> theo các góp ý phản biện, và ghi lại các việc ở mục 5.3 đã làm.
 > **Cập nhật 2026-10-30, lần 2:** đọc toàn văn N6 từ bản PDF (CC BY) do nhóm tải bằng trình duyệt
 > thường; sửa dòng N6 ở bảng 3 và các mục 2, 4, 5, 6 theo kết quả này.
 > **Cập nhật 2026-10-30, lần 3:** đọc toàn văn S4 từ bản PDF miễn phí trên trang Microsoft Research;
 > thêm mục 3.3 và sửa các mục 2, 3.1, 4, 5, 6 theo kết quả này.
 >
-> **Cách làm:** trợ lý AI (Claude Code) tìm, sàng lọc và tóm tắt qua API PubMed E-utilities,
+> **Cách làm:** trợ lý AI tìm, sàng lọc và tóm tắt qua API PubMed E-utilities,
 > Europe PMC REST và OpenAlex; toàn văn được đọc qua Europe PMC, BioC (NCBI), trang PMC, kho của
 > ETH Zurich, bản PDF do nhóm tải (N6) và bản PDF trên trang Microsoft Research (S4). Chỉ có một bên sàng lọc là trợ lý AI; chưa có thành viên
 > nào của nhóm đối chiếu từng đoạn. **Mọi con số phải được đối chiếu với nguyên văn trước khi đưa
@@ -596,8 +596,8 @@ thêm nghiệm pháp. Các ý về PEP, áp lực tiếp xúc và cỡ mẫu đ�
   ngày gỡ được độ lệch hệ thống mà zero-change mắc phải, và các nhóm đặc trưng chỉ hơn nó rất ít (mục
   3.3). Gợi ý của trợ lý, chưa được nhóm hay thầy quyết định: cân nhắc thêm một baseline kiểu static
   vào SAP (chỉ BP hiệu chuẩn và hệ số chặn học bằng LOSO lồng, không dùng tín hiệu), để tách phần
-  "vượt zero-change" nhờ tín hiệu khỏi phần nhờ học độ lệch trung bình giữa các phiên. Cần đưa Codex
-  xem trước khi ghi vào SAP.
+  "vượt zero-change" nhờ tín hiệu khỏi phần nhờ học độ lệch trung bình giữa các phiên. Cần xem xét kỹ
+  trước khi ghi vào SAP.
 - **Dải ΔBP ở người trẻ (S4, Hình 3):** trung vị |ΔSBP| giữa hai buổi khoảng 3 mmHg ở 21–30 tuổi và
   chỉ tăng rõ từ khoảng 51 tuổi. Có thể dùng các số này làm khoảng cho mô phỏng độ nhạy (RQ mục 4.E)
   và khi đặt lại ngưỡng R3/P2. Suy luận của trợ lý: nới tuổi tuyển trong phạm vi dưới 50 tuổi khó làm

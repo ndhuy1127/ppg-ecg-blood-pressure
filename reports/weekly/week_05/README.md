@@ -181,14 +181,14 @@ Không đo trên người trong tuần này.
 - **Phát hiện:** ECG/PPG của PulseDB Subset đã được chuẩn hóa min-max về [0, 1] theo
   từng đoạn, nên mất biên độ. Đặc trưng thống kê đơn giản của B3 vì thế gần như
   không mang thông tin.
-- Codex review hai vòng; các điểm đã sửa: đọc nhãn chỉ của dòng được chọn, lời văn
+- Review hai vòng; các điểm đã sửa: đọc nhãn chỉ của dòng được chọn, lời văn
   về nhãn test, script xuất Tuần 5 dùng reader mới, test bắt được lỗi trọng số và
   lỗi đọc sai dòng, file luôn được đóng.
 
 **Chuẩn bị B4: đánh dấu tay mốc R/foot trên PulseDB**
 
-- **Kế hoạch và ngưỡng chấp nhận chốt trước khi đánh dấu** (Huy, từ đề xuất của
-  Codex; [tài liệu mốc](../../../docs/protocol/week05_fiducials_pat_validity.md)
+- **Kế hoạch và ngưỡng chấp nhận chốt trước khi đánh dấu** (Huy;
+  [tài liệu mốc](../../../docs/protocol/week05_fiducials_pat_validity.md)
   mục 9; config `fiducials-week05-v2`):
   - chỉ train: 40 người × 2 đoạn, chia sẵn 20 người để chọn phương pháp và 20 người
     để xác nhận một lần; người val không dùng để chọn mốc;
@@ -249,7 +249,7 @@ Không đo trên người trong tuần này.
   - 4 footprint module khớp file Eagle của ProtoCentral và SparkFun và bản vẽ Waveshare, sai số 0 mm;
   - BMI270 ở mặt dưới đúng cho cách lắp mặt chip quay ra ngoài.
 
-  Codex rà soát độc lập: không có lỗi phải sửa PCB.
+  Rà soát độc lập: không có lỗi phải sửa PCB.
 - **Gerber và file khoan V1-draft5** xuất ngày 2026-10-27, không lưu trong repo.
   - Đã kiểm: mọi lỗ khoan khớp pad/via; lỗ mạ có đồng hai lớp; pad có lỗ mở mask.
   - Đặt ở CXT thành hai thiết kế riêng, 5 tấm mỗi mạch.

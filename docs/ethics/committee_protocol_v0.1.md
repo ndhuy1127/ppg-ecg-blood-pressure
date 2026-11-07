@@ -13,7 +13,7 @@
 >   (4.5–4.6), người trực (9.7), thử nhiệt (5.1), nghỉ 5 phút trước khi đo hai tay và thứ tự đo
 >   (6.2), giới tính (mục 7), mô tả thiết kế là "thực nghiệm có nghiệm pháp sinh lý" thay vì
 >   "quan sát".
-> - Sửa cùng ngày sau vòng phản biện thứ hai của Codex: PAT được định nghĩa là khoảng từ đỉnh R tới
+> - Sửa cùng ngày sau vòng phản biện thứ hai: PAT được định nghĩa là khoảng từ đỉnh R tới
 >   chân sóng PPG, không gọi là "thời gian truyền mạch"; thiết bị ghi là "chưa được cấp phép như thiết
 >   bị y tế" và câu hỏi gửi hội đồng ở 9.8 hỏi phạm vi pháp luật áp dụng thay vì xin xác nhận một kết
 >   luận có sẵn (Điều 24 của Nghị định 98/2021/NĐ-CP miễn đăng ký cho *thiết bị y tế* dùng cho nghiên

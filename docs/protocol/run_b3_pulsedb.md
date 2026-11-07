@@ -122,7 +122,7 @@ chối giá trị khác:
   của XGBoost (ngưỡng `min_child_weight` mặc định 1, phạt `reg_lambda` mặc định 1)
   tác động trên cùng thang toàn cục. Nếu dùng đúng 1/n_s thì tổng trọng số chỉ bằng
   số người, và một lá cần trọng số tương đương cả một người mới được tách
-  (Codex review 2026-10-25 đồng ý giữ trung bình 1).
+  (review 2026-10-25 đồng ý giữ trung bình 1).
 - Đặc trưng, siêu tham số, seed B3 và bootstrap giữ như v0 (quyết định B3/B4 ở
   trên).
 

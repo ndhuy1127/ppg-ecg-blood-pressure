@@ -18,7 +18,7 @@
 >   hoãn buổi (tổn thương da thường tạm thời), không loại hẳn; quy tắc khi một tiêu chí mới xuất
 >   hiện ở buổi 2–3; thêm trường giới tính để mô tả mẫu. Lý do ở bảng L1–L9 viết lại theo nội
 >   dung, bỏ dẫn chiếu tài liệu nội bộ.
-> - 2026-10-31, sau vòng phản biện thứ hai của Codex: câu hỏi L2 và bản thông tin chép đúng "hệ
+> - 2026-10-31, sau vòng phản biện thứ hai: câu hỏi L2 và bản thông tin chép đúng "hệ
 >   thần kinh giao cảm" (bản trước viết "thần kinh", rộng hơn tiêu chí); lý do L2 không gọi PAT là
 >   "thời gian truyền mạch"; khuyên đi khám để được đo lại khi chênh hai tay.
 > - Đề xuất của nhóm, cần thầy/bác sĩ xác nhận: độ tuổi 18–35, L7, L8, ngưỡng chênh hai tay

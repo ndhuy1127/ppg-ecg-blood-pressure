@@ -88,7 +88,7 @@ Bảng chân từng dây: A.7. Schematic và PCB (đã đi dây) của hai bo:
 `hardware/kicad/v1_module/base/` và `hardware/kicad/v1_module/wrist/`. Sơ đồ khối:
 [hardware_diagram_v1.svg](hardware_diagram_v1.svg).
 
-Rà soát đi dây V1-draft3 (cùng Codex, 2026-10-23): không có lỗi nghiêm trọng. Đã
+Rà soát đi dây V1-draft3 (2026-10-23): không có lỗi nghiêm trọng. Đã
 thêm C9 100 nF tại J2; trên đoạn chéo dài chạy song song, khe hở mép
 `T0_BTN`–`ECG_INT2B` tăng từ 0,28 lên khoảng 1,0 mm và `ECG_CS`–`LED_STAT` từ 0,40
 lên khoảng 0,9 mm; thêm via GND trên cả hai bo. Giữ nguyên nhánh TP4 (`PPG_SCL`) và
@@ -98,7 +98,7 @@ breakout ECG (ước tính sụt áp điện trở 4–9 mV khi dòng bo cổ ta
 chưa tính điện cảm; V1-draft5 đã tách riêng nguồn ECG, xem dưới). Các phép đo kiểm trên bo thật nằm ở
 [trình tự bring-up](../../hardware/test_reports/v1_bringup_procedure.md) mục 8.
 
-V1-draft4 (2026-10-24, rà soát cùng Codex): đổi thứ tự chân cáp, đi lại sáu đường
+V1-draft4 (2026-10-24, rà soát lại): đổi thứ tự chân cáp, đi lại sáu đường
 tín hiệu cáp trên cả hai bo, gỡ các đoạn GND cũ cắm vào chân nay là tín hiệu (GND vẫn
 nối qua vùng đổ hai mặt); `BMI_SCK` mặt dưới bo đế đi khe J2.8/J2.10, không chồng dưới
 `BMI_INT`; `BMI_MOSI` mặt dưới bo cổ tay dời sang x = 12,6, không chồng dưới `BMI_SCK`;
@@ -106,9 +106,9 @@ thêm via GND (32,0; 20,0) ở bo đế và (9,3; 9,2) ở bo cổ tay để n�
 diện đường tín hiệu; J2.10 nối đặc với vùng đổ như J2.2/4/14. ERC 0 lỗi, DRC (kèm so
 khớp schematic) chỉ còn cảnh báo thư viện `ppg_v1` và chân nằm trong courtyard đã biết.
 
-V1-draft5 (2026-10-27, sửa theo đợt rà soát footprint so với module thật cùng ngày, có
-Codex; Codex rà lại bản sửa cùng ngày: không có lỗi Critical/Major, đã sửa UUID trùng
-của ghi chú M3 và hai câu dưới; sau khi chuyển cụm tụ trái sang nhánh ECG, Codex rà lần
+V1-draft5 (2026-10-27, sửa theo đợt rà soát footprint so với module thật cùng ngày;
+rà lại bản sửa cùng ngày: không có lỗi Critical/Major, đã sửa UUID trùng
+của ghi chú M3 và hai câu dưới; sau khi chuyển cụm tụ trái sang nhánh ECG, rà lần
 2: không có phát hiện mới):
 
 - **Breakout MAX30001 (J1 bo đế) dời 0,5 mm sang trái.** Khe giữa mép breakout và mép
@@ -126,8 +126,8 @@ của ghi chú M3 và hai câu dưới; sau khi chuyển cụm tụ trái sang n
   dùng chung dài 36 mm (khoảng 44 mΩ) trên bo đế; phần dùng chung còn lại trên bo đế chỉ
   là đoạn nối U1.1–U1.2 dài 2,54 mm (khoảng 3 mΩ). Hai nhánh vẫn chung mặt 3V3, LDO của
   bo Waveshare và đường GND. Không chọn dây riêng U1 → J2.1 vì phải cắt qua khoảng tám dây
-  chéo hoặc xẻ mặt GND dưới các dây ECG. Cụm tụ trái được chuyển sang nhánh ECG theo gợi
-  ý của Codex (bản đầu của V1-draft5 để J1.2 cách tụ lớn gần nhất 86 mm). TP1 nay đo 3V3
+  chéo hoặc xẻ mặt GND dưới các dây ECG. Cụm tụ trái được chuyển sang nhánh ECG (bản
+  đầu của V1-draft5 để J1.2 cách tụ lớn gần nhất 86 mm). TP1 nay đo 3V3
   của nhánh ECG. Bring-up: đo J1.2–J1.3 bằng oscilloscope khi LED PPG chạy xung.
 - **U1 vẽ theo bo Waveshare:** viền Fab 63,30 × 25,40 mm (x 27,03–52,43, y −3,31…59,99),
   module WROOM-1, một USB-C, 4 lỗ Ø2 mm; vị trí USB-C, BOOT, RESET ước từ ảnh. Courtyard

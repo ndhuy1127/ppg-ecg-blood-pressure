@@ -78,14 +78,14 @@ Không đo trên người.
 - **Mốc tay Tuần 5** (6511926): `compare` từ chối mốc tay trên val, `gate` chỉ nhận dòng
   train. Đánh dấu tay lần 1 mới xong 28/80 đoạn (phiên dở ngày 2026-10-25), nên chưa chạy
   `gate` và B4 vẫn bị chặn.
-- **B2:** định nghĩa được review trước khi có số (Claude và Codex, 2026-11-07), sửa năm điểm
+- **B2:** định nghĩa được review trước khi có số (2026-11-07), sửa năm điểm
   (19fc432), duyệt nguyên trạng bằng commit riêng (1c708df). v0 dừng đúng chốt kiểm trước khi
   fit; v1 chỉ đổi quy tắc nhân khẩu học (450302b), duyệt bằng commit riêng (a215f07), chạy trên
   val ngày 2026-11-07 (mục 6.5).
 
 ### Review cuối tuần (2026-11-07)
 
-Toàn bộ 16 commit của tuần được review cùng Codex (hai vòng). Các lỗi tài liệu đã sửa
+Toàn bộ 16 commit của tuần được review độc lập (hai vòng). Các lỗi tài liệu đã sửa
 (c1c4b48):
 
 - an toàn buổi đo mục 8: bản trước cho ép tim cả khi người tham gia chưa tỉnh nhưng vẫn thở

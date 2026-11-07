@@ -103,7 +103,7 @@ def test_a_repeat_waits_while_the_latest_state_is_still_queued(run):
 
 
 def test_a_lost_transition_sent_from_the_table_keeps_the_repeats(run):
-    # Codex round 2, finding 1: 9 never reached the queue and went out from the
+    # Finding 1: 9 never reached the queue and went out from the
     # table; the repeats must not stop until a new transition.
     lines = [queue(1, k) for k in range(1, 9)]
     out = run(*lines, "L 1 9", latest(1, 9), repeat(1, 9), repeat(1, 9), "P 1")

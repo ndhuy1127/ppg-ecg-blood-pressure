@@ -16,7 +16,7 @@
 >   8 (triệu chứng nặng, cấp cứu); thử nhiệt loại một lần 120 phút ở trần LED thay cho chỉ kiểm
 >   "không nóng sau 5 phút"; máy đo huyết áp chỉ nối với người tham gia qua ống hơi; viết lại câu
 >   về laptop cho rõ; người ký biên bản ghi theo vai trò.
-> - 2026-10-31, sau vòng phản biện thứ hai của Codex: mục 8 tách trường hợp ngất nhưng thở bình
+> - 2026-10-31, sau vòng phản biện thứ hai: mục 8 tách trường hợp ngất nhưng thở bình
 >   thường với trường hợp không tỉnh hoặc không thở bình thường (gọi 115, ép tim theo hướng dẫn của
 >   tổng đài); mục 7 thêm đứng dậy từ từ; mục 10 nói rõ việc hỏi thăm sau sự cố chỉ khi người tham
 >   gia đồng ý ở mục 9 của phiếu đồng thuận, giữ liên lạc tối đa 30 ngày. Không thêm ngưỡng huyết

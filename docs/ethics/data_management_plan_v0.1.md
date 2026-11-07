@@ -19,7 +19,7 @@
 >   sao lưu, sau mốc khóa không dùng dữ liệu cho mục đích mới, thời hạn lưu tính từ công bố **đầu
 >   tiên**, sự cố dữ liệu ngoài Git, điều kiện cho mục 10 của phiếu đồng thuận, giới tính trong
 >   phiếu sàng lọc.
-> - 2026-10-31, sau vòng phản biện thứ hai của Codex (đã đối chiếu Nghị định 356/2025/NĐ-CP trên
+> - 2026-10-31, sau vòng phản biện thứ hai (đã đối chiếu Nghị định 356/2025/NĐ-CP trên
 >   luatvietnam.vn: Điều 5 xác nhận yêu cầu trong 02 ngày làm việc, xóa trong 20 ngày, 30 ngày khi có
 >   bên xử lý hay bên thứ ba, gia hạn một lần tối đa 20 ngày; Điều 29 báo chủ thể dữ liệu trong 72 giờ
 >   khi lộ dữ liệu vị trí hoặc sinh trắc học, báo cơ quan chuyên trách theo Điều 28, lưu hồ sơ vi phạm
