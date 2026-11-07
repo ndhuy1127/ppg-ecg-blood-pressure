@@ -1,7 +1,8 @@
 # Định nghĩa B2 trên PulseDB: nhân khẩu học cộng HR
 
-> **Trạng thái:** đề xuất ngày 2026-10-26, **chưa duyệt**. Code và test SYNTHETIC
-> đã có (mục 8), chưa chạy trên PulseDB, chưa có số B2 nào. Định nghĩa này phải được duyệt và commit **trước** khi tính
+> **Trạng thái:** đề xuất ngày 2026-10-26, sửa ngày 2026-11-07 sau review (mục 7),
+> **chưa duyệt**. Code và test SYNTHETIC đã có (mục 8), chưa chạy trên PulseDB, chưa có
+> số B2 nào. Định nghĩa này phải được duyệt và commit **trước** khi tính
 > bất kỳ số B2 nào trên val (kế hoạch Tuần 6, việc 2 của Huy). Sau khi đã thấy kết quả
 > thì không đổi đặc trưng, bộ dò, ngưỡng, learner hay phép so sánh; nếu phải đổi thì
 > tạo version mới và báo cả hai.
@@ -67,6 +68,10 @@
 
 - Mỗi bảng có model riêng, đặt tên khác nhau (ví dụ `B3@hr_available`). Không so B2b
   của bảng "có HR" với B3 của bảng "đủ".
+- **Bảng "có HR" không chấm được (thêm 2026-11-07, trước khi có số):** nếu train hoặc val
+  có ít hơn `bootstrap.min_subjects` (2) người có HR, run dừng ngay sau khi tính mặt nạ
+  HR, **trước khi fit** bất kỳ model nào của cả hai bảng, nên không có số B2 nào. Khi đó
+  ghi lý do và số người có HR, và chỉ chạy lại với một version mới của định nghĩa.
 - Báo số dòng bị loại, số người mất hẳn, độ phủ theo dòng và theo người, tách mô tả
   theo `< 18` / `≥ 18` tuổi và theo giới. Manifest gốc giữ nguyên; mặt nạ dòng có HR
   ghi riêng trong `hr_mask.csv` (`sample_id`, `split`, `has_hr` cho mọi dòng train và
@@ -101,8 +106,15 @@
 - **Ghi nhận:** ngày 2026-10-26, khi soạn định nghĩa này, đã đọc phạm vi các cột Age,
   Height, Weight, BMI (không có NaN; tuổi 0,4–92) và Gender (M/F) trên **cả** file
   VitalDB Train, gồm cả người thuộc val và test của split. Không đọc nhãn hay tín hiệu.
-  Đó là lộ biến đầu vào, không phải lộ nhãn; không dùng thêm biến đầu vào của val/test
-  cho quyết định thiết kế nào khác.
+  Đó là lộ biến đầu vào, không phải lộ nhãn.
+- **Lần xem đó đã ảnh hưởng tới một lựa chọn (ghi rõ 2026-11-07):** `refractory_s = 0,25`
+  (mục 3) được biện luận bằng tuổi nhỏ nhất 0,4 năm, con số đọc trên cả file, không phải
+  chỉ trên train. Các lựa chọn khác dựa trên train, trên kết quả SYNTHETIC Tuần 5 hoặc
+  trên cấu hình B3 v1: bộ dò `derivative_energy`, khoảng [30, 220] bpm, ≥ 4 đỉnh, không
+  điền giá trị thiếu, hai bảng, learner và seed. Không sửa lại được tình trạng "chưa từng
+  xem"; duyệt định nghĩa này là chấp nhận rằng `refractory_s` có thể đã chịu ảnh hưởng
+  của biến đầu vào val/test. Mức ảnh hưởng tới sai số chưa định lượng được; vì nó chỉ đổi
+  bộ dò R cho nhịp nhanh, hướng của nó lên MAE không biết trước.
 
 ## 7. Review
 
@@ -110,6 +122,25 @@ Codex phản biện ngày 2026-10-26 (một vòng). Nhận: phương án hai b�
 train, refractory 0,25 s, đóng băng mọi lựa chọn trước khi chấm, ghi lộ biến đầu vào,
 B3 − B2b không phải phần lợi thêm. Không nhận: `prominence` ở 0,25 s (Codex đề xuất),
 vì kết quả SYNTHETIC Tuần 5 cho thấy nó bắt đỉnh T.
+
+Review trước khi duyệt, 2026-11-07 (Claude và Codex, độc lập, thay cho review của Linh
+theo kế hoạch Tuần 6; chưa có số nào). Codex kết luận "duyệt được sau khi sửa"; cả năm
+điểm đã được kiểm trên code và đã sửa:
+
+1. Chốt duyệt chỉ kiểm config và file định nghĩa; mã tính HR, fit và chấm có thể khác
+   `HEAD`. Nay runner đòi cả `CODE_FILES` đã commit và không đổi (`approval_committed`
+   có thêm `code`).
+2. Test "từ chối khi chưa duyệt" dùng config thật của repo, nên sẽ hỏng ngay sau commit
+   duyệt. Nay test dùng một bản sao `PENDING` và chặn mọi lần đọc dữ liệu.
+3. Ảnh hưởng của lần xem biến đầu vào toàn file lên `refractory_s` được ghi rõ (mục 6).
+4. Chưa định trước trường hợp bảng "có HR" không chấm được. Nay có quy tắc dừng trước khi
+   fit (mục 4) và test.
+5. Bản đăng ký chấm test chưa liệt kê model theo từng bảng. Nay đã liệt kê
+   ([đăng ký chấm test](pulsedb_test_scoring_preregistration.md) mục 3).
+
+Ghi thêm làm giới hạn, không sửa: bảng "có HR" ước lượng hiệu năng có điều kiện trên
+các đoạn đo được HR, nên có thể lệch theo chất lượng tín hiệu; B0 (trung bình) và
+XGBoost tối ưu sai số bình phương trong khi chỉ số chính là MAE.
 
 ## 8. Code và cách chạy (2026-10-26)
 
@@ -124,8 +155,9 @@ vì kết quả SYNTHETIC Tuần 5 cho thấy nó bắt đỉnh T.
 - **Chốt chặn (sửa 2026-10-26 theo review):** `status` chỉ nhận hai giá trị,
   `PENDING_APPROVAL_NOT_RUN` và `APPROVED_NOT_TEST_EVALUATED`; giá trị khác (rỗng, gõ
   sai) làm config bị từ chối. Runner chỉ chạy với `APPROVED_NOT_TEST_EVALUATED`, và chỉ
-  khi config cùng file định nghĩa này đã được Git theo dõi và không khác `HEAD`; nếu
-  không thì dừng trước khi đọc raw. Khi duyệt xong, đổi `status` trong một commit riêng
+  khi config, file định nghĩa này và mọi file mã trong `CODE_FILES` của runner (thêm
+  2026-11-07) đã được Git theo dõi và không khác `HEAD`; nếu không thì dừng trước khi
+  đọc raw. Khi duyệt xong, đổi `status` trong một commit riêng
   rồi mới chạy, để lịch sử Git cho thấy định nghĩa có trước số liệu. Runner không có
   tham số bỏ qua chốt này; file bị symlink không được tính là đã commit. Test SYNTHETIC
   (config nằm ngoài repo) thay phép kiểm Git bằng `monkeypatch`.

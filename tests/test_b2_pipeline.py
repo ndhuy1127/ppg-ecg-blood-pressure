@@ -321,22 +321,65 @@ def built_split(tmp_path):
     return raw, tmp_path / "split"
 
 
-def committed(monkeypatch, definition=True):
+def committed(monkeypatch, definition=True, code=True):
     """Stand in for Git: SYNTHETIC configs live outside the repository, so the
     approval commit is simulated here; the runner has no bypass of its own."""
     import scripts.run_b2_pulsedb as runner
 
     def fake(repo, path):
-        return definition or not str(path).endswith("b2_pulsedb_definition.md")
+        name = Path(path).as_posix()
+        if not code and name.endswith("software/pulsedb/features_b2.py"):
+            return False
+        return definition or not name.endswith("b2_pulsedb_definition.md")
 
     monkeypatch.setattr(runner, "committed_unchanged", fake)
 
 
-def test_runner_refuses_until_the_definition_is_approved(tmp_path):
+def test_runner_refuses_until_the_definition_is_approved(tmp_path, monkeypatch):
+    # A pending copy, so the test does not depend on the repository config's
+    # status (it holds before and after the approval commit).
+    import scripts.run_b2_pulsedb as runner
     from scripts.run_b2_pulsedb import run
+    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    config["status"] = "PENDING_APPROVAL_NOT_RUN"
+    pending = tmp_path / "pending.json"
+    pending.write_text(json.dumps(config), encoding="utf-8")
+
+    def no_read(*args, **kwargs):
+        raise AssertionError("data read before the approval check")
+
+    monkeypatch.setattr("scripts.run_b3_pulsedb.load_split", no_read)
+    monkeypatch.setattr(runner, "committed_unchanged", lambda repo, path: True)
     with pytest.raises(ValueError, match="not approved"):
-        run(tmp_path / "none.mat", tmp_path / "none", CONFIG_PATH, tmp_path / "out", REPO)
+        run(tmp_path / "none.mat", tmp_path / "none", pending, tmp_path / "out", REPO)
     assert not (tmp_path / "out").exists()
+
+
+def test_runner_refuses_when_the_code_is_not_committed(tmp_path, monkeypatch):
+    from scripts.run_b2_pulsedb import run
+    committed(monkeypatch, code=False)
+    with pytest.raises(ValueError, match="'code': False"):
+        run(tmp_path / "none.mat", tmp_path / "none", approved_config(tmp_path),
+            tmp_path / "out", REPO)
+    assert not (tmp_path / "out").exists()
+
+
+def test_hr_panel_without_enough_subjects_stops_before_any_fit(monkeypatch):
+    import software.pulsedb.pipeline_b2 as pipeline
+    segments, manifest, inventory = make_data()
+    val = set(manifest[manifest.split == "val"].raw_index)
+    # Every val ECG flat: no val subject has HR.
+    segments = [segment(int(s.subject_id[4:]), s.sbp, 60, flat=True) if i in val else s
+                for i, s in enumerate(segments)]
+    inventory = build_inventory(segments, "SYN_SOURCE.mat", "0" * 64)
+    manifest = make_manifest(inventory, seed=72)
+
+    def no_fit(*args, **kwargs):
+        raise AssertionError("a panel was fitted")
+
+    monkeypatch.setattr(pipeline, "_panel", no_fit)
+    with pytest.raises(ValueError, match="0 val subjects with HR"):
+        run_b2(segments, manifest, inventory, small_config())
 
 
 def test_runner_refuses_an_approved_config_that_is_not_committed(tmp_path):
@@ -440,7 +483,8 @@ def test_runner_end_to_end_writes_both_panels_and_the_hr_mask_without_ids(
     config = approved_config(tmp_path, split_dir)
     report, table = run(raw, split_dir, config, tmp_path / "out", REPO)
     assert set(report["panels"]) == {"full", "hr_available"}
-    assert report["approval_committed"] == {"config": True, "definition": True}
+    assert report["approval_committed"] == {"config": True, "definition": True,
+                                            "code": True}
     assert report["hr_mask"]["rows_without_hr"] > 0
     assert "B2b@hr_available" in table and "B2a@full" in table
     saved = (tmp_path / "out" / "report.json").read_text(encoding="utf-8")

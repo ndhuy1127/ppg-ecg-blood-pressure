@@ -116,11 +116,15 @@ def run(raw_path, split_dir, config_path, output, repo):
     if config["status"] != APPROVED:
         raise ValueError(f"B2 definition not approved yet (config status "
                          f"{config['status']}); no B2 number may be computed")
+    # The code that computes HR, fits and scores is locked too (2026-11-07): a
+    # result must be reproducible from the commit recorded in the report.
     committed = {"config": committed_unchanged(repo, config_path),
-                 "definition": committed_unchanged(repo, Path(repo) / DEFINITION)}
+                 "definition": committed_unchanged(repo, Path(repo) / DEFINITION),
+                 "code": all(committed_unchanged(repo, Path(repo) / name)
+                             for name in CODE_FILES)}
     if not all(committed.values()):
-        raise ValueError("The approved config and the B2 definition must be committed "
-                         f"and unchanged before a run (Git: {committed})")
+        raise ValueError("The approved config, the B2 definition and the code must be "
+                         f"committed and unchanged before a run (Git: {committed})")
     payloads, split_report, raw_sha256, inventory, manifest, pool_decision = (
         load_split(raw_path, split_dir))
     found = {"raw": raw_sha256, "inventory": split_report["inventory_sha256"],

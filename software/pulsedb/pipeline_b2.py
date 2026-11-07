@@ -177,6 +177,15 @@ def run_b2(segments, manifest, inventory, config) -> dict:
     has_hr = [table[i][2] is not None for i in labelled.raw_index]
     mask = pd.DataFrame({"sample_id": labelled.sample_id.to_numpy(),
                          "split": labelled.split.to_numpy(), "has_hr": has_hr})
+    # Section 4 (2026-11-07): both panels need HR rows from at least
+    # bootstrap.min_subjects subjects in train and in val; otherwise the run stops
+    # here, before any model is fitted, and no B2 number exists.
+    for split in ("train", "val"):
+        with_hr = mask.sample_id[(mask.split == split) & mask.has_hr]
+        subjects = labelled[labelled.sample_id.isin(with_hr)].subject_id.nunique()
+        if subjects < config["bootstrap"]["min_subjects"]:
+            raise ValueError(f"hr_available panel cannot be scored: {subjects} {split} "
+                             "subjects with HR; stopped before fitting")
     no_hr = mask.sample_id[~mask.has_hr]
     keep_manifest = ~manifest.sample_id.isin(no_hr)
     keep_inventory = ~inventory.sample_id.isin(no_hr)

@@ -38,7 +38,12 @@ test.
 lần** trên mỗi tập:
 
 - B0 và B3 của `b3-pipeline-v1`;
-- B2a và B2b, nếu định nghĩa B2 được duyệt và đã chạy trên val;
+- B2, nếu định nghĩa B2 được duyệt và đã chạy trên val, theo đúng hai bảng của
+  [định nghĩa B2](b2_pulsedb_definition.md) mục 4 (liệt kê rõ ngày 2026-11-07, trước khi
+  có số B2 nào): bảng `full` gồm B0, B2a, B3 fit trên mọi dòng train qua QC; bảng
+  `hr_available` gồm B0, B2a, B2b, B3 fit lại trên các dòng train có HR. Mỗi model chỉ
+  được ghép với model cùng bảng. Mặt nạ HR của test (và CalFree) tính bằng đúng quy tắc
+  ECG của định nghĩa, trước khi đọc nhãn test;
 - B4, chỉ khi lệnh `gate` cho `B4_ALLOWED` và B4 đã khóa
   ([Tuần 5](week05_fiducials_pat_validity.md) mục 9).
 
