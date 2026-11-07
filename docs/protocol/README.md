@@ -30,8 +30,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Tạo inventory và split PulseDB](run_pulsedb_split.md)
 - [Chạy B0/B3 trên PulseDB split v2](run_b3_pulsedb.md)
 - [Định nghĩa B2 trên PulseDB](b2_pulsedb_definition.md): nhân khẩu học cộng HR,
-  hai bảng so sánh định trước; đề xuất 2026-10-26, sửa sau review 2026-11-07, chưa duyệt;
-  code có, chưa chạy
+  hai bảng so sánh định trước; đề xuất 2026-10-26, sửa sau review và duyệt ngày
+  2026-11-07, trước khi có số B2 nào
 - [Theo dõi thí nghiệm và kiểm tính tất định nhiều seed](experiment_tracking.md):
   quy ước tên thí nghiệm/artifact, bảng tổng hợp sinh từ `report.json`, B3 nhiều seed
   (2026-11-07)

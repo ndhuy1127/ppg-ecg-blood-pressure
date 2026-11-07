@@ -1,8 +1,8 @@
 # Định nghĩa B2 trên PulseDB: nhân khẩu học cộng HR
 
 > **Trạng thái:** đề xuất ngày 2026-10-26, sửa ngày 2026-11-07 sau review (mục 7),
-> **chưa duyệt**. Code và test SYNTHETIC đã có (mục 8), chưa chạy trên PulseDB, chưa có
-> số B2 nào. Định nghĩa này phải được duyệt và commit **trước** khi tính
+> **duyệt nguyên trạng ngày 2026-11-07** bằng commit riêng đổi `status` của config thành
+> `APPROVED_NOT_TEST_EVALUATED`, trước khi có số B2 nào. Code và test SYNTHETIC ở mục 8. Định nghĩa này phải được duyệt và commit **trước** khi tính
 > bất kỳ số B2 nào trên val (kế hoạch Tuần 6, việc 2 của Huy). Sau khi đã thấy kết quả
 > thì không đổi đặc trưng, bộ dò, ngưỡng, learner hay phép so sánh; nếu phải đổi thì
 > tạo version mới và báo cả hai.
