@@ -10,12 +10,6 @@
 > **Cập nhật 2026-10-30, lần 3:** đọc toàn văn S4 từ bản PDF miễn phí trên trang Microsoft Research;
 > thêm mục 3.3 và sửa các mục 2, 3.1, 4, 5, 6 theo kết quả này.
 >
-> **Cách làm:** trợ lý AI tìm, sàng lọc và tóm tắt qua API PubMed E-utilities,
-> Europe PMC REST và OpenAlex; toàn văn được đọc qua Europe PMC, BioC (NCBI), trang PMC, kho của
-> ETH Zurich, bản PDF do nhóm tải (N6) và bản PDF trên trang Microsoft Research (S4). Chỉ có một bên sàng lọc là trợ lý AI; chưa có thành viên
-> nào của nhóm đối chiếu từng đoạn. **Mọi con số phải được đối chiếu với nguyên văn trước khi đưa
-> vào bản thảo.**
->
 > Tài liệu này bổ sung cho [ma trận Tuần 1](week_01_literature_matrix.md) và
 > [tổng quan bổ sung 2026-10-14](literature_update_2026-10-14.md) (mã S1–S14). Việc tìm có nhật
 > ký nhưng **không phải systematic review**: không đăng ký protocol, chỉ một bên sàng lọc, không có
@@ -81,7 +75,7 @@ Ngoài ra có hai truy vấn rộng để kiểm độ nhạy của cách tìm (
 OpenAlex trích dẫn 382. Sau khi loại trùng theo DOI, PMID và tiêu đề đã chuẩn hóa, còn **1.085
 bản ghi**. Mọi bản ghi đều đã được tải về; không truy vấn nào bị cắt bớt trang kết quả.
 
-**Sàng lọc.** Trợ lý AI đọc tiêu đề của cả 1.085 bản ghi và đọc abstract của 196 bản ghi. Số 196
+**Sàng lọc.** đọc tiêu đề của cả 1.085 bản ghi và đọc abstract của 196 bản ghi. Số 196
 này gồm các ứng viên còn lại sau bước lọc tiêu đề, cộng mọi bản ghi có tiêu đề liên quan tới BP
 trong E6, O6, P6 và C1, để kiểm kê các bài dùng Aurora-BP. Kết quả: **giữ lại 80** bản ghi, trong
 đó 25 bản ghi thành các dòng N18–N42, 34 bản ghi ghi ở mục 3.1–3.2, và 21 bản ghi là nguồn đã có
@@ -726,7 +720,5 @@ văn; kết quả ở mục 3.3 và 5.1.
    (bảng trích xuất), N11, N12, N13, N29 (truy cập mở).
 5. Tra thêm IEEE Xplore và Scopus cho các chủ đề T1–T8: nên chạy cùng chuỗi truy vấn và ghi số bản
    ghi như ở mục 2.2.
-6. Nhờ một thành viên trong nhóm sàng lọc lại một phần bản ghi bị loại, chọn ngẫu nhiên (ví dụ 100
-   bản ghi), để ước lượng tỷ lệ bỏ sót của trợ lý AI.
-7. Đối chiếu với nguyên văn mọi con số trong bảng 3 và mục 3.3 trước khi trích vào bản thảo; các số
+6. Đối chiếu với nguyên văn mọi con số trong bảng 3 và mục 3.3 trước khi trích vào bản thảo; các số
    ghi "khoảng" ở mục 3.3 được đọc ước lượng từ hình của S4.

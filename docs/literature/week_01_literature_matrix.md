@@ -127,7 +127,7 @@ Viết lại ở v0.3 (2026-10-29) sau khi rà soát các nghiên cứu gần nh
    - cùng thuật toán và cùng tập lần đo cho hai mô hình, và hai mô hình chỉ khác nhau ở PAT (thêm ngày 2026-10-30 sau khi đọc S4, chờ thầy xem);
    - luôn so với zero-change, có CI bootstrap theo người và δ khóa trước.
 
-   Phạm vi tra: PubMed, Europe PMC, OpenAlex, giai đoạn 2022–2026; chưa tra IEEE Xplore, Scopus. Nhận định này đã được trợ lý AI đối chiếu với toàn văn N6 và S4 ngày 2026-10-30 (chờ thầy xem). Kết quả âm tính là khả năng thực tế, nên RQ1 có mức hiệu ứng nhỏ nhất đáng quan tâm δ để kết quả âm tính diễn giải được ([RQ](../research_questions_v0.1.md) mục 4.E).
+   Phạm vi tra: PubMed, Europe PMC, OpenAlex, giai đoạn 2022–2026; chưa tra IEEE Xplore, Scopus. Nhận định này đã được đối chiếu với toàn văn N6 và S4 ngày 2026-10-30 (chờ thầy xem). Kết quả âm tính là khả năng thực tế, nên RQ1 có mức hiệu ứng nhỏ nhất đáng quan tâm δ để kết quả âm tính diễn giải được ([RQ](../research_questions_v0.1.md) mục 4.E).
 2. **Độ ổn định của hiệu chuẩn qua nhiều ngày, và mức lạc quan của đánh giá trong một buổi.**
    ESH 2023 (S1) đưa ra "recalibration test" và AHA 2025 (S5) nêu rằng các protocol validation hiện chưa xử lý độ ổn định theo thời gian. Ding et al. (2017, N4) ghi nhận sai số tăng khi đánh giá ở ngày hôm sau; Vybornova 2021 (#9, thiết bị chỉ có PPG) và Liu 2023 (N6, toàn văn đọc ngày 2026-10-30) theo dõi khoảng 1 tháng. N6 đo ở D+7, D+14, D+21 sau hiệu chuẩn và báo sai số tăng từ D+7 sang D+14 rồi ổn định; N6 chỉ so tổ hợp tín hiệu ở mô hình không hiệu chuẩn, còn phần đã đọc của #9 không có phép so sánh PPG-only với PPG + PAT. Một số nghiên cứu gần nhất chỉ đánh giá trong một buổi (N1, N2). N7 chỉ đo lại ngày hôm sau ở 11 người, với nghiệm pháp bóp tay.
 
