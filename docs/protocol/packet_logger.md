@@ -58,6 +58,21 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
   manifest v2: nó chỉ dùng hash và `logger_version`, không dùng các khóa đã đổi tên.
   `decode.json` của v3 khác v2 (thêm `ppg_led_lock` ở mỗi phiên), nên so với manifest
   v2 sẽ lệch hash `decode.json` và `logger_version`.
+- **Sửa theo review ngày 2026-11-07 (vẫn là `packet-logger-v3`):** `decode.json`,
+  `packets.csv`, `samples.csv` trùng từng byte với trước khi sửa. Đã kiểm trên 98
+  luồng mô phỏng (cả luồng làm hỏng byte ngẫu nhiên) và một luồng 100 103 packet.
+  `tests/test_packet_streaming.py` so 98 luồng đó với hash do code ở `a7e0ea1` sinh ra
+  (`tests/fixtures/packet_outputs_a7e0ea1.json`), và so cách ghi theo dòng với cách
+  tính cũ viết lại trong test. Vì vậy
+  không nâng version: config, metadata và các khóa của manifest giữ nguyên. Thay đổi:
+  - bộ nhớ (mục "Đầu ra" và "Giới hạn"): `record` không giữ packet nào trong lúc ghi,
+    ghi `rx_chunks.csv` và `t_rx_packets.csv` dần theo dòng, cuối buổi giải mã
+    `raw.bin` **một lần** từ đĩa; DATA giữ dạng byte, ba file output ghi theo dòng;
+  - người vận hành thấy ngay kết quả từng lệnh, mã LED MAX30101 so với mã đã khóa, và
+    mức DC của PPG nếu bật `--dc-every-s` (mục "Hiển thị khi đang ghi");
+  - `MARK_EVENT` quá 1,0 s thì không gửi nữa (mục "Lệnh xuống thiết bị");
+  - thư mục người hay buổi trong `data/raw/` là liên kết sang người hay buổi khác
+    cũng bị từ chối (mục "Nơi ghi").
 - **Đọc cổng serial trực tiếp** (2026-10-24, `pyserial==3.5` được duyệt):
   `record --port ... --duration-s ...` (mục Nguồn byte). **Chờ:** chạy 10 phút với
   firmware khung trên bo thật.
@@ -67,12 +82,15 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
 
 | Thành phần | Vai trò |
 | --- | --- |
-| `software/data_io/packet_wire.py` | Layout byte, CRC-16/CCITT-FALSE, `encode_packet`, `StreamDecoder` (thuần, không I/O) |
-| `software/data_io/packet_receiver.py` | Kiểm tra mục 12, metadata phiên, xuất JSON/CSV dạng byte (thuần) |
+| `software/data_io/packet_wire.py` | Layout byte, CRC-16/CCITT-FALSE, `encode_packet`, `StreamDecoder` (thuần, không I/O); DATA giải mã thành `DataWords` (byte int32, bằng tuple cùng giá trị) |
+| `software/data_io/packet_receiver.py` | Kiểm tra mục 12, metadata phiên, xuất JSON/CSV dạng byte hoặc ghi theo dòng vào file do bên gọi mở (`write_outputs`) |
+| `software/data_io/command_desk.py` | Gửi lệnh, gửi lại, nhật ký lệnh, dòng báo kết quả cho người vận hành |
+| `software/data_io/live_monitor.py` | Dòng báo khi đang ghi: mã LED MAX30101 so với mã khóa, nhắc gửi mã khóa, mức DC của PPG |
 | `scripts/packet_logger.py` | I/O: `record` từ nguồn byte, `replay` từ raw, provenance, manifest |
 | `configs/hardware/packet_logger.json` | Dung sai và kích thước đọc; `status: NOT_HARDWARE_VALIDATED` |
 | `tests/test_packet_logger.py`, `tests/fixtures/packet_v3_expected.json` | Test với đáp án độc lập |
 | `tests/test_packet_study_metadata.py` | Metadata v1, nơi ghi, mã LED đã khóa, đọc output cũ |
+| `tests/test_packet_streaming.py`, `tests/test_live_monitor.py`, `tests/test_command_desk.py` | Bộ nhớ và ghi theo dòng (so với cách tính cũ), dòng báo khi đang ghi, lệnh và hạn tuổi `MARK_EVENT` |
 
 ## Nguồn byte
 
@@ -372,6 +390,27 @@ Bản ghi có người nằm ở `data/raw/SUB###/S###/<recording>`; thay đư�
   `0xD3` kết quả 0 nghĩa là sự kiện đã vào hàng đợi của firmware; packet `0xC1` vẫn có
   thể mất (logger báo như mọi sự kiện mất). Sự kiện mã 2 và 4 nằm trong `events` của
   phiên trong `decode.json`.
+- **Hạn tuổi của `mark` (đề xuất 2026-11-07, chờ duyệt):** một `mark` chỉ được gửi, kể cả gửi lại,
+  khi chưa quá **1,0 s** kể từ lúc vòng ghi đọc khối hộp thư chứa nó (mọi dòng của
+  một lần đọc cùng một mốc, nên dòng lỗi đứng trước không làm `mark` trẻ ra)
+  (`MARK_EVENT_MAX_AGE_S` trong `command_desk.py`). Lý do: firmware đóng dấu thời gian
+  lúc nhận lệnh, nên một mốc xếp hàng sau lệnh khác (ví dụ `set_ppg_led` chờ tới
+  2,5 s) sẽ trễ vài giây mà trông vẫn hợp lệ.
+  - Chưa gửi được trước hạn (lệnh khác còn đang chờ, hoặc chưa có packet nào nên chưa
+    biết `SESSION_ID`): ghi `expired`, **không gửi**. Logger in
+    `WARNING: ... NOT SENT`; người vận hành tự ghi giờ vào sổ.
+  - Đã gửi mà chưa có `0xD3` thì gửi lại sau 0,5 s như mọi lệnh. Lần gửi lại nào rơi
+    vào sau hạn thì không gửi: ghi `unknown` với `reason` `mark_event_age_limit` (mốc
+    có thể thiếu). Gửi đúng ở 0; 0,5; 1,0 s vẫn trong hạn ("không quá 1,0 s"); khi đó
+    ba lần gửi đã dùng hết và kết quả là `unknown` thường, không có lý do này.
+    `0xD3` tới muộn vẫn khớp và ghi `late_ack`.
+  - Tuổi được kiểm trên đồng hồ đọc **ngay trước khi ghi cổng**. Vì vậy các dòng nhật
+    ký và dòng báo in ngay trước đó (cũng tốn thời gian) không đẩy được `mark` quá hạn
+    (sửa sau review, 2026-11-07).
+  - Tuổi tính từ lúc đọc hộp thư, nên chưa gồm khoảng chờ tối đa khoảng 0,1 s từ
+    `device_command.py` tới lần đọc hộp thư, và chưa gồm USB và firmware. 1,0 s là
+    giới hạn chờ gửi phía PC, không bảo đảm sai số đầu cuối của mốc nhỏ hơn 1 s.
+  - Lệnh khác không có hạn tuổi.
 - "queued" chỉ nghĩa là đã ghi vào hộp thư. Vòng ghi xem hộp thư sau mỗi lần đọc cổng
   (kể cả khi không có byte), lấy `SESSION_ID` đích từ packet gần nhất, gửi một lệnh mỗi
   lần, chờ `0xD3` 500 ms, gửi lại cùng byte tối đa 3 lần, rồi ghi kết quả "không biết".
@@ -385,8 +424,22 @@ Bản ghi có người nằm ở `data/raw/SUB###/S###/<recording>`; thay đư�
   hộp thư dài quá 1 024 byte bị bỏ tới hết ký tự xuống dòng. `SESSION_ID` đổi (MCU khởi
   động lại) thì lệnh đang chờ bị hủy.
 - Mọi bước ghi vào `commands_sent.jsonl` (`queued`, `rejected`, `sent`, `acked`,
-  `unknown`, `late_ack`, `session_changed`, `inbox_truncated`, `not_sent`), kèm thời
-  điểm PC `pc_monotonic_s`. Thời điểm PC chỉ để tham khảo, không phải mốc sự kiện. Hai
+  `unknown`, `late_ack`, `session_changed`, `inbox_truncated`, `not_sent`, và từ
+  2026-11-07 `expired`, `inbox_unreadable`), kèm thời điểm PC `pc_monotonic_s`. Từ
+  2026-11-07:
+  - các bước `sent`, `acked`, `late_ack`, `session_changed`, `unknown`, `not_sent`,
+    `expired` có thêm trường `cmd` (tên lệnh);
+  - một lần ghi cổng nhận ít byte hơn khung lệnh là lỗi (`error`: `short write: n of m
+    bytes`);
+  - hộp thư không đọc được nữa (bị xóa chẳng hạn) thì ghi `inbox_unreadable` và thôi
+    đọc lệnh, còn việc ghi dữ liệu vẫn tiếp tục.
+- **Kết quả hiện ngay (từ 2026-11-07):** mỗi kết quả cũng được in thành một dòng
+  ra stderr của `record`, ví dụ `command line 3 (set_ppg_led): device answered ok,
+  LED generation 2`. Các trường hợp `WARNING:`: kết quả khác `ok` (ví dụ `busy`,
+  `out_of_range`); `unknown` (không biết lệnh đã tới chưa, chưa chắc là lỗi);
+  `late_ack`; dòng hộp thư bị từ chối; `mark` không gửi; lệnh bị hủy vì
+  `SESSION_ID` đổi; lỗi ghi cổng; hộp thư bị cắt. `queued` và lần gửi bình thường
+  không in. `device_command.py` vẫn chỉ báo "queued". Thời điểm PC chỉ để tham khảo, không phải mốc sự kiện. Hai
   file có hash trong manifest (`commands`). `decode.json`, `packets.csv`, `samples.csv`
   chỉ phụ thuộc `raw.bin`, nên replay không cần nhật ký lệnh.
 
@@ -423,10 +476,16 @@ Ghi trên người tham gia (mã ví dụ, cổng ví dụ):
 .\.venv\Scripts\python.exe scripts/packet_logger.py record --port COM5 --duration-s 3600 --commands --metadata <metadata v1 của SUB001, buổi S001> --subject-id SUB001 --session-id S001
 ```
 
+Buổi đầu của một người, lúc chỉnh LED (protocol mục 6.1), thêm `--dc-every-s 2`:
+cứ 2 s logger in mức DC trung bình 10 s gần nhất của từng màu (mục "Hiển thị khi
+đang ghi").
+
 Không truyền `--output` thì output là `runs/packet_logger/<UTC>_record` hoặc
 `_replay`; với `--subject-id` dạng `SUB###` là `data/raw/<subject_id>/<session_id>/<UTC>`
 (mục "Nơi ghi"). Với `--commands`, logger in thư mục bản ghi ra stderr lúc bắt đầu,
-để dùng cho `device_command.py --recording`. Mọi thư mục output phải là thư mục
+để dùng cho `device_command.py --recording`. Mọi dòng báo cho người vận hành (kết
+quả lệnh, mã LED, mức DC) cũng ra stderr, mỗi dòng một việc; dòng cần xử lý bắt đầu
+bằng `WARNING:`. Mọi thư mục output phải là thư mục
 mới; mọi file được mở bằng exclusive create (`xb`). Exit 1 nghĩa là
 input/config/metadata/nơi ghi sai, hoặc replay khác manifest. Exit 0 **không** có
 nghĩa là luồng sạch: phải đọc `issue_counts`.
@@ -446,6 +505,9 @@ nghĩa là luồng sạch: phải đọc `issue_counts`.
   tạo thư mục.
 - `data/raw/` có thể là một liên kết (symlink, junction) tới ổ khác, ví dụ ổ mã hóa.
   Thư mục người hay buổi bên trong mà là liên kết ra ngoài `data/raw/` thì bị từ chối.
+  Từ 2026-11-07, liên kết sang người khác hay buổi khác **bên trong** `data/raw/`
+  (ví dụ `SUB001/S001` trỏ tới `SUB002/S001`) cũng bị từ chối: sau khi giải liên kết,
+  đường dẫn vẫn phải đúng `<subject_id>/<session_id>/<recording>`.
   Bản ghi không có người bị từ chối nếu nằm trong `data/raw/` theo đường dẫn đã gõ
   hoặc sau khi giải liên kết.
 - Bản ghi `DEVICE` mới cần metadata v1: bring-up phải ghi rõ `subject_id` null kèm
@@ -537,8 +599,58 @@ chạy), theo từng `SESSION_ID`:
 - Trong `record --commands`, mỗi khi gặp một `SESSION_ID` mới, logger in ra stderr
   một dòng nhắc kèm lệnh `device_command.py ... set-ppg-led` với đúng mã khóa. Logger
   không tự gửi lệnh.
+- Từ 2026-11-07, việc so mã khóa với `0xD2` cũng chạy **ngay trong lúc ghi** (mục
+  "Hiển thị khi đang ghi"). Logger báo khi mã khóa bắt đầu có hiệu lực ("Locked LED
+  codes in effect: measurement may start"). Một trạng thái sau đó có mã khác thì in
+  `WARNING: MAX30101 LED codes ... differ from the locked ...` ngay khi `0xD2` tới.
+  Kết quả chính thức vẫn là `decode.json` sau buổi.
 
-Không có `ppg_led_lock` thì `sessions[].ppg_led_lock` là null và không kiểm gì.
+Không có `ppg_led_lock` thì `sessions[].ppg_led_lock` là null và không kiểm gì sau buổi;
+trong lúc ghi logger vẫn in mã LED của mỗi trạng thái MAX30101 mới.
+
+## Hiển thị khi đang ghi (đề xuất 2026-11-07, chờ duyệt)
+
+`software/data_io/live_monitor.py` đọc các packet vừa giải mã và in từng dòng ra
+stderr của `record`. Module này không đổi `raw.bin`, output decode hay file nào khác.
+Đây chỉ là gợi ý cho người vận hành; bản ghi chính thức là `decode.json`.
+
+- **Mã LED MAX30101** từ `0xD2` (nguồn chip, đang chạy). Mỗi trạng thái mới (thế hệ
+  hoặc mã đổi) in một dòng. `0xD2` lặp lại mỗi 10 s nhưng chỉ in một lần. Khi
+  metadata có `ppg_led_lock`, các dòng nói rõ mã đã là mã khóa hay chưa, và cảnh báo
+  khi lệch sau mốc (mục "Mã LED đã khóa").
+- **Mức DC của PPG** cho quy trình chỉnh LED ở protocol mục 6.1, bật bằng
+  `--dc-every-s <giây>`; cửa sổ mặc định `--dc-window-s 10`. Mỗi dòng gồm:
+  - với từng màu: trung bình của các mẫu trong cửa sổ, tính bằng % thang đo ADC
+    (2¹⁸ mã), và giá trị lớn nhất. Cờ `LOW` (< 30) hay `HIGH` (> 70) xét trên giá trị
+    đã làm tròn 0,1 % đúng như được in;
+  - số mẫu chạm trần ADC. Trần lấy theo độ phân giải trong thanh ghi `0x0A`
+    (`LED_PW`; dữ liệu căn trái nên 18 bit là `0x3FFFF`, 17 bit là `0x3FFFE`);
+    chưa có `0xD2` thì dùng `0x3FFFE`;
+  - số packet có STATUS bit 6 (ALC overflow).
+- **Tên màu** lấy từ `0x11`/`0x12` (`MULTI_LED_CTRL`: 1 đỏ, 2 IR, 3 xanh). Chưa có
+  `0xD2` thì in `slot1`…`slot4`. Cấu hình V1: khe 1 xanh, khe 2 đỏ, khe 3 IR.
+- **Cửa sổ ghi lại từ đầu** khi:
+  - MAX30101 có trạng thái mới (mỗi `set_ppg_led` xong), hoặc `0xD2` báo chip không
+    chạy (nguồn giả hoặc chưa cấu hình; in `WARNING: MAX30101 not running ...`). Sau
+    báo không chạy, PPG không được tính và không có dòng DC cho tới khi `0xD2` báo chip
+    chạy lại;
+  - một packet PPG có bit 5 (chip neo lại), kể cả packet có `FS_NOMINAL_MHZ = 0`;
+  - chỉ số mẫu của kênh không nối tiếp (mất hoặc lặp packet);
+  - `SESSION_ID` đổi. Khi đó tên màu và trần ADC của phiên cũ cũng bị bỏ, cho tới
+    `0xD2` của phiên mới.
+
+  Nhờ vậy trung bình chỉ gồm các mẫu liên tục của mã LED hiện hành. Khi cửa sổ chưa
+  đủ, dòng ghi `only 4.2 of 10 s so far`: đợi đủ 10 s rồi mới đọc (protocol 6.1
+  bước 2).
+- Màu nào không có mẫu mới quá 1 s theo đồng hồ PC thì hiện
+  `STALE (no sample for … s)`, không hiện mức cũ như số hiện tại.
+- Số mẫu chạm trần in kèm tỷ lệ trong cửa sổ, ví dụ `red 13 (0.6 %)`.
+- Cửa sổ tính theo số mẫu (`FS_NOMINAL_MHZ` × giây), không theo thời gian mẫu; nhịp in
+  tính theo đồng hồ PC. Ở 2 s một dòng, buổi 120 phút có khoảng 3 600 dòng; chỉ bật
+  `--dc-every-s` khi cần, ví dụ lúc chỉnh LED, hoặc đặt nhịp thưa hơn.
+
+Mức DC này chỉ để chỉnh LED trong buổi; không dùng làm số liệu. Khoảng 30–70 % vẫn là
+đề xuất kỹ thuật chưa có nguồn (protocol 6.1).
 Một `SESSION_ID` quay lại sau một `SESSION_ID` khác được gộp làm một phiên, như mọi kiểm
 khác của logger. Firmware lấy `SESSION_ID` ngẫu nhiên 32 bit mỗi lần khởi động
 (`esp_random`), nên việc này gần như không xảy ra.
@@ -566,9 +678,27 @@ kiểm tra, không xóa. Bản sao đầu vào chỉ giúp khi tiến trình b�
 `SESSION_ID` của firmware (chính là `device_session_id` của manifest), không phải buổi
 nghiên cứu.
 
-Trong `record`, decode chạy trực tiếp theo từng đoạn đọc. Sau đó `raw.bin` được
-đọc lại từ đĩa và decode lần nữa. Hai kết quả phải giống từng byte, nếu không thì
-dừng (`live_equals_offline_decode`). `replay` ghi `decode.json`, `packets.csv`,
+Trong `record`, decode chạy trực tiếp theo từng đoạn đọc, để phục vụ lệnh và các dòng
+báo; không giữ lại packet nào. Từ 2026-11-07, `rx_chunks.csv` và `t_rx_packets.csv`
+được ghi dần trong lúc ghi. Cuối buổi, `raw.bin` được đọc lại từ đĩa theo từng đoạn
+`read_chunk_bytes` và decode **một lần**; các phép kiểm và ba file output dùng kết
+quả này, ghi theo dòng. `record` dừng (không có manifest) nếu:
+
+- SHA-256 hoặc số byte của `raw.bin` trên đĩa khác các byte đã nhận;
+- ranh giới packet và nhật ký decoder (lỗi, đoạn bỏ qua, ứng viên SYNC bị loại) của
+  lần decode lại khác lần decode trực tiếp.
+
+Cả hai cùng được ghi là `live_equals_offline_decode`. Trước 2026-11-07, điều kiện này
+được kiểm bằng cách so từng byte của output; nay output chỉ được tạo một lần.
+
+Hết phần thu, logger in `Capture ended ...; decoding raw.bin from disk` và, khi
+manifest đã ghi, `Recording complete: ...` (với buổi 120 phút cách nhau khoảng 40 s,
+mục "Giới hạn"). Không đóng cửa sổ giữa hai dòng này. Mọi file của phần thu (`raw.bin`,
+hai file thời gian nhận, nhật ký lệnh) được đóng dù có lỗi ở bước nào. Nếu phần cuối bị
+ngắt hay lỗi, `raw.bin` vẫn nguyên và không có manifest. Khi đó chạy `replay` trên
+`raw.bin` đó để có output decode, ghi vào chỗ khác `data/raw/`, và ghi lại sự cố.
+
+`replay` ghi `decode.json`, `packets.csv`,
 `samples.csv` và `replay_report.json`. Report có `session_metadata_version` và bốn
 trường nghiên cứu của metadata (từ 2026-10-29), để biết output là tín hiệu của ai mà
 không cần mở manifest gốc. Với `--expect`, hash raw, ba output decode và hash
@@ -606,8 +736,25 @@ config/metadata được so với manifest.
   không bị phát hiện; với mốc `SAMP`, trường hợp này được báo `anchor_check_weak`.
 - Logger không kiểm được lệch cố định của ánh xạ xung `SAMP` ↔ mẫu, và không dùng
   `latency_samp_l_us` (không tính thời gian mẫu).
-- Toàn bộ packet được giữ trong RAM tới cuối phiên. 10 phút (khoảng 5·10⁴ packet)
-  không có vấn đề; phiên rất dài sẽ cần ghi theo dòng.
+- **RAM (đo 2026-11-07, Windows, Python 3.11, đỉnh working set của
+  `record --source-file`).** Luồng SYNTHETIC theo nhịp của V1: ECG 512 Hz, ba khe
+  PPG 200 Hz, sáu kênh IMU 100 Hz, `0xD1`/`0xD2` mỗi 10 s; khoảng 114 packet/s.
+  - Trong lúc ghi, bộ nhớ Python không tăng theo độ dài buổi: còn khoảng 2 MB sau 120
+    phút dữ liệu sạch. Nhật ký lỗi của decoder vẫn tăng theo số lỗi, và `decode.json`
+    vẫn được dựng trọn trong RAM (cỡ issue và tóm tắt, không có mẫu).
+  - Cuối buổi, phần decode và output vẫn tăng theo số packet, khoảng 1,1 KB mỗi
+    packet:
+
+    | Buổi | Packet | Đỉnh RAM | Thời gian |
+    | --- | --- | --- | --- |
+    | 30 phút | 205 024 | 254 MB | 10 s |
+    | 75 phút | 512 554 | 598 MB | 25 s |
+    | 120 phút | 820 084 | 921–936 MB (hai lần đo) | 40–42 s |
+
+    `replay` 120 phút: 938 MB. Trước khi sửa, luồng 100 103 packet cần 993 MB (ước
+    khoảng 9 GB cho 120 phút); nay luồng đó cần 120 MB.
+  - Đây là số đo trên luồng tổng hợp, chưa đo trên laptop dùng cho buổi đo hay với
+    thiết bị thật. Nghiệm thu bằng lần chạy cả hệ 120 phút ở bring-up.
 - Chỉ dùng thư viện chuẩn; chưa có hiệu chỉnh `L`, fs thật hay drift.
 
 ## Quy ước packet của firmware (D1–D10)

@@ -322,6 +322,26 @@ def test_a_linked_session_directory_cannot_move_raw_out(tmp_path):
     assert list(outside.iterdir()) == []
 
 
+@pytest.mark.parametrize("link, target", [
+    (("SUB001", "S001"), ("SUB002", "S001")),  # session -> another subject's
+    (("SUB001",), ("SUB002",)),                # whole subject -> another one
+    (("SUB001", "S001"), ("SUB001", "S002")),  # session -> another session
+])
+def test_a_link_to_another_subject_or_session_inside_raw_is_refused(tmp_path, link,
+                                                                    target):
+    # Review of 2026-11-07: the link resolves inside data/raw, yet the files
+    # would sit under another subject or session than the metadata says.
+    stream, base = _stream(tmp_path)
+    raw_root = tmp_path / "data" / "raw"
+    _link_dir(raw_root.joinpath(*link), raw_root.joinpath(*target))
+    participant = _write_meta(tmp_path, _participant(base))
+    with stream.open("rb") as source, pytest.raises(ValueError, match="goes only to"):
+        record(source, raw_root / "SUB001" / "S001" / "rec", LOGGER_CONFIG,
+               participant, tmp_path, "stream.bin", subject_id="SUB001",
+               session_id="S001", raw_root=raw_root)
+    assert [p for p in raw_root.joinpath(*target).rglob("*")] == []
+
+
 def test_data_raw_itself_may_be_a_link(tmp_path):
     # data/raw on another (encrypted) drive, reached through a link: allowed.
     stream, base = _stream(tmp_path)
@@ -459,7 +479,10 @@ def test_record_reminds_to_send_the_locked_codes_at_each_session(tmp_path):
     manifest = record(ByteSource(stream.read_bytes()), tmp_path / "rec", LOGGER_CONFIG,
                       meta, ROOT, "fake", commands=True, notify=notes.append)
     assert notes[0].startswith("Recording to ")
-    assert [n.split(":")[0] for n in notes[1:]] == ["SESSION_ID 1", "SESSION_ID 2"]
+    assert [n.split(":")[0] for n in notes[1:-2]] == ["SESSION_ID 1", "SESSION_ID 2"]
+    # Since 2026-11-07 the end of the capture and the manifest are announced too.
+    assert notes[-2].startswith("Capture ended") and notes[-1].startswith(
+        "Recording complete: ")
     assert "--green 18 --red 40 --ir 44" in notes[1]
     # V0.1 generator streams have no 0xD2, so neither session has the lock.
     decode = json.loads((tmp_path / "rec" / "decode.json").read_bytes())

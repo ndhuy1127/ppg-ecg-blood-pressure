@@ -20,7 +20,10 @@ mark sends MARK_EVENT: the device sends an event packet 0xC1 with code 2
 (cuff_end) or 4 (operator), timed when the device receives the command, which
 is later than this script by an unmeasured PC -> device delay (inbox polling,
 USB): good for marks of about a second, not for millisecond marks (t0 stays the
-SW1 button).
+SW1 button). A mark that the record loop cannot send within 1 s of reading it
+(another command still waiting, say) is not sent at all: the record terminal
+prints "WARNING: ... NOT SENT" and the operator writes the time down by hand
+(proposed 2026-11-07, pending team review). The outcome of every command is printed there too.
 """
 
 import argparse
@@ -100,6 +103,7 @@ def main(argv=None):
     except (ValueError, OSError) as exc:
         parser.exit(1, f"Not queued: {exc}\n")
     print(f"queued (not yet sent): {line}", end="")
+    print("The result shows in the record terminal.")
 
 
 if __name__ == "__main__":
