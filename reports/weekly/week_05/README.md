@@ -181,14 +181,13 @@ Không đo trên người trong tuần này.
 - **Phát hiện:** ECG/PPG của PulseDB Subset đã được chuẩn hóa min-max về [0, 1] theo
   từng đoạn, nên mất biên độ. Đặc trưng thống kê đơn giản của B3 vì thế gần như
   không mang thông tin.
-- Codex review hai vòng; các điểm đã sửa: đọc nhãn chỉ của dòng được chọn, lời văn
+- Review hai vòng; các điểm đã sửa: đọc nhãn chỉ của dòng được chọn, lời văn
   về nhãn test, script xuất Tuần 5 dùng reader mới, test bắt được lỗi trọng số và
   lỗi đọc sai dòng, file luôn được đóng.
 
 **Chuẩn bị B4: đánh dấu tay mốc R/foot trên PulseDB**
 
-- **Kế hoạch và ngưỡng chấp nhận chốt trước khi đánh dấu** (Huy, từ đề xuất của
-  Codex; [tài liệu mốc](../../../docs/protocol/week05_fiducials_pat_validity.md)
+- **Kế hoạch và ngưỡng chấp nhận chốt trước khi đánh dấu** (Huy; [tài liệu mốc](../../../docs/protocol/week05_fiducials_pat_validity.md)
   mục 9; config `fiducials-week05-v2`):
   - chỉ train: 40 người × 2 đoạn, chia sẵn 20 người để chọn phương pháp và 20 người
     để xác nhận một lần; người val không dùng để chọn mốc;
@@ -249,7 +248,7 @@ Không đo trên người trong tuần này.
   - 4 footprint module khớp file Eagle của ProtoCentral và SparkFun và bản vẽ Waveshare, sai số 0 mm;
   - BMI270 ở mặt dưới đúng cho cách lắp mặt chip quay ra ngoài.
 
-  Codex rà soát độc lập: không có lỗi phải sửa PCB.
+  Rà soát độc lập: không có lỗi phải sửa PCB (chờ duyệt).
 - **Gerber và file khoan V1-draft5** xuất ngày 2026-10-27, không lưu trong repo.
   - Đã kiểm: mọi lỗ khoan khớp pad/via; lỗ mạ có đồng hai lớp; pad có lỗ mở mask.
   - Đặt ở CXT thành hai thiết kế riêng, 5 tấm mỗi mạch.
@@ -279,7 +278,7 @@ Không đo trên người trong tuần này.
 | 11 | Mốc ứng viên, `detect` | Huy | [fiducials.py](../../../software/signal_processing/fiducials.py) |
 | 12 | PAT hợp lệ | Huy | [pat_validity.py](../../../software/signal_processing/pat_validity.py) |
 | 13 | So với đánh dấu tay | Huy | [fiducial_agreement.py](../../../software/evaluation/fiducial_agreement.py), [week05_fiducials.py](../../../scripts/week05_fiducials.py), [mẫu CSV](../../../docs/protocol/templates/manual_fiducials_template.csv) |
-| 14 | Config Tuần 5 | Huy | [week05_huy.json](../../../configs/data/week05_huy.json) |
+| 14 | Config Tuần 5 | Huy | [week05_fiducials.json](../../../configs/data/week05_fiducials.json) |
 | 15 | Tài liệu phương pháp | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) |
 | 16 | Test mốc Tuần 5 | Huy | [test_week05_fiducials.py](../../../tests/test_week05_fiducials.py) |
 | 17 | Kết quả SYNTHETIC | Huy | [synthetic_fiducials/](synthetic_fiducials/agreement_synthetic.json) (thêm biến thể [refractory_040/](synthetic_fiducials/refractory_040/agreement_synthetic.json)) |
@@ -302,7 +301,7 @@ Không đo trên người trong tuần này.
 | 34 | KiCad V1-draft4 | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3, A.7 |
 | 35 | Reader `h5py` và split Train 400 người (2026-10-25) | Huy | [h5_reader.py](../../../software/pulsedb/h5_reader.py), [run_pulsedb_split.md](../../../docs/protocol/run_pulsedb_split.md), [pulsedb_train400_split.json](../../../configs/data/pulsedb_train400_split.json) |
 | 36 | `b3-pipeline-v1` và kết quả B0/B3 trên val (2026-10-25) | Huy | [run_b3_pulsedb.md](../../../docs/protocol/run_b3_pulsedb.md), [b3_pulsedb_v1.json](../../../configs/models/b3_pulsedb_v1.json), [pulsedb_b3_v1/](pulsedb_b3_v1/README.md) |
-| 37 | Kế hoạch đánh dấu tay, ngưỡng chấp nhận, lệnh `repeat`/`gate`, `annotate --resume` (2026-10-25) | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) mục 9, [fiducial_gate.py](../../../software/evaluation/fiducial_gate.py), [week05_huy.json](../../../configs/data/week05_huy.json) |
+| 37 | Kế hoạch đánh dấu tay, ngưỡng chấp nhận, lệnh `repeat`/`gate`, `annotate --resume` (2026-10-25) | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) mục 9, [fiducial_gate.py](../../../software/evaluation/fiducial_gate.py), [week05_fiducials.json](../../../configs/data/week05_fiducials.json) |
 | 38 | B2: định nghĩa, code, test SYNTHETIC; chưa chạy (2026-10-26) | Huy | [b2_pulsedb_definition.md](../../../docs/protocol/b2_pulsedb_definition.md), [b2_pulsedb_v0.json](../../../configs/models/b2_pulsedb_v0.json), [features_b2.py](../../../software/pulsedb/features_b2.py), [pipeline_b2.py](../../../software/pulsedb/pipeline_b2.py), [run_b2_pulsedb.py](../../../scripts/run_b2_pulsedb.py), [test_b2_pipeline.py](../../../tests/test_b2_pipeline.py) |
 | 39 | Lệnh PC → thiết bị, packet `0xD2`/`0xD3`, `packet-logger-v2` | Phần cứng và firmware | [device_command.py](../../../scripts/device_command.py), [command_desk.py](../../../software/data_io/command_desk.py), [command_wire.py](../../../software/data_io/command_wire.py), [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) mục 12–13 |
 | 40 | Sự kiện mã 3 và kế hoạch đo đồng bộ 10 phút | Firmware | [stim_plan.c](../../../firmware/app/stim_plan.c), [sync_10min_test_plan.md](../../../hardware/test_reports/sync_10min_test_plan.md) |

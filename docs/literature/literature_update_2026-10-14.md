@@ -1,6 +1,5 @@
 # Tổng quan bổ sung: nguồn 2015–2026 cho RQ1–RQ3
 
-> **Người thực hiện:** Nguyễn Đức Huy
 > **Ngày cập nhật:** 2026-10-14; 2026-10-30 (dòng S4 và mục 4, 5 sau khi đọc toàn văn S4)
 > Bổ sung cho [ma trận Tuần 1](week_01_literature_matrix.md); không phải systematic review và không thay thế protocol.
 

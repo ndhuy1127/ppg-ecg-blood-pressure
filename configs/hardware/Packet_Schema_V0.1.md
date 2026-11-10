@@ -375,7 +375,7 @@ file riêng, không trộn vào luồng packet.
 
 ## 14. Đối chiếu với mô phỏng `synthetic-packet-v2`
 
-`software/data_io/packet_simulation.py` (Huy) là giao diện **giả lập** dạng JSON,
+`software/data_io/packet_simulation.py` là giao diện **giả lập** dạng JSON,
 không phải decoder của schema này.
 
 | Schema V0.1 | `synthetic-packet-v2` | Ghi chú |
@@ -394,7 +394,7 @@ không phải decoder của schema này.
 
 ### 14.1. Đối chiếu với `synthetic-packet-v3` và logger `packet-logger-v0` (2026-10-21; v1 từ 2026-10-23)
 
-`software/data_io/packet_simulation_v3.py` (Linh) sinh **luồng byte** theo đúng
+`software/data_io/packet_simulation_v3.py` sinh **luồng byte** theo đúng
 mục 6. `software/data_io/packet_wire.py` và `packet_receiver.py` là decoder và
 kiểm tra mục 12 của logger ([hướng dẫn](../../docs/protocol/packet_logger.md)).
 v2 ở bảng trên giữ nguyên.

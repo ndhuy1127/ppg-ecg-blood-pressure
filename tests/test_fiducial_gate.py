@@ -20,7 +20,7 @@ from software.evaluation.fiducial_agreement import ANNOTATION_COLUMNS
 from software.evaluation.fiducial_gate import gate, group_metrics, repeatability
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIG_PATH = ROOT / "configs/data/week05_huy.json"
+CONFIG_PATH = ROOT / "configs/data/week05_fiducials.json"
 CONFIG = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 FLOOR = CONFIG["acceptance"]["segment_floor"]
 BOOT = {"seed": 1, "repetitions": 50, "confidence": 0.95}

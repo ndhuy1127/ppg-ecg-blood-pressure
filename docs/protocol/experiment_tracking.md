@@ -1,7 +1,7 @@
 # Theo dõi thí nghiệm và kiểm tính tất định nhiều seed
 
 > **Trạng thái:** viết ngày 2026-11-07 theo kế hoạch Tuần 6 (theo dõi thí nghiệm, mục 1–2
-> của phần Linh). Không thêm dependency: không dùng MLflow, chỉ dùng các `report.json` mà
+> của mảng phần mềm). Không thêm dependency: không dùng MLflow, chỉ dùng các `report.json` mà
 > runner đã ghi, cộng một thư mục bảng tổng hợp trong `runs/` (ngoài Git). Chỉ dùng val;
 > test và CalFree không được đọc.
 

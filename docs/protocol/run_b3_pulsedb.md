@@ -2,7 +2,7 @@
 
 ## Phạm vi
 
-Bản sửa pipeline B3 XGBoost của Linh (commit `acc8b8b`, PR #22). Các điểm khác
+Bản sửa pipeline B3 XGBoost gốc (commit `acc8b8b`, PR #22). Các điểm khác
 bản gốc:
 
 - Dùng split `pulsedb-split-v2` có inventory, thay CSV 1.000 đoạn với
@@ -70,7 +70,7 @@ Hàm chỉ nhận vector ECG và PPG, không nhận ABP, nhãn BP, ID người h
 Không impute: NaN/Inf, vector rỗng hoặc masked array gây `ValueError`. PAT và
 module `features-sqi-v1` chưa được tích hợp.
 
-**Quyết định 2026-10-25 (Huy):** B3 (kể cả `b3-pipeline-v1`) giữ đặc trưng
+**Quyết định 2026-10-25 (đã duyệt):** B3 (kể cả `b3-pipeline-v1`) giữ đặc trưng
 `pulsedb-simple-stats-v0` để đóng baseline G1. PAT, nhịp tim và SQI đi vào một
 model **B4** riêng, chỉ sau khi đánh dấu tay trên train (không dùng val hay test để
 chọn mốc) xác nhận mốc R/foot
@@ -95,7 +95,7 @@ PulseDB chưa rõ là zero-phase hay causal).
 `n_jobs` phải là số nguyên dương cố định để kết quả tái lập. Không có
 imputation, chuẩn hóa hay chọn đặc trưng. Ở v0 mỗi dòng train có trọng số bằng
 nhau, nên người có nhiều đoạn có ảnh hưởng lớn hơn; v1 cân theo người (mục dưới).
-Siêu tham số giữ nguyên bản của Linh, **chưa tuning**. Nếu tuning sau này thì chỉ
+Siêu tham số giữ nguyên bản gốc, **chưa tuning**. Nếu tuning sau này thì chỉ
 dùng val.
 
 ## `b3-pipeline-v1` (triển khai 2026-10-25)
@@ -122,7 +122,7 @@ chối giá trị khác:
   của XGBoost (ngưỡng `min_child_weight` mặc định 1, phạt `reg_lambda` mặc định 1)
   tác động trên cùng thang toàn cục. Nếu dùng đúng 1/n_s thì tổng trọng số chỉ bằng
   số người, và một lá cần trọng số tương đương cả một người mới được tách
-  (Codex review 2026-10-25 đồng ý giữ trung bình 1).
+  (review 2026-10-25 đồng ý giữ trung bình 1).
 - Đặc trưng, siêu tham số, seed B3 và bootstrap giữ như v0 (quyết định B3/B4 ở
   trên).
 

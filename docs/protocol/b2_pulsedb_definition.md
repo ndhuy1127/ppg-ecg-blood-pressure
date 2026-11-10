@@ -7,7 +7,7 @@
 > 2026-11-07, **duyệt nguyên trạng ngày 2026-11-07** bằng commit riêng, trước khi có số
 > nào) chỉ đổi quy tắc nhân khẩu học ở mục 2. Code và test SYNTHETIC
 > ở mục 8. Định nghĩa này phải được duyệt và commit **trước** khi tính
-> bất kỳ số B2 nào trên val (kế hoạch Tuần 6, việc 2 của Huy). Sau khi đã thấy kết quả
+> bất kỳ số B2 nào trên val (kế hoạch Tuần 6, việc 2). Sau khi đã thấy kết quả
 > thì không đổi đặc trưng, bộ dò, ngưỡng, learner hay phép so sánh; nếu phải đổi thì
 > tạo version mới và báo cả hai.
 
@@ -126,13 +126,13 @@
 
 ## 7. Review
 
-Codex phản biện ngày 2026-10-26 (một vòng). Nhận: phương án hai bảng, ghép cả dòng
+Phản biện ngày 2026-10-26 (một vòng). Nhận: phương án hai bảng, ghép cả dòng
 train, refractory 0,25 s, đóng băng mọi lựa chọn trước khi chấm, ghi lộ biến đầu vào,
-B3 − B2b không phải phần lợi thêm. Không nhận: `prominence` ở 0,25 s (Codex đề xuất),
+B3 − B2b không phải phần lợi thêm. Không nhận: `prominence` ở 0,25 s (đề xuất của vòng phản biện),
 vì kết quả SYNTHETIC Tuần 5 cho thấy nó bắt đỉnh T.
 
-Review trước khi duyệt, 2026-11-07 (Claude và Codex, độc lập, là bước review định nghĩa
-của kế hoạch Tuần 6; chưa có số nào). Codex kết luận "duyệt được sau khi sửa"; cả năm
+Review trước khi duyệt, 2026-11-07 (hai review độc lập, là bước review định nghĩa của
+kế hoạch Tuần 6; chưa có số nào). Kết luận "duyệt được sau khi sửa"; cả năm
 điểm đã được kiểm trên code và đã sửa:
 
 1. Chốt duyệt chỉ kiểm config và file định nghĩa; mã tính HR, fit và chấm có thể khác

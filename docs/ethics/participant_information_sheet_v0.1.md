@@ -5,11 +5,11 @@
 > kẻ là đúng nội dung bản nộp: bản Word được dựng từ file này, bỏ các dòng trích dẫn `>`. Ô
 > `[...]` là thông tin còn trống, chờ thầy, đơn vị hoặc hội đồng; nhóm không tự điền.
 >
-> - Huy soạn 2026-10-21; cập nhật 2026-10-29 theo protocol v0.3 (số buổi, số lần bơm cuff,
+> - Soạn 2026-10-21; cập nhật 2026-10-29 theo protocol v0.3 (số buổi, số lần bơm cuff,
 >   chuẩn bị trước buổi đo, ngưỡng huyết áp, rút lui, thời hạn lưu; bỏ ngâm chân nước lạnh và
 >   đạp xe).
 > - 2026-10-31, sau rà soát cuối (đối chiếu CIOMS 2016, ICH E6 4.8.10, mẫu của các hội đồng
->   trong nước và phản biện của Codex): viết lại theo bố cục bản nộp; thêm số người tham gia, lý
+>   trong nước và một vòng phản biện): viết lại theo bố cục bản nộp; thêm số người tham gia, lý
 >   do mời, địa điểm và tổng thời gian; thứ tự ký đồng thuận trước sàng lọc; nghỉ trước khi đo
 >   hai tay; hướng dẫn thở nhẹ nhàng; phát hiện ngoài ý muốn (ECG không được đọc lâm sàng, chênh
 >   lệch hai tay); chi phí, bồi dưỡng và xử trí khi có tổn hại; quyền xem hồ sơ của hội đồng;
@@ -21,7 +21,7 @@
 >   rút lại đồng ý không có hiệu lực hồi tố. Theo các mẫu của hội đồng trong nước: thêm việc người
 >   tham gia cần làm (3.6), lựa chọn thay thế (không tham gia), bảo hiểm, ai xem câu trả lời sàng
 >   lọc.
-> - 2026-10-31, sau vòng phản biện thứ hai của Codex (đã kiểm từng ý trên file và trên văn bản
+> - 2026-10-31, sau vòng phản biện thứ hai (đã kiểm từng ý trên file và trên văn bản
 >   Nghị định 356/2025/NĐ-CP): "không phải thiết bị y tế" đổi thành "chưa được cấp phép như một
 >   thiết bị y tế" (việc thiết bị có thuộc diện thiết bị y tế hay không là câu hỏi gửi hội đồng); L2
 >   chép đúng "hệ thần kinh giao cảm"; người được xem dữ liệu nêu nhất quán (người dự phòng mở được

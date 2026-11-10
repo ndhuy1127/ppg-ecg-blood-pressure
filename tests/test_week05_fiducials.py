@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scripts.demo_week04_huy import fixture
+from scripts.demo_week04 import fixture
 from scripts.build_pulsedb_split import run as build_split
 from scripts.week05_fiducials import (
     SYNTHETIC_CASES, clicks_to_rows, detection_rows, export_record_id, load_records,
@@ -31,7 +31,7 @@ from software.signal_processing.pat_validity import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIG_PATH = ROOT / "configs/data/week05_huy.json"
+CONFIG_PATH = ROOT / "configs/data/week05_fiducials.json"
 CONFIG = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 BASE = SignalConfig(**CONFIG["signal"])
 RULES = PatRules(**CONFIG["pat_validity"])

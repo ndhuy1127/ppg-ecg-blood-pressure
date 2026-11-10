@@ -1,4 +1,4 @@
-# Chạy B0 từ CSV PulseDB của Linh
+# Chạy B0 từ CSV PulseDB bàn giao Tuần 3
 
 Đây là runner cho API B0/metrics Tuần 3, chỉ fit train và đánh giá val.
 Không đổi split, đọc waveform, dùng nhãn test, hoặc chạy B1. Kết quả là mô tả
@@ -13,7 +13,7 @@ hiện hành chạy trong `b3-pipeline-v1` trên split Train 400 người
 ## Đầu vào
 
 CSV UTF-8 có các cột `sample_id,subject_id,source,split,sbp,dbp,sample_hash`.
-Giữ nguyên giá trị split `train`, `val`, `test` của Linh. Xác nhận đơn vị mmHg
+Giữ nguyên giá trị split `train`, `val`, `test` của bản bàn giao. Xác nhận đơn vị mmHg
 từ tài liệu nguồn. Lưu CSV ngoài Git, ví dụ `data/processed/linh_week03/`.
 
 CSV không được kèm trong commit runner, và từ 2026-10-24 không còn trong cây Git
@@ -58,13 +58,13 @@ python scripts/run_b0_pulsedb_csv.py
 Hash mặc định phải khớp CSV đã ghi nhận. Với CSV khác, truyền đường dẫn và
 `--unit mmHg` rõ ràng; seed/ref của cấu hình mặc định không tự áp sang CSV mới.
 
-Từ checkout có baseline/metrics của Huy:
+Từ checkout có module baseline/metrics:
 
 ```powershell
 python scripts/run_b0_pulsedb_csv.py data/processed/linh_week03/pulsedb_manifest_1000.csv --unit mmHg --split-seed 72 --manifest-ref 1f218eb
 ```
 
-Seed 72 được ghi từ code notebook `week3-split-hash.ipynb` của Linh ở commit
+Seed 72 được ghi từ code notebook `week3-split-hash.ipynb` ở commit
 `1f218eb`. Runner không chia lại dữ liệu. Khi dùng bản bàn giao khác, chỉ ghi
 seed đúng theo bằng chứng của bản đó; không tự giả định 72.
 
@@ -77,7 +77,7 @@ script từ chối ghi đè file đã tồn tại.
 
 ## Giới hạn
 
-- Notebook Linh đọc `file_paths[0]` nhưng ghi tên source cố định; cần xác nhận
+- Notebook bàn giao đọc `file_paths[0]` nhưng ghi tên source cố định; cần xác nhận
   checksum/tên file thực đọc. CSV không tự chứng minh metadata source đúng.
 - sample_hash gồm cả metadata và waveform theo code notebook; runner chỉ
   kiểm tra chuỗi hash trong CSV, chưa tái tạo hash từ raw.

@@ -1,4 +1,4 @@
-# Split PulseDB có inventory — bản sửa phần Linh Tuần 3
+# Split PulseDB có inventory — bản sửa split Tuần 3
 
 ## Phạm vi và ảnh hưởng
 
@@ -24,7 +24,7 @@ cùng người; AAMI Test và AAMI Cal là cùng người (nhóm C); CalFree Tes
 người riêng. CSV lịch sử dùng `VitalDB_AAMI_Cal_Subset.mat` (116 người, đều có
 mặt trong AAMI Test). Chi tiết và bằng chứng: [provenance PulseDB](../pulsedb_provenance.md).
 
-**Đã chốt ngày 2026-10-24 (Huy, provenance mục 5):** pool là
+**Đã chốt ngày 2026-10-24 (provenance mục 5):** pool là
 `VitalDB_Train_Subset.mat`, lấy mẫu con 400 người (seed 20261024), chia theo người
 với seed 72 và tỉ lệ 0,8/0,1/0,1. CalFree Test là tập kiểm tra ngoài; CalBased Test,
 AAMI Cal và AAMI Test không dùng. Split đã chạy hai lần trên raw ngày 2026-10-25,

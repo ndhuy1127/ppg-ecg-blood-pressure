@@ -15,7 +15,7 @@ B2/B3 thành dòng truy vết được và so độ lệch giữa các seed; dù
 `gate` chấm mọi phương án trên nhóm chọn, giữ phương án đạt mọi ngưỡng có MAE trung
 bình theo người thấp nhất, rồi chỉ chấm phương án đó một lần trên nhóm xác nhận;
 `repeatability` so hai lượt đánh dấu của cùng người cách nhau ít nhất `min_days`.
-Ngưỡng nằm trong khối `acceptance` của `configs/data/week05_huy.json`; mô tả ở
+Ngưỡng nằm trong khối `acceptance` của `configs/data/week05_fiducials.json`; mô tả ở
 [week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
 mục 9.
 

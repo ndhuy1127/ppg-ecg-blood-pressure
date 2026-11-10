@@ -21,7 +21,7 @@ BOUNDARY_TOL_MS = 1e-6
 
 @dataclass(frozen=True)
 class PatRules:
-    """Engineering proposals, NOT_TEST_TUNED; see configs/data/week05_huy.json."""
+    """Engineering proposals, NOT_TEST_TUNED; see configs/data/week05_fiducials.json."""
 
     min_ms: float = 80.0
     max_ms: float = 400.0

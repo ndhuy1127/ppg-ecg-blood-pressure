@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCRIPT_VERSION = "collect-runs-v1"
-DEFAULT_EXPERIMENTS = ("b3_pulsedb", "b2_pulsedb", "b3_multiseed")
+DEFAULT_EXPERIMENTS = ("b3_pulsedb", "b2_pulsedb", "b3_multiseed", "b5_pulsedb")
 # Summaries written next to model runs (not model runs themselves); listed in
 # sources with their status, e.g. the determinism check of run_b3_multiseed.py.
 SUMMARY_SCHEMAS = ("b3-multiseed-v1",)

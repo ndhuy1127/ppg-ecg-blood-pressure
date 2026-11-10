@@ -1,6 +1,6 @@
 # Danh sách mua V1-module
 
-> **Trạng thái (2026-11-07):** Huy báo ngày 2026-11-07 đã đặt đủ các đơn ở mục 5 (bo Waveshare
+> **Trạng thái (2026-11-07):** ngày 2026-11-07 nhóm báo đã đặt đủ các đơn ở mục 5 (bo Waveshare
 > 2026-10-27, PCB V1 ở CXT từ 2026-10-28, DigiKey, kit MAX30001, điện cực và cáp). Nơi bán, ngày
 > đặt, ngày giao dự kiến và mã đơn của các đơn mới chưa ghi vào repo. Linh kiện lắp ráp đợt 2
 > (mục 2) và đồ dựng kích thích (mục 1.4) chưa xác nhận.
@@ -180,15 +180,15 @@ Trình tự đầy đủ, kể cả bước cấp nguồn:
 
 ## 5. Duyệt và đặt hàng
 
-Cập nhật 2026-11-07 theo Huy báo (chi tiết từng đơn chưa ghi). Mỗi đơn một dòng.
+Cập nhật 2026-11-07 (chi tiết từng đơn chưa ghi). Mỗi đơn một dòng.
 
 | Đơn | Nội dung | Nơi bán | Trạng thái | Ngày đặt | Ngày giao dự kiến | Mã đơn | Người duyệt | Ngày duyệt |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Waveshare | Bo ESP32-S3-DEV-KIT-N8R8-M (dòng 6) | Chưa ghi (giá chưa ghi) | Đã đặt, chưa nhận | 2026-10-27 | Chưa ghi | Chưa ghi | | |
-| CXT | Gia công PCB V1-draft5, hai thiết kế riêng, 5 tấm mỗi mạch (mục 2); commit và SHA-256 của gói Gerber chưa ghi | CXT | Đã đặt (Huy báo 2026-11-07) | 2026-10-28 | Chưa ghi | Chưa ghi | | |
-| DigiKey | Dòng 1, 2, 4; tạm tính $78,87 gồm ship (mục 1.1) | DigiKey (hoặc nơi thay thế, chưa ghi) | Đã đặt (Huy báo 2026-11-07) | Chưa ghi | Chưa ghi | Chưa ghi | | |
-| ProtoCentral | Kit MAX30001 (dòng 5); phí ship và giao về Việt Nam chưa kiểm | ProtoCentral (đặt trực tiếp; nơi bán thực tế chưa ghi) | Đã đặt (Huy báo 2026-11-07); ngày 2026-10-23 trang bán ghi hết hàng tạm thời | Chưa ghi | Chưa ghi | Chưa ghi | | |
-| Trong nước | Dòng 7–9; 154.000 đ cộng cáp USB-C chưa tra giá (mục 1.3) | Minh Trí Medical, hshop; nơi bán cáp USB-C chưa ghi | Đã đặt (Huy báo 2026-11-07) | Chưa ghi | Chưa ghi | Chưa ghi | | |
+| CXT | Gia công PCB V1-draft5, hai thiết kế riêng, 5 tấm mỗi mạch (mục 2); commit và SHA-256 của gói Gerber chưa ghi | CXT | Đã đặt (báo 2026-11-07) | 2026-10-28 | Chưa ghi | Chưa ghi | | |
+| DigiKey | Dòng 1, 2, 4; tạm tính $78,87 gồm ship (mục 1.1) | DigiKey (hoặc nơi thay thế, chưa ghi) | Đã đặt (báo 2026-11-07) | Chưa ghi | Chưa ghi | Chưa ghi | | |
+| ProtoCentral | Kit MAX30001 (dòng 5); phí ship và giao về Việt Nam chưa kiểm | ProtoCentral (đặt trực tiếp; nơi bán thực tế chưa ghi) | Đã đặt (báo 2026-11-07); ngày 2026-10-23 trang bán ghi hết hàng tạm thời | Chưa ghi | Chưa ghi | Chưa ghi | | |
+| Trong nước | Dòng 7–9; 154.000 đ cộng cáp USB-C chưa tra giá (mục 1.3) | Minh Trí Medical, hshop; nơi bán cáp USB-C chưa ghi | Đã đặt (báo 2026-11-07) | Chưa ghi | Chưa ghi | Chưa ghi | | |
 
 Linh kiện lắp ráp đợt 2 (mục 2) và đồ dựng kích thích (mục 1.4): trạng thái chưa xác nhận (tới
 2026-10-29 chưa chọn nơi bán, chưa đặt).

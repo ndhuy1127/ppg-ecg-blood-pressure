@@ -19,7 +19,8 @@ from statistics import stdev
 
 VERSION = "run-record-v1"
 # Model run reports this module reads (schema_version of report.json).
-MODEL_SCHEMAS = ("b3-pipeline-v0", "b3-pipeline-v1", "b2-pipeline-v0", "b2-pipeline-v1")
+MODEL_SCHEMAS = ("b3-pipeline-v0", "b3-pipeline-v1", "b2-pipeline-v0", "b2-pipeline-v1",
+                 "b5-pipeline-v0")
 TARGETS = ("SBP", "DBP")
 METRICS = ("subject_balanced_mae", "subject_balanced_bias", "sample_sd")
 TRACE_FIELDS = (

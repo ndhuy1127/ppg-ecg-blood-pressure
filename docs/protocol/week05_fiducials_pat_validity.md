@@ -1,6 +1,6 @@
 # Tuần 5 — mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay
 
-Huy, 2026-10-21; sửa ngày 2026-10-22 theo review độc lập; bốn quyết định ngày
+2026-10-21; sửa ngày 2026-10-22 theo review độc lập; bốn quyết định ngày
 2026-10-25 ở mục 8; kế hoạch đánh dấu tay và ngưỡng chấp nhận ngày 2026-10-25 ở
 mục 9; các điểm chốt 2026-10-29 ở mục 3, 4, 7, 8, 9.1–9.4 và 9.6. Version config:
 `fiducials-week05-v2` (v1 sáng 2026-10-25, v0 tới 2026-10-24), trạng thái
@@ -21,7 +21,7 @@ R → chân sóng PPG, không phải PTT. BP/ABP không là đầu vào của m�
 | So với đánh dấu tay | `software/evaluation/fiducial_agreement.py` (`match_events`, `agreement`) |
 | Ngưỡng chấp nhận và độ lặp lại (mục 9) | `software/evaluation/fiducial_gate.py` (`gate`, `repeatability`) |
 | Script synth/export/plot/annotate/detect/compare/repeat/gate | `scripts/week05_fiducials.py` |
-| Config và ghi chú nguồn | `configs/data/week05_huy.json` |
+| Config và ghi chú nguồn | `configs/data/week05_fiducials.json` |
 | Mẫu CSV đánh dấu tay (trống) | `docs/protocol/templates/manual_fiducials_template.csv` |
 | Test | `tests/test_week05_fiducials.py`, `tests/test_fiducial_gate.py` |
 
@@ -52,7 +52,7 @@ phẳng không nội suy), tối đa nửa mẫu. Trước 2026-10-25, `d2_max` 
 nên điểm argmax ở biên đoạn tìm vẫn có thể bị dời nửa mẫu. **Lý do tắt:** một góc
 nhọn bất đối xứng (sườn xuống dốc, sườn lên thoải, như điểm bắt đầu xung SYNTHETIC)
 vẫn là cực trị chặt nên bị nội suy, và nội suy làm sai số **tăng** ở cả hai phương
-pháp (quét 101 pha onset, Codex 2026-10-25): `valley_min` 3,32 → 6,59 ms ở 125 Hz,
+pháp (quét 101 pha onset, 2026-10-25): `valley_min` 3,32 → 6,59 ms ở 125 Hz,
 2,00 → 3,91 ms ở 200 Hz; `d2_max` 9,90 → 11,93 ms ở 125 Hz, 6,63 → 8,25 ms ở 200 Hz.
 Trên cực trị trơn đối xứng thì nội suy giảm sai số (khoảng 2 ms xuống gần 0), nên
 giữ làm tùy chọn để đối chứng; chốt cuối sau khi có đánh dấu tay.
@@ -127,7 +127,7 @@ khóa các giá trị của nó bằng đúng bảng dưới.
 | Quy tắc MAD | median ± k · 1,4826 · MAD | Leys et al. 2013, [10.1016/j.jesp.2013.03.013](https://doi.org/10.1016/j.jesp.2013.03.013); mới đối chiếu metadata, chưa đọc toàn văn |
 | `mad_k` | 3 | **Chưa có nguồn** cho giá trị; lựa chọn kỹ thuật |
 | `mad_floor_ms` | 10 ms | **Chưa có nguồn**. Thêm ngày 2026-10-21 sau khi test SYNTHETIC cho thấy không có sàn thì PAT gần như hằng bị gắn outlier chỉ vì lượng tử hóa 1 mẫu (8 ms ở 125 Hz) |
-| `refractory_s` (config Tuần 5) | 0,25 s, cho đỉnh R | **Chưa có nguồn**; để HR cao không bị refractory cắt. v1 (features-sqi) giữ 0,4 s cho cả hai kênh, nhưng ở ECG 512 Hz với RR 0,4 s (HR 150) chỉ còn 17/21 đỉnh R (Codex 2026-10-25) |
+| `refractory_s` (config Tuần 5) | 0,25 s, cho đỉnh R | **Chưa có nguồn**; để HR cao không bị refractory cắt. v1 (features-sqi) giữ 0,4 s cho cả hai kênh, nhưng ở ECG 512 Hz với RR 0,4 s (HR 150) chỉ còn 17/21 đỉnh R (2026-10-25) |
 | `ppg_refractory_s` (config Tuần 5 v2) | 0,35 s, cho đỉnh PPG | Quyết định 2026-10-25 (mục 8), **chưa có nguồn**: chặn sóng phụ cách đỉnh tâm thu 0,30 s và vẫn dưới RR 0,4 s; sóng phụ ở +0,36 s vẫn lọt |
 | `r_energy_threshold` | `quantile`, 0,2 × (Q95 − Q05) | Quyết định 2026-10-25 (mục 8); Q95/Q05 là lựa chọn kỹ thuật, **chưa có nguồn** |
 | Dung sai so khớp | R 24 ms, foot 48 ms (3 và 6 mẫu ở 125 Hz) | Chốt ngày 2026-10-25, trước khi đánh dấu (mục 9); **chưa có nguồn**. v1 dùng 50/100 ms, mức đó từng tính sóng S trễ 30 ms là R đúng. Không đổi sau khi xem kết quả |
@@ -252,7 +252,7 @@ thủ công.**
 ```powershell
 .\.venv\Scripts\python.exe scripts\week05_fiducials.py synth --out tmp\w5\rec
 .\.venv\Scripts\python.exe scripts\week05_fiducials.py plot --records tmp\w5\rec --out tmp\w5\fig
-.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records tmp\w5\rec --out tmp\w5\manual.csv --annotator Huy --date 2026-10-21
+.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records tmp\w5\rec --out tmp\w5\manual.csv --annotator <mã người đánh dấu> --date 2026-10-21
 .\.venv\Scripts\python.exe scripts\week05_fiducials.py detect --records tmp\w5\rec --out tmp\w5\det.csv
 .\.venv\Scripts\python.exe scripts\week05_fiducials.py compare --annotations tmp\w5\manual.csv --detections tmp\w5\det.csv --out tmp\w5\agreement.json
 ```
@@ -313,7 +313,7 @@ rồi suy giảm mũ; foot đúng = điểm bắt đầu sườn lên. Hình d�
 phải mô hình sinh lý. Dung sai R 50 ms / foot 100 ms.
 
 - **Output chính:** `reports/weekly/week_05/synthetic_fiducials/`, config
-  `week05_huy.json` (`refractory_s` 0,25 s).
+  `week05_fiducials.json` (`refractory_s` 0,25 s).
 - **Biến thể độ nhạy:** `refractory_040/` chỉ đổi `refractory_s` thành 0,4 s (giá
   trị v1). Config của biến thể nằm ngay trong thư mục output, không phải đề xuất
   thứ hai.
@@ -404,7 +404,7 @@ Chạy trên raw thật ngày 2026-10-25 (kết quả ở mục 9.4).
 
   Trong cả ba trường hợp `prominence` vẫn 9/9, tới nhịp ×5,5. Từ 2026-10-25 ngưỡng
   mặc định là `quantile` (mục 8): nhịp ×2,5 cho lại 9/9, nhưng gai 1 mẫu vẫn cho 1
-  FP và biên độ tụt còn 0,3 giữa chừng vẫn chỉ 5/9 (probe Codex, 512 Hz). Đó là các
+  FP và biên độ tụt còn 0,3 giữa chừng vẫn chỉ 5/9 (probe, 512 Hz). Đó là các
   hạn chế đã biết của `derivative_energy`; chúng vẫn đúng.
 
   **Vai trò của `derivative_energy` (chốt 2026-10-29).** Nó không phải mặc định của
@@ -445,7 +445,7 @@ Chạy trên raw thật ngày 2026-10-25 (kết quả ở mục 9.4).
 
 ## 8. Quyết định ngày 2026-10-25
 
-Huy chọn ngày 2026-10-25, sau khi Codex phân tích độc lập và chạy probe trong bộ
+Chốt ngày 2026-10-25, sau một phân tích độc lập và probe trong bộ
 nhớ. Cả bốn là đề xuất kỹ thuật tạm, **không** phải tham số đã thẩm định; lựa chọn
 cuối cho nội suy và bộ tham số chờ đánh dấu tay, chọn theo người, không bao giờ
 trên test (từ 2026-10-25 chỉ trên train, mục 9).
@@ -478,8 +478,8 @@ thật. Hai chỗ dùng đó là bộ dò HR của B2 (đã dùng, chưa qua c�
 
 ## 9. Kế hoạch đánh dấu tay PulseDB và ngưỡng chấp nhận (chốt 2026-10-25)
 
-Huy chọn ngày 2026-10-25, **trước khi đánh dấu bất kỳ đoạn PulseDB nào**, từ đề
-xuất của Codex (2026-10-25). Mọi con số ở đây là đề xuất kỹ thuật, **chưa có
+Chốt ngày 2026-10-25, **trước khi đánh dấu bất kỳ đoạn PulseDB nào**, từ một đề
+xuất cùng ngày. Mọi con số ở đây là đề xuất kỹ thuật, **chưa có
 nguồn**; chúng được khóa trong `review_plan` và `acceptance` của config
 `fiducials-week05-v2`, và không được đổi sau khi xem kết quả. Theo quyết định B3/B4
 ([run_b3_pulsedb.md](run_b3_pulsedb.md)), B4 chỉ được xây khi bước này đạt.
@@ -559,7 +559,7 @@ Dung sai ghép R ±24 ms, foot ±48 ms (3 và 6 mẫu ở 125 Hz). Sai số = t�
 - **Độ lặp lại** của người đánh dấu (lần 2 − lần 1, cùng dung sai): MAE R ≤ 8 ms,
   foot ≤ 16 ms, **và** mọi mốc của cả hai lần đều ghép được. Nếu không có điều kiện
   này, các mốc bỏ sót hay lệch quá dung sai sẽ bị loại khỏi MAE và bị che đi
-  (Codex review 2026-10-25). Lần 2 phải phủ đúng 16 đoạn của `repeat/`, cùng vùng
+  (review 2026-10-25). Lần 2 phải phủ đúng 16 đoạn của `repeat/`, cùng vùng
   review, và bắt đầu ít nhất 2 ngày sau ngày cuối của lần 1. Không đạt thì `gate`
   ra `B4_NOT_ALLOWED`; với PulseDB đó là kết luận cuối (mục 9.6, từ 2026-10-29),
   không sửa quy trình rồi làm vòng mới.
@@ -579,6 +579,17 @@ Kết quả lần xuất ngày 2026-10-25 được ghi ở
 [báo cáo Tuần 5](../../reports/weekly/week_05/README.md) mục 6.5. Thư mục
 `data/processed/pulsedb_w5_review_v1/` nằm ngoài Git, vì `records.csv` và
 `export.json` có ID người.
+
+**Đổi tên config và sửa ghi chú (2026-11-07, chờ duyệt).** `configs/data/week05_huy.json`
+đổi tên thành `configs/data/week05_fiducials.json`. Trong khối `sources` chỉ bỏ tên người
+làm ("decided by …" thành "approved"); mọi khóa khác giống hệt bản đã commit ở `a7e0ea1`,
+nên không giá trị nào đổi. SHA-256 (LF) của config đổi từ `6d7acad3…` sang `0241488c…`,
+nên `export.json` và `detections_main.csv` của v1 không còn khớp config. Đã chạy lại
+`export` và `detect` với config mới vào `data/processed/pulsedb_w5_review_v2/`: mọi file
+trong `main/` và `repeat/` (`records.csv` `ebbbbc12…` và `4e2368eb…`), nhóm người và
+`detections_main.csv` (`7cd70c09…`) giống hệt v1. Đánh dấu tay tiếp tục trong v1 như cũ
+(`annotate --resume` không xét config); `compare`, `repeat` và `gate` dùng `export.json`
+và `detections_main.csv` của v2.
 
 **Tuổi của 40 người đã xuất (kiểm 2026-10-29).** Không ai dưới 18 tuổi; tuổi nhỏ
 nhất là 21. Rủi ro của `ppg_refractory_s` 0,35 s ở trẻ nhỏ (chặn đỉnh PPG khi HR trên
@@ -608,14 +619,14 @@ mà chưa ghi checkpoint, các hàng của đoạn đó bị cắt bỏ, số by
 
 ```powershell
 # Lần 1: mọi đoạn trong main/; dừng giữa chừng thì chạy lại lệnh này kèm --resume
-.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records data\processed\pulsedb_w5_review_v1\main --out data\processed\pulsedb_w5_review_v1\manual_main.csv --annotator Huy --date <YYYY-MM-DD>
-# So với detector (detections_main.csv đã chạy sẵn), rồi chấm ngưỡng
-python scripts\week05_fiducials.py compare --annotations data\processed\pulsedb_w5_review_v1\manual_main.csv --detections data\processed\pulsedb_w5_review_v1\detections_main.csv --out data\processed\pulsedb_w5_review_v1\agreement_main.json
-python scripts\week05_fiducials.py gate --agreement data\processed\pulsedb_w5_review_v1\agreement_main.json --export data\processed\pulsedb_w5_review_v1\export.json --out data\processed\pulsedb_w5_review_v1\gate_v1.json
+.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records data\processed\pulsedb_w5_review_v1\main --out data\processed\pulsedb_w5_review_v1\manual_main.csv --annotator <mã người đánh dấu> --date <YYYY-MM-DD>
+# So với detector (detections_main.csv của v2, chạy lại 2026-11-07 với config mới), rồi chấm ngưỡng
+python scripts\week05_fiducials.py compare --annotations data\processed\pulsedb_w5_review_v1\manual_main.csv --detections data\processed\pulsedb_w5_review_v2\detections_main.csv --out data\processed\pulsedb_w5_review_v2\agreement_main.json
+python scripts\week05_fiducials.py gate --agreement data\processed\pulsedb_w5_review_v2\agreement_main.json --export data\processed\pulsedb_w5_review_v2\export.json --out data\processed\pulsedb_w5_review_v2\gate_v1.json
 # Lần 2 (ít nhất 2 ngày sau lần 1): repeat/, rồi độ lặp lại và gate cuối
-.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records data\processed\pulsedb_w5_review_v1\repeat --out data\processed\pulsedb_w5_review_v1\manual_repeat.csv --annotator Huy --date <YYYY-MM-DD>
-python scripts\week05_fiducials.py repeat --first data\processed\pulsedb_w5_review_v1\manual_main.csv --second data\processed\pulsedb_w5_review_v1\manual_repeat.csv --export data\processed\pulsedb_w5_review_v1\export.json --out data\processed\pulsedb_w5_review_v1\repeatability.json
-python scripts\week05_fiducials.py gate --agreement data\processed\pulsedb_w5_review_v1\agreement_main.json --export data\processed\pulsedb_w5_review_v1\export.json --repeatability data\processed\pulsedb_w5_review_v1\repeatability.json --out data\processed\pulsedb_w5_review_v1\gate_final.json
+.\.venv\Scripts\python.exe scripts\week05_fiducials.py annotate --records data\processed\pulsedb_w5_review_v1\repeat --out data\processed\pulsedb_w5_review_v1\manual_repeat.csv --annotator <mã người đánh dấu> --date <YYYY-MM-DD>
+python scripts\week05_fiducials.py repeat --first data\processed\pulsedb_w5_review_v1\manual_main.csv --second data\processed\pulsedb_w5_review_v1\manual_repeat.csv --export data\processed\pulsedb_w5_review_v2\export.json --out data\processed\pulsedb_w5_review_v2\repeatability.json
+python scripts\week05_fiducials.py gate --agreement data\processed\pulsedb_w5_review_v2\agreement_main.json --export data\processed\pulsedb_w5_review_v2\export.json --repeatability data\processed\pulsedb_w5_review_v2\repeatability.json --out data\processed\pulsedb_w5_review_v2\gate_final.json
 ```
 
 `compare` in tóm tắt gộp mọi đoạn của cả hai nhóm. Bảng đó chỉ để xem; quyết định

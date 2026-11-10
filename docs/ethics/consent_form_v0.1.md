@@ -14,7 +14,7 @@
 > - 2026-10-31, theo Luật 91/2025/QH15 Điều 9 và Nghị định 356/2025/NĐ-CP Điều 6: mục 6 nói rõ
 >   mục đích và việc đây là dữ liệu nhạy cảm; mỗi mục đích (nghiên cứu này, liên hệ nhắc lịch, dùng
 >   cho nghiên cứu sau) có ô đồng ý riêng, các ô để trống sẵn.
-> - 2026-10-31, sau vòng phản biện thứ hai của Codex: mục 7 viết ở thì tương lai (ký trước khi
+> - 2026-10-31, sau vòng phản biện thứ hai: mục 7 viết ở thì tương lai (ký trước khi
 >   sàng lọc nên chưa thể "đã khai"); mục 2 đổi thành "chưa được cấp phép như một thiết bị y tế";
 >   mục 5 dẫn cách xử lý yêu cầu xóa ở mục 9 của bản thông tin thay vì nói "chỉ thực hiện được";
 >   mục 9 tách hai mục đích liên hệ (hẹn lịch; hỏi thăm sau sự cố, giữ tối đa 30 ngày), mỗi mục

@@ -1,6 +1,6 @@
 # Kịch bản bài báo P A / P B / P C — phác thảo v0.3
 
-> Huy, 2026-10-21; sửa 2026-10-22 (tiêu chí G5 theo RQ mục E); v0.2 ngày 2026-10-29 (định nghĩa R3
+> 2026-10-21; sửa 2026-10-22 (tiêu chí G5 theo RQ mục E); v0.2 ngày 2026-10-29 (định nghĩa R3
 > thống nhất với P2, nghĩa của "test khóa tới G5" theo LOSO lồng); v0.3 ngày 2026-10-29 (tiêu chí
 > G5, cách đọc kết quả âm tính và hàng "RQ trả lời" theo RQ v0.4; đề xuất, chờ thầy; cùng ngày ghi
 > hệ quả của việc bỏ M3, M4 đối với R3).

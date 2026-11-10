@@ -1,7 +1,7 @@
 """B2 features on PulseDB: demographics plus an ECG peak-rate HR.
 
-Definition: docs/protocol/b2_pulsedb_definition.md (proposed 2026-10-26, pending
-Huy's approval). Inputs are the demographic fields and the ECG vector of one
+Definition: docs/protocol/b2_pulsedb_definition.md (proposed 2026-10-26, approved
+before the val run). Inputs are the demographic fields and the ECG vector of one
 segment; ABP, SBP/DBP, subject IDs and hashes are never passed in. The HR is an
 unvalidated ECG peak-rate estimate: the R detector has not passed the Week 5
 gate, and a plausible value does not prove a correct one.

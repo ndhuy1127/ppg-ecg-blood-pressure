@@ -48,7 +48,7 @@ Trong cách viết gọn của kế hoạch, `PAT = PEP + PTT`; vì mốc đo l�
 
 ## 5. Trường metadata tối thiểu cần thống nhất
 
-Đây là **đề xuất giao diện logic** để Linh và Đức Anh đối chiếu, chưa phải packet đã khóa. “Bắt buộc” chỉ có nghĩa là cần trường đó để dùng bản ghi trong phân tích tương ứng; không được tự điền giá trị thiếu. `public_abp` không có lần đo cuff của prototype, nên không tạo `event_id` cuff cho nguồn này.
+Đây là **đề xuất giao diện logic** để mảng phần mềm và mảng phần cứng đối chiếu, chưa phải packet đã khóa. “Bắt buộc” chỉ có nghĩa là cần trường đó để dùng bản ghi trong phân tích tương ứng; không được tự điền giá trị thiếu. `public_abp` không có lần đo cuff của prototype, nên không tạo `event_id` cuff cho nguồn này.
 
 | Trường | Áp dụng trong đề xuất | Đơn vị / kiểu dự kiến | Mục đích / điểm cần xác nhận |
 | --- | --- | --- | --- |
@@ -65,7 +65,7 @@ Trong cách viết gọn của kế hoạch, `PAT = PEP + PTT`; vì mốc đo l�
 | `device_config_version`, `firmware_version`, phiên bản packet | Chỉ áp dụng cho prototype | Mã phiên bản | Truy cấu hình và định dạng logger. Packet `0xD1` mang phiên bản ứng dụng và ELF SHA-256 trong luồng raw; metadata phiên ghi `firmware_version`, `firmware_commit` ([hướng dẫn logger](packet_logger.md)). Phiên bản packet là trường `VERSION`, `0x02` từ Packet Schema V0.2. Firmware chưa chạy trên thiết bị thật. |
 | `quality_flags`, phiên bản script/config/split/seed/commit | Bắt buộc khi tạo dữ liệu dẫn xuất | Cờ và mã phiên bản | Truy quy tắc loại dữ liệu và phép phân tích; ngưỡng SQI phải được khóa trước trên pilot/validation. |
 
-Tên trường, kiểu dữ liệu cụ thể, ánh xạ clock, tần số lấy mẫu và cách đóng gói phải được Linh và Đức Anh xác nhận trước khi khóa schema. Raw bất biến; dữ liệu dẫn xuất cần truy về raw, script, config, split, seed và commit theo [chính sách dữ liệu](../DATA_POLICY.md).
+Tên trường, kiểu dữ liệu cụ thể, ánh xạ clock, tần số lấy mẫu và cách đóng gói phải được mảng phần mềm và mảng phần cứng xác nhận trước khi khóa schema. Raw bất biến; dữ liệu dẫn xuất cần truy về raw, script, config, split, seed và commit theo [chính sách dữ liệu](../DATA_POLICY.md).
 
 **Đầu vào hiện có:** [packet schema V0.1](../../configs/hardware/Packet_Schema_V0.1.md), đã vào `develop` qua PR #23. Bản đối chiếu lúc viết glossary là ref `origin/dev/ducanh` (`e13d669`, 2026-09-30), khi đó đề xuất ECG 512 SPS, hai loại gói ECG/PPG và timestamp mẫu đầu gói (µs). Bản hiện tại tách thời điểm lấy mẫu, mốc neo `T_ANCHOR_US` và thời điểm PC nhận gói (mục 3, 5), chốt ECG 512 sps và PPG MAX30101 ba khe 200 sps; độ rộng xung PPG còn mở (mục 15); bảng tốc độ ứng viên ở [interface_power_sampling_v0.md, mục 4](../../configs/hardware/interface_power_sampling_v0.md). Protocol cũ nêu ECG 250–500 Hz, PPG 100–250 Hz. Không tự thay bằng một cấu hình cuối cùng: cần đối chiếu timestamp lấy mẫu với đọc FIFO/nhận gói, clock theo kênh, mất mẫu, metadata phiên và marker cuff. Packet V0.1 chốt ngày 2026-10-23; bản bổ sung [V0.2](../../configs/hardware/Packet_Schema_V0.2.md) (`VERSION = 0x02`, chốt 2026-10-24) thêm IMU và các packet `0xD1`, `0xB1`, `0xD2`, `0xD3`.
 

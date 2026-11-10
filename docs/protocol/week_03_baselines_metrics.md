@@ -1,6 +1,6 @@
 # Tuần 3 — giao diện B0/B1 và chỉ số đánh giá
 
-> Huy, 2026-10-03. Kiểm thử cục bộ bằng dữ liệu giả lập. Các quyết định
+> 2026-10-03. Kiểm thử cục bộ bằng dữ liệu giả lập. Các quyết định
 > phương pháp còn mở được ghi bên dưới.
 > Tài liệu không khóa protocol, split, calibration PulseDB hay ngưỡng SQI.
 
@@ -37,7 +37,7 @@ Reader hiện có ở `software/pulsedb/` được giữ nguyên; không đọc 
   cũ, không tích lũy dữ liệu; fit bị lỗi giữ nguyên state đã hợp lệ.
 - API chỉ tính công thức trên dữ liệu được cung cấp: **không xác minh split,
   sample/event ID, chronology hoặc nguồn nhãn** vì không nhận các metadata đó.
-  Linh/Huy phải kiểm tra manifest trước khi gọi. Tên đối số train/calibration
+  Người gọi phải kiểm tra manifest trước khi gọi. Tên đối số train/calibration
   và việc predict không nhận nhãn giúp tách luồng, không thay validator leakage.
 
 Một dòng đầu vào là một đơn vị quan sát đã được thống nhất. Với prototype cuff,
@@ -194,4 +194,4 @@ trong danh sách cài cục bộ. Chưa thao tác trực tiếp nút giao diện
 `.vscode/` đang được Git ignore, nên cấu hình này chỉ có trên workspace hiện tại.
 
 Kết quả chạy và đầu vào còn thiếu nằm trong
-[báo cáo Huy Tuần 3](../../reports/weekly/week_03/README.md).
+[báo cáo Tuần 3](../../reports/weekly/week_03/README.md).

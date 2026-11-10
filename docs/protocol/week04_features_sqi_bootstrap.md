@@ -2,7 +2,7 @@
 
 Version hiện tại: `features-sqi-v1` (đổi quy tắc đếm nhịp không ghép ở biên, mục 3).
 
-Huy, 2026-10-13. Kiểm tra bằng fixture SYNTHETIC.
+2026-10-13. Kiểm tra bằng fixture SYNTHETIC.
 Không phải phương pháp đã khóa trên dữ liệu công khai.
 Không thay protocol, split, calibration hoặc chính sách raw.
 
@@ -11,7 +11,7 @@ Không thay protocol, split, calibration hoặc chính sách raw.
 Mã trong `software/signal_processing/fiducials.py`,
 `software/feature_extraction/week04.py` và
 `software/evaluation/subject_bootstrap.py`.
-Config: `configs/data/week04_huy.json`.
+Config: `configs/data/week04_features_sqi.json`.
 
 `Channel` nhận vector số thực, `fs_hz` riêng từng kênh, `unit`, `clock_id`,
 `start_s` hoặc vector timestamp với đơn vị `s/ms/us`. Timestamp là **thời gian
@@ -191,7 +191,7 @@ from software.signal_processing.fiducials import SignalConfig
 from software.feature_extraction.week04 import from_pulse_segment, extract_windows
 from software.evaluation.subject_bootstrap import BootstrapConfig, evaluate_prediction_table
 
-config = json.loads(Path("configs/data/week04_huy.json").read_text())
+config = json.loads(Path("configs/data/week04_features_sqi.json").read_text())
 # segment/row/channel metadata do reader + manifest/config upstream bàn giao.
 def features_for_segment(segment, row, ecg_metadata, ppg_metadata):
     window = from_pulse_segment(segment, row, ecg_metadata, ppg_metadata)
@@ -206,11 +206,11 @@ Adapter mặc định chặn PAT tới khi caller cung cấp alignment evidence;
 True chỉ để có feature. Runner fixture không tải/đọc dataset:
 
 ```powershell
-& '.venv/Scripts/python.exe' 'scripts/demo_week04_huy.py'
+& '.venv/Scripts/python.exe' 'scripts/demo_week04.py'
 & '.venv/Scripts/python.exe' -m pytest -q 'tests/test_week04_features.py' 'tests/test_subject_bootstrap.py'
 ```
 
-Runner sinh JSON, CSV fixture và SVG, mặc định trong `runs/demo_week04_huy/`
+Runner sinh JSON, CSV fixture và SVG, mặc định trong `runs/demo_week04/`
 (không vào Git), ghi raw fixture/config/code/figure/table SHA256, seed, commit và
 dirty. Đường dẫn `--output`, `--figure` có thể đổi; CSV nằm cạnh JSON. Như các
 runner khác trong `scripts/`, runner **từ chối ghi đè** (sửa 2026-10-25: trước đó

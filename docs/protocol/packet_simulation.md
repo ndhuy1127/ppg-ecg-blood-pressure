@@ -8,7 +8,7 @@ Không dùng dữ liệu này để đánh giá
 waveform, PAT, BP, độ trễ sinh lý, năng lượng hoặc hiệu năng thiết bị.
 
 Tham khảo yêu cầu generator/replay và packet ở `origin/dev/ducanh@40ede49`.
-Ở commit đó, `configs/hardware/Packet_Schema_V0.1.md` là bản gốc của Đức Anh. Bản
+Ở commit đó, `configs/hardware/Packet_Schema_V0.1.md` là bản gốc trên nhánh đó. Bản
 cùng tên trong nhánh này đã được viết lại (layout byte, `T_ANCHOR_US`/`T_FIRST_US`,
 `STATUS`) và khác bản gốc; mô phỏng giữ định nghĩa timestamp của bản gốc (thời
 điểm sample đầu batch). Schema đã chốt định nghĩa timestamp ngày 2026-10-23 (mục 3, 5); bản v2 giữ định nghĩa cũ.
@@ -120,9 +120,9 @@ commit/dirty có thể thay đổi giữa các lần, nên không yêu cầu to�
 Lỗi ghi có thể để lại thư mục chưa hoàn chỉnh: chỉ bàn giao khi lệnh exit 0,
 đủ bốn file và hash khớp. Không đổi tên output giả lập thành dữ liệu đo thật.
 
-## `synthetic-packet-v3`: luồng byte theo layout V0.1 (Tuần 5, Linh)
+## `synthetic-packet-v3`: luồng byte theo layout V0.1 (Tuần 5)
 
-**Quyết định version (2026-10-21, Linh):** v3 là version mới, có module riêng
+**Quyết định version (đã duyệt 2026-10-21):** v3 là version mới, có module riêng
 `software/data_io/packet_simulation_v3.py` và config riêng
 `configs/hardware/packet_simulation_v3.json`. Đầu ra là byte theo mục 6 của
 schema, không phải JSON, nên không thay thế v2. Config v2 chỉ nhận case v2;

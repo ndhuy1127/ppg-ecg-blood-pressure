@@ -27,10 +27,10 @@ thì theo mục này. Đánh giá mốc đóng tuần (2026-11-07):
 
 | Phụ trách | Việc | Tiêu chí xong |
 | --- | --- | --- |
-| Phần cứng | Đặt nốt MAX30001, MAX30101, BMI270, cáp và điện cực ([danh sách mua](../../hardware/bom/purchase_list_v1_module.md)) | Đơn đã đặt, có ngày giao |
-| Phần cứng | Nhận PCB V1 và bo Waveshare; bring-up theo [trình tự V1-module](../../hardware/test_reports/v1_bringup_procedure.md) khi có hàng | Có ngày giao; bring-up mục 0–2 khi nhận bo |
-| Firmware | Sự kiện mã 2 (`CUFF_END`) và mã 4 (đánh dấu của người vận hành) bằng lệnh PC `MARK_EVENT` (chốt 2026-10-29) | Spec Packet Schema V0.2 mục 13, firmware, logger, `device_command.py`, có test; chưa chạy trên chip |
-| Firmware, Huy | Quy trình chỉnh và khóa dòng LED theo người: đã viết ở protocol mục 6.1 (2026-10-29); PC chặn mã > `0x7F` | Chưa chạy trên người |
+| Đức Anh | Đặt nốt MAX30001, MAX30101, BMI270, cáp và điện cực ([danh sách mua](../../hardware/bom/purchase_list_v1_module.md)) | Đơn đã đặt, có ngày giao |
+| Đức Anh | Nhận PCB V1 và bo Waveshare; bring-up theo [trình tự V1-module](../../hardware/test_reports/v1_bringup_procedure.md) khi có hàng | Có ngày giao; bring-up mục 0–2 khi nhận bo |
+| Đức Anh | Sự kiện mã 2 (`CUFF_END`) và mã 4 (đánh dấu của người vận hành) bằng lệnh PC `MARK_EVENT` (chốt 2026-10-29) | Spec Packet Schema V0.2 mục 13, firmware, logger, `device_command.py`, có test; chưa chạy trên chip |
+| Đức Anh, Huy | Quy trình chỉnh và khóa dòng LED theo người: đã viết ở protocol mục 6.1 (2026-10-29); PC chặn mã > `0x7F` | Chưa chạy trên người |
 | Linh | Theo dõi thí nghiệm; lần chạy nhiều seed chỉ là kiểm tính tất định (bảng dưới, sửa 2026-10-29); logger với bo Waveshare khi nhận hàng | Như bảng dưới |
 | Linh, Huy | Duyệt B2 (chốt 2026-10-29), trong Tuần 6: Linh review [định nghĩa B2](../protocol/b2_pulsedb_definition.md) khi chưa có số nào; Huy duyệt nguyên trạng bằng commit riêng đổi `status`, ghi ngày; sau đó mới chạy trên val. Commit [đăng ký trước cách chấm test/CalFree](../protocol/pulsedb_test_scoring_preregistration.md) trước khi chạy | Bảng B0/B2/B3 trên val có CI |
 | Huy | Đánh dấu tay 80 + 16 đoạn (đã có một phiên dở ngày 2026-10-25), rồi chạy `gate`. Quy tắc chốt 2026-10-29, trước khi chạy compare/gate: chỉ dùng train; ra `B4_NOT_ALLOWED` thì là kết luận cuối, không làm B4 trên PulseDB; độ lặp lại vẫn đòi khớp 100%, nhịp sát biên vùng review xử lý bằng quy tắc click ở [Tuần 5](../protocol/week05_fiducials_pat_validity.md) mục 9.2. Annotate cần `.venv` mới (Python 3.11.9 có tkinter) | Như bảng dưới |
@@ -103,7 +103,7 @@ nộp bản còn ghi "chưa quyết định".
       <td width="30%" valign="top" style="vertical-align: top; text-align: left; overflow-wrap: anywhere; padding: 10px;"><p style="margin: 0 0 8px;">Danh sách metrics của Huy (<code style="white-space: normal; overflow-wrap: anywhere;">evaluate_bp</code>, bootstrap theo người). Raw PulseDB và split v2 sẵn trên máy.</p><p style="margin: 0 0 8px;">Mục 3 chờ DevKitC.</p></td>
     </tr>
     <tr>
-      <td width="10%" valign="top" style="vertical-align: top; text-align: left; overflow-wrap: anywhere; padding: 10px;">Phần cứng và firmware</td>
+      <td width="10%" valign="top" style="vertical-align: top; text-align: left; overflow-wrap: anywhere; padding: 10px;">Đức Anh</td>
       <td width="30%" valign="top" style="vertical-align: top; text-align: left; overflow-wrap: anywhere; padding: 10px;"><p style="margin: 0 0 8px;"><strong>1. Đặt mua module (việc đầu tiên).</strong> Duyệt <a href="../../hardware/bom/purchase_list_v1_module.md">danh sách mua</a> rồi đặt; ghi ngày giao dự kiến và phương án thay thế.</p><p style="margin: 0 0 8px;"><strong>2. Đặt gia công PCB V1.</strong> In tờ kiểm footprint tỉ lệ 1:1, so với bản vẽ kích thước của từng module; đạt thì đặt bo đế và bo cổ tay.</p><p style="margin: 0 0 8px;"><strong>3. Firmware không cần bo.</strong> Lệnh từ PC xuống thiết bị (bắt đầu hiệu chuẩn, đặt dòng LED PPG theo người, khóa cho các buổi sau); packet cấu hình AFE trong luồng dữ liệu để logger ghi vào phiên; packet sự kiện mã 3 cho phép đo đồng bộ 10 phút; thống nhất cách thử lại khi khởi động chip.</p><p style="margin: 0 0 8px;"><strong>4. Ước lượng dòng</strong> từng khối (ESP32-S3, MAX30001, MAX30101 khi LED chạy xung, BMI270) so với giới hạn cổng USB của laptop trong buổi đo 75 phút.</p><p style="margin: 0 0 8px;"><strong>5. Bring-up</strong> theo <a href="../../hardware/test_reports/v1_bringup_procedure.md">trình tự V1-module</a> khi nhận hàng.</p></td>
       <td width="30%" valign="top" style="vertical-align: top; text-align: left; overflow-wrap: anywhere; padding: 10px;"><p style="margin: 0 0 8px;">Đơn mua module và đơn gia công PCB đã đặt, có ngày giao.</p><p style="margin: 0 0 8px;">Lệnh PC→thiết bị, packet cấu hình AFE và sự kiện mã 3 có spec (Packet Schema V0.2), codec và logger Python, firmware, test trên máy tính; chưa cần chạy trên chip.</p><p style="margin: 0 0 8px;">Bảng ước lượng dòng có nguồn số liệu (datasheet, trang).</p></td>
       <td width="30%" valign="top" style="vertical-align: top; text-align: left; overflow-wrap: anywhere; padding: 10px;"><p style="margin: 0 0 8px;">Duyệt mua theo quy định repo. Linh review packet và lệnh mới theo spec; Huy review quy trình hiệu chuẩn LED theo protocol v0.2 mục 6.1.</p><p style="margin: 0 0 8px;">Không gắn điện cực lên người.</p></td>
@@ -121,7 +121,7 @@ nộp bản còn ghi "chưa quyết định".
 
 - **Linh:** log thí nghiệm và script tổng hợp ở `scripts/` và `software/`, output ở
   `runs/` ngoài Git, hướng dẫn tại `docs/protocol/`.
-- **Phần cứng và firmware:** đơn mua tại `hardware/bom/`; spec lệnh và packet mới tại
+- **Đức Anh:** đơn mua tại `hardware/bom/`; spec lệnh và packet mới tại
   `configs/hardware/Packet_Schema_V0.2.md`; codec và logger tại `software/data_io/`;
   firmware tại `firmware/`; ước lượng dòng tại `configs/hardware/`.
 - **Huy:** hồ sơ đạo đức tại `docs/ethics/`; B2 tại `software/pulsedb/`

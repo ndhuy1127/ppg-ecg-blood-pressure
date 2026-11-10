@@ -4,7 +4,7 @@
 > dẫn xử trí y khoa. Phần dưới đường kẻ là đúng nội dung bản nộp; bản Word được dựng từ file
 > này. Ô `[...]` chờ thầy, bác sĩ/đầu mối y tế hoặc hội đồng.
 >
-> - Huy soạn 2026-10-21; phần thiết bị theo
+> - Soạn 2026-10-21; phần thiết bị theo
 >   [V1-module](../../configs/hardware/custom_board_proposal.md), phần nghiệm pháp theo
 >   [protocol v0.3 mục 6.4](../protocol/protocol_outline_v0.2.md).
 > - 2026-10-29 (đề xuất của nhóm, chờ thầy/bác sĩ/hội đồng): ngưỡng huyết áp ở mục 6, phương
@@ -16,7 +16,7 @@
 >   8 (triệu chứng nặng, cấp cứu); thử nhiệt loại một lần 120 phút ở trần LED thay cho chỉ kiểm
 >   "không nóng sau 5 phút"; máy đo huyết áp chỉ nối với người tham gia qua ống hơi; viết lại câu
 >   về laptop cho rõ; người ký biên bản ghi theo vai trò.
-> - 2026-10-31, sau vòng phản biện thứ hai của Codex: mục 8 tách trường hợp ngất nhưng thở bình
+> - 2026-10-31, sau vòng phản biện thứ hai: mục 8 tách trường hợp ngất nhưng thở bình
 >   thường với trường hợp không tỉnh hoặc không thở bình thường (gọi 115, ép tim theo hướng dẫn của
 >   tổng đài); mục 7 thêm đứng dậy từ từ; mục 10 nói rõ việc hỏi thăm sau sự cố chỉ khi người tham
 >   gia đồng ý ở mục 9 của phiếu đồng thuận, giữ liên lạc tối đa 30 ngày. Không thêm ngưỡng huyết
@@ -183,8 +183,12 @@ mối y tế, và lối đưa người bệnh ra xe cấp cứu [mô tả].
   không mượn được thì dựng mạch đo theo IEC 60601-1, đo bằng đồng hồ vạn năng và ghi rõ giới hạn đo
   cùng độ bất định.
 - Đo trên đúng cấu hình dùng trong buổi đo: bo mạch nghiên cứu, bo MCU, cáp USB và laptop chạy pin.
-- Loại bộ phận ứng dụng dự kiến là BF (điện cực dán ngoài da) [cần xác nhận]. Giới hạn dùng để so
-  sánh được trích từ bản tiêu chuẩn khi viết biên bản.
+- Loại bộ phận ứng dụng dự kiến là BF (điện cực dán ngoài da) [cần xác nhận]. Giới hạn đề xuất
+  cho BF (chưa đối chiếu nguyên văn IEC 60601-1, chờ duyệt): dòng rò bệnh nhân và dòng phụ bệnh
+  nhân 100 µA AC và 10 µA DC ở điều kiện bình thường, 500 µA AC và 50 µA DC ở điều kiện lỗi
+  đơn. Thiết bị đạt khi mọi giá trị đo ở điều kiện bình thường, cộng độ bất định, không quá 50 %
+  giới hạn. Cách đo chi tiết:
+  [kế hoạch đo dòng rò và thử nhiệt](../../hardware/test_reports/leakage_thermal_test_plan_v1.md).
 - Biên bản ghi phạm vi phép đo: dòng rò bệnh nhân và dòng phụ giữa các điện cực, ở điều kiện bình
   thường và điều kiện lỗi đơn, cả thành phần AC lẫn DC. Phần nào dụng cụ không đo được thì ghi rõ
   là chưa đo, và thiết bị chỉ được dùng trên người khi người có chuyên môn [người duyệt biên bản]
@@ -192,7 +196,8 @@ mối y tế, và lối đưa người bệnh ra xe cấp cứu [mô tả].
 
 **Thử nhiệt:** cho thiết bị chạy liên tục 120 phút (bằng buổi đo dài nhất) với dòng LED ở trần của
 nghiên cứu, ở nhiệt độ phòng đo; đo nhiệt độ bề mặt bo cổ tay ở mặt tiếp xúc da. Nhiệt độ cao nhất
-không được vượt [giới hạn cho bộ phận tiếp xúc da của IEC 60601-1, trích khi viết biên bản].
+không được vượt 41 °C (mức nội bộ, thấp hơn giới hạn 43 °C cho bề mặt tiếp xúc da ≥ 10 phút của
+IEC 60601-1; đề xuất, chưa đối chiếu nguyên văn, chờ duyệt).
 
 ## 10. Ghi nhận và báo cáo sự cố
 

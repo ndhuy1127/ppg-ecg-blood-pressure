@@ -171,7 +171,7 @@ def main() -> None:
         "--unit", choices=["mmHg"],
         help="Required for an explicit CSV; otherwise use the recorded config units",
     )
-    parser.add_argument("--split-seed", type=int, help="Record Linh's actual split seed")
+    parser.add_argument("--split-seed", type=int, help="Record the handover's actual split seed")
     parser.add_argument("--manifest-ref", help="Record the supplied CSV source commit/ref")
     parser.add_argument("--output", type=Path, help="New JSON path; existing files refused")
     args = parser.parse_args()
@@ -232,7 +232,7 @@ def main() -> None:
         # These validation messages contain no raw rows or subject identifiers.
         parser.exit(1, f"B0 stopped: {exc}\n")
     except ModuleNotFoundError:
-        parser.exit(1, "Use a checkout containing Huy's baseline and metrics modules.\n")
+        parser.exit(1, "Use a checkout containing the baseline and metrics modules.\n")
     except FileNotFoundError:
         parser.exit(1, "B0 stopped: CSV/config file not found. Check "
                     "configs/data/b0_pulsedb_validation.json or supply a CSV path.\n")

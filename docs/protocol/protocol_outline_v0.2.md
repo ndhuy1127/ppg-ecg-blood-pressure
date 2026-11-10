@@ -1,8 +1,6 @@
 # Khung protocol nghiên cứu thực nghiệm (Protocol Outline), phiên bản v0.3
 
 > **Phiên bản:** v0.3, thay cho v0.2 (bản trước nữa: [v0.1](protocol_outline_v0.1.md)). Tên file vẫn giữ `v0.2` để không làm gãy liên kết.
-> **Người biên soạn:** Nguyễn Đức Huy
-> **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu
 > **Ngày lập:** 2026-09-22. **Cập nhật:** 2026-10-14 (v0.1: đồng bộ với RQ v0.2, với yêu cầu phần cứng V0 và với nguồn bổ sung); 2026-10-21 (v0.2); 2026-10-22 (sửa theo review); 2026-10-29 (v0.3); 2026-10-30 (dẫn N7 cho dạng bài của M2; ngưỡng P2/R3 dùng các kịch bản δ khai báo trước; mục 4.1: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, giới hạn công suất và luật dừng tuyển); 2026-10-31 (rà soát hồ sơ đạo đức: mô tả thiết kế ở mục 3, L1/L4/L5 chép đúng phiếu sàng lọc, cách đo hai tay, liên kết tới đề cương nộp hội đồng; số mục của các file hồ sơ đổi theo bản viết lại).
 > **Lưu ý:** Chưa thu dữ liệu trên người, và chỉ thu sau khi có phê duyệt đạo đức. Phân bổ tay và điện cực ở mục 5.1–5.2 đã được xác nhận về phần cứng ngày 2026-10-23. Các nghiệm pháp ở 6.4–6.5 chưa được hội đồng đạo đức duyệt. Những mục ghi "đề xuất của nhóm, chờ thầy/hội đồng" trong v0.3 là phương án mặc định mang đi xin ý kiến, chưa phải quyết định cuối cùng.
 
@@ -17,7 +15,7 @@
 - Bổ sung cùng ngày theo RQ v0.4 (đề xuất, chờ thầy): mục 9.1 thêm dự đoán vòng ngoài cho các lần cuff nghiệm pháp ở phiên 1, chỉ dùng cho RQ2b; mục 9.2 dẫn về RQ mục 4.E cho tiêu chí kết luận, đa kiểm định và δ.
 - Bổ sung cùng ngày: bỏ M3 (ngâm chân nước lạnh) và M4 (đạp xe tư thế ngồi) vì khó thực hiện ở phòng thí nghiệm của nhóm. Bộ nghiệm pháp còn M0–M2 và không thay bằng nghiệm pháp mới trong hồ sơ lần này (6.4, mục "Dự phòng"). Các mục sửa theo: 3; 4.2–4.3 (bỏ L9 cũ, L10 đổi thành L9); 5.2–5.4; 6.4 (nhịp thở của M1; dạng bài, thời lượng và cách kiểm mức tham gia của M2; thứ tự và thời gian nghỉ; số lần cuff; thời lượng buổi; quy tắc nếu xin sửa đổi để thêm nghiệm pháp); 6.5 (phải đặt lại ngưỡng P2/R3, đề xuất suy ngưỡng từ mô phỏng độ nhạy); 7.3; 9.1; 10–12.
 
-**Changelog v0.2 (2026-10-21, Huy):**
+**Changelog v0.2 (2026-10-21):**
 
 - Mục 5 viết lại theo thiết bị V1-module (Phần A của `custom_board_proposal.md`): bo cổ tay MAX30101/BMI270, bo đế ESP32-S3 + MAX30001, USB nối tới laptop chạy pin, điện cực dán Ag/AgCl đạo trình I giữa hai cổ tay (chốt 2026-10-23; bản nháp đầu của v0.2 ghi cổ tay–ngón tay). Bỏ cấu hình ngón tay chạm điện cực mặt trên của v0.1.
 - Thêm bảng phân bổ tay/điện cực (5.2), phần chi dùng cho từng nghiệm pháp, và phần kiểm tra xung đột có kết quả (5.4).
@@ -25,7 +23,7 @@
 - Thêm 6.4 về nghiệm pháp tạo ΔBP (có nguồn cho hướng thay đổi) và 6.5 về tiêu chí biên độ ΔBP cho pilot (đề xuất, khóa trước pilot).
 - Mục 3, 11, 12 sửa theo các thay đổi trên. Mục 1 chỉ bỏ chữ "trong Tuần 1" ở tuyên bố không thu dữ liệu. Mục 2, 4, 7–10 giữ nguyên như v0.1.
 
-**Changelog 2026-10-22 (Huy, sửa theo review độc lập Tuần 5):**
+**Changelog 2026-10-22 (sửa theo review độc lập Tuần 5):**
 
 - 5.1: MAX30101 là module PPG nhóm đã chọn. Số điện cực và việc dùng điện cực khô trên người được ghi là chờ quyết định. Khôi phục hai ý của v0.1 bị mất khi viết lại mục 5: ghi chú Cohen 2025 về sai số cuff truyền vào hiệu chuẩn, và yêu cầu chốt quy trình đo hai tay trước khi thu chính.
 - 5.3, 6.4: ghi rõ mâu thuẫn chưa giải quyết về thời điểm nói ở M2 và về thời điểm của cửa sổ tín hiệu ở M4.
@@ -252,7 +250,10 @@ Kết luận (trên giấy, 2026-10-22; sửa 2026-10-29 khi bỏ M3, M4):
    1. Bắt đầu từ mã mặc định của bring-up: đỏ và IR là `0x24`, xanh là `0x12` mỗi nhánh
       (7,2 mA mỗi màu).
    2. Người tham gia ngồi yên. Ghi 10 s rồi đọc mức DC trung bình của từng màu, tính theo
-      phần trăm thang đo.
+      phần trăm thang đo. Mức DC đọc trên màn hình của `record --dc-every-s 2` (từ
+      2026-11-07, [logger](packet_logger.md) mục "Hiển thị khi đang ghi"). Logger in mỗi
+      2 s trung bình 10 s gần nhất; sau mỗi lệnh chỉnh, logger đếm lại 10 s từ đầu.
+      Cùng dòng đó có số mẫu chạm trần ADC (mẫu bão hòa ở bước 3).
    3. Với từng màu: nếu DC < 30% thì tăng một bước; nếu DC > 70% hoặc có mẫu bão hòa thì giảm
       một bước. Bước cố định là `0x08` cho đỏ và IR, `0x04` mỗi nhánh cho xanh (đều bằng
       1,6 mA mỗi màu). Không vượt trần hiện hành: `0x7F` theo Packet Schema V0.2 mục 13, hoặc

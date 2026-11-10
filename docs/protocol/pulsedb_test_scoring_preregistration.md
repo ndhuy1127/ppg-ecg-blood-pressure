@@ -45,7 +45,11 @@ lần** trên mỗi tập:
   được ghép với model cùng bảng. Mặt nạ HR của test (và CalFree) tính bằng đúng quy tắc
   ECG của định nghĩa, trước khi đọc nhãn test;
 - B4, chỉ khi lệnh `gate` cho `B4_ALLOWED` và B4 đã khóa
-  ([Tuần 5](week05_fiducials_pat_validity.md) mục 9).
+  ([Tuần 5](week05_fiducials_pat_validity.md) mục 9);
+- B5 (thêm 2026-11-07, đề xuất, chờ duyệt cùng [định nghĩa B5](b5_pulsedb_definition.md)),
+  chỉ khi định nghĩa B5 được duyệt và đã chạy trên val. Chấm đúng hai file `model_sbp.pt`,
+  `model_dbp.pt` của lần chạy val đó, có SHA-256 trong report, không học lại. Chuẩn hóa đầu
+  vào và nhãn dùng đúng giá trị đã ghi trong report.
 
 Không chọn một "model tốt nhất" trên val rồi chỉ chấm model đó. Cách đó vẫn hợp lệ
 nếu test độc lập, nhưng val chỉ có 40 người nên CI rộng và lựa chọn dễ phụ thuộc

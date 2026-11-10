@@ -1,4 +1,4 @@
-"""Synthetic-only regression tests for Linh's inventory-backed split."""
+"""Synthetic-only regression tests for the inventory-backed split."""
 
 import hashlib
 import json

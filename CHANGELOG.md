@@ -85,9 +85,9 @@ Chi tiết: [báo cáo Tuần 6](reports/weekly/week_06/README.md).
 - #20 (2026-10-11): kế hoạch Tuần 4 (`docs/plans/WEEK_04.md`).
 - #21 (2026-10-15): fiducial ECG/PPG và ghép PAT
   (`software/signal_processing/fiducials.py`); đặc trưng và SQI `features-sqi-v0`
-  (`software/feature_extraction/week04.py`, `configs/data/week04_huy.json`);
+  (`software/feature_extraction/week04.py`, `configs/data/week04_features_sqi.json`);
   bootstrap theo người (`software/evaluation/subject_bootstrap.py`); demo
-  SYNTHETIC `scripts/demo_week04_huy.py` và test; tổng quan y văn bổ sung, RQ
+  SYNTHETIC `scripts/demo_week04.py` và test; tổng quan y văn bổ sung, RQ
   v0.2, cập nhật protocol; báo cáo Tuần 4.
 - #22 (2026-10-17): bản đầu pipeline huấn luyện PulseDB (`software/pulsedb/`
   `train.py`, `evaluate.py`, `features.py`, `pipeline.py`), notebook và

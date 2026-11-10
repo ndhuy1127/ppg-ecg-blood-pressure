@@ -32,6 +32,13 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Định nghĩa B2 trên PulseDB](b2_pulsedb_definition.md): nhân khẩu học cộng HR,
   hai bảng so sánh định trước; v0 duyệt 2026-11-07, dừng đúng chốt kiểm trước khi fit
   (không có số); v1 (nhân khẩu học theo từng đoạn) duyệt 2026-11-07
+- [Định nghĩa B5 trên PulseDB](b5_pulsedb_definition.md): ResNet-18 1D của bài PulseDB
+  (ECG + PPG), chọn epoch bằng 10 % người train; đề xuất 2026-11-07, chờ duyệt; chưa chạy trên
+  val
+- [SAP v1 cho RQ1](sap_v1.md): estimand, endpoint, đa kiểm định, δ, mô phỏng độ nhạy, dữ liệu
+  thiếu; đề xuất 2026-11-07, chờ duyệt, khóa trước pilot
+- [Đặc tả SQI v1](sqi_specification_v1.md): cờ chất lượng của một lần đo cuff, vai trò trong
+  phân tích; đề xuất 2026-11-07, chờ duyệt
 - [Theo dõi thí nghiệm và kiểm tính tất định nhiều seed](experiment_tracking.md):
   quy ước tên thí nghiệm/artifact, bảng tổng hợp sinh từ `report.json`, B3 nhiều seed
   (2026-11-07)

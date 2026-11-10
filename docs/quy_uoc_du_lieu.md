@@ -61,8 +61,8 @@ Mỗi file trong `data/processed/` phải kèm theo một file metadata `.json` 
 {
   "processed_file": "SUB001_S001_E01_processed.parquet",
   "source_raw_files": ["data/raw/SUB001/S001/<recording>/raw.bin"],
-  "script_used": "<script trong scripts/, ví dụ scripts/demo_week04_huy.py>",
-  "config_used": "<config trong configs/, ví dụ configs/data/week04_huy.json>",
+  "script_used": "<script trong scripts/, ví dụ scripts/demo_week04.py>",
+  "config_used": "<config trong configs/, ví dụ configs/data/week04_features_sqi.json>",
   "git_commit_hash": "<commit Git của code đã chạy>"
 }
 ```

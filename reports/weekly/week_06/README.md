@@ -36,7 +36,7 @@ Không đo trên người.
   đối chiếu với file CAD và bản vẽ của nhà sản xuất, lưu ý lắp ráp. ERC/DRC chạy lại ngày
   2026-11-07 bằng KiCad 10: 0 lỗi ở cả hai bo (mục 6.2).
 - Đặt hàng: bo Waveshare đặt 2026-10-27; PCB V1 đặt ở CXT từ 2026-10-28, 5 tấm mỗi mạch. Ngày
-  2026-11-07 Huy báo đã đặt đủ các đơn còn lại (DigiKey, kit MAX30001, điện cực, cáp); nơi bán,
+  2026-11-07 nhóm báo đã đặt đủ các đơn còn lại (DigiKey, kit MAX30001, điện cực, cáp); nơi bán,
   ngày giao và mã đơn chưa ghi vào
   [danh sách mua](../../../hardware/bom/purchase_list_v1_module.md). Gói Gerber gửi CXT chưa
   có commit và SHA-256.
@@ -78,14 +78,14 @@ Không đo trên người.
 - **Mốc tay Tuần 5** (6511926): `compare` từ chối mốc tay trên val, `gate` chỉ nhận dòng
   train. Đánh dấu tay lần 1 mới xong 28/80 đoạn (phiên dở ngày 2026-10-25), nên chưa chạy
   `gate` và B4 vẫn bị chặn.
-- **B2:** định nghĩa được review trước khi có số (Claude và Codex, 2026-11-07), sửa năm điểm
+- **B2:** định nghĩa được review trước khi có số (hai review độc lập, 2026-11-07), sửa năm điểm
   (19fc432), duyệt nguyên trạng bằng commit riêng (1c708df). v0 dừng đúng chốt kiểm trước khi
   fit; v1 chỉ đổi quy tắc nhân khẩu học (450302b), duyệt bằng commit riêng (a215f07), chạy trên
   val ngày 2026-11-07 (mục 6.5).
 
 ### Review cuối tuần (2026-11-07)
 
-Toàn bộ 16 commit của tuần được review cùng Codex (hai vòng). Các lỗi tài liệu đã sửa
+Toàn bộ 16 commit của tuần được review hai vòng (chờ duyệt). Các lỗi tài liệu đã sửa
 (c1c4b48):
 
 - an toàn buổi đo mục 8: bản trước cho ép tim cả khi người tham gia chưa tỉnh nhưng vẫn thở
@@ -214,7 +214,7 @@ của bệnh nhân gây mê, không phải cuff; test split và CalFree chưa ch
 
 | Mốc đóng tuần | Trạng thái | Người xử lý | Chuyển sang |
 | --- | --- | --- | --- |
-| Module và PCB đã đặt, có ngày giao | **Đạt một phần:** mọi đơn đã đặt (Huy báo 2026-11-07); chưa ghi ngày giao, mã đơn, nơi bán; Gerber gửi CXT chưa có commit/SHA-256 | Phần cứng | Tuần 7: ghi đủ đơn và ngày giao; bring-up khi nhận hàng |
+| Module và PCB đã đặt, có ngày giao | **Đạt một phần:** mọi đơn đã đặt (báo 2026-11-07); chưa ghi ngày giao, mã đơn, nơi bán; Gerber gửi CXT chưa có commit/SHA-256 | Phần cứng | Tuần 7: ghi đủ đơn và ngày giao; bring-up khi nhận hàng |
 | Hồ sơ đạo đức đã nộp, hoặc đã báo giám sát viên | **Chưa nộp;** bộ Word đã gửi thầy 2026-10-31; điều kiện nộp chưa đủ (mục 5.1) | Huy | Tuần 7: gặp thầy; nộp khi đủ điều kiện |
 | B2 trên val có CI | **Đạt:** B2 v1 trên val có CI (mục 6.5); v0 dừng trước khi fit, không có số | Huy | — |
 | Bảng nhiều seed sinh tự động | **Đạt:** bảng tổng hợp và bảng nhiều seed sinh tự động; B3 `DETERMINISTIC` (mục 6.4) | Linh | — |

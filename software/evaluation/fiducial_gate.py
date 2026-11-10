@@ -1,8 +1,8 @@
 """Pre-registered acceptance gate for R/foot detectors, and annotator repeatability.
 
-Decided by Huy on 2026-10-25, before any PulseDB segment was marked
+Approved on 2026-10-25, before any PulseDB segment was marked
 (docs/protocol/week05_fiducials_pat_validity.md section 9); the numbers live in
-the ``acceptance`` block of configs/data/week05_huy.json and have no source:
+the ``acceptance`` block of configs/data/week05_fiducials.json and have no source:
 they are engineering proposals.
 
 ``gate``: the selection group scores every candidate method; methods that pass

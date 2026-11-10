@@ -3,17 +3,17 @@
 > **Ngày lập:** 2026-10-29. **Cập nhật cùng ngày:** lần tra thứ hai, có hệ thống và có nhật ký, trên
 > PubMed, Europe PMC và OpenAlex cho giai đoạn 2022–2026; đọc toàn văn N5, N7, N8, N16; thêm
 > N18–N42; viết lại mục 4–6; ghi quyết định ngày 2026-10-29 về S4 và kết quả thử tải N6.
-> **Cập nhật 2026-10-30:** Claude Code viết lại văn phong, sửa ghi chú của vài dòng trong bảng 3
-> theo góp ý của Codex (một trợ lý AI khác, chỉ đọc), và ghi lại các việc ở mục 5.3 đã làm.
+> **Cập nhật 2026-10-30:** viết lại văn phong, sửa ghi chú của vài dòng trong bảng 3 sau một
+> vòng phản biện, và ghi lại các việc ở mục 5.3 đã làm (chờ duyệt).
 > **Cập nhật 2026-10-30, lần 2:** đọc toàn văn N6 từ bản PDF (CC BY) do nhóm tải bằng trình duyệt
 > thường; sửa dòng N6 ở bảng 3 và các mục 2, 4, 5, 6 theo kết quả này.
 > **Cập nhật 2026-10-30, lần 3:** đọc toàn văn S4 từ bản PDF miễn phí trên trang Microsoft Research;
 > thêm mục 3.3 và sửa các mục 2, 3.1, 4, 5, 6 theo kết quả này.
 >
-> **Cách làm:** trợ lý AI (Claude Code) tìm, sàng lọc và tóm tắt qua API PubMed E-utilities,
+> **Cách làm:** tìm, sàng lọc và tóm tắt qua API PubMed E-utilities,
 > Europe PMC REST và OpenAlex; toàn văn được đọc qua Europe PMC, BioC (NCBI), trang PMC, kho của
-> ETH Zurich, bản PDF do nhóm tải (N6) và bản PDF trên trang Microsoft Research (S4). Chỉ có một bên sàng lọc là trợ lý AI; chưa có thành viên
-> nào của nhóm đối chiếu từng đoạn. **Mọi con số phải được đối chiếu với nguyên văn trước khi đưa
+> ETH Zurich, bản PDF do nhóm tải (N6) và bản PDF trên trang Microsoft Research (S4). Chỉ có một bên sàng lọc; chưa có thành viên
+> nào của nhóm đối chiếu từng đoạn (chờ duyệt). **Mọi con số phải được đối chiếu với nguyên văn trước khi đưa
 > vào bản thảo.**
 >
 > Tài liệu này bổ sung cho [ma trận Tuần 1](week_01_literature_matrix.md) và
@@ -48,10 +48,10 @@ bảng 3, đã cập nhật sau lần thứ hai.
 **Đính chính về truy cập.** Lần thứ nhất ghi cả S4 và N6 là "IEEE, toàn văn có phí". Thực tế:
 
 - S4: bản trên IEEE có phí, nên ngày 2026-10-29 nhóm quyết định không lấy qua thư viện mà chỉ dùng
-  abstract. Ngày 2026-10-30 trợ lý tìm được bản PDF miễn phí trên trang Microsoft Research và đã đọc
+  abstract. Ngày 2026-10-30 tìm được bản PDF miễn phí trên trang Microsoft Research và đã đọc
   toàn văn (mục 2.2 và 3.3).
 - N6 là bài truy cập mở dạng hybrid: theo Crossref, bản đã xuất bản có giấy phép CC BY 4.0. Tải
-  tự động bị chặn (mục 2.2); ngày 2026-10-30 nhóm tải bản PDF bằng trình duyệt thường và trợ lý đã
+  tự động bị chặn (mục 2.2); ngày 2026-10-30 nhóm tải bản PDF bằng trình duyệt thường và đã
   đọc toàn văn từ bản này.
 
 ### 2.2. Lần tra thứ hai (2026-10-29, tra có hệ thống)
@@ -81,7 +81,7 @@ Ngoài ra có hai truy vấn rộng để kiểm độ nhạy của cách tìm (
 OpenAlex trích dẫn 382. Sau khi loại trùng theo DOI, PMID và tiêu đề đã chuẩn hóa, còn **1.085
 bản ghi**. Mọi bản ghi đều đã được tải về; không truy vấn nào bị cắt bớt trang kết quả.
 
-**Sàng lọc.** Trợ lý AI đọc tiêu đề của cả 1.085 bản ghi và đọc abstract của 196 bản ghi. Số 196
+**Sàng lọc.** Một bên sàng lọc (chờ duyệt) đọc tiêu đề của cả 1.085 bản ghi và đọc abstract của 196 bản ghi. Số 196
 này gồm các ứng viên còn lại sau bước lọc tiêu đề, cộng mọi bản ghi có tiêu đề liên quan tới BP
 trong E6, O6, P6 và C1, để kiểm kê các bài dùng Aurora-BP. Kết quả: **giữ lại 80** bản ghi, trong
 đó 25 bản ghi thành các dòng N18–N42, 34 bản ghi ghi ở mục 3.1–3.2, và 21 bản ghi là nguồn đã có
@@ -188,13 +188,13 @@ C4  cites:W4377142751 (N6)   C5 cites:W4409443090 (N8)
 - Đã tải nhưng chưa đọc: N23 (PMC10158604).
 - Đọc ngày 2026-10-30: N6, bản PDF đã xuất bản (12 trang, CC BY 4.0) do nhóm tải bằng trình duyệt
   thường; SHA-256 của tệp `35587d99612e4fc6129f54e46e38f6292c9a30bf9e59fc52bdb7e6c898d504ee`. Phần
-  chữ được trích bằng `pdftotext`. Bảng trong tệp không trích được thành chữ, nên trợ lý xem dưới
+  chữ được trích bằng `pdftotext`. Bảng trong tệp không trích được thành chữ, nên được xem dưới
   dạng ảnh dựng từ PDF: xem kỹ Bảng IV, A1, A2 và Hình 5, 6, 8; xem lướt Bảng II, III, V và Hình 7,
   A1; chưa xem Bảng I, VI, VII và Hình 1–4.
 - Đọc ngày 2026-10-30: S4, bản PDF 12 trang (bản IEEE đã xuất bản) trên trang Microsoft Research
   (đường dẫn ở mục 3.3); SHA-256 của tệp
   `c96abd7fd662b76c54d2bee89b118ebf238951c387dc84b5164066ad1de3b8ba`. Phần chữ được trích bằng
-  PyMuPDF. Bảng và hình không trích được thành chữ, nên trợ lý xem dưới dạng ảnh dựng từ PDF: xem
+  PyMuPDF. Bảng và hình không trích được thành chữ, nên được xem dưới dạng ảnh dựng từ PDF: xem
   kỹ Bảng I–VII và Hình 1, 3–7; chưa xem Hình 2 (ví dụ dạng sóng) và chưa đọc kỹ danh mục tài liệu
   tham khảo.
 - Ngoài bài báo: bản ghi dataset Aurora-BP trên Zenodo (phần mô tả và danh sách tệp; chưa đọc tệp
@@ -208,11 +208,11 @@ C4  cites:W4377142751 (N6)   C5 cites:W4409443090 (N8)
     mở được trang IEEE;
   - kho CityU Scholars có bản "Final Published version" (CC BY), nhưng tệp PDF nằm sau trang kiểm
     tra của Cloudflare: truy cập tự động bị trả 403, còn trình duyệt trong app hiện ô "Verify you
-    are human". Trợ lý không vượt qua bước kiểm tra này.
+    are human"; bước kiểm tra này không được vượt qua bằng công cụ tự động.
   - Ngày 2026-10-30 nhóm tải thủ công bằng trình duyệt thường (xem danh sách bài đã mở ở trên).
 - S4: bản trên IEEE có phí. Crossref chỉ có giấy phép IEEE; Europe PMC có PMID 35201992 nhưng
   không có PMCID; ngày 2026-10-29 trang publication của Microsoft Research trả HTTP 403, nên nhóm
-  quyết định chỉ dùng abstract. Ngày 2026-10-30 trang này mở được và có bản PDF tải tự do; trợ lý
+  quyết định chỉ dùng abstract. Ngày 2026-10-30 trang này mở được và có bản PDF tải tự do;
   đã đọc toàn văn (danh sách bài đã mở ở trên).
 - Europe PMC `fullTextXML` trả HTTP 500 với PMC8221527, PMC12331212 và PMC9154072; các bài này
   được đọc thay qua BioC hoặc trang PMC. BioC không có N8 vì bài nằm ngoài tập truy cập mở.
@@ -243,7 +243,7 @@ một bài không có nghĩa là bài đó không tồn tại.
 | **N3** | Block RC et al. (13 tác giả). Conventional pulse transit times as markers of blood pressure changes in humans. *Sci Rep* 2020 | [10.1038/s41598-020-73143-8](https://doi.org/10.1038/s41598-020-73143-8) | Cùng cohort với N2 (32/44 người). So sáu khoảng PAT/PTT: PAT ngón chân tương quan với SBP tốt nhất (r −0,63 ± 0,05), PAT ngón tay tương quan kém | Cơ sở cho nhận định PAT phụ thuộc vị trí đo và PEP; chỉ một buổi | Toàn văn (Europe PMC), đọc một lượt |
 | **N4** | Ding X, Yan BP, Zhang YT, Liu J, Zhao N, Tsang HK. Pulse transit time based continuous cuffless blood pressure estimation: a new extension and a comprehensive evaluation. *Sci Rep* 2017 | [10.1038/s41598-017-11507-3](https://doi.org/10.1038/s41598-017-11507-3) | 33 người (14 tăng huyết áp); dùng PTT và PIR, tham chiếu Finapres; nghiệm pháp đứng dậy, thở sâu, Valsalva, bóp tay; theo dõi 24 giờ ở một nhóm nhỏ. Sang ngày thứ 2, sai số tăng ở mọi phương pháp | Bằng chứng cho thấy sai số tăng khi đánh giá vào ngày hôm sau; phần đã đọc không có baseline chỉ hiệu chuẩn | Toàn văn (Europe PMC), đọc 100.000/137.802 ký tự |
 | **N5** | Ganti VG et al. (6 tác giả). Wearable cuff-less blood pressure estimation at home via pulse transit time. *IEEE J Biomed Health Inform* (online 2020) | [10.1109/jbhi.2020.3021532](https://doi.org/10.1109/jbhi.2020.3021532) | Đồng hồ SeismoWatch 2.0 gồm: ECG một đạo trình (ngón tay bàn tay kia chạm điện cực trên dây đeo), SCG ba trục (áp đồng hồ lên giữa xương ức) và PPG cổ tay nhiều bước sóng. PTT tính từ lúc van động mạch chủ mở (trên SCG) tới chân sóng PPG cổ tay (hồng ngoại); ECG chỉ dùng để tách nhịp. 21 người khỏe (25,9 ± 3,4 tuổi) đo tại nhà mỗi giờ trong 24 giờ, cuff Omron BP785N; dùng 216/245 lần đo. Hồi quy tuyến tính theo từng người trên dữ liệu 24 giờ: RMSE DBP/MAP/SBP 2,72/2,99/4,75 mmHg, r 0,69/0,61/0,33. Hiệu chuẩn một điểm (giữ nguyên một giá trị DBP) cho RMSE 6,05 ± 1,75 mmHg; 4 điểm 4,73 ± 2,41; 6 điểm 3,83 ± 1,40 mmHg | Chỉ trong cùng một ngày (24 giờ), không có phiên khác ngày. Không so PPG-only với PAT, vì bài đo PTT thật chứ không dùng PAT. Phải áp đồng hồ lên ngực nên không thuần cổ tay. Tác giả ghi rằng cần đánh giá đường hiệu chuẩn qua nhiều ngày. Phép hiệu chuẩn một điểm của bài tương tự baseline zero-change, nhưng các mô hình PTT được ước lượng trên chính dữ liệu cùng ngày | Toàn văn (BioC, PMC8221527), 2026-10-29 |
-| **N6** | Liu ZD, Li Y, Zhang YT, Zeng J, Chen ZX, Cui ZW, Liu JK, Miao F. Cuffless blood pressure measurement using smartwatches: a large-scale validation study. *IEEE J Biomed Health Inform* 2023;27(9):4216–4227 | [10.1109/jbhi.2023.3278168](https://doi.org/10.1109/jbhi.2023.3278168) | 3.077 người (18–75 tuổi, 65,16% nữ, 35,91% tăng huyết áp); **không có nghiệm pháp** tạo ΔBP. Mỗi người đo 4 ngày D, D+7, D+14, D+21, mỗi ngày 3 lần ghi 2 phút cách nhau 5 phút (dùng 29.568/30.294 lần ghi). Đồng hồ nguyên mẫu của Huawei: ECG (hai điện cực mặt sau đồng hồ ở cổ tay trái, điện cực thứ ba do ngón cái tay phải chạm), PPG bốn bước sóng do **ngón trỏ tay phải** ấn lên cảm biến, sóng áp lực mạch (PPW, áp điện) ở động mạch quay. Tham chiếu: hai người đo nghe tim, mù nhau, lấy trung bình trước và sau mỗi lần ghi. Mô hình: ba công thức "PTT" theo cách gọi của bài: (1) và (2) dùng PTT_RM1 = từ đỉnh R tới điểm dốc nhất của PPG, tức PAT theo quy ước dự án, nhưng ở (2) DBP tính từ PIR; (3) dùng "arteriolar PTT", độ trễ giữa đỉnh hai sóng PPG, không có ECG (mục II.D, Hình 3(b); sửa 2026-11-07); ridge, SVM, AdaBoost, RF với đặc trưng PAT, hình thái PPG/PPW và nhân khẩu học (tuổi, giới, BMI, tiền sử tăng huyết áp); bốn mạng học sâu. Không hiệu chuẩn: 5-fold CV, chia ngẫu nhiên **theo người**. Có hiệu chuẩn: f_cal = (1 − α)·f_uncal + α·BP nền, BP nền là trung bình BP ngày D, α = 0,6 là giá trị cho sai số nhỏ nhất của chính các mô hình được báo cáo (Hình A1); mô hình PTT hiệu chuẩn theo từng người bằng dữ liệu ngày D rồi dự đoán các ngày sau. Baseline có hiệu chuẩn: AdaBoost với BP ban đầu + nhân khẩu học; baseline không hiệu chuẩn: AdaBoost chỉ với nhân khẩu học. Bảng IV, MAE SBP/DBP (mmHg): baseline có hiệu chuẩn 8,46/5,78; ba mô hình PTT 9,20–9,26/6,59–6,78; tốt nhất 7,38 (AdaBoost)/5,13 (SVM). Không hiệu chuẩn: baseline 12,19/8,04; tốt nhất 9,67/6,80. Hình 6 (chỉ SBP): MAE thấp hơn baseline ở mọi nhóm con, ví dụ tăng huyết áp độ 1 là 8,10 so với 9,64; không có CI hay kiểm định. Bảng A2 (chỉ AdaBoost không hiệu chuẩn, chỉ SBP, trung bình ± SD sai số tuyệt đối): PPG hồng ngoại 9,99 ± 8,85; ECG + PPG hồng ngoại 9,90 ± 8,78; ECG + PPG + PPW 9,67 ± 8,58. Hình 8 chỉ kiểm định các cặp với ECG + PPG + PPW (p < 0,05 so với PPG hồng ngoại, PPG bốn bước sóng, PPW, ECG + PPW); cặp PPG với ECG + PPG không được kiểm định. Mục IV.C: sai số tăng từ D+7 sang D+14 rồi ổn định tới D+21; \|ΔBP\| so với ngày D theo cùng xu hướng (Hình 5) | **Không có phép so sánh ghép cặp PPG-only với PPG + PAT sau hiệu chuẩn (chờ thầy xem).** So tổ hợp tín hiệu chỉ có ở mô hình không hiệu chuẩn, chỉ SBP, gộp mọi lần đo; bài không nói các tổ hợp có kèm nhân khẩu học không. Baseline có hiệu chuẩn là mô hình học từ BP ban đầu + nhân khẩu học, không phải zero-change, và hiệu chuẩn khác mô hình (trộn cố định theo α), nên chênh lệch với baseline không chỉ do tín hiệu (suy luận của trợ lý). Mô hình PTT (PAT) có hiệu chuẩn kém hơn baseline ở cả SBP và DBP. \|ΔBP\| so với BP nền ngày D ở Hình 5(c)(d) chính là sai số của dự đoán zero-change (suy luận của trợ lý), nhưng bài không so nó với sai số mô hình. **Lời văn lệch với hình:** các số ở mục IV.C (SBP 7,41 ± 6,43; 9,07 ± 7,24; 9,31 ± 7,31 mmHg ở D+7, D+14, D+21), được gọi là sai số ước lượng, khớp với cột \|ΔSBP\| ở Hình 5(c); cột sai số ở Hình 5(a) thấp hơn, khoảng 7,0; 7,6; 7,7 mmHg (trợ lý đo chiều cao cột trên ảnh, sai khoảng ±0,1 mmHg). DBP cũng vậy: Hình 5(b) khoảng 4,9; 5,6; 5,5, còn Hình 5(d) và lời văn khoảng 5,0; 6,3; 6,2. Trung bình các cột ở Hình 5(a) gần MAE 7,38 của mô hình tốt nhất ở Bảng IV, còn trung bình ở Hình 5(c) gần MAE 8,46 của baseline, nên nhiều khả năng lời văn ghi nhầm số của \|ΔBP\| (suy luận của trợ lý, chưa hỏi tác giả). Bài không ghi mô hình nào được vẽ ở Hình 5. Khác RQ1: PPG ở ngón tay và ECG cần ngón cái tay kia, nên thiết bị không thuần cổ tay; không có nghiệm pháp; không có CI theo người. α được chọn theo sai số của chính các mô hình được báo cáo, khớp với lo ngại rò rỉ của N8. Dataset CAS-BP: phần 1 (1.272 người) cấp theo yêu cầu gửi tác giả liên hệ, kèm Data Use Agreement có điều khoản không ghép với nguồn dữ liệu khác; phần 2 (1.805 người) không công khai (README của kho GitHub zdzdliu/CAS-BP, đọc 2026-10-30) | Toàn văn (PDF bản đã xuất bản, CC BY 4.0, do nhóm tải thủ công), đọc ngày 2026-10-30; mức xem từng bảng và hình ghi ở mục 2.2 |
+| **N6** | Liu ZD, Li Y, Zhang YT, Zeng J, Chen ZX, Cui ZW, Liu JK, Miao F. Cuffless blood pressure measurement using smartwatches: a large-scale validation study. *IEEE J Biomed Health Inform* 2023;27(9):4216–4227 | [10.1109/jbhi.2023.3278168](https://doi.org/10.1109/jbhi.2023.3278168) | 3.077 người (18–75 tuổi, 65,16% nữ, 35,91% tăng huyết áp); **không có nghiệm pháp** tạo ΔBP. Mỗi người đo 4 ngày D, D+7, D+14, D+21, mỗi ngày 3 lần ghi 2 phút cách nhau 5 phút (dùng 29.568/30.294 lần ghi). Đồng hồ nguyên mẫu của Huawei: ECG (hai điện cực mặt sau đồng hồ ở cổ tay trái, điện cực thứ ba do ngón cái tay phải chạm), PPG bốn bước sóng do **ngón trỏ tay phải** ấn lên cảm biến, sóng áp lực mạch (PPW, áp điện) ở động mạch quay. Tham chiếu: hai người đo nghe tim, mù nhau, lấy trung bình trước và sau mỗi lần ghi. Mô hình: ba công thức "PTT" theo cách gọi của bài: (1) và (2) dùng PTT_RM1 = từ đỉnh R tới điểm dốc nhất của PPG, tức PAT theo quy ước dự án, nhưng ở (2) DBP tính từ PIR; (3) dùng "arteriolar PTT", độ trễ giữa đỉnh hai sóng PPG, không có ECG (mục II.D, Hình 3(b); sửa 2026-11-07); ridge, SVM, AdaBoost, RF với đặc trưng PAT, hình thái PPG/PPW và nhân khẩu học (tuổi, giới, BMI, tiền sử tăng huyết áp); bốn mạng học sâu. Không hiệu chuẩn: 5-fold CV, chia ngẫu nhiên **theo người**. Có hiệu chuẩn: f_cal = (1 − α)·f_uncal + α·BP nền, BP nền là trung bình BP ngày D, α = 0,6 là giá trị cho sai số nhỏ nhất của chính các mô hình được báo cáo (Hình A1); mô hình PTT hiệu chuẩn theo từng người bằng dữ liệu ngày D rồi dự đoán các ngày sau. Baseline có hiệu chuẩn: AdaBoost với BP ban đầu + nhân khẩu học; baseline không hiệu chuẩn: AdaBoost chỉ với nhân khẩu học. Bảng IV, MAE SBP/DBP (mmHg): baseline có hiệu chuẩn 8,46/5,78; ba mô hình PTT 9,20–9,26/6,59–6,78; tốt nhất 7,38 (AdaBoost)/5,13 (SVM). Không hiệu chuẩn: baseline 12,19/8,04; tốt nhất 9,67/6,80. Hình 6 (chỉ SBP): MAE thấp hơn baseline ở mọi nhóm con, ví dụ tăng huyết áp độ 1 là 8,10 so với 9,64; không có CI hay kiểm định. Bảng A2 (chỉ AdaBoost không hiệu chuẩn, chỉ SBP, trung bình ± SD sai số tuyệt đối): PPG hồng ngoại 9,99 ± 8,85; ECG + PPG hồng ngoại 9,90 ± 8,78; ECG + PPG + PPW 9,67 ± 8,58. Hình 8 chỉ kiểm định các cặp với ECG + PPG + PPW (p < 0,05 so với PPG hồng ngoại, PPG bốn bước sóng, PPW, ECG + PPW); cặp PPG với ECG + PPG không được kiểm định. Mục IV.C: sai số tăng từ D+7 sang D+14 rồi ổn định tới D+21; \|ΔBP\| so với ngày D theo cùng xu hướng (Hình 5) | **Không có phép so sánh ghép cặp PPG-only với PPG + PAT sau hiệu chuẩn (chờ thầy xem).** So tổ hợp tín hiệu chỉ có ở mô hình không hiệu chuẩn, chỉ SBP, gộp mọi lần đo; bài không nói các tổ hợp có kèm nhân khẩu học không. Baseline có hiệu chuẩn là mô hình học từ BP ban đầu + nhân khẩu học, không phải zero-change, và hiệu chuẩn khác mô hình (trộn cố định theo α), nên chênh lệch với baseline không chỉ do tín hiệu (suy luận, chờ duyệt). Mô hình PTT (PAT) có hiệu chuẩn kém hơn baseline ở cả SBP và DBP. \|ΔBP\| so với BP nền ngày D ở Hình 5(c)(d) chính là sai số của dự đoán zero-change (suy luận, chờ duyệt), nhưng bài không so nó với sai số mô hình. **Lời văn lệch với hình:** các số ở mục IV.C (SBP 7,41 ± 6,43; 9,07 ± 7,24; 9,31 ± 7,31 mmHg ở D+7, D+14, D+21), được gọi là sai số ước lượng, khớp với cột \|ΔSBP\| ở Hình 5(c); cột sai số ở Hình 5(a) thấp hơn, khoảng 7,0; 7,6; 7,7 mmHg (đo chiều cao cột trên ảnh, sai khoảng ±0,1 mmHg). DBP cũng vậy: Hình 5(b) khoảng 4,9; 5,6; 5,5, còn Hình 5(d) và lời văn khoảng 5,0; 6,3; 6,2. Trung bình các cột ở Hình 5(a) gần MAE 7,38 của mô hình tốt nhất ở Bảng IV, còn trung bình ở Hình 5(c) gần MAE 8,46 của baseline, nên nhiều khả năng lời văn ghi nhầm số của \|ΔBP\| (suy luận, chờ duyệt, chưa hỏi tác giả). Bài không ghi mô hình nào được vẽ ở Hình 5. Khác RQ1: PPG ở ngón tay và ECG cần ngón cái tay kia, nên thiết bị không thuần cổ tay; không có nghiệm pháp; không có CI theo người. α được chọn theo sai số của chính các mô hình được báo cáo, khớp với lo ngại rò rỉ của N8. Dataset CAS-BP: phần 1 (1.272 người) cấp theo yêu cầu gửi tác giả liên hệ, kèm Data Use Agreement có điều khoản không ghép với nguồn dữ liệu khác; phần 2 (1.805 người) không công khai (README của kho GitHub zdzdliu/CAS-BP, đọc 2026-10-30) | Toàn văn (PDF bản đã xuất bản, CC BY 4.0, do nhóm tải thủ công), đọc ngày 2026-10-30; mức xem từng bảng và hình ghi ở mục 2.2 |
 | **N7** | Hove C et al. (10 tác giả). A prototype photoplethysmography-based cuffless device shows promising results in tracking changes in blood pressure. *Front Med Technol* 2024 | [10.3389/fmedt.2024.1464473](https://doi.org/10.3389/fmedt.2024.1464473) | Nguyên mẫu chỉ có PPG (Aidee Health), đặt ở **cánh tay trên** bên trái. Tuyển 67 người, phân tích 38 (29 người bị loại do nhiễu tín hiệu tham chiếu), tuổi trung vị 33. Nghiệm pháp: bóp tay tĩnh ở 30% MVC, tính nhẩm trừ 13 trong 5 phút, ngâm tay vào nước đá 2 phút. Tham chiếu là thiết bị kẹp ngón tay (Nexfin hoặc Human NIBP), hiệu chuẩn lại trước mỗi hoạt động; thiết bị nghiên cứu hiệu chuẩn offset một lần lúc nghỉ đầu buổi. Mô hình được xây trên chính cohort bằng 3-fold CV, rồi lấy trung bình ba mô hình. Theo ISO 81060-3: Accuracy 0,3 (8,7)/0,04 (6,6) mmHg (SBP/DBP); Stability (11 người đo lại bóp tay vào ngày hôm sau) 1,9 (9,2)/2,9 (8,1); Change ở bách phân vị 50/85: 39/56% (SBP), 32/48% (DBP) | Nghiệm pháp gần với protocol của nhóm. Có đo lại vào ngày hôm sau ở 11 người, nhưng chỉ có PPG, không có baseline chỉ hiệu chuẩn và không đo ở cổ tay. Phần đã đọc không nói rõ dự đoán cho mỗi người có dùng mô hình không được học từ chính người đó hay không | Toàn văn (Europe PMC XML, PMC11532190), 2026-10-29 |
 | **N8** | Mukkamala R, Shroff SG, Kyriakoulis KG, Avolio AP, Stergiou GS. Cuffless blood pressure measurement: where do we actually stand? *Hypertension* 2025 | [10.1161/hypertensionaha.125.24822](https://doi.org/10.1161/hypertensionaha.125.24822) | Tổng quan. Các ý chính của tác giả: dữ liệu Aurora cho thấy phân tích bằng học máy sóng tonometry, PPG cổ tay và ECG không thêm giá trị so với baseline dựa trên BP hiệu chuẩn và thời điểm trong ngày; các nghiên cứu lớn gần đây (gồm N6, N20) có so với baseline nhưng có nguy cơ rò rỉ dữ liệu; thiết bị Aktiia và Samsung cho giá trị gần BP hiệu chuẩn (N23, N24); kiểm tra ngay sau hiệu chuẩn không cho thông tin gì; áp lực tiếp xúc làm đổi biên độ và hình dạng PPG. Kết luận của bài: chưa có bằng chứng thuyết phục rằng phân tích dạng sóng và PAT thêm được giá trị đáng kể ngoài cuff hiệu chuẩn hoặc thông tin nhân khẩu học; nên giữ thái độ hoài nghi, trừ khi có thử nghiệm độc lập, tiến cứu, so sánh chặt với baseline model hoặc thử nghiệm ngẫu nhiên | Khung định vị chính cho RQ1. Ba điều kiện "đáng xem xét" mà tác giả nêu là những tiêu chí người phản biện có thể đặt ra. Tác giả khai có tài trợ của NIH và thỏa thuận nghiên cứu với Apple | Toàn văn (trang PMC12331212), trừ phụ lục và hình, 2026-10-29 |
 | **N9** | Finnegan E et al. (8 tác giả). Pulse arrival time as a surrogate of blood pressure. *Sci Rep* 2021 | [10.1038/s41598-021-01358-4](https://doi.org/10.1038/s41598-021-01358-4) | 30 người khỏe, mỗi buổi khoảng 28 phút, truyền phenylephrine. PEP tăng 5,5 ± 4,5 ms so với nền, trong khi PTT thay đổi nhiều hơn (−16,8 ± 7,5 ms theo abstract); so các mô hình dựa trên PAT và trên PTT | Cơ sở về PAT cho N1. PEP ít đổi khi dùng phenylephrine, khác với khi làm nghiệm pháp gây stress (N11) | Abstract (Europe PMC) |
@@ -394,7 +394,7 @@ Mieloszyk R et al. *IEEE J Biomed Health Inform* 2022;26(7):2864–2875,
 [10.1109/jbhi.2022.3153259](https://doi.org/10.1109/jbhi.2022.3153259). Bản đã đọc là bản IEEE đã
 xuất bản, đăng tự do trên trang Microsoft Research
 ([PDF](https://www.microsoft.com/en-us/research/wp-content/uploads/2022/07/A_Comparison_of_Wearable_Tonometry_Photoplethysmography_and_Electrocardiography_for_Cuffless_Measurement_of_Blood_Pressure_in_an_Ambulatory_Setting.pdf)).
-Số ghi "khoảng" do trợ lý đọc ước lượng từ hình, không phải số in trong bài; các số còn lại chép từ
+Số ghi "khoảng" là ước lượng đọc từ hình, không phải số in trong bài; các số còn lại chép từ
 bảng. Chờ thầy xem.
 
 **Thiết kế**
@@ -552,7 +552,7 @@ Ngày 2026-10-29 nhóm quyết định bỏ qua toàn văn S4 vì tưởng S4 ch
 - N22–N24 và N33 cho thấy đầu ra của bốn thiết bị thương mại được đánh giá đều bám gần mốc hiệu
   chuẩn.
 
-Suy luận của trợ lý, không nguồn nào nói trực tiếp: N18 cho rằng PAT ở tai và ngón tay cho kết quả
+Suy luận (chờ duyệt), không nguồn nào nói trực tiếp: N18 cho rằng PAT ở tai và ngón tay cho kết quả
 kém là do co cơ trơn thành mạch; đường mạch tới cổ tay cũng đi qua động mạch cơ, nên PAT cổ tay có
 thể gặp cùng vấn đề.
 
@@ -594,13 +594,13 @@ thêm nghiệm pháp. Các ý về PEP, áp lực tiếp xúc và cỡ mẫu đ�
 - **Cỡ mẫu:** con số 31 người của N18 nên được đưa vào mô phỏng độ nhạy ở RQ mục 4.E.
 - **Baseline "static" (S4, bổ sung 2026-10-30):** ở S4, baseline chỉ dùng BP hiệu chuẩn và giờ trong
   ngày gỡ được độ lệch hệ thống mà zero-change mắc phải, và các nhóm đặc trưng chỉ hơn nó rất ít (mục
-  3.3). Gợi ý của trợ lý, chưa được nhóm hay thầy quyết định: cân nhắc thêm một baseline kiểu static
+  3.3). Gợi ý, chưa được nhóm hay thầy quyết định (chờ duyệt): cân nhắc thêm một baseline kiểu static
   vào SAP (chỉ BP hiệu chuẩn và hệ số chặn học bằng LOSO lồng, không dùng tín hiệu), để tách phần
-  "vượt zero-change" nhờ tín hiệu khỏi phần nhờ học độ lệch trung bình giữa các phiên. Cần đưa Codex
-  xem trước khi ghi vào SAP.
+  "vượt zero-change" nhờ tín hiệu khỏi phần nhờ học độ lệch trung bình giữa các phiên. Cần phản
+  biện trước khi ghi vào SAP.
 - **Dải ΔBP ở người trẻ (S4, Hình 3):** trung vị |ΔSBP| giữa hai buổi khoảng 3 mmHg ở 21–30 tuổi và
   chỉ tăng rõ từ khoảng 51 tuổi. Có thể dùng các số này làm khoảng cho mô phỏng độ nhạy (RQ mục 4.E)
-  và khi đặt lại ngưỡng R3/P2. Suy luận của trợ lý: nới tuổi tuyển trong phạm vi dưới 50 tuổi khó làm
+  và khi đặt lại ngưỡng R3/P2. Suy luận (chờ duyệt): nới tuổi tuyển trong phạm vi dưới 50 tuổi khó làm
   rộng dải ΔBP.
 - **Tỷ lệ dữ liệu PPG cổ tay (S4, Hình 5, 6):** trong phòng thí nghiệm, khoảng 1/4 số phép đo PPG
   không dùng được; đặc trưng dựa trên dicrotic notch chỉ trích được ở khoảng 30–40% số phép đo. Bộ
@@ -664,7 +664,7 @@ tới khoảng trống của RQ1.
 
 **S4 (xong ngày 2026-10-30):** ngày 2026-10-29 nhóm quyết định bỏ qua S4 (Mieloszyk 2022,
 [10.1109/jbhi.2022.3153259](https://doi.org/10.1109/jbhi.2022.3153259)) vì tưởng S4 chỉ có bản trả
-phí. Ngày 2026-10-30 trợ lý tìm được bản PDF miễn phí trên trang Microsoft Research và đã đọc toàn
+phí. Ngày 2026-10-30 tìm được bản PDF miễn phí trên trang Microsoft Research và đã đọc toàn
 văn; kết quả ở mục 3.3 và 5.1.
 
 1. **N6** – Liu ZD et al. *IEEE J Biomed Health Inform* 2023;27(9):4216–4227,
@@ -727,6 +727,6 @@ văn; kết quả ở mục 3.3 và 5.1.
 5. Tra thêm IEEE Xplore và Scopus cho các chủ đề T1–T8: nên chạy cùng chuỗi truy vấn và ghi số bản
    ghi như ở mục 2.2.
 6. Nhờ một thành viên trong nhóm sàng lọc lại một phần bản ghi bị loại, chọn ngẫu nhiên (ví dụ 100
-   bản ghi), để ước lượng tỷ lệ bỏ sót của trợ lý AI.
+   bản ghi), để ước lượng tỷ lệ bỏ sót của lần sàng lọc này.
 7. Đối chiếu với nguyên văn mọi con số trong bảng 3 và mục 3.3 trước khi trích vào bản thảo; các số
    ghi "khoảng" ở mục 3.3 được đọc ước lượng từ hình của S4.

@@ -1,13 +1,11 @@
 ﻿# Khung Đạo đức Nghiên cứu (Ethics Outline) - Phiên bản v0.1
 
 > **Phiên bản:** v0.1
-> **Người biên soạn:** Nguyễn Đức Huy
-> **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol và hồ sơ đạo đức
 > **Ngày cập nhật:** 2026-09-22
 > **Lưu ý:** CHƯA PHẢI HỒ SƠ ĐẠO ĐỨC ĐÃ ĐƯỢC PHÊ DUYỆT CHÍNH THỨC.
 
 > [!NOTE]
-> **Cập nhật 2026-10-22 (Huy):** nội dung để nộp nằm trong 5 file bản nháp v0.1:
+> **Cập nhật 2026-10-22:** nội dung để nộp nằm trong 5 file bản nháp v0.1:
 > [phiếu thông tin](participant_information_sheet_v0.1.md),
 > [phiếu đồng thuận](consent_form_v0.1.md),
 > [chọn/loại](eligibility_screening_v0.1.md),

@@ -376,7 +376,7 @@ breakout đã cắm vào bo đế.
   không dừng chuyển đổi (tr. 43). Chuyển đổi chạy lại từ cạnh clock kế sau `SYNCH`
   (tr. 46), và lệnh bật lại `SAMP` là một giao dịch SPI có thể bị chen ngang. Nếu
   lỡ cạnh đầu thì mọi mốc lệch cố định một mẫu, và phép kiểm khoảng cách không phát
-  hiện được (Codex review 2026-10-25). Vì vậy **bit 8 tắt** cho tới khi bring-up
+  hiện được (review 2026-10-25). Vì vậy **bit 8 tắt** cho tới khi bring-up
   xác nhận trên chip thật và build với `BOARD_SAMP_VERIFIED=1`:
   - ánh xạ vẫn chạy;
   - log UART0 in khoảng (thời điểm đọc FIFO − cạnh `SAMP` của mẫu cuối packet),
@@ -628,7 +628,7 @@ Packet Schema V0.2 mục 12–13.
   không có sự kiện, không tính là sự kiện mất. Gửi lại cùng byte nhận lại kết quả cũ,
   không phát sự kiện thứ hai. Độ trễ PC → thiết bị chưa đo; log UART0 in
   `MARK_EVENT code …`.
-- **Bộ nhớ yêu cầu theo thứ tự nhận (2026-10-29, sau review của Codex):** mỗi quyết định
+- **Bộ nhớ yêu cầu theo thứ tự nhận (2026-10-29, sau review):** mỗi quyết định
   của `cmd_exec_decide` lấy một vé (`ticket`) tăng dần; `cmd_exec_done` không thay yêu
   cầu đã nhớ bằng một yêu cầu nhận sớm hơn. Nhờ vậy một `SET_PPG_LED` xong muộn (PC đã
   ghi nó "không biết" và gửi `MARK_EVENT`) không đẩy `MARK_EVENT` ra khỏi bộ nhớ, và lần
