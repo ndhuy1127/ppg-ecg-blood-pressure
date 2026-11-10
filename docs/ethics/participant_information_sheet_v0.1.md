@@ -9,7 +9,7 @@
 >   chuẩn bị trước buổi đo, ngưỡng huyết áp, rút lui, thời hạn lưu; bỏ ngâm chân nước lạnh và
 >   đạp xe).
 > - 2026-10-31, sau rà soát cuối (đối chiếu CIOMS 2016, ICH E6 4.8.10, mẫu của các hội đồng
->   trong nước và một vòng phản biện): viết lại theo bố cục bản nộp; thêm số người tham gia, lý
+>   trong nước và các đợt phản biện): viết lại theo bố cục bản nộp; thêm số người tham gia, lý
 >   do mời, địa điểm và tổng thời gian; thứ tự ký đồng thuận trước sàng lọc; nghỉ trước khi đo
 >   hai tay; hướng dẫn thở nhẹ nhàng; phát hiện ngoài ý muốn (ECG không được đọc lâm sàng, chênh
 >   lệch hai tay); chi phí, bồi dưỡng và xử trí khi có tổn hại; quyền xem hồ sơ của hội đồng;

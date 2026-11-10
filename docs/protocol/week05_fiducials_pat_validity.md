@@ -127,7 +127,7 @@ khóa các giá trị của nó bằng đúng bảng dưới.
 | Quy tắc MAD | median ± k · 1,4826 · MAD | Leys et al. 2013, [10.1016/j.jesp.2013.03.013](https://doi.org/10.1016/j.jesp.2013.03.013); mới đối chiếu metadata, chưa đọc toàn văn |
 | `mad_k` | 3 | **Chưa có nguồn** cho giá trị; lựa chọn kỹ thuật |
 | `mad_floor_ms` | 10 ms | **Chưa có nguồn**. Thêm ngày 2026-10-21 sau khi test SYNTHETIC cho thấy không có sàn thì PAT gần như hằng bị gắn outlier chỉ vì lượng tử hóa 1 mẫu (8 ms ở 125 Hz) |
-| `refractory_s` (config Tuần 5) | 0,25 s, cho đỉnh R | **Chưa có nguồn**; để HR cao không bị refractory cắt. v1 (features-sqi) giữ 0,4 s cho cả hai kênh, nhưng ở ECG 512 Hz với RR 0,4 s (HR 150) chỉ còn 17/21 đỉnh R (2026-10-25) |
+| `refractory_s` (config Tuần 5) | 0,25 s, cho đỉnh R | **Chưa có nguồn**; để HR cao không bị refractory cắt. v1 (features-sqi) giữ 0,4 s cho cả hai kênh, nhưng ở ECG 512 Hz với RR 0,4 s (HR 150) chỉ còn 17/21 đỉnh R (thử nghiệm 2026-10-25) |
 | `ppg_refractory_s` (config Tuần 5 v2) | 0,35 s, cho đỉnh PPG | Quyết định 2026-10-25 (mục 8), **chưa có nguồn**: chặn sóng phụ cách đỉnh tâm thu 0,30 s và vẫn dưới RR 0,4 s; sóng phụ ở +0,36 s vẫn lọt |
 | `r_energy_threshold` | `quantile`, 0,2 × (Q95 − Q05) | Quyết định 2026-10-25 (mục 8); Q95/Q05 là lựa chọn kỹ thuật, **chưa có nguồn** |
 | Dung sai so khớp | R 24 ms, foot 48 ms (3 và 6 mẫu ở 125 Hz) | Chốt ngày 2026-10-25, trước khi đánh dấu (mục 9); **chưa có nguồn**. v1 dùng 50/100 ms, mức đó từng tính sóng S trễ 30 ms là R đúng. Không đổi sau khi xem kết quả |
@@ -404,7 +404,7 @@ Chạy trên raw thật ngày 2026-10-25 (kết quả ở mục 9.4).
 
   Trong cả ba trường hợp `prominence` vẫn 9/9, tới nhịp ×5,5. Từ 2026-10-25 ngưỡng
   mặc định là `quantile` (mục 8): nhịp ×2,5 cho lại 9/9, nhưng gai 1 mẫu vẫn cho 1
-  FP và biên độ tụt còn 0,3 giữa chừng vẫn chỉ 5/9 (probe, 512 Hz). Đó là các
+  FP và biên độ tụt còn 0,3 giữa chừng vẫn chỉ 5/9 (kết quả probe, 512 Hz). Đó là các
   hạn chế đã biết của `derivative_energy`; chúng vẫn đúng.
 
   **Vai trò của `derivative_energy` (chốt 2026-10-29).** Nó không phải mặc định của

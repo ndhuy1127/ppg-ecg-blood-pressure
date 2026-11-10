@@ -8,10 +8,13 @@ thuẫn, `quy_uoc_du_lieu.md` được ưu tiên.
 ## 1. Quy tắc đặt tên
 
 - Phần không phải ID dùng chữ thường và snake_case (ví dụ `ecg_raw_2026.csv`).
-- File dữ liệu nghiên cứu theo mẫu
+- File dữ liệu **dẫn xuất** (`data/interim/`, `data/processed/`) theo mẫu
   `<subject_id>_<session_id>_<event_id>_<data_type>.<ext>` như định nghĩa trong
   `quy_uoc_du_lieu.md`. Phần ID giữ đúng định dạng ở đó (ví dụ
-  `SUB001_S001_E01_raw.csv`).
+  `SUB001_S001_E01_window.parquet`).
+- Raw thiết bị không theo mẫu trên (chốt 2026-10-29, `quy_uoc_du_lieu.md` mục 1–2):
+  mỗi lần ghi là một thư mục `data/raw/<subject_id>/<session_id>/<recording>/` chứa
+  một `raw.bin`. Sửa 2026-11-10: bản trước lấy `SUB001_S001_E01_raw.csv` làm ví dụ.
 
 ## 2. Tần số lấy mẫu (trạng thái)
 

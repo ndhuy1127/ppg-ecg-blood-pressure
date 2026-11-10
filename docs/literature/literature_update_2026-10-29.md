@@ -596,8 +596,8 @@ thêm nghiệm pháp. Các ý về PEP, áp lực tiếp xúc và cỡ mẫu đ�
   ngày gỡ được độ lệch hệ thống mà zero-change mắc phải, và các nhóm đặc trưng chỉ hơn nó rất ít (mục
   3.3). Gợi ý, chưa được nhóm hay thầy quyết định (chờ duyệt): cân nhắc thêm một baseline kiểu static
   vào SAP (chỉ BP hiệu chuẩn và hệ số chặn học bằng LOSO lồng, không dùng tín hiệu), để tách phần
-  "vượt zero-change" nhờ tín hiệu khỏi phần nhờ học độ lệch trung bình giữa các phiên. Cần phản
-  biện trước khi ghi vào SAP.
+  "vượt zero-change" nhờ tín hiệu khỏi phần nhờ học độ lệch trung bình giữa các phiên. Cần xem xét kỹ
+  trước khi ghi vào SAP.
 - **Dải ΔBP ở người trẻ (S4, Hình 3):** trung vị |ΔSBP| giữa hai buổi khoảng 3 mmHg ở 21–30 tuổi và
   chỉ tăng rõ từ khoảng 51 tuổi. Có thể dùng các số này làm khoảng cho mô phỏng độ nhạy (RQ mục 4.E)
   và khi đặt lại ngưỡng R3/P2. Suy luận (chờ duyệt): nới tuổi tuyển trong phạm vi dưới 50 tuổi khó làm

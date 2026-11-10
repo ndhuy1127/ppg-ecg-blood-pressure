@@ -85,7 +85,7 @@ Không đo trên người.
 
 ### Review cuối tuần (2026-11-07)
 
-Toàn bộ 16 commit của tuần được review hai vòng (chờ duyệt). Các lỗi tài liệu đã sửa
+Toàn bộ 16 commit của tuần được review độc lập (hai vòng, chờ duyệt). Các lỗi tài liệu đã sửa
 (c1c4b48):
 
 - an toàn buổi đo mục 8: bản trước cho ép tim cả khi người tham gia chưa tỉnh nhưng vẫn thở

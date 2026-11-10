@@ -128,11 +128,11 @@
 
 Phản biện ngày 2026-10-26 (một vòng). Nhận: phương án hai bảng, ghép cả dòng
 train, refractory 0,25 s, đóng băng mọi lựa chọn trước khi chấm, ghi lộ biến đầu vào,
-B3 − B2b không phải phần lợi thêm. Không nhận: `prominence` ở 0,25 s (đề xuất của vòng phản biện),
+B3 − B2b không phải phần lợi thêm. Không nhận: `prominence` ở 0,25 s (được đề xuất),
 vì kết quả SYNTHETIC Tuần 5 cho thấy nó bắt đỉnh T.
 
-Review trước khi duyệt, 2026-11-07 (hai review độc lập, là bước review định nghĩa của
-kế hoạch Tuần 6; chưa có số nào). Kết luận "duyệt được sau khi sửa"; cả năm
+Review trước khi duyệt, 2026-11-07 (độc lập, là bước review định nghĩa
+của kế hoạch Tuần 6; chưa có số nào). Kết luận "duyệt được sau khi sửa"; cả năm
 điểm đã được kiểm trên code và đã sửa:
 
 1. Chốt duyệt chỉ kiểm config và file định nghĩa; mã tính HR, fit và chấm có thể khác

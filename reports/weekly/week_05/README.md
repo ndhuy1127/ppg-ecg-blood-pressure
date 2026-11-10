@@ -187,7 +187,8 @@ Không đo trên người trong tuần này.
 
 **Chuẩn bị B4: đánh dấu tay mốc R/foot trên PulseDB**
 
-- **Kế hoạch và ngưỡng chấp nhận chốt trước khi đánh dấu** (Huy; [tài liệu mốc](../../../docs/protocol/week05_fiducials_pat_validity.md)
+- **Kế hoạch và ngưỡng chấp nhận chốt trước khi đánh dấu** (Huy;
+  [tài liệu mốc](../../../docs/protocol/week05_fiducials_pat_validity.md)
   mục 9; config `fiducials-week05-v2`):
   - chỉ train: 40 người × 2 đoạn, chia sẵn 20 người để chọn phương pháp và 20 người
     để xác nhận một lần; người val không dùng để chọn mốc;
