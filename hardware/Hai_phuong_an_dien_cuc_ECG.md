@@ -35,7 +35,7 @@ chuyển động, độ ổn định tiếp xúc và khả năng tái sử dụn
    Zhang, X. (2025). Flexible dry electrodes for electrocardiographic monitoring:
    Working principles, design strategies, and recent advances. *iScience*, 28(11),
    113812. DOI: 10.1016/j.isci.2025.113812.
-3. Luo, S., et al. (2015). Simultaneous comparison of 1 gel with 4 dry electrode types
+3. Meziane, N., et al. (2015). Simultaneous comparison of 1 gel with 4 dry electrode types
    for electrocardiography. *Physiological Measurement*, 36(3), 513–529.
    DOI: 10.1088/0967-3334/36/3/513.
 4. Soroudi, A., Hernández, N., Berglin, L., & Nierstrasz, V. (2019). Electrode

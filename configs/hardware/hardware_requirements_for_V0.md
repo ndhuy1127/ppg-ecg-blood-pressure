@@ -7,7 +7,7 @@ Kiểm chứng khả năng thu nhận tín hiệu PPG.
 Kiểm tra chất lượng tín hiệu và mức độ nhiễu của ECG và PPG.
 Kiểm tra khả năng lấy mẫu và truyền dữ liệu ổn định.
 Kiểm chứng khả năng đồng bộ thời gian giữa ECG và PPG.
-Thu thập dữ liệu ECG và PPG phục vụ các bước xử lý tín hiệu, trích xuất đặc trưng và phát triển mô hình AI dự đoán huyết áp.
+Thu thập dữ liệu ECG và PPG phục vụ các bước xử lý tín hiệu, trích xuất đặc trưng và phát triển mô hình ước lượng thay đổi huyết áp (ΔSBP/ΔDBP) sau hiệu chuẩn cá nhân.
 
 V1-module là prototype phục vụ kiểm chứng nguyên lý và chất lượng tín hiệu, chưa phải thiết bị wearable hoàn chỉnh và chưa phải thiết bị y tế.
 ## 2. Phạm vi phiên bản V1-module
