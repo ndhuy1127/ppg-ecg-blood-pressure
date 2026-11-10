@@ -69,8 +69,10 @@ def test_ci_methods_known_answers():
                              sim.draw_counts(10, 4, rng), 0.95, "student_t")
     assert np.allclose([low[0], high[0]], [2.5 - 2.0543, 2.5 + 2.0543], atol=1e-3)
     # Row quantiles: position 0.5 * 4 = 2 and 0.1 * 4 = 0.4 on 0..4.
+    from software.evaluation.mean_intervals import row_quantile
+
     ordered = np.array([[0.0, 1.0, 2.0, 3.0, 4.0], [0.0, 1.0, 2.0, 3.0, 4.0]])
-    assert np.allclose(sim._row_quantile(ordered, np.array([0.5, 0.1])), [2.0, 0.4])
+    assert np.allclose(row_quantile(ordered, np.array([0.5, 0.1])), [2.0, 0.4])
     try:
         sim.interval(np.zeros((1, 4)), counts[:, :4], 0.95, "unknown")
     except ValueError:

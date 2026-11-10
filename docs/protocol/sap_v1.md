@@ -117,8 +117,11 @@
     trên những tập người chồng lấp nhau, nên d_s có thể phụ thuộc nhau. Mô phỏng ở mục 9 không
     huấn luyện mô hình, nên chưa kiểm được điều này. **Việc phải làm trước khi khóa:** một mô
     phỏng có huấn luyện Ridge thật trong LOSO.
-  - `software/evaluation/subject_bootstrap.py` hiện chỉ có percentile. Phải thêm bootstrap-t và
-    khoảng bao, kèm test, trước khi khóa SAP.
+  - Code: `bootstrap_bp(..., contrasts=..., contrast_ci_methods=(...))` trong
+    `software/evaluation/subject_bootstrap.py` tính năm kiểu CI cho hiệu MAE trung bình đều theo
+    người (thêm 2026-11-11, có test đáp án biết trước). Công thức nằm ở
+    `software/evaluation/mean_intervals.py`, dùng chung với mô phỏng ở mục 9, nên phân tích thật
+    và mô phỏng tính CI giống hệt nhau.
 - Phân tích hỗ trợ: Wilcoxon signed-rank trên d_s, hai phía, không dùng để kết luận.
 
 ## 6. Đa kiểm định (đề xuất: phương án A, chờ duyệt)
@@ -363,7 +366,6 @@ Theo protocol mục 10, khóa lại ở đây:
 Việc còn mở, phải xong trước khi khóa (ghi 2026-11-10):
 
 - mô phỏng có huấn luyện Ridge thật trong LOSO, để kiểm sự phụ thuộc giữa các d_s (mục 5);
-- thêm bootstrap-t và khoảng bao vào `subject_bootstrap.py` (mục 5);
 - mô phỏng chung SBP và DBP để có xác suất kết luận chính sau đủ các bước Holm (mục 6);
 - baseline không dùng tín hiệu mạnh hơn zero-change (trung bình ΔBP theo nghiệm pháp, hoặc
   baseline "static" của S4): mô hình PPG-only có HR từ PPG, nên có thể vượt zero-change chỉ nhờ

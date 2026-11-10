@@ -8,6 +8,7 @@ import pandas as pd
 from software._bp_validation import bp_pairs, subjects
 from software.data_io.split_manifest import validate_manifest
 from software.evaluation.bp_metrics import evaluate_bp
+from software.evaluation.mean_intervals import CI_METHODS, interval
 from software.signal_processing.fiducials import finite_number
 
 
@@ -88,8 +89,35 @@ def _interval(values, alpha):
             else ("degenerate" if np.ptp(values) == 0 else "ok")}
 
 
+def _ci_methods(methods, pairs):
+    methods = tuple(methods or ())
+    if any(not isinstance(m, str) or m not in CI_METHODS for m in methods):
+        raise ValueError(f"contrast_ci_methods must be among {CI_METHODS}")
+    if len(set(methods)) != len(methods):
+        raise ValueError("Duplicate contrast CI method")
+    if methods and pairs is None:
+        raise ValueError("contrast_ci_methods needs contrasts")
+    return methods
+
+
+def _subject_mae_differences(reference, predictions, ids, a, b):
+    """d_s = MAE_s(a) - MAE_s(b) per target, subjects in np.unique(ids) order."""
+    by_a = evaluate_bp(reference, predictions[a], ids).by_subject
+    by_b = evaluate_bp(reference, predictions[b], ids).by_subject
+    order = [str(subject) for subject in np.unique(ids)]
+    return {target: np.array([by_a[s][target].mae - by_b[s][target].mae for s in order])
+            for target in ("SBP", "DBP")}
+
+
+def _drawn_subject_counts(ids, indices, draw_ids, unique):
+    """How often each subject of ``unique`` is drawn in one cluster draw."""
+    _, first = np.unique(draw_ids, return_index=True)
+    columns = np.searchsorted(unique, ids[indices[first]])
+    return np.bincount(columns, minlength=len(unique))
+
+
 def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig(), *,
-                 contrasts=None):
+                 contrasts=None, contrast_ci_methods=()):
     """Same cluster draws for every model; no model fitting or selection here.
 
     ``contrasts``: optional (model, reference) pairs. For each, the difference
@@ -97,6 +125,13 @@ def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig
     draw, and its percentile CI is reported under ``result["contrasts"]``. The
     point difference of subject-balanced MAE equals the mean over subjects of
     MAE_s(model) - MAE_s(reference). Without contrasts the result is unchanged.
+
+    ``contrast_ci_methods`` (added 2026-11-11, SAP v1 section 5): extra CIs of the
+    subject-balanced MAE contrast, i.e. of the mean over subjects of d_s =
+    MAE_s(model) - MAE_s(reference), by the methods of ``mean_intervals``
+    (percentile, bca, bootstrap_t, student_t, t_envelope), from the same cluster
+    draws. They are reported under ``contrast["ci_methods"]``. Left empty, the
+    result is exactly that of earlier versions.
     """
     reference = bp_pairs(reference, "reference")
     ids = subjects(subject_ids, len(reference))
@@ -108,6 +143,7 @@ def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig
     if any(values.shape != reference.shape for values in predictions.values()):
         raise ValueError("reference and predictions must have identical shapes")
     pairs = _contrast_pairs(contrasts, predictions)
+    methods = _ci_methods(contrast_ci_methods, pairs)
     point = {name: _statistics(evaluate_bp(reference, values, ids)) for name, values in predictions.items()}
     n_subjects = len(np.unique(ids))
     result = {"n_rows": len(ids), "n_subjects": n_subjects, "seed": config.seed,
@@ -121,19 +157,28 @@ def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig
                   for metric in CONTRAST_METRICS} for target in point[a]}
         for a, b in pairs or ()
     ]
+    if methods:
+        result["contrast_ci_methods"] = list(methods)
     if n_subjects < config.min_subjects:
         result["status"] = "insufficient_subjects"
         result["models"] = {name: {"point": stats, "ci": None} for name, stats in point.items()}
         if pairs is not None:
             result["contrasts"] = [{"model": a, "reference": b, "point": p, "ci": None}
                                    for (a, b), p in zip(pairs, contrast_point)]
+            if methods:
+                for contrast in result["contrasts"]:
+                    contrast["ci_methods"] = None
         return result
+    unique = np.unique(ids)
+    counts = np.zeros((config.repetitions, len(unique))) if methods else None
     samples = {name: {target: {metric: [] for metric in stats[target]} for target in stats} for name, stats in point.items()}
     contrast_samples = [{target: {metric: [] for metric in CONTRAST_METRICS}
                          for target in point[a]} for a, _ in pairs or ()]
     rng = np.random.default_rng(config.seed)
-    for _ in range(config.repetitions):
+    for repetition in range(config.repetitions):
         indices, draw_ids = cluster_draw(ids, rng)
+        if counts is not None:
+            counts[repetition] = _drawn_subject_counts(ids, indices, draw_ids, unique)
         draw = {}
         for name, values in predictions.items():
             stats = draw[name] = _statistics(
@@ -163,18 +208,33 @@ def bootstrap_bp(reference, prediction_sets, subject_ids, config=BootstrapConfig
                     for target, metrics in store.items()}}
             for (a, b), p, store in zip(pairs, contrast_point, contrast_samples)
         ]
+        for (a, b), contrast in zip(pairs, result["contrasts"] if methods else ()):
+            differences = _subject_mae_differences(reference, predictions, ids, a, b)
+            contrast["ci_methods"] = {target: {"subject_balanced_mae": {
+                method: _method_interval(values, counts, config.confidence, method)
+                for method in methods}} for target, values in differences.items()}
     return result
 
 
+def _method_interval(values, counts, confidence, method):
+    low, high = interval(values[None, :], counts, confidence, method)
+    bounds = [float(low[0]), float(high[0])]
+    finite = all(np.isfinite(bounds))
+    return {"bounds": bounds if finite else None,
+            "status": "undefined" if not finite
+            else ("degenerate" if bounds[0] == bounds[1] else "ok")}
+
+
 def evaluate_prediction_table(manifest, inventory, predictions, *, split="val",
-                              config=BootstrapConfig(), contrasts=None):
+                              config=BootstrapConfig(), contrasts=None,
+                              contrast_ci_methods=()):
     """Validate v2 conservation/leakage and exact prediction keys before metrics.
 
     Table columns: sample_id, subject_id, split, model, pred_sbp, pred_dbp.
     Caller still owns raw/pool permissions and observation/calibration checks.
     Validation only (2026-10-24): test evaluation is refused here; it needs a
     separate script that requires a lock file committed before the run.
-    ``contrasts`` is passed to ``bootstrap_bp``.
+    ``contrasts`` and ``contrast_ci_methods`` are passed to ``bootstrap_bp``.
     """
     validate_manifest(manifest, inventory)
     if split != "val":
@@ -200,4 +260,5 @@ def evaluate_prediction_table(manifest, inventory, predictions, *, split="val",
             raise ValueError("Prediction subject mismatch")
         prediction_sets[name] = group[["pred_sbp", "pred_dbp"]].to_numpy()
     return bootstrap_bp(rows[["sbp", "dbp"]].to_numpy(), prediction_sets,
-                        rows.subject_id.to_numpy(), config, contrasts=contrasts)
+                        rows.subject_id.to_numpy(), config, contrasts=contrasts,
+                        contrast_ci_methods=contrast_ci_methods)

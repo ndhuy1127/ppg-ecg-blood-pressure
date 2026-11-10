@@ -171,6 +171,17 @@ bằng trung bình theo người của MAE_s(A) − MAE_s(B), tức đại lư�
 [RQ](../research_questions_v0.1.md) khi A là PPG + PAT và B là PPG-only. Không
 truyền `contrasts` thì output giữ nguyên như trước.
 
+**Các kiểu CI khác cho hiệu MAE theo người (thêm 2026-11-11):**
+`bootstrap_bp(..., contrasts=[(A, B)], contrast_ci_methods=("t_envelope", ...))`
+trả thêm `contrast["ci_methods"][huyết áp]["subject_balanced_mae"][kiểu]`, mỗi kiểu có
+`bounds` và `status`, và `result["contrast_ci_methods"]`. Các kiểu: `percentile`
+(trùng CI ở trên), `bca`, `bootstrap_t`, `student_t` và `t_envelope` (cận rộng hơn ở
+mỗi phía của bootstrap-t và Student t; CI chính đề xuất ở
+[SAP v1](sap_v1.md) mục 5). Mọi kiểu bootstrap dùng đúng các lượt rút của CI ở trên.
+Chỉ áp cho `subject_balanced_mae`, vì đó là trung bình của một giá trị mỗi người. Không
+truyền `contrast_ci_methods` thì output giữ nguyên như trước. Công thức ở
+`software/evaluation/mean_intervals.py`, dùng chung với mô phỏng độ nhạy RQ1.
+
 `evaluate_prediction_table(manifest, inventory, predictions, split='val')`
 gọi validator v2 rồi join theo sample_id, kiểm tra đúng subject/split, số dòng,
 không trùng/mất/thêm ID và cùng tập cho các model. Prediction table có đúng:
