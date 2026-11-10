@@ -45,10 +45,23 @@
 | 8 | Bo cổ tay qua cáp: nguồn, I²C, SPI, PPG, IMU | BU mục 8 bước 1–8 | [ ] | |
 | 9 | **VLED+:** V1 không tải 4,9–5,3 V; V2 đỉnh khởi động ≤ 5,5 V; V3 trong xung `0x7F` 4,5–5,5 V; V4 ghi chú nếu 5,0–5,3 V | AT mục 3 | [ ] | |
 | 10 | Nhiễu đèn trên PPG | BU mục 8 bước 10 | [ ] | |
-| 11 | Đo đồng bộ 10 phút | BU mục 9, [sync_10min_test_plan.md](sync_10min_test_plan.md) | [ ] | |
+| 11 | Đo đồng bộ: thử trước 1 phút (kích thích PPG thấy được), 5 lần 10 phút, 1 lần 120 phút; tiêu chí A1–A9 | BU mục 9, [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3, 4, 9 | [ ] | |
 | 12 | Chạy cả hệ 120 phút, gộp với thử nhiệt: `record --commands`, LED `0x7F`, nhiệt độ bo cổ tay ≤ 41 °C, đủ file và manifest, ghi đỉnh RAM | BU mục 8 bước 9; AT mục 4 | [ ] | |
 | 13 | Đo dòng rò: bệnh nhân và phụ, AC và DC, ≤ 50 % giới hạn | AT mục 2 | [ ] | |
 | 14 | Biên bản dòng rò và nhiệt có chữ ký người có chuyên môn | AT mục 5 | [ ] | |
+
+**Ba phép kiểm chặn đường thời gian** (ghi 2026-11-11, đề xuất, chờ duyệt). Mọi mốc thời gian
+dựa vào ba hành vi của chip mà datasheet không bảo đảm. Bước nào dưới đây không đạt thì dừng,
+không đi tiếp sang bước 11:
+
+- [ ] **Ở bước 7:** cạnh `SAMP` đầu tiên ứng với mẫu đầu tiên của FIFO ECG (BU mục 7 bước 4).
+  Lệch cố định một mẫu là 1,953 ms và logger không tự phát hiện được; tiêu chí A8 của kế hoạch
+  đo đồng bộ kiểm lại độc lập.
+- [ ] **Ở bước 8:** ba khe ở 200 sps chạy được với độ rộng xung đã chọn: `SPO2_SR` đọc lại đúng
+  và tốc độ ra mỗi khe trong 200 sps ± 3 %
+  ([interface_power_sampling_v0.md](../../configs/hardware/interface_power_sampling_v0.md) mục 6).
+- [ ] **Ở bước 8:** `PPG_RDY` báo mỗi mẫu ở chế độ ba khe (BU mục 8 bước 6); nếu không thì ghi
+  cách đọc FIFO thay thế và kiểm lại tiêu chí A3.
 
 Chỉ sau bước 14, và khi đã có phê duyệt phù hợp, mới tới G2 trên thành viên nhóm (K3–K5 của
 protocol mục 5.4, khóa ngưỡng SQI theo [SQI v1](../../docs/protocol/sqi_specification_v1.md)

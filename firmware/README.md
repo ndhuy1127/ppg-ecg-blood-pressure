@@ -319,7 +319,9 @@ khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận c�
   động một dãy mới, tái lập được từ chính luồng dữ liệu.
 - **Test** [tests/test_firmware_stim_plan.py](../tests/test_firmware_stim_plan.py):
   dãy khoảng cách khớp một xorshift32 viết độc lập bằng Python, luôn trong
-  [1 s; 1 s + 1 953 µs), và pha của 600 cạnh phủ đều chu kỳ mẫu ECG. Phần GPIO và
+  [1 s; 1 s + 1 953 µs), và pha của 600 cạnh phủ đều chu kỳ mẫu ECG lẫn chu kỳ mẫu
+  PPG 5 000 µs, kể cả khi tốc độ PPG lệch ± 3 % (độ lệch cộng dồn qua các cạnh;
+  thêm 2026-11-11). Phần GPIO và
   `esp_timer` trong `main.c` chỉ kiểm bằng build.
 
 ## Kiểm tra khi có bo (chưa làm)

@@ -3,7 +3,11 @@
  * sync_10min_test_plan.md, sections 3-4; decided 2026-10-25): a rising edge on
  * GPIO6 every STIM_PERIOD_US plus a uniform offset in [0, STIM_JITTER_US), so
  * that the edges cover one ECG sample period (1953.125 us at 512 sps) evenly
- * instead of locking to a phase. The seed is the SESSION_ID, which every packet
+ * instead of locking to a phase. The caller schedules target times, so the
+ * offsets add up: the edge phase is a random walk that also covers the PPG
+ * sample period (5000 us at 200 sps) evenly over 600 edges, although each offset
+ * is shorter than it (tests/test_firmware_stim_plan.py). The seed is the
+ * SESSION_ID, which every packet
  * carries, so each boot gives a new sequence that can be regenerated. Plain C
  * with no ESP-IDF dependency, so the same code can be compiled on a PC.
  */

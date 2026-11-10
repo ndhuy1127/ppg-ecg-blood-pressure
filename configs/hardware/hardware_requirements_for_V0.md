@@ -115,7 +115,7 @@ và so sánh với chu kỳ danh định $T_s = 1/f_s$ của từng kênh (ECG: 
 
 #### 4.4.2 Jitter
 Jitter được hiểu là biến thiên ngắn hạn của thời điểm lấy mẫu so với thời điểm lý tưởng.
-V1-module phải đo và ghi nhận jitter thực tế thay vì tự đặt một giới hạn chưa có cơ sở đo.
+V1-module phải đo và ghi nhận jitter thực tế, rồi báo theo mục A7 của kế hoạch đo đồng bộ (mục 9 của tài liệu đó), cạnh giá trị kỳ vọng do lượng tử; A7 chỉ để báo cáo, các tiêu chí đạt/không đạt là A1–A6, A8 và A9.
 #### 4.4.3 Clock drift
 Khi thời gian thu tăng lên, clock của các thiết bị có thể lệch nhau.
 Do đó cần kiểm tra:
@@ -126,7 +126,7 @@ $$
 
 theo thời gian.
 Nếu độ lệch thay đổi theo thời gian, phải ghi nhận drift và xác định phương pháp hiệu chỉnh trước khi sử dụng dữ liệu để tính PAT.
-Ở V1-module chưa chốt một con số jitter/drift cứng nếu chưa có phép đo và yêu cầu nghiên cứu cụ thể. Giá trị giới hạn sẽ được xác định sau khi thực hiện thử nghiệm đồng bộ.
+Giới hạn cho độ lệch, jitter và drift là các tiêu chí A1–A9 ở `hardware/test_reports/sync_10min_test_plan.md` mục 9 (đề xuất 2026-11-11, chờ duyệt), được viết **trước** khi đo. Bản trước của mục này ghi giới hạn sẽ được xác định sau khi thử nghiệm đồng bộ; đặt giới hạn sau khi đã thấy số đo thì giới hạn không còn kiểm được gì. Ngân sách sai số của PAT ở mục 10 của cùng tài liệu.
 ## 5. Yêu cầu MCU
 Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M (module Espressif ESP32-S3-WROOM-1-N8R8, chân giống DevKitC-1; đặt 2026-10-27, thay bản DevKitC-1-N8R8 chốt 2026-10-24) là MCU chính của prototype V1-module.
 MCU có các nhiệm vụ:
