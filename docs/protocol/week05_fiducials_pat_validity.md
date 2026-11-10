@@ -656,6 +656,16 @@ Chốt ngày 2026-10-29, trước khi chạy `compare` hay `gate` trên mốc ta
 chốt, file mốc lần 1 (`manual_main.csv`) có một phiên dở ngày 2026-10-25; chưa có
 bảng so khớp hay kết quả cổng nào.
 
+**Bỏ phiên ngày 2026-10-25 (ghi 2026-11-11, sai lệch so với kế hoạch).** Người đánh dấu
+báo phiên đó là bấm nhầm. Kiểm file: 62 mốc trên 28 đoạn; 27 đoạn chỉ có 1 đỉnh R và 1 chân
+sóng, trong khi một đoạn 10 s có khoảng 10–15 nhịp; không dòng nào có ghi chú. Đây không phải
+mốc thật. Hai file `manual_main.csv` (SHA-256 `26559a14…`) và `manual_main.progress.json` được
+chuyển nguyên trạng sang `data/processed/pulsedb_w5_review_v1/discarded_2026-11-11/`, không
+dùng cho `compare`, `repeat` hay `gate`. Lần 1 bắt đầu lại từ 0/80 đoạn, theo quy tắc chốt
+ngày 2026-10-29 (mục 9.2), nên điểm yếu "một phần mốc được đánh trước khi chốt quy tắc" không
+còn. Mốc của lần 2 vẫn phải bắt đầu ít nhất 2 ngày sau ngày cuối của lần 1 mới. Chưa có bảng so
+khớp hay kết quả cổng nào được tính từ các mốc bị bỏ.
+
 - `B4_NOT_ALLOWED` là **kết luận cuối cho PulseDB**. Không có vòng đánh dấu 2, không
   đổi phương pháp hay ngưỡng rồi chấm lại, và không làm B4 trên PulseDB.
 - PAT chỉ được đánh giá trên **dữ liệu thiết bị**. Detector cho thiết bị được thẩm
