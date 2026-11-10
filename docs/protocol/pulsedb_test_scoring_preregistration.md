@@ -1,5 +1,8 @@
 # Đăng ký trước: chấm test split và CalFree trên PulseDB
 
+> **Phiên bản:** v1 (nội dung chốt 2026-10-29; danh sách bảng B2 ở mục 3 bổ sung
+> 2026-11-07, trước khi có số B2 nào; nhãn phiên bản thêm 2026-11-10, không đổi nội dung).
+>
 > **Trạng thái:** chốt 2026-10-29. Phải commit **trước khi chạy B2 trên val** và
 > trước khi xem bất kỳ con số nào của test split hay CalFree. Chưa có script chấm
 > và chưa chấm lần nào. Đổi bất cứ điều gì dưới đây sau khi đã chấm thì phải nâng

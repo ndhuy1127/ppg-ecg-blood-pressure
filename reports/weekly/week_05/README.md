@@ -204,7 +204,8 @@ Không đo trên người trong tuần này.
 - **Cấu hình bộ lọc của PulseDB** (Supplementary Material): ECG Butterworth
   [0,5; 40] Hz, PPG Chebyshev-II [0,5; 8] Hz, chuẩn hóa [0, 1] theo từng đoạn. Vẫn
   chưa biết lọc zero-phase hay causal.
-- **Phát hiện: PPG trễ so với ECG.** Khoảng R → foot kế tiếp có trung vị 572 ms,
+- **Giả thuyết, chưa kiểm chứng (sửa nhãn 2026-11-10, trước ghi "Phát hiện"): PPG trễ so
+  với ECG.** Số dưới đây lấy từ bộ dò chưa thẩm định. Khoảng R → foot kế tiếp có trung vị 572 ms,
   trong khi PAT ngón tay lúc nghỉ chỉ khoảng 180–260 ms. Một preprint dẫn lại rằng
   ECG–PPG trong VitalDB lệch khoảng 350 ms (nguồn thứ cấp). Vì vậy PAT PulseDB chỉ
   dùng được như đặc trưng tương đối, và giới hạn 80–400 ms phải xem lại trước khi

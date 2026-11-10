@@ -193,10 +193,11 @@ và hash: [pulsedb_b2_v1/](pulsedb_b2_v1/README.md).
 
 Hiệu ghép cặp định trước (mmHg, âm là sai số thấp hơn):
 
-- B2a − B0 (`full`): SBP +1,29 [−0,39; 3,07], DBP +0,74 [−0,81; 2,30]: nhân khẩu học không tốt
-  hơn trung bình train.
-- B2b − B2a (`hr_available`): SBP +0,05 [−0,89; 1,09], DBP −0,01 [−0,61; 0,61]: ước lượng HR
-  không thêm gì.
+- B2a − B0 (`full`): SBP +1,29 [−0,39; 3,07], DBP +0,74 [−0,81; 2,30]: với cấu hình
+  này chưa thấy B2a tốt hơn trung bình train (CI chứa 0).
+- B2b − B2a (`hr_available`): SBP +0,05 [−0,89; 1,09], DBP −0,01 [−0,61; 0,61]: chưa thấy
+  ước lượng HR thêm thông tin (CI chứa 0; bộ dò R chưa qua cổng nghiệm thu). Sửa câu chữ
+  2026-11-10: bản trước ghi "không thêm gì", trong khi chưa có biên tương đương định trước.
 - B3 − B2a (`full`): SBP −1,82 [−3,52; −0,07], DBP −1,03 [−2,70; 0,66]; B3 − B2b
   (`hr_available`): SBP −1,94 [−3,76; −0,18], DBP −0,68 [−2,21; 0,91]. Đây là so hai bộ đặc
   trưng khác nhau, không phải phần lợi thêm của dạng sóng so với nhân khẩu học.

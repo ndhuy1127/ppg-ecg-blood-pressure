@@ -2,7 +2,7 @@
 
 Ngoài `bp_metrics.py` (dưới đây) và `subject_bootstrap.py`, thư mục có
 [fiducial_agreement.py](fiducial_agreement.py) (Tuần 5): so mốc R/foot tự động với
-đánh dấu tay, chỉ train/val. Mô tả đầu vào/đầu ra ở
+đánh dấu tay; chỉ nhận bản ghi train/val, mốc tay trên dữ liệu thật chỉ ở train. Mô tả đầu vào/đầu ra ở
 [week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
 mục 4.
 

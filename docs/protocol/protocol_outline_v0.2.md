@@ -273,7 +273,7 @@ Kết luận (trên giấy, 2026-10-22; sửa 2026-10-29 khi bỏ M3, M4):
    phiên có cờ theo từng người. Nếu DC lệch khỏi khoảng mà không bão hòa thì không chỉnh.
 
 ### 6.2. Trình tự một lượt đo (Measurement Event)
-Mỗi lượt đo (`event_id`) kéo dài khoảng $2.5 - 3\text{ phút}$, chưa kể ít nhất 2 phút nghỉ trước lượt tiếp theo (sửa 2026-10-31), và gồm 3 giai đoạn:
+Mỗi lượt đo (`event_id`) kéo dài khoảng $2{,}5 - 3\text{ phút}$, chưa kể ít nhất 2 phút nghỉ trước lượt tiếp theo (sửa 2026-10-31), và gồm 3 giai đoạn:
 1. **Giai đoạn 1: ghi tín hiệu trước khi đo cuff (Baseline Signal Window, $60\text{s}$):**
    - Thiết bị thu PPG và ECG đồng bộ, liên tục trong 60 giây trước khi bắt đầu bơm cuff. Toàn bộ 60 giây này được lưu để kiểm soát chất lượng và phân tích độ nhạy.
    - Đây là **cửa sổ tín hiệu ứng viên trước cuff**, không phải phép đo huyết áp đồng thời. Cửa sổ phân tích chính dự kiến là 20–30 giây ngay trước lúc bơm cuff. SQI, độ ổn định của nhịp tim/nhịp mạch và cờ chuyển động của cửa sổ đều được tính và lưu, nhưng phân tích chính không loại cửa sổ theo các chỉ số này; lọc theo SQI là phân tích phụ (7.3, sửa 2026-10-29). Phải lưu độ lệch thời gian giữa cuối cửa sổ tín hiệu và lúc máy cuff trả kết quả.
@@ -581,7 +581,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
   - Tuyệt đối **KHÔNG bootstrap theo từng cửa sổ đo riêng rẽ**, vì làm vậy vi phạm giả định các quan sát độc lập (i.i.d).
 - **Kiểm định giả thuyết (chưa khóa):**
   - Phép so sánh chính của RQ1 là giữa mô hình PPG-only và mô hình PPG + PAT, dùng cùng thuật toán, trên **cùng tập lần đo** tính được cả PAT lẫn đặc trưng PPG (xem [RQ](../research_questions_v0.1.md), mục 4.C). Tập này lấy từ endpoint ở 6.4 và không lọc thêm theo ngưỡng SQI (7.3). Sai số được báo cả gộp chung lẫn theo từng nghiệm pháp; phân tích chỉ dùng M0 là phân tích phụ định trước.
-  - Hiệu ứng chính là chênh lệch MAE tính theo từng người; báo cáo trung bình và CI 95% bootstrap theo người. Kiểm định Wilcoxon signed-rank ghép cặp theo người ($\alpha = 0.05$) là phân tích hỗ trợ.
+  - Hiệu ứng chính là chênh lệch MAE tính theo từng người; báo cáo trung bình và CI 95% bootstrap theo người. Kiểm định Wilcoxon signed-rank ghép cặp theo người ($\alpha = 0{,}05$) là phân tích hỗ trợ.
   - Tiêu chí kết luận theo [RQ v0.4](../research_questions_v0.1.md) mục 4.E (đề xuất 2026-10-29, chờ thầy): so sánh với zero-change cũng phải có CI theo người, như so sánh với PPG-only; trước khi chạy vòng ngoài phải chọn xong phương án đa kiểm định (A: giao–hợp cho từng đầu ra, Holm giữa SBP và DBP; B: Holm trên bốn so sánh) và mức hiệu ứng nhỏ nhất đáng quan tâm δ.
   - Luôn báo cáo kèm baseline zero-change và SD của $\Delta\text{BP}$ tham chiếu.
 
@@ -600,7 +600,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 
 | Rủi ro kỹ thuật | Khả năng | Mức độ | Biện pháp phòng ngừa và xử lý |
 |---|---|---|---|
-| ECG đạo trình I nhiễu, SNR thấp | Cao | Cao | Dùng điện cực dán Ag/AgCl cho đạo trình I qua hai tay (LA ở mặt lòng cổ tay trái, RA ở mặt lòng cổ tay phải, RL ở cẳng tay trái; mục 5.2). Thiết kế lọc dải thông khoảng $0.5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn). Thiết bị theo [custom_board_proposal.md, Phần A](../../configs/hardware/custom_board_proposal.md). Trên người chỉ dùng Ag/AgCl có gel; điện cực khô không thuộc hồ sơ lần này (mục 5.1). |
+| ECG đạo trình I nhiễu, SNR thấp | Cao | Cao | Dùng điện cực dán Ag/AgCl cho đạo trình I qua hai tay (LA ở mặt lòng cổ tay trái, RA ở mặt lòng cổ tay phải, RL ở cẳng tay trái; mục 5.2). Thiết kế lọc dải thông khoảng $0{,}5 - 40\text{ Hz}$ và khuếch đại vi sai có CMRR cao (thông số cụ thể theo AFE được chọn). Thiết bị theo [custom_board_proposal.md, Phần A](../../configs/hardware/custom_board_proposal.md). Trên người chỉ dùng Ag/AgCl có gel; điện cực khô không thuộc hồ sơ lần này (mục 5.1). |
 | Nhiễu trôi đường nền PPG do dây đeo lỏng | Trung bình | Trung bình | Thêm phần hiển thị SQI trực quan trên giao diện thu thập; hướng dẫn kỹ thuật viên siết vòng vừa đủ chặt trước khi bắt đầu đếm ngược 60 giây. |
 | Biên độ biến thiên huyết áp tự nhiên giữa các phiên quá nhỏ ($< 5\text{ mmHg}$) | Cao (từ 2026-10-29, khi chỉ còn M1, M2) | Cao | Dùng nghiệm pháp M1, M2 ở mục 6.4 và tiêu chí kiểm ở pilot (6.5), chỉ khi đã được duyệt đạo đức. Báo SD của ΔBP tham chiếu và sai số của baseline zero-change (mục 3). Nếu P2 thấp thì cùng thầy rà lại protocol, có thể xin sửa đổi để thêm nghiệm pháp (6.4, "Dự phòng"). |
 | Người tham gia cử động tay trong khi đo | Cao | Trung bình | Hiển thị SQI và cờ cử động (`motion-sqi-v0`) cho người vận hành. Khi có cử động trong cửa sổ trước cuff, người vận hành đánh dấu (sự kiện mã 4) và có thể đo lại sau thời gian nghỉ theo quy tắc an toàn. Mọi lượt, kể cả lượt có cử động, vẫn được giữ trong raw kèm cờ. Phân tích chính không loại theo SQI; lọc SQI là phân tích phụ đăng ký trước (7.3, chốt 2026-10-29), không quyết định ngay lúc đang đo, để RQ3 có dữ liệu SQI kém (sửa 2026-10-26; bản trước ghi là tự động hủy lượt đo). Việc đánh dấu dùng lệnh sự kiện mã 4 gửi từ PC. |

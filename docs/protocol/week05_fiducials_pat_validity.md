@@ -472,7 +472,7 @@ trên test (từ 2026-10-25 chỉ trên train, mục 9).
 
 Không quyết định nào chặn việc tải PulseDB hay phát triển thiết bị. Quyết định 4
 phải có trước khi tạo bảng so sánh SYNTHETIC mới; quyết định 3 trước khi tin độ phủ
-PAT ở nhịp tim cao (M4); quyết định 2 trước khi dùng `derivative_energy` làm bộ dò
+PAT ở nhịp tim cao (M4 đã bỏ ngày 2026-10-29, nhưng nhịp tim vẫn có thể tăng ở M2); quyết định 2 trước khi dùng `derivative_energy` làm bộ dò
 thật. Hai chỗ dùng đó là bộ dò HR của B2 (đã dùng, chưa qua cổng) và bộ dò R của B4
 (chỉ khi thắng và được xác nhận ở cổng mục 9.3).
 

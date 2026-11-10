@@ -136,7 +136,7 @@ Viết lại ở v0.3 (2026-10-29) sau khi rà soát các nghiên cứu gần nh
 
    N22–N24 và N33 (abstract) cho thấy đầu ra của các thiết bị thương mại được đánh giá bám gần mốc hiệu chuẩn. Vì vậy RQ2b (cùng phiên so với khác phiên) đo mức lạc quan của cách đánh giá trong một buổi trên dữ liệu của nhóm. Ở quy mô ≥ 15 người, đây là nghiên cứu khả thi (feasibility), không phải bằng chứng validation.
 3. **Ảnh hưởng của cách chia dữ liệu.**
-   Đây **không** phải khoảng trống mới: Yoshizawa 2023, Mehta 2024, PulseDB và Moulaeifard 2025 đã chứng minh rò rỉ theo người làm kết quả đẹp giả. RQ2a chỉ kiểm chứng lại hiệu ứng này trong pipeline của nhóm và báo ở phụ lục.
+   Đây **không** phải khoảng trống mới: Yoshizawa 2023, Mehta 2024, PulseDB và Moulaeifard 2025 đã báo cáo rằng rò rỉ theo người làm kết quả đẹp giả (Yoshizawa 2023 mới đọc abstract). RQ2a chỉ kiểm chứng lại hiệu ứng này trong pipeline của nhóm và báo ở phụ lục.
 4. **Từ chối dự đoán kết hợp SQI và độ bất định.**
    Shen 2025 (S7) dùng conformal prediction trên Aurora-BP và có signal quality làm một đặc trưng; Shen 2024 (#11) dùng mạng evidential. Trong các nguồn đã đọc, chưa thấy đánh giá kết hợp lọc SQI đầu vào với độ bất định đầu ra bằng đường cong risk–coverage so với từ chối ngẫu nhiên ở cùng coverage, ở mức người. Đây là khoảng trống hẹp, chưa tìm kiếm cho giai đoạn 2022–2026, và RQ3 chỉ là phân tích thăm dò.
 
