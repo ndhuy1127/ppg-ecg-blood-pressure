@@ -1,0 +1,7 @@
+# Optional, B5 only (docs/protocol/b5_pulsedb_definition.md; added 2026-11-07, pending
+# team review). Not needed by the rest of the repository; tests that need it skip
+# without it. NVIDIA GPU with a CUDA 12.4 driver:
+#   python -m pip install -r requirements-dl.txt
+# CPU only: python -m pip install torch==2.6.0  (same version, CPU wheel from PyPI)
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0

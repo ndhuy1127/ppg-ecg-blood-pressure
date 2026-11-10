@@ -1,0 +1,56 @@
+{
+  "schema_version": "b5-pipeline-v0",
+  "status": "PENDING_REVIEW",
+  "unit": "mmHg",
+  "split_sha256": {
+    "raw": "20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002",
+    "inventory": "17d3a8c2aa7a7d5a304d219aaaabada10a696232d529a1b0e19788f5d1fb7c26",
+    "manifest": "257d9653d6d42de26b77c291de79031b77ad7f3d29c6365d2319940acbe07d36",
+    "config": "437f84f409c73809ceb6d101950d6236c30b359815443bfb4e25f1f9d472fe55"
+  },
+  "fit_split": "train",
+  "evaluation_split": "val",
+  "b3_feature_set": "pulsedb-simple-stats-v0",
+  "label_qc": "exclude_dbp_ge_sbp",
+  "train_weighting": "inverse_subject_rows",
+  "xgboost": {
+    "seed": 42,
+    "params": {
+      "n_estimators": 300,
+      "max_depth": 4,
+      "learning_rate": 0.05,
+      "objective": "reg:squarederror",
+      "tree_method": "hist",
+      "n_jobs": 1
+    }
+  },
+  "model": {
+    "architecture": "resnet18-1d",
+    "input_channels": [
+      "ecg",
+      "ppg"
+    ],
+    "samples": 1250,
+    "separate_targets": true
+  },
+  "training": {
+    "seed": 20261107,
+    "inner_val_fraction": 0.1,
+    "optimizer": "adam",
+    "learning_rate": 1e-06,
+    "batch_size": 64,
+    "max_epochs": 100,
+    "patience": 15,
+    "loss": "subject_weighted_mse",
+    "input_scaling": "train_fit_channel_standardization",
+    "target_scaling": "train_fit_standardization",
+    "selection_metric": "inner_val_subject_balanced_mae",
+    "eval_batch_size": 1024
+  },
+  "bootstrap": {
+    "seed": 20261013,
+    "repetitions": 2000,
+    "confidence": 0.95,
+    "min_subjects": 2
+  }
+}

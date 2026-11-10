@@ -63,6 +63,30 @@ def pin_problems(requirements: str) -> list[str]:
     return problems
 
 
+def optional_problems(requirements: str) -> list[str]:
+    """Optional pins (requirements-dl.txt, B5 only): a package that is not installed
+    is fine; an installed one must match the pinned release, ignoring a local build
+    label such as ``+cu124``. Pip option lines (``--extra-index-url``) are skipped."""
+    problems = []
+    for line in requirements.splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line or line.startswith("-"):
+            continue
+        name, separator, pinned = line.partition("==")
+        if not separator:
+            problems.append(f"Unpinned optional requirement: {line}")
+            continue
+        try:
+            installed = version(name.strip())
+        except PackageNotFoundError:
+            print(f"Optional {name.strip()} not installed (B5 only)")
+            continue
+        if installed.split("+", 1)[0] != pinned.strip():
+            problems.append(f"{name.strip()}=={installed} differs from optional pin "
+                            f"{pinned.strip()}")
+    return problems
+
+
 def main() -> int:
     """Run lightweight imports, a NumPy calculation and the pin comparison."""
     values = np.array([1.0, 2.0, 3.0])
@@ -90,6 +114,8 @@ def main() -> int:
     problems = python_problems(project["project"]["requires-python"],
                                tuple(sys.version_info[:3]))
     problems += pin_problems((ROOT / "requirements.txt").read_text(encoding="utf-8"))
+    problems += optional_problems((ROOT / "requirements-dl.txt").read_text(
+        encoding="utf-8"))
     for problem in problems:
         print(f"MISMATCH: {problem}")
     if problems:
