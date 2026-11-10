@@ -234,7 +234,10 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    - lúc khởi động: quá áp, chụp bằng oscilloscope;
    - khi LED xanh chạy xung dòng cao nhất đã chọn: gợn, đo cùng lúc với 3V3 tại bo
      cổ tay;
-   - so với dải 4,5–5,0 V dùng chung cho cả ba LED.
+   - so với quy tắc nghiệm thu V1–V4 của
+     [leakage_thermal_test_plan_v1.md](leakage_thermal_test_plan_v1.md) mục 3 (đề xuất
+     2026-11-07, chờ duyệt). Quy tắc này thay dải 4,5–5,0 V dùng chung cho cả ba LED, vì
+     bo SparkFun danh định 5,1 V nên dải cũ luôn trượt.
 4. Bus I²C PPG (`I2C_NUM_0`; GPIO8 SDA, GPIO9 SCL, 400 kHz):
    - quét bus chỉ thấy địa chỉ 7 bit `0x57`;
    - đọc `PART_ID` (0xFF) = `0x15` (MAX30101 Rev 2, tr. 12);
@@ -333,7 +336,9 @@ rộng xung đã chốt truyền qua `PLATFORMIO_BUILD_FLAGS`.
 
 Đề xuất của nhóm 2026-10-29, chờ thầy duyệt. Phương pháp, giới hạn và biên bản theo
 [session_safety_stopping_v0.1.md](../../docs/ethics/session_safety_stopping_v0.1.md)
-mục 9 (số mục theo bản viết lại 2026-10-31).
+mục 9 (số mục theo bản viết lại 2026-10-31). Cách đo chi tiết, giới hạn đề xuất và quy tắc
+đạt: [leakage_thermal_test_plan_v1.md](leakage_thermal_test_plan_v1.md) (đề xuất 2026-11-07,
+chờ duyệt). Checklist cả quá trình: [v1_bringup_checklist.md](v1_bringup_checklist.md).
 
 - Dụng cụ: ưu tiên mượn máy phân tích an toàn điện y tế; không mượn được thì dùng
   mạch đo MD theo IEC 60601-1 và đồng hồ vạn năng.
