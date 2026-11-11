@@ -115,6 +115,8 @@ SBP và DBP được kiểm định riêng. Bằng chứng hiện có cho thấy
 | Mô hình | Đầu vào | Vai trò |
 |---|---|---|
 | **Zero-change** | Không có đặc trưng; $`\Delta\widehat{\text{BP}} = 0`$, tức $`\widehat{\text{BP}} = \text{BP}_0`$ | Baseline bắt buộc. Mô hình nào không vượt baseline này thì không có giá trị gia tăng so với chỉ dùng mốc hiệu chuẩn |
+| **Trung bình theo pha** (chốt 2026-11-12) | Không dùng tín hiệu; trong mỗi lượt LOSO, ΔBP trung bình của từng pha (M0, M1, M2) ở phiên ≥ 2 trên người huấn luyện ([SAP v1](protocol/sap_v1.md) mục 4) | Đối chứng phụ bắt buộc. Tách phần "vượt zero-change" nhờ theo được BP từng người khỏi phần nhờ nhận ra pha qua HR |
+| **Độ lệch hằng số** (chốt 2026-11-12) | Như trên nhưng một giá trị cho mọi pha | Chỉ mô tả; gần với baseline "static" của S4 nhưng không dùng giờ trong ngày |
 | **PAT-only** | $`\Delta(1/\text{PAT}^2)`$ hoặc $`\Delta\text{PAT}`$ | Kiểm tra lượng thông tin của riêng PAT. Hệ số được học ở mức quần thể trên những người thuộc tập train, vì người được đánh giá chỉ đóng góp $`\text{BP}_0`$ (trung bình M0 phiên 1) cho hiệu chuẩn; cuff nghiệm pháp ở phiên 1 của họ không dùng để fit hệ số riêng. Đây là hồi quy thực nghiệm, không phải áp phương trình Moens–Korteweg lên PAT |
 | **PPG-only** | Đặc trưng PPG + HR từ PPG | Đối chứng chính của RQ1 |
 | **PPG + PAT** | Như PPG-only, có thêm PAT/ΔPAT | Mô hình chính của RQ1 |
@@ -129,6 +131,7 @@ Tính riêng cho ΔSBP và ΔDBP:
 - MAE và ME ± SD của sai số (sai số = dự đoán − tham chiếu), tổng hợp đều theo người (như `evaluate_bp`).
 - **Hiệu ứng chính:** $`d_s = \text{MAE}_s(\text{PPG+PAT}) - \text{MAE}_s(\text{PPG})`$ cho từng người $s$. Báo cáo trung bình của $d_s$ và CI 95% bootstrap theo người (`software/evaluation/subject_bootstrap.py`). Kiểm định Wilcoxon signed-rank trên $d_s$ là phân tích hỗ trợ.
 - **So với zero-change (v0.4):** $`d^{0}_s = \text{MAE}_s(\text{PPG+PAT}) - \text{MAE}_s(\text{zero-change})`$. Báo trung bình và CI 95% bootstrap theo người giống như với $d_s$, dùng chung các lượt bootstrap.
+- **So với trung bình theo pha (chốt 2026-11-12):** $`d^{P}_s = \text{MAE}_s(\text{PPG+PAT}) - \text{MAE}_s(\text{trung bình theo pha})`$, endpoint phụ bắt buộc, không phải điều kiện của kết luận chính. Chỉ được viết rằng mô hình theo được BP của từng người vượt mức đoán theo pha khi CI của trung bình $d^{P}_s$ nằm hoàn toàn dưới 0 ([SAP v1](protocol/sap_v1.md) mục 3, 7).
 - Hệ số Pearson $r$ giữa ΔBP tham chiếu và ΔBP dự đoán. Hệ số này không xác định cho zero-change vì dự đoán là hằng số.
 - Tỷ lệ lần đo có $|e| \le 5$ và $\le 10$ mmHg, chỉ để mô tả, không phải tiêu chí AAMI/ISO.
 - **Bắt buộc báo cáo kèm:** SD của ΔBP tham chiếu và tỷ lệ lần đo có $|\Delta\text{BP}| > 5$ mmHg. Nếu ΔBP tham chiếu có dải rất hẹp thì mọi so sánh MAE đều kém nhạy, và người đọc cần biết điều đó.
@@ -343,4 +346,4 @@ Tên B0/B1/B3 trong code không khớp với số thứ tự "Baseline 1/2/3" c�
 > - [ ] **Định vị so với S4** (mục 1, đề xuất 2026-10-30 sau khi đọc toàn văn S4):
 >   - thêm điều kiện "hai mô hình chỉ khác nhau ở PAT" vào phần có thể là đóng góp;
 >   - có khóa khoảng cách tối thiểu giữa phiên 1 và phiên 2 trong SAP theo câu hỏi về độ bền hiệu chuẩn không (protocol hiện cho phép 1 ngày);
->   - có thêm baseline kiểu "static" của S4 (chỉ BP hiệu chuẩn và hệ số chặn, không dùng tín hiệu) vào SAP không; gợi ý, chưa quyết định (chờ duyệt) ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.2).
+>   - baseline không dùng tín hiệu: chốt 2026-11-12 (báo thầy): "trung bình theo pha" làm đối chứng phụ bắt buộc, không phải điều kiện của kết luận chính, và "độ lệch hằng số" để mô tả, thay cho gợi ý baseline kiểu "static" của S4 ([tổng quan](literature/literature_update_2026-10-29.md) mục 5.2); thêm endpoint phụ có biến chỉ pha ([SAP v1](protocol/sap_v1.md) mục 3, 7, 9 kết quả 9–10, 13).

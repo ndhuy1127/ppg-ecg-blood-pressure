@@ -109,6 +109,11 @@ Không đo trên người.
   viết lại mục chống rò rỉ cho đúng (nhãn và dạng sóng val/test vẫn được đọc để băm và QC,
   không vào mô hình); ghi rõ B5 − B0/B3 là so sánh quy trình
   ([định nghĩa B5](../../../docs/protocol/b5_pulsedb_definition.md) mục 5, 6, 9).
+- **Baseline không dùng tín hiệu cho RQ1** (2026-11-12, chốt, báo thầy; kèm một phản biện độc
+  lập): SAP thêm baseline trung bình theo pha (M0, M1, M2) và độ lệch hằng số, endpoint phụ bắt
+  buộc dᴾ (không phải điều kiện của kết luận chính), quy tắc viết bài, hai endpoint phụ mới (mô
+  hình có biến chỉ pha; trung vị theo pha); mô phỏng LOSO thêm hai baseline và mô hình có biến
+  chỉ pha (edbe46d; mục 6.5).
 
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
@@ -131,6 +136,7 @@ Không đo trên người.
 | 15 | Mô phỏng Holm chung SBP–DBP và Ridge trong LOSO | Huy | [rq1_holm_loso.py](../../../software/evaluation/rq1_holm_loso.py), [simulate_rq1_holm_loso.py](../../../scripts/simulate_rq1_holm_loso.py), [rq1_holm_loso_v1.json](../../../configs/analysis/rq1_holm_loso_v1.json), [test_rq1_holm_loso.py](../../../tests/test_rq1_holm_loso.py), [kết quả](rq1_holm_loso/summary.md) |
 | 16 | Review B5, sửa trọng số phần học | Huy | [b5_pulsedb_definition.md](../../../docs/protocol/b5_pulsedb_definition.md) mục 9, [pipeline_b5.py](../../../software/pulsedb/pipeline_b5.py), [test_b5_pipeline.py](../../../tests/test_b5_pipeline.py) |
 | 17 | B5 trên val: bảng, report, đường học | Linh | [pulsedb_b5_v0/](pulsedb_b5_v0/README.md), [b5_pulsedb_definition.md](../../../docs/protocol/b5_pulsedb_definition.md) mục 10 |
+| 18 | Baseline không dùng tín hiệu cho RQ1 | Huy | [sap_v1.md](../../../docs/protocol/sap_v1.md) mục 3, 4, 7, 9 (kết quả 9, 10), 13; [research_questions_v0.1.md](../../../docs/research_questions_v0.1.md) mục 4.C, 4.D, 8; [rq1_holm_loso.py](../../../software/evaluation/rq1_holm_loso.py), [test_rq1_holm_loso.py](../../../tests/test_rq1_holm_loso.py), [kết quả](rq1_holm_loso/summary.md) |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
@@ -146,9 +152,13 @@ Không đo trên người.
 - **δ** = max(1 mmHg; 0,5 × SD lặp lại của cuff), chốt sau pilot, không đổi sau khi thấy dữ liệu
   chính.
 - **P2 mới:** trung vị ΔSBP có dấu ở M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả.
-- **Hai mô phỏng còn thiếu đã chạy ngày 2026-11-11** (mục 6.5). Việc còn lại trước khi khóa
-  SAP: quyết định baseline mạnh hơn zero-change (trung bình ΔBP theo nghiệm pháp, hoặc
-  "static" của S4).
+- **Hai mô phỏng còn thiếu đã chạy ngày 2026-11-11** (mục 6.5).
+- **Baseline không dùng tín hiệu** (2026-11-12): HR từ PPG đổi rõ theo nghiệm pháp, nên mô hình
+  có thể vượt zero-change chỉ nhờ nhận ra pha. Đề xuất thêm baseline trung bình theo pha, tính
+  trong cùng các lượt LOSO từ nhãn người huấn luyện và lịch đo, làm endpoint phụ bắt buộc
+  (dᴾ), không phải điều kiện của kết luận chính; chỉ được viết mô hình theo được BP của từng
+  người khi CI của dᴾ nằm dưới 0. Chốt 2026-11-12, báo thầy. Thêm endpoint phụ cho mô hình có
+  biến chỉ pha để hỏi PAT có thêm gì ngoài pha.
 
 ### 5.2. Bring-up: điều cần biết trước khi hàng về
 
@@ -176,9 +186,9 @@ BP tuyệt đối của người chưa thấy trên PulseDB, không nói gì v�
 
 ### 6.1. Kiểm tra toàn repo
 
-Ngày 2026-11-11, sau mọi thay đổi của mục 3 (kể cả review B5 và mô phỏng mục 6.5): `ruff
-check .` sạch; `pytest -q` 1.299 đạt, 1 bỏ qua (tạo
-symlink cần quyền trên Windows), test firmware chạy bằng trình dịch C `ziglang`;
+Ngày 2026-11-12, sau mọi thay đổi của mục 3 (kể cả review B5, mô phỏng mục 6.5 và baseline
+không dùng tín hiệu): `ruff check .` sạch; `pytest -q` 1.305 đạt, 1 bỏ qua (tạo symlink cần
+quyền trên Windows), test firmware chạy bằng trình dịch C `ziglang`;
 `scripts/check_environment.py` và `pip check` đạt. Không có trình dịch C thì 105 test firmware
 tự bỏ qua.
 
@@ -254,6 +264,19 @@ mô phỏng riêng 20.000 nghiên cứu, và phép xáo cột để tách ảnh 
   0,6–8,1 % (đánh giá thấp lợi ích). Xáo cột đưa cả hai phía về khoảng 1–3 %, nên phần trượt
   thêm là do các mô hình LOSO học trên gần cùng tập người. Percentile và BCa trượt phía dưới tới
   3,8 % và 4,3 %, nên giữ khoảng bao; SAP ghi độ phủ hai phía khoảng 92–95 % là giới hạn.
+- **Baseline không dùng tín hiệu** (chạy lại 2026-11-12 với runner v3 trên commit `edbe46d`,
+  không có thay đổi chưa commit, summary SHA-256 `e103e769…`; số của Holm và LOSO ở trên trùng
+  hệt lần 2026-11-11): trung bình theo pha có MAE
+  SBP 4,2–4,5 mmHg, thấp hơn mọi mô hình Ridge (PPG + PAT 4,7–6,6) ở mọi kịch bản; CI của dᴾ
+  nằm dưới 0 ở ≤ 0,3 % nghiên cứu, kể cả khi kết luận chính đạt tới 92 %. Lý do nằm ở mô hình
+  đặc trưng tự đặt (PPG theo BP yếu, HR chỉ đánh dấu M2, không gì đánh dấu M1, Ridge không hệ
+  số chặn). Nếu dᴾ là điều kiện chặn thì kết luận chính gần như không đạt dưới các giả định
+  này, nên giữ dᴾ là endpoint phụ. CI của dᴾ giữ mức (trượt mỗi phía 1,3–2,9 %).
+- **Mô hình có biến chỉ pha (endpoint phụ 10):** cả hai nhánh xuống MAE 4,1–4,6, ngang trung
+  bình theo pha. Lợi ích còn lại của PAT nhỏ hơn nhiều (θᵂ −0,02 tới −0,04 khi PAT "benefit",
+  −0,13 tới −0,16 khi "strong", so với θ −0,09 tới −0,98 khi không có biến chỉ pha), nên CI
+  nằm dưới 0 ở ≤ 17 % nghiên cứu; endpoint này chỉ để mô tả. Khi PAT không liên quan BP, CI nằm
+  dưới 0 ở ≤ 0,8 %.
 
 ### 6.6. B5 trên PulseDB Train 400 người, val (2026-11-11)
 
@@ -287,7 +310,7 @@ tiết và hash: [pulsedb_b5_v0/](pulsedb_b5_v0/README.md).
 | Chuẩn bị bring-up, tiêu chí dòng rò và VLED | **Đạt phần viết** (chờ duyệt): checklist, kế hoạch dòng rò/nhiệt/VLED, tiêu chí đồng bộ A1–A9. Giới hạn IEC 60601-1 chưa đối chiếu nguyên văn; chưa có người có chuyên môn duyệt | Đức Anh | Tuần 8: đối chiếu IEC, tìm người duyệt; bring-up khi hàng về |
 | Logger qua các test mới | **Đạt trên máy tính:** ghi theo dòng, hiển thị khi đang ghi, hạn `MARK_EVENT`, RAM đo lại (mục 6.2). Chưa chạy với thiết bị | Linh | Bring-up: chạy 120 phút cả hệ |
 | B5 trên val trong bảng tổng hợp | **Đạt:** review rò rỉ, commit duyệt `38f23fe`, chạy trên val ngày 2026-11-11, có trong bảng tổng hợp (mục 6.6) | Linh, Huy (review) | — |
-| SQI v1 và SAP v1 có commit | **Đạt một phần:** có commit, chờ thầy duyệt; hai mô phỏng còn thiếu đã chạy 2026-11-11; còn quyết định baseline mạnh hơn zero-change (mục 5.1) | Huy | Tuần 8 và trước pilot |
+| SQI v1 và SAP v1 có commit | **Đạt một phần:** có commit, chờ thầy duyệt; hai mô phỏng còn thiếu đã chạy 2026-11-11; baseline không dùng tín hiệu chốt 2026-11-12, báo thầy (mục 5.1) | Huy | Tuần 8 và trước pilot |
 | Kết quả `gate` lần 1 | **Chưa:** phiên 2026-10-25 bị bỏ, lần 1 bắt đầu lại từ 0/80 đoạn | Huy | Tuần 8: xong 80 đoạn; lần 2 (16 đoạn) sau ít nhất 2 ngày; rồi `gate` |
 | Biên bản gặp thầy | **Chưa có biên bản:** ngày 2026-11-10 thầy cho biết hồ sơ đạo đức chưa cần làm gấp; các đề xuất 2.1–2.8 chưa có trả lời ghi lại | Huy | Tuần 8: ghi biên bản và các mục đã chốt |
 

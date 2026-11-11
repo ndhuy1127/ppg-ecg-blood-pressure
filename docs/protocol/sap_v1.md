@@ -20,6 +20,10 @@
 > - **Sửa 2026-11-11 (đề xuất, chờ duyệt):** mục 9 thêm hai mô phỏng còn thiếu (SBP và DBP chung
 >   một nghiên cứu với Holm; Ridge huấn luyện thật trong LOSO), mục 4 thêm thang trọng số, mục 5
 >   và 6 ghi kết quả, mục 13 cập nhật.
+> - **Sửa 2026-11-12 (chốt, báo thầy), sau một vòng phản biện độc lập:** thêm hai baseline
+>   không dùng tín hiệu (trung bình theo pha, độ lệch hằng số) và endpoint phụ bắt buộc dᴾ (mục
+>   3, 4, 7, 11); thêm hai endpoint phụ (biến chỉ pha, trung vị theo pha; mục 3); mục 9 thêm kết
+>   quả 9 và 10; mục 13 cập nhật.
 
 ## 1. Câu hỏi và nguyên tắc
 
@@ -57,6 +61,19 @@
   - MAE_s là trung bình |sai số| trên các lần cuff của người s trong tập phân tích chính;
   - mỗi lần cuff có trọng số như nhau trong một người, mỗi người có trọng số như nhau khi tính θ.
 - **Estimand đồng chính:** θ⁰ = E_s[d⁰_s], với d⁰_s = MAE_s(PPG+PAT) − MAE_s(zero-change).
+- **Endpoint phụ bắt buộc, so với baseline theo pha (chốt 2026-11-12):**
+  - θᴾ = E_s[dᴾ_s], với dᴾ_s = MAE_s(PPG+PAT) − MAE_s(trung bình theo pha) (baseline ở mục 4);
+  - báo trung bình và CI 95 % khoảng bao (mục 5), dùng chung lượt rút với d và d⁰, luôn có
+    trong bảng chính;
+  - không phải điều kiện của kết luận chính (mục 7 ghi cách dùng khi viết bài). Phương án đã
+    cân nhắc và không chọn: đưa dᴾ thành điều kiện thứ ba của kết luận chính. Dưới các giả định
+    của mục 9 (kết quả 9), CI của dᴾ nằm dưới 0 ở ≤ 0,3 % nghiên cứu, nên kết luận chính gần
+    như không bao giờ đạt; câu hỏi chính của RQ1 là PAT so với PPG-only, không phải mô hình so
+    với giao thức.
+- **Lý do cần endpoint này:** PPG-only và PPG + PAT có HR từ PPG, mà HR đổi rõ theo nghiệm pháp.
+  Một mô hình chỉ cần nhận ra lần cuff đang ở pha nào (M0, M1, M2) rồi dự đoán mức đổi điển hình
+  của pha đó là đã có thể vượt zero-change, dù không theo được BP của riêng từng người. Phép so
+  chính d cũng không được che hoàn toàn khỏi điều này: PAT có thể chỉ giúp nhận ra pha tốt hơn HR.
 - **Endpoint phụ (không xác nhận), báo với cùng cách tính:**
   1. chỉ các lần cuff M0 ở phiên ≥ 2;
   2. theo từng nghiệm pháp;
@@ -67,6 +84,13 @@
   7. bỏ các lần cuff mang cờ dừng an toàn (protocol 10);
   8. RQ2b: cùng phiên so với khác phiên (RQ mục 5.B);
   9. Pearson r giữa ΔBP tham chiếu và dự đoán; tỷ lệ |sai số| ≤ 5 và ≤ 10 mmHg (chỉ mô tả).
+  10. **PAT khi mô hình đã biết pha** (chốt 2026-11-12): pha + PPG so với
+      pha + PPG + PAT. Hai mô hình thêm cùng ba biến chỉ pha (mục 4), cùng cách chia SD, cùng
+      α, cùng thang trọng số. Hiệu MAE theo người và CI như d. Đây là phép kiểm trực tiếp hơn
+      cho câu hỏi PAT có thêm thông tin ngoài pha hay không, nhưng là một đặc tả mô hình mới,
+      nên không thay phép so chính. Độ nhạy thấp (mục 9, kết quả 10), nên chỉ dùng để mô tả.
+  11. Baseline theo pha dùng trung vị thay trung bình (mục 4; chốt 2026-11-12): MAE tối ưu ở trung vị, nên vượt
+      trung bình theo pha có thể chỉ nhờ phân bố ΔBP lệch.
 
 ## 4. Hiệu chuẩn và đặc trưng
 
@@ -95,6 +119,32 @@
     tổng các trọng số bằng số người huấn luyện. α = 1 áp trên thang này. Phải khóa thang, vì với
     α cố định, nhân mọi trọng số với một hằng số sẽ đổi độ co của Ridge.
 - Ghi chú: **zero-change** dự đoán ΔBP = 0, tức BP = BP₀.
+- **Hai baseline không dùng tín hiệu (chốt 2026-11-12).** "Không dùng tín hiệu"
+  nghĩa là không đọc ECG hay PPG của người được dự đoán; chỉ dùng nhãn của người huấn luyện và
+  pha theo lịch đo.
+  - **Trung bình theo pha (P):** trong mỗi lượt ngoài, với mỗi pha p ∈ {M0, M1, M2}, lấy trung
+    bình ΔBP của từng người huấn luyện trên các lần cuff pha p **ở phiên ≥ 2** thuộc tập phân
+    tích chính, rồi lấy trung bình đều theo người của các giá trị đó. P dự đoán đúng giá trị
+    này cho mọi lần cuff pha p của người bị giữ lại. Nhãn của người bị giữ lại không bao giờ
+    vào P.
+  - **Độ lệch hằng số (C):** như P nhưng gộp mọi pha thành một, nên chỉ có một giá trị. C chỉ
+    tách phần "vượt zero-change nhờ học độ lệch chung giữa các phiên". Nó gần với baseline
+    "static" của S4 nhưng không giống: S4 hồi quy trên BP hiệu chuẩn và giờ trong ngày.
+  - **Vì sao chỉ dùng phiên ≥ 2:** đó là quần thể được đánh giá. Ở phiên 1, trung bình ΔBP của
+    M0 bằng 0 theo cách tính BP₀, nên gộp phiên 1 sẽ kéo mức M0 về 0 một cách giả tạo.
+  - **Pha** lấy từ lịch đo (mã sự kiện của người vận hành), không suy ra từ BP đo được, vì suy
+    từ BP sẽ làm rò nhãn.
+  - **Thiếu pha:** nếu không người huấn luyện nào có lần cuff pha p trong lượt đó thì P dự đoán
+    0 cho pha p. Báo số lượt rơi vào trường hợp này, cùng số lần cuff mỗi pha bị bỏ qua (ví dụ
+    dừng an toàn trước M2). Vì việc bỏ pha có thể phụ thuộc BP, kết quả chỉ áp cho các lần cuff
+    đã đo được.
+  - **Trọng số:** trung bình đều theo người trong từng pha. Khi số lần cuff mỗi pha khác nhau
+    giữa người, cách này không trùng trọng số 1 / số lần cuff dùng trong MAE_s; ghi rõ khi báo.
+  - **Biến thể trung vị** (endpoint phụ 11): thay trung bình đều theo người bằng trung vị của
+    các trung bình theo người, cũng trong từng pha.
+- **Biến chỉ pha cho endpoint phụ 10:** ba biến 0/1 là M1, M2 và "phiên ≥ 2". Lần cuff M0 của
+  phiên 1 có cả ba biến bằng 0, nên mô hình vẫn dự đoán 0 khi mọi Δ đặc trưng bằng 0, đúng như
+  mô hình không hệ số chặn ở trên.
 
 ## 5. Ước lượng và khoảng tin cậy
 
@@ -176,6 +226,19 @@ Dùng CI của trung bình d_s ở mức thật của mục 6, ký hiệu [L; U]
 Ghi chú 2026-11-10: cách đọc thứ hai nghĩa là có lợi nhưng CI chưa loại được khả năng lợi ích
 nhỏ hơn δ; nó không khẳng định lợi ích nhỏ hơn δ. Với dải ΔBP dự kiến, cách đọc thứ nhất gần như
 ngoài tầm (mục 9, kết quả 6).
+
+**Dùng dᴾ khi viết bài (chốt 2026-11-12).** Kết luận chính giữ đúng lời của RQ
+mục 4.E: "thêm PAT làm giảm sai số so với PPG-only và vượt zero-change". dᴾ không đổi kết luận
+đó, nhưng giới hạn những gì được viết thêm:
+
+- Chỉ được viết rằng mô hình theo được thay đổi BP của từng người, vượt mức đoán theo pha của
+  giao thức, khi CI của trung bình dᴾ_s nằm hoàn toàn dưới 0.
+- Nếu CI của dᴾ không nằm hẳn dưới 0: viết "chưa chứng minh được mô hình vượt baseline theo
+  pha". Không viết rằng lợi ích chắc chắn chỉ do nhận ra pha, vì CI chứa 0 không chứng minh
+  điều đó.
+- Vượt P chỉ cho biết mô hình hơn baseline này. Nó không chứng minh phần thông tin riêng từng
+  người đến từ PAT; câu hỏi đó thuộc endpoint phụ 10. Khi kết luận chính đạt mà CI của endpoint
+  phụ 10 chứa 0, viết rằng chưa tách được phần lợi ích của PAT ngoài việc nhận ra pha.
 
 ## 8. Mức hiệu ứng nhỏ nhất đáng quan tâm δ (chốt sau pilot)
 
@@ -299,7 +362,10 @@ code ghi trong `report.json`). Bản 2026-11-07 dùng CI percentile vẫn ở
    `configs/analysis/rq1_holm_loso_v1.json` (dùng nguyên target và mô hình của config v2); mọi
    thành phần ngẫu nhiên của DBP tương quan ρ với thành phần tương ứng của SBP, ρ ∈ {0; 0,6}
    (giả định). Kết quả: [rq1_holm_loso/summary.md](../../reports/weekly/week_07/rq1_holm_loso/summary.md)
-   (SHA-256 `80d58cf5…`, kèm `report.json`; chạy 2026-11-11 trên bản chưa commit).
+   (SHA-256 `80d58cf5…`, kèm `report.json`; chạy 2026-11-11 trên bản chưa commit). Chạy lại
+   2026-11-12 với runner v3 trên commit `edbe46d`, không có thay đổi chưa commit, để thêm kết quả
+   9 và 10 (summary SHA-256 `e103e769…`). Mọi số của kết quả 7 và 8 trùng hệt lần trước, vì phần
+   thêm không rút thêm số ngẫu nhiên nào.
    - Khi PAT không thêm gì ở cả hai đầu ra: tỷ lệ tuyên bố ít nhất một đầu ra ≤ 0,2 %. Cận
      trên khi mô hình chắc chắn vượt zero-change (Holm chỉ trên CI của d) là 1,5–2,8 %, quanh
      mức danh nghĩa 2,5 % (sai số Monte Carlo khoảng 0,35 điểm %).
@@ -329,6 +395,40 @@ code ghi trong `report.json`). Bản 2026-11-07 dùng CI percentile vẫn ở
      dưới 0 ở ≤ 0,5 % nghiên cứu.
    - **Hệ quả:** giữ khoảng bao làm CI chính; báo độ phủ hai phía khoảng 92–95 % là giới hạn đã
      biết. Mọi số phụ thuộc mô hình đặc trưng tự đặt; chạy lại với tham số từ pilot.
+9. **Hai baseline không dùng tín hiệu trong cùng các lượt LOSO (thêm 2026-11-12).** Cùng dữ
+   liệu mô phỏng và các mô hình Ridge của kết quả 8 (summary mục "No-signal baselines"). θᴾ lấy
+   từ cùng mô phỏng riêng 20 000 nghiên cứu như θ. Đơn vị mmHg, SBP.
+   - **Trung bình theo pha thắng mọi mô hình ở mọi kịch bản.** MAE của nó 4,2–4,3 (M2 vừa) và
+     4,4–4,5 (M2 rộng), so với zero-change 5,2 và 6,8, PPG-only 5,0–5,1 và 6,4–6,5, PPG + PAT
+     4,7–5,2 và 5,4–6,6. θᴾ dương ở mọi dòng: 0,81–0,85 / 0,69–0,71 / 0,42–0,44 khi M2 vừa (PAT
+     không liên quan, vừa, mạnh), 2,0–2,1 / 1,7 / 1,0–1,1 khi M2 rộng.
+   - Vì vậy CI của dᴾ nằm dưới 0 ở ≤ 0,3 % nghiên cứu, kể cả khi mô hình đạt kết luận chính (tới
+     92 % ở kịch bản mạnh nhất). CI nằm hẳn trên 0 ở 10–100 % nghiên cứu.
+   - CI khoảng bao của dᴾ giữ mức: nằm hẳn dưới θᴾ ở 1,5–2,9 %, nằm hẳn trên ở 1,3–2,5 %.
+   - Độ lệch hằng số kém zero-change 0,02–0,2 mmHg, vì mô phỏng không có độ lệch hệ thống giữa
+     các phiên; nó chỉ có ích khi có độ lệch như vậy (như nhánh dao động kế của S4).
+   - **Vì sao:** trong mô hình tự đặt, đặc trưng PPG chỉ theo BP rất yếu, HR chỉ đánh dấu M2 và
+     với hệ số khác nhau giữa người, không gì đánh dấu M1, và Ridge không có hệ số chặn. Baseline
+     theo pha thì biết đúng mức đổi trung bình của cả ba pha.
+   - **Hệ quả:** nếu dᴾ là điều kiện của kết luận chính thì, dưới các giả định này, kết luận chính
+     gần như không bao giờ đạt; đó là lý do đề xuất để dᴾ là endpoint phụ bắt buộc. Kết quả cũng
+     cho thấy vượt zero-change có thể còn rất xa mới vượt được mức đoán theo pha, nên quy tắc
+     viết bài ở mục 7 là cần. Mọi số phụ thuộc mô hình đặc trưng tự đặt; chạy lại với tham số
+     từ pilot.
+10. **Endpoint phụ 10: cả hai nhánh Ridge có biến chỉ pha (thêm 2026-11-12).** Cùng dữ liệu và
+    cùng các lượt LOSO (summary mục "PAT once the model knows the phase"); θᵂ lấy từ cùng mô
+    phỏng riêng 20 000 nghiên cứu.
+   - Có biến chỉ pha, MAE của hai nhánh xuống 4,1–4,6 mmHg, ngang trung bình theo pha (4,2–4,5);
+     nhánh có PAT "strong" thấp hơn nó khoảng 0,1 mmHg.
+   - **Phần lợi ích của PAT còn lại sau khi biết pha nhỏ hơn nhiều:** θᵂ = −0,02 tới −0,04 khi
+     PAT "benefit" (θ không có biến chỉ pha: −0,09 tới −0,34), −0,13 tới −0,16 khi "strong" (θ:
+     −0,37 tới −0,98). Trong mô hình tự đặt, phần lớn lợi ích của PAT ở d đến từ việc PAT theo
+     mức đổi BP chung của từng pha.
+   - CI nằm dưới 0 ở ≤ 2,4 % nghiên cứu khi "benefit" và 4,5–17 % khi "strong", so với 3–93 % của
+     d. Endpoint này vì vậy chỉ để mô tả.
+   - Khi PAT không liên quan BP: CI nằm dưới 0 ở ≤ 0,8 %, nằm hẳn dưới θᵂ ở ≤ 1,6 %; CI nằm hẳn
+     trên 0 ở 12–25 %, tức thêm một đặc trưng nhiễu vào mô hình đã biết pha làm sai số tăng thấy
+     được. Phía trên θᵂ trượt tới 12,5 % khi có hiệu ứng (bảo thủ, như kết quả 8).
 
 **Lưới P2** (cùng summary, mục "P2 grid"): giữ mọi giả định khác, cho trung bình đáp ứng M2 đổi
 từ 4 đến 15 mmHg SBP (2 đến 9 mmHg DBP), với 25 người × 2 phiên và 20 người × 3 phiên. Tỷ lệ đạt
@@ -382,8 +482,10 @@ Theo protocol mục 10, khóa lại ở đây:
 
 ## 11. Báo cáo
 
-- Bảng chính theo đầu ra: MAE, ME ± SD của sai số, cho zero-change, PAT-only, PPG-only và
-  PPG + PAT; trung bình d_s và d⁰_s; CI ở mức thật; cách đọc theo δ.
+- Bảng chính theo đầu ra: MAE, ME ± SD của sai số, cho zero-change, độ lệch hằng số, trung bình
+  theo pha, PAT-only, PPG-only và PPG + PAT; trung bình d_s và d⁰_s, CI ở mức thật; trung bình
+  dᴾ_s, CI 95 %; cách đọc theo δ. Thêm MAE và ME theo từng pha cho mọi dòng, vì giảm độ lệch
+  thôi chưa đủ để nói mô hình theo được BP.
 - Luôn báo SD của ΔBP tham chiếu và tỷ lệ |ΔBP| > 5 mmHg, gộp và theo nghiệm pháp.
 - **Hình:** d_s theo người; phân bố ΔBP theo nghiệm pháp; Bland–Altman cho dữ liệu đo lặp (phương
   pháp LoA cho đo lặp, chờ chọn).
@@ -409,13 +511,18 @@ Theo protocol mục 10, khóa lại ở đây:
 6. Quy tắc chọn số người và phân bổ phiên sau pilot (mục 9).
 7. Các endpoint phụ (mục 3).
 8. SQI v1 ([sqi_specification_v1.md](sqi_specification_v1.md)).
-
 9. Thang trọng số của Ridge (mục 4, đề xuất 2026-11-11).
 
-Việc còn mở, phải xong trước khi khóa (ghi 2026-11-10, cập nhật 2026-11-11):
+Đã chốt 2026-11-12, báo thầy:
+
+- hai baseline không dùng tín hiệu, endpoint phụ bắt buộc dᴾ (không phải điều kiện của kết luận
+  chính) và cách dùng khi viết bài (mục 3, 4, 7; lý do ở mục 3 và mục 9, kết quả 9);
+- endpoint phụ 10 (biến chỉ pha, chỉ để mô tả) và 11 (trung vị theo pha) (mục 3; mục 9, kết quả
+  10).
+
+Việc còn mở, phải xong trước khi khóa (ghi 2026-11-10, cập nhật 2026-11-12):
 
 - ~~mô phỏng có huấn luyện Ridge thật trong LOSO~~ và ~~mô phỏng chung SBP và DBP~~: đã chạy
   2026-11-11 (mục 9, kết quả 7 và 8);
-- baseline không dùng tín hiệu mạnh hơn zero-change (trung bình ΔBP theo nghiệm pháp, hoặc
-  baseline "static" của S4): mô hình PPG-only có HR từ PPG, nên có thể vượt zero-change chỉ nhờ
-  nhận ra đang ở nghiệm pháp nào. Chờ quyết định ([RQ](../research_questions_v0.1.md) mục 8).
+- ~~baseline không dùng tín hiệu mạnh hơn zero-change~~: chốt 2026-11-12 (xem trên;
+  [RQ](../research_questions_v0.1.md) mục 8).
