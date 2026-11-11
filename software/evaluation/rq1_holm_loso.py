@@ -14,6 +14,13 @@ No human data: every input is an assumption stated in the config
    training subject the same total weight) is fitted on the other subjects and
    predicts the held-out subject. This checks whether the per-subject
    differences d_s stay close enough to independent for a subject-level CI.
+   It also compares PPG+PAT with two no-signal baselines fitted in the same
+   folds (``phase_mean_loso``): the mean change of each protocol phase (M0, M1,
+   M2) over the training subjects, and one mean over every phase ("constant
+   offset"; not the "static" baseline of S4, which also used the time of day).
+   Last, both Ridge arms get three phase indicators (M1, M2, session >= 2), so
+   the comparison asks whether PAT adds anything once the model knows the phase
+   (SAP secondary endpoint 10).
 
 The model of section 2 (per subject s, session k = 1..K, cuff j of CUFFS):
 
@@ -184,33 +191,91 @@ def loso_ridge(x, y, alpha):
     return np.einsum("rnmf,rnf->rnm", flat_x, beta).reshape(r, n, k, c)
 
 
+def phase_mean_loso(y, phases):
+    """No-signal phase-mean baseline in LOSO (SAP section 4, decided 2026-11-12).
+
+    ``y`` ``(R, n, K, C)`` reference changes, ``phases`` the protocol phase of each
+    of the C cuffs of a session. For each phase: every subject's mean of y over
+    its cuffs of that phase in sessions 2..K, then the equal-weight mean of those
+    subject means over the other subjects of the study; that value is the
+    prediction for every cuff of that phase of the held-out subject. One label for
+    every cuff gives the "constant" baseline. Returns ``(R, n, K, C)``."""
+    if len(phases) != y.shape[-1]:
+        raise ValueError("One phase label per cuff is needed")
+    n = y.shape[1]
+    out = np.empty(y.shape)
+    for label in dict.fromkeys(phases):
+        cols = [i for i, p in enumerate(phases) if p == label]
+        own = y[:, :, 1:][..., cols].mean(axis=(2, 3))
+        others = (own.sum(axis=1, keepdims=True) - own) / (n - 1)
+        out[..., cols] = others[:, :, None, None]
+    return out
+
+
+def phase_indicators(shape):
+    """The three 0/1 phase features of SAP section 4 (secondary endpoint 10): M1,
+    M2 and session >= 2, for an array ``(R, n, K, C)`` of cuffs. Session-1 M0
+    cuffs have all three at 0. Returns ``(R, n, K, C, 3)``. No random draws."""
+    r, n, k, c = shape
+    is_m1 = np.array([p == "M1" for p in CUFFS], float)
+    is_m2 = np.array([p == "M2" for p in CUFFS], float)
+    late = (np.arange(k) >= 1).astype(float)[:, None]
+    columns = [np.broadcast_to(is_m1, (k, c)), np.broadcast_to(is_m2, (k, c)),
+               np.broadcast_to(late, (k, c))]
+    return np.broadcast_to(np.stack(columns, axis=-1), (r, n, k, c, 3))
+
+
 def loso_d(rng, replicates, subjects, sessions, target, effect, features,
            base_features, alpha):
-    """Per-subject d_s and d0_s ``(replicates, subjects)`` of LOSO Ridge models."""
+    """Per-subject differences ``(replicates, subjects)`` of LOSO Ridge models:
+    ``d`` (PPG+PAT - PPG-only), ``d0`` (- zero-change), ``d_phase`` (- phase mean),
+    ``d_constant`` (- constant offset), ``d_with_phase`` (both arms with the phase
+    indicators added: phase+PPG+PAT - phase+PPG), and the mean MAE of each model
+    over every subject. The phase indicators draw no random numbers, so the other
+    differences are those of the same seed without them."""
     reference, x = simulate_loso_data(rng, replicates, subjects, sessions, target,
                                       effect, features)
     names = list(features)
     base = [names.index(name) for name in base_features]
-    error_base = loso_ridge(x[..., base], reference, alpha) - reference
-    error_full = loso_ridge(x, reference, alpha) - reference
+    phase = phase_indicators(reference.shape)
     mae = lambda e: np.abs(e[:, :, 1:]).mean(axis=(2, 3))  # noqa: E731  sessions >= 2
-    return mae(error_full) - mae(error_base), mae(error_full) - mae(-reference)
+    fit = lambda z: mae(loso_ridge(z, reference, alpha) - reference)  # noqa: E731
+    maes = {"ppg": fit(x[..., base]),
+            "ppg_pat": fit(x),
+            "zero_change": mae(-reference),
+            "phase_mean": mae(phase_mean_loso(reference, CUFFS) - reference),
+            "constant": mae(phase_mean_loso(reference, ("all",) * len(CUFFS))
+                            - reference),
+            "phase_ppg": fit(np.concatenate([x[..., base], phase], axis=-1)),
+            "phase_ppg_pat": fit(np.concatenate([x, phase], axis=-1))}
+    full = maes["ppg_pat"]
+    return {"d": full - maes["ppg"], "d0": full - maes["zero_change"],
+            "d_phase": full - maes["phase_mean"], "d_constant": full - maes["constant"],
+            "d_with_phase": maes["phase_ppg_pat"] - maes["phase_ppg"],
+            "mean_mae": {name: float(v.mean()) for name, v in maes.items()}}
 
 
 def reference_theta(seed, replicates, chunk, subjects, sessions, target, effect,
-                    features, base_features, alpha):
+                    features, base_features, alpha, key="d"):
     """theta = expected mean d of the design (models trained on n - 1 subjects,
     averaged over training sets and held-out subjects), from a simulation
-    separate from the studies whose CIs are judged; with its Monte Carlo SE."""
+    separate from the studies whose CIs are judged; with its Monte Carlo SE.
+    With ``key`` another difference of ``loso_d`` (e.g. ``"d_phase"``) instead;
+    a list of keys returns ``{key: (theta, se)}`` from the same studies."""
     rng = np.random.default_rng(seed)
-    means = []
+    keys = [key] if isinstance(key, str) else list(key)
+    means = {k: [] for k in keys}
     for size in [chunk] * (replicates // chunk) + ([replicates % chunk]
                                                     if replicates % chunk else []):
-        d, _ = loso_d(rng, size, subjects, sessions, target, effect, features,
-                      base_features, alpha)
-        means.append(d.mean(axis=1))
-    means = np.concatenate(means)
-    return float(means.mean()), float(means.std(ddof=1) / np.sqrt(len(means)))
+        diffs = loso_d(rng, size, subjects, sessions, target, effect, features,
+                       base_features, alpha)
+        for k in keys:
+            means[k].append(diffs[k].mean(axis=1))
+    out = {}
+    for k, parts in means.items():
+        values = np.concatenate(parts)
+        out[k] = float(values.mean()), float(values.std(ddof=1) / np.sqrt(len(values)))
+    return out[key] if isinstance(key, str) else out
 
 
 def run_loso(seed, replicates, draws, subjects, sessions, target, effect, features,
@@ -219,39 +284,70 @@ def run_loso(seed, replicates, draws, subjects, sessions, target, effect, featur
     (``reference_theta``) on each side. ``shuffled`` repeats the check after
     shuffling each subject column across studies: same marginal d_s, no
     dependence within a study, so the difference shows what that dependence does."""
-    theta, theta_se = reference_theta(
+    thetas = reference_theta(
         [*np.atleast_1d(seed), 99], theta_replicates, 2000, subjects, sessions, target,
-        effect, features, base_features, alpha)
+        effect, features, base_features, alpha, key=("d", "d_phase", "d_with_phase"))
+    (theta, theta_se), (theta_p, theta_p_se) = thetas["d"], thetas["d_phase"]
+    theta_w, theta_w_se = thetas["d_with_phase"]
     rng = np.random.default_rng(seed)
-    d, d0 = loso_d(rng, replicates, subjects, sessions, target, effect, features,
+    diffs = loso_d(rng, replicates, subjects, sessions, target, effect, features,
                    base_features, alpha)
+    d = diffs["d"]
     shuffled = np.column_stack([rng.permutation(d[:, j]) for j in range(subjects)])
     study_mean = d.mean(axis=1)
     naive_se = d.std(axis=1, ddof=1) / np.sqrt(subjects)
     centred = study_mean - study_mean.mean()
     out = {"subjects": subjects, "sessions": sessions, "theta": theta,
            "theta_mc_se": theta_se, "mean_d": float(d.mean()),
-           "mean_d0": float(d0.mean()),
+           "mean_d0": float(diffs["d0"].mean()),
+           "mean_d_phase": float(diffs["d_phase"].mean()),
+           "mean_d_constant": float(diffs["d_constant"].mean()),
+           "mean_d_with_phase": float(diffs["d_with_phase"].mean()),
+           "mean_mae": diffs["mean_mae"],
            "sd_of_study_mean_d": float(study_mean.std(ddof=1)),
            "rms_naive_se": float(np.sqrt(np.mean(naive_se ** 2))),
            "skew_of_study_mean_d": float((centred ** 3).mean() / centred.std() ** 3),
            "corr_d_between_subjects": float(_mean_pair_corr(d)),
-           "methods": {}, "shuffled": {}}
+           "methods": {}, "shuffled": {}, "baselines": {}, "with_phase": {}}
     out["se_ratio"] = out["sd_of_study_mean_d"] / out["rms_naive_se"]
-    limits = {(m, kind): np.empty((2, replicates)) for m in methods
-              for kind in ("methods", "shuffled")}
+    kinds = {"methods": d, "shuffled": shuffled, "d0": diffs["d0"],
+             "d_phase": diffs["d_phase"], "d_constant": diffs["d_constant"],
+             "d_with_phase": diffs["d_with_phase"]}
+    limits = {(m, kind): np.empty((2, replicates)) for m in methods for kind in kinds}
     for rows in np.array_split(np.arange(replicates), draw_blocks):
+        # One set of subject draws per block, shared by every difference.
         counts = draw_counts(draws, subjects, rng)
         for (method, kind), store in limits.items():
-            values = d if kind == "methods" else shuffled
-            store[0, rows], store[1, rows] = interval(values[rows], counts, level,
+            store[0, rows], store[1, rows] = interval(kinds[kind][rows], counts, level,
                                                       method)
-    for (method, kind), (low, high) in limits.items():
-        out[kind][method] = {"miss_below": float(np.mean(high < theta)),
-                             "miss_above": float(np.mean(low > theta)),
-                             "p_upper_below_0": float(np.mean(high < 0)),
-                             "p_lower_above_0": float(np.mean(low > 0)),
-                             "width": float(np.mean(high - low))}
+    for method in methods:
+        for kind in ("methods", "shuffled"):
+            low, high = limits[method, kind]
+            out[kind][method] = {"miss_below": float(np.mean(high < theta)),
+                                 "miss_above": float(np.mean(low > theta)),
+                                 "p_upper_below_0": float(np.mean(high < 0)),
+                                 "p_lower_above_0": float(np.mean(low > 0)),
+                                 "width": float(np.mean(high - low))}
+        below = {k: limits[method, k][1] < 0
+                 for k in ("methods", "d0", "d_phase", "d_constant")}
+        main = below["methods"] & below["d0"]
+        out["baselines"][method] = {
+            "p_d0_below_0": float(below["d0"].mean()),
+            "p_d_phase_below_0": float(below["d_phase"].mean()),
+            "p_d_constant_below_0": float(below["d_constant"].mean()),
+            "p_d_phase_above_0": float(np.mean(limits[method, "d_phase"][0] > 0)),
+            "theta_phase": theta_p, "theta_phase_mc_se": theta_p_se,
+            "phase_miss_below": float(np.mean(limits[method, "d_phase"][1] < theta_p)),
+            "phase_miss_above": float(np.mean(limits[method, "d_phase"][0] > theta_p)),
+            "p_main": float(main.mean()),
+            "p_main_and_phase": float((main & below["d_phase"]).mean())}
+        low_w, high_w = limits[method, "d_with_phase"]
+        out["with_phase"][method] = {
+            "theta": theta_w, "theta_mc_se": theta_w_se,
+            "miss_below": float(np.mean(high_w < theta_w)),
+            "miss_above": float(np.mean(low_w > theta_w)),
+            "p_upper_below_0": float(np.mean(high_w < 0)),
+            "p_lower_above_0": float(np.mean(low_w > 0))}
     return out
 
 

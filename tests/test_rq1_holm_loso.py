@@ -122,7 +122,99 @@ def test_loso_run_is_reproducible_and_reports_every_method():
     first, second = sim.run_loso(*args), sim.run_loso(*args)
     assert first == second
     assert set(first["methods"]) == set(first["shuffled"]) == set(spec["ci_methods"])
+    assert set(first["baselines"]) == set(spec["ci_methods"])
     assert first["se_ratio"] > 0 and first["theta_mc_se"] > 0
+    m = first["mean_mae"]
+    assert first["mean_d_phase"] == pytest.approx(m["ppg_pat"] - m["phase_mean"])
+    assert first["mean_d0"] == pytest.approx(m["ppg_pat"] - m["zero_change"])
+    b = first["baselines"]["t_envelope"]
+    assert b["p_main_and_phase"] <= min(b["p_main"], b["p_d_phase_below_0"])
+    assert b["theta_phase_mc_se"] > 0
+    w = first["with_phase"]["t_envelope"]
+    assert w["theta_mc_se"] > 0 and set(first["with_phase"]) == set(spec["ci_methods"])
+    assert first["mean_d_with_phase"] == pytest.approx(
+        m["phase_ppg_pat"] - m["phase_ppg"])
+    assert 0 <= b["phase_miss_below"] <= 1 and 0 <= b["phase_miss_above"] <= 1
+
+
+def test_reference_theta_of_several_keys_matches_single_keys():
+    spec = CONFIG["loso"]
+    target = BASE["targets"]["SBP"]
+    features = json.loads(json.dumps(spec["features"]))
+    features["pat"]["a"] = 0.1
+    args = ([3], 50, 25, 6, 2, target, target["m2"]["moderate"], features,
+            spec["base_features"], 1.0)
+    both = sim.reference_theta(*args, key=("d", "d_phase"))
+    assert both["d"] == sim.reference_theta(*args)
+    assert both["d_phase"] == sim.reference_theta(*args, key="d_phase")
+
+
+def _naive_phase_mean(y, phases):
+    r, n, k, c = y.shape
+    out = np.empty(y.shape)
+    for rep in range(r):
+        for s in range(n):
+            for j, label in enumerate(phases):
+                cols = [i for i, p in enumerate(phases) if p == label]
+                # each other subject: mean over its sessions 2..K cuffs of the phase
+                means = [y[rep, o, 1:][:, cols].mean() for o in range(n) if o != s]
+                out[rep, s, :, j] = np.mean(means)
+    return out
+
+
+def test_phase_mean_matches_a_naive_equal_subject_weight_mean():
+    rng = np.random.default_rng(12)
+    y = rng.normal(size=(2, 5, 3, 4))
+    phases = ("M0", "M0", "M1", "M2")
+    np.testing.assert_allclose(sim.phase_mean_loso(y, phases),
+                               _naive_phase_mean(y, phases), rtol=1e-12)
+    static = sim.phase_mean_loso(y, ("all",) * 4)
+    np.testing.assert_allclose(static, _naive_phase_mean(y, ("all",) * 4), rtol=1e-12)
+    assert np.all(static == static[..., :1])  # one value for every cuff
+
+
+def test_phase_mean_ignores_the_held_out_subject_and_session_one():
+    rng = np.random.default_rng(13)
+    y = rng.normal(size=(1, 4, 3, 4))
+    before = sim.phase_mean_loso(y, sim.CUFFS)
+    y2 = y.copy()
+    y2[0, 1] += 50.0          # labels of the held-out subject 1
+    y2[:, :, 0] -= 30.0       # session 1 of everyone
+    after = sim.phase_mean_loso(y2, sim.CUFFS)
+    np.testing.assert_allclose(after[0, 1], before[0, 1])
+    np.testing.assert_allclose(after[0, 0, 0], before[0, 0, 0] + 50.0 / 3)
+    with pytest.raises(ValueError):
+        sim.phase_mean_loso(y, ("M0", "M1"))
+
+
+def test_phase_mean_recovers_known_phase_offsets():
+    # Every subject has the same change per phase: the baseline predicts it exactly.
+    offsets = np.array([1.0, 1.0, -3.0, 8.0])
+    y = np.broadcast_to(offsets, (1, 6, 3, 4)).copy()
+    np.testing.assert_allclose(sim.phase_mean_loso(y, sim.CUFFS), y)
+
+
+def test_phase_indicators_mark_m1_m2_and_later_sessions():
+    ind = sim.phase_indicators((2, 3, 3, 4))
+    assert ind.shape == (2, 3, 3, 4, 3)
+    # session 1: M0, M0, M1, M2 -> only the maneuver flags
+    np.testing.assert_array_equal(ind[0, 0, 0], [[0, 0, 0], [0, 0, 0], [1, 0, 0],
+                                                 [0, 1, 0]])
+    # session 2: the "session >= 2" flag is on for every cuff
+    np.testing.assert_array_equal(ind[1, 2, 1], [[0, 0, 1], [0, 0, 1], [1, 0, 1],
+                                                 [0, 1, 1]])
+
+
+def test_phase_features_with_exact_phase_offsets_predict_them():
+    # Changes are exactly a per-phase offset: Ridge on the indicators alone gets
+    # close (shrunk by alpha), and much closer with a tiny alpha.
+    offsets = np.array([1.0, 1.0, -3.0, 8.0])
+    y = np.zeros((1, 8, 3, 4))
+    y[:, :, 1:] = offsets
+    y[:, :, 0, 2:] = offsets[2:] - 1.0  # session 1 maneuvers, no session offset
+    x = np.array(sim.phase_indicators(y.shape))
+    pred = sim.loso_ridge(x, y, 1e-9)
+    np.testing.assert_allclose(pred, y, atol=1e-6)
 
 
 def test_a_constant_training_feature_is_refused():

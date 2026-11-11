@@ -18,7 +18,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-SCRIPT_VERSION = "rq1-holm-loso-runner-v1"
+# v2: no-signal baselines in LOSO; v3: both Ridge arms with phase indicators
+SCRIPT_VERSION = "rq1-holm-loso-runner-v3"
 CODE_FILES = ("scripts/simulate_rq1_holm_loso.py",
               "software/evaluation/rq1_holm_loso.py",
               "software/evaluation/rq1_sensitivity.py",
@@ -117,6 +118,55 @@ def summary(results, config):
             f"{row['corr_d_between_subjects']:.3f} | {row['skew_of_study_mean_d']:.2f} | "
             f"{cells} | {shuf['miss_below']:.3f} / {shuf['miss_above']:.3f} | "
             f"{env['p_upper_below_0']:.3f} | {env['p_lower_above_0']:.3f} |")
+    lines += ["", f"## No-signal baselines in the same LOSO folds ({spec['target']}, "
+              f"t_envelope {100 * spec['level']:g} % CI)", "",
+              "`phase mean`: mean change of each protocol phase (M0, M1, M2) over the "
+              "training subjects of the fold (sessions >= 2, equal subject weight); "
+              "`constant`: one mean over every phase. MAE columns: mean over subjects "
+              "and studies (mmHg). `d^P`: PPG+PAT minus phase mean; `theta^P ± MC "
+              "SE`: its expected mean from the separate simulation; `miss below / "
+              "above`: share of CIs entirely below / above theta^P (nominal 0.025 "
+              "each). `P(...<0)`: share of studies whose CI lies entirely below 0; "
+              "`main`: CIs of d and d0 both below 0 (one outcome, no Holm).", "",
+              "| M2 | PAT | Subjects × sessions | MAE zero / constant / phase / PPG / "
+              "PPG+PAT | mean d0 | theta^P ± MC SE | d^P miss below / above | "
+              "P(d0<0) | P(d^const<0) | P(d^P<0) | P(d^P>0) | P(main) | "
+              "P(main and d^P<0) |",
+              "| --- | --- | --- | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: "
+              "| ---: | ---: |"]
+    for row in results["loso"]:
+        m, b = row["mean_mae"], row["baselines"]["t_envelope"]
+        maes = " / ".join(f"{m[k]:.2f}" for k in ("zero_change", "constant",
+                                                    "phase_mean", "ppg", "ppg_pat"))
+        lines.append(
+            f"| {row['m2_scenario']} | {row['effect']} | {row['subjects']} × "
+            f"{row['sessions']} | {maes} | {row['mean_d0']:.2f} | "
+            f"{b['theta_phase']:.3f} ± {b['theta_phase_mc_se']:.3f} | "
+            f"{b['phase_miss_below']:.3f} / {b['phase_miss_above']:.3f} | "
+            f"{b['p_d0_below_0']:.3f} | "
+            f"{b['p_d_constant_below_0']:.3f} | {b['p_d_phase_below_0']:.3f} | "
+            f"{b['p_d_phase_above_0']:.3f} | {b['p_main']:.3f} | "
+            f"{b['p_main_and_phase']:.3f} |")
+    lines += ["", "## PAT once the model knows the phase (SAP secondary endpoint 10)", "",
+              "Both Ridge arms get three 0/1 phase features (M1, M2, session >= 2), "
+              "scaled and penalised like the others. `d^W`: phase+PPG+PAT minus "
+              "phase+PPG; `theta^W ± MC SE` from the separate simulation; `miss below / "
+              "above` theta^W (nominal 0.025 each); `P(U<0)`, `P(L>0)`: t_envelope CI "
+              "entirely below / above 0. `d` columns repeat the comparison without "
+              "phase features.", "",
+              "| M2 | PAT | Subjects × sessions | MAE phase+PPG / phase+PPG+PAT | "
+              "theta (d) | theta^W ± MC SE | d^W miss below / above | P(d: U<0) | "
+              "P(d^W: U<0) | P(d^W: L>0) |",
+              "| --- | --- | --- | --- | ---: | --- | --- | ---: | ---: | ---: |"]
+    for row in results["loso"]:
+        m, w = row["mean_mae"], row["with_phase"]["t_envelope"]
+        lines.append(
+            f"| {row['m2_scenario']} | {row['effect']} | {row['subjects']} × "
+            f"{row['sessions']} | {m['phase_ppg']:.2f} / {m['phase_ppg_pat']:.2f} | "
+            f"{row['theta']:.3f} | {w['theta']:.3f} ± {w['theta_mc_se']:.3f} | "
+            f"{w['miss_below']:.3f} / {w['miss_above']:.3f} | "
+            f"{row['methods']['t_envelope']['p_upper_below_0']:.3f} | "
+            f"{w['p_upper_below_0']:.3f} | {w['p_lower_above_0']:.3f} |")
     return "\n".join(lines)
 
 
