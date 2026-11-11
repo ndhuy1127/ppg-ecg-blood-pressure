@@ -95,22 +95,35 @@ Bài không nêu hoặc khác dữ liệu ở các điểm dưới. Mỗi điể
 
 ## 5. Chống rò rỉ
 
-- Mọi thống kê dùng để chuẩn hóa chỉ tính trên phần học. Tập kiểm tra trong là người của train,
-  tách theo người.
-- Nhãn val chỉ được đọc khi chấm, sau khi mô hình đã chốt.
-- Đoạn test không được đưa vào mô hình hay chấm. Như B3, chúng chỉ được băm ở bước kiểm
-  split (`verify_inputs`).
-- Chế độ `inner` không đọc dạng sóng của đoạn val hay test.
+- Mọi thống kê dùng để chuẩn hóa, và trọng số của phần học, chỉ tính trên phần học. Tập kiểm
+  tra trong là người của train, tách theo người.
+- **Đầu vào của mô hình:** dạng sóng của đoạn train (chế độ `inner`), hoặc train và val (chế
+  độ `val`, val chỉ để dự đoán sau khi mô hình đã chốt). Đoạn test không bao giờ vào mô hình
+  hay được chấm.
+- **Các lần đọc khác, không vào mô hình** (sửa 2026-11-11 sau review; bản trước ghi "nhãn val
+  chỉ được đọc khi chấm"):
+  - như B2/B3, `verify_inputs` đọc lại mọi dòng của raw, kể cả nhãn và dạng sóng của val và
+    test, chỉ để băm và so với inventory;
+  - QC nhãn (`exclude_dbp_ge_sbp`, chốt trước) chạy trên train và val trước khi học, như B3
+    v1; report của cả hai chế độ ghi số dòng bị loại ở train và val (trên split v2: 0 dòng;
+    test không áp QC, ghi `None`).
 
-`tests/test_b5_pipeline.py` kiểm các điểm này bằng dữ liệu SYNTHETIC: dạng sóng chỉ được đọc
-cho đoạn train (chế độ `inner`) hoặc train và val (chế độ `val`), không bao giờ cho test.
+  Không giá trị nào từ hai bước này đi vào việc học, chuẩn hóa hay chọn epoch.
+
+`tests/test_b5_pipeline.py` kiểm bằng dữ liệu SYNTHETIC rằng `waveforms()` (đường vào mô
+hình) chỉ đọc đoạn train (chế độ `inner`) hoặc train và val (chế độ `val`), không bao giờ
+test, và trọng số của phần học có trung bình 1, mỗi người cùng tổng trọng số. Test không chặn
+các lần đọc để băm ở trên.
 
 ## 6. Giới hạn
 
 - Nhãn là ABP xâm lấn công khai của bệnh nhân phẫu thuật VitalDB, không phải cuff, không
   phải ΔBP qua phiên, không phải thiết bị của nhóm.
 - Đây là BP tuyệt đối của người chưa thấy (calibration-free), khác bài toán chính của dự án.
-- B5 học trên ít người hơn B0/B3 (mục 3).
+- B5 học trên ít người hơn B0/B3 (288 so với 320), nhưng được chọn epoch trên 32 người còn
+  lại, còn B3 có số cây cố định (mục 3). Vì vậy B5 − B0 và B5 − B3 là so sánh hai **quy
+  trình** hoàn chỉnh, không phải so sánh kiến trúc có kiểm soát; không nói trước được chênh
+  lệch dữ liệu này làm B5 thiệt hay lợi.
 - Không tinh chỉnh siêu tham số. Learning rate theo bài; batch, chuẩn hóa và cách dừng
   chọn trước khi có số val.
 - Kết luận chỉ cho val PulseDB.
@@ -153,4 +166,21 @@ dùng người của train; không có số nào trên val hay test.
 
 ## 9. Review
 
-Chờ review về rò rỉ và so sánh công bằng (kế hoạch Tuần 7), rồi chờ duyệt.
+**Review về rò rỉ và so sánh công bằng (2026-11-11, rà soát và một phản biện độc lập):**
+không có lỗi chặn trên đường học và chấm. Đã kiểm: chuẩn hóa chỉ từ phần học; dự đoán ở chế
+độ `eval`; checkpoint tốt nhất giữ cả trạng thái batch norm; dự đoán đổi lại mmHg; B0/B3/B5
+được ghép theo `sample_id` và chấm trên cùng các lượt bootstrap theo người; tập kiểm tra trong
+tách theo người, chỉ từ train. Các điểm đã xử lý:
+
+1. Mục 5 trước đây nói quá: nhãn và dạng sóng của val/test vẫn được đọc để băm
+   (`verify_inputs`) và để QC nhãn, dù không vào mô hình. Đã viết lại mục 5.
+2. So sánh với B0/B3 là so sánh quy trình, không phải kiến trúc (mục 6, đã ghi rõ).
+3. Trọng số của phần học trước đây được chuẩn hóa trên cả 320 người rồi mới cắt ra 288 người,
+   nên khi số đoạn mỗi người khác nhau thì trung bình khác 1. Đã sửa: tính trên phần học
+   (`pipeline_b5.py`), thêm test. Trên split v2 mỗi người 360 đoạn và QC không loại dòng nào,
+   nên mọi trọng số vẫn bằng 1: lần chạy `inner` ở mục 7 không đổi.
+4. Lần chạy `inner` ở mục 7 là bằng chứng phát triển, không phải bằng chứng hiệu năng độc lập:
+   đã ghi ở mục 7, và không điểm nào của mục 3 đổi sau lần chạy đó.
+
+**Chờ duyệt:** đổi `status` của config thành `APPROVED_NOT_TEST_EVALUATED` bằng một commit
+riêng, rồi mới chạy chế độ `val`.

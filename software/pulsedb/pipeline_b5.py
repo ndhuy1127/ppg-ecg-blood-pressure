@@ -233,12 +233,14 @@ def run_b5(segments, manifest, inventory, config, device="cpu", mode="val", log=
     before_qc = (manifest, inventory)  # run_baselines applies the same QC itself
     manifest, inventory, qc = pipeline.label_qc(manifest, inventory)
     train = pipeline._rows(manifest, "train")
-    weights = pipeline.subject_weights(train.subject_id.to_numpy())
     training = config["training"]
     held = inner_split(train.subject_id.to_numpy(), training["inner_val_fraction"],
                        training["seed"])
     inner_mask = train.subject_id.isin(held).to_numpy()
     fit, inner = train[~inner_mask], train[inner_mask]
+    # Weights of the fitting rows only: every fitting subject the same total
+    # weight, mean 1 over the fitting rows (as B3 v1 over all train rows).
+    weights = pipeline.subject_weights(fit.subject_id.to_numpy())
     samples = config["model"]["samples"]
     x_fit = waveforms(segments, fit.raw_index.tolist(), samples)
     x_inner = waveforms(segments, inner.raw_index.tolist(), samples)
@@ -256,7 +258,7 @@ def run_b5(segments, manifest, inventory, config, device="cpu", mode="val", log=
         column = target.lower()
         started = time.perf_counter()
         model, history, best_epoch, target_scale = train_target(
-            x_fit, fit[column].to_numpy(), weights[~inner_mask], x_inner,
+            x_fit, fit[column].to_numpy(), weights, x_inner,
             inner[column].to_numpy(), inner.subject_id.to_numpy(), training, device,
             None if log is None else (lambda row, t=target: log(t, row)))
         models[target] = model

@@ -160,6 +160,30 @@ def test_inner_mode_reads_train_waveforms_only_and_scores_nothing(monkeypatch):
         assert 1 <= len(history) <= 2 and report["targets"][target]["best_epoch"] >= 1
 
 
+def test_fit_weights_give_every_fit_subject_equal_weight_and_mean_one(monkeypatch):
+    # Unequal rows per subject: weights must be normalised over the fitting rows,
+    # not over all train rows and then sliced (review finding, 2026-11-11).
+    segments = [segment(s, k) for s in range(20) for k in range(2 + s % 3)]
+    inventory = build_inventory(segments, "SYN_SOURCE.mat", "0" * 64)
+    manifest = make_manifest(inventory, seed=72)
+    seen = []
+
+    def fake_train(x_fit, y_fit, w_fit, *args, **kwargs):
+        seen.append(np.asarray(w_fit))
+        return (ResNet18_1d(), [{"inner_subject_balanced_mae": 1.0}], 1,
+                {"centre": 0.0, "spread": 1.0})
+
+    monkeypatch.setattr(pipeline_b5, "train_target", fake_train)
+    run_b5(segments, manifest, inventory, small_config(), "cpu", "inner")
+    train = manifest[manifest.split == "train"]
+    held = inner_split(train.subject_id.to_numpy(), 0.1, small_config()["training"]["seed"])
+    fit_ids = train[~train.subject_id.isin(held)].subject_id.to_numpy()
+    for weights in seen:
+        assert weights.mean() == pytest.approx(1.0)
+        totals = {s: weights[fit_ids == s].sum() for s in set(fit_ids)}
+        assert max(totals.values()) == pytest.approx(min(totals.values()))
+
+
 def test_val_mode_scores_b0_b3_b5_on_val_and_never_reads_test(monkeypatch):
     segments, manifest, inventory = make_data()
     recorder = Recorder(monkeypatch)
