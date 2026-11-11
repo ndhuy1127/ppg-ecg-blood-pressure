@@ -183,3 +183,23 @@ tách theo người, chỉ từ train. Các điểm đã xử lý:
 
 **Duyệt:** ngày 2026-11-11, nguyên trạng, bằng commit riêng đổi `status` của config thành
 `APPROVED_NOT_TEST_EVALUATED`, trước khi chạy chế độ `val`.
+
+## 10. Kết quả trên val (2026-11-11)
+
+Chạy một lần sau commit duyệt `38f23fe`; report ghi `workspace_has_changes: false` và
+`approval_committed` đủ ba phần. Không đổi điểm nào của định nghĩa sau khi thấy số. Bảng, report
+và hash: [reports/weekly/week_07/pulsedb_b5_v0/](../../reports/weekly/week_07/pulsedb_b5_v0/README.md).
+
+| Model | SBP MAE [CI 95 %] | DBP MAE [CI 95 %] |
+| --- | --- | --- |
+| B0 | 15,11 [13,47; 16,88] | 10,40 [9,12; 11,80] |
+| B3 | 14,58 [12,89; 16,49] | 10,12 [8,94; 11,44] |
+| B5 | 13,24 [11,84; 14,64] | 9,76 [8,56; 11,20] |
+
+- B5 − B0: SBP −1,87 [−3,23; −0,45], DBP −0,64 [−1,35; 0,15] mmHg.
+- B5 − B3: SBP −1,34 [−2,53; −0,16], DBP −0,36 [−0,91; 0,18] mmHg.
+- Trọng số trùng từng byte với lần chạy `inner` (mục 7), nên việc sửa trọng số ở mục 9 không
+  đổi kết quả. Học 21,3 phút (SBP) và 12,2 phút (DBP) trên GPU; suy luận 0,27 ms mỗi đoạn.
+- Đọc: với cấu hình này, B5 có sai số SBP thấp hơn B0 và B3 trên val (CI dưới 0); với DBP chưa
+  thấy khác (CI chứa 0). Lợi ích SBP khoảng 1,3–1,9 mmHg, nhỏ so với MAE khoảng 13 mmHg. Kết
+  luận chỉ cho BP tuyệt đối của người chưa thấy trên val PulseDB (mục 6).

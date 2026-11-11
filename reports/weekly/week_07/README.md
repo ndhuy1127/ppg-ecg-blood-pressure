@@ -42,11 +42,10 @@ Không đo trên người.
 - **B5** (3761b1b, 2026-11-10): ResNet-18 1D của chính bài PulseDB (Wang và cộng sự 2023),
   2 kênh ECG + PPG, hai mô hình SBP/DBP, MSE, Adam lr 10⁻⁶, 100 epoch; dựng lại theo mô tả vì
   bài không công bố code hay MAE từng tập con
-  ([định nghĩa B5](../../../docs/protocol/b5_pulsedb_definition.md)). Config
-  `PENDING_REVIEW`; runner từ chối chế độ `val` khi chưa có commit duyệt. PyTorch 2.6.0 là
-  dependency tùy chọn (`requirements-dl.txt`), chờ duyệt. Đã chạy chế độ `inner` chỉ trên
-  train (mục 6.4); chưa có số trên val. Review rò rỉ xong ngày 2026-11-11; chờ commit duyệt
-  để chạy val.
+  ([định nghĩa B5](../../../docs/protocol/b5_pulsedb_definition.md)). PyTorch 2.6.0 là
+  dependency tùy chọn (`requirements-dl.txt`). Chạy chế độ `inner` chỉ trên train (mục 6.4);
+  review rò rỉ ngày 2026-11-11; duyệt nguyên trạng bằng commit riêng `38f23fe`; chạy trên val
+  cùng ngày (mục 6.6), có trong bảng tổng hợp `collect_runs.py`.
 
 ### Đức Anh
 
@@ -131,6 +130,7 @@ Không đo trên người.
 | 14 | Ghi nhận bỏ phiên đánh dấu tay 2026-10-25 | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) |
 | 15 | Mô phỏng Holm chung SBP–DBP và Ridge trong LOSO | Huy | [rq1_holm_loso.py](../../../software/evaluation/rq1_holm_loso.py), [simulate_rq1_holm_loso.py](../../../scripts/simulate_rq1_holm_loso.py), [rq1_holm_loso_v1.json](../../../configs/analysis/rq1_holm_loso_v1.json), [test_rq1_holm_loso.py](../../../tests/test_rq1_holm_loso.py), [kết quả](rq1_holm_loso/summary.md) |
 | 16 | Review B5, sửa trọng số phần học | Huy | [b5_pulsedb_definition.md](../../../docs/protocol/b5_pulsedb_definition.md) mục 9, [pipeline_b5.py](../../../software/pulsedb/pipeline_b5.py), [test_b5_pipeline.py](../../../tests/test_b5_pipeline.py) |
+| 17 | B5 trên val: bảng, report, đường học | Linh | [pulsedb_b5_v0/](pulsedb_b5_v0/README.md), [b5_pulsedb_definition.md](../../../docs/protocol/b5_pulsedb_definition.md) mục 10 |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
@@ -167,6 +167,10 @@ Chọn mô hình mẫu của chính bài PulseDB vì cùng dataset, cùng dạng
 ECG + PPG. Giới hạn: bài không công bố MAE từng tập con hay code huấn luyện, nên không có con số
 đích để so; Hình 4 (sơ đồ lớp) chưa được đối chiếu. Sau khi thấy số trên val không đổi kiến
 trúc, quy trình học hay cách chọn epoch; nếu đổi thì tạo version mới và báo cả hai.
+
+Trên val, B5 có sai số SBP thấp hơn B0 và B3 (CI của hiệu nằm dưới 0), còn với DBP chưa thấy
+khác (mục 6.6). Lợi ích SBP khoảng 1,3–1,9 mmHg, nhỏ so với MAE khoảng 13 mmHg; kết quả chỉ cho
+BP tuyệt đối của người chưa thấy trên PulseDB, không nói gì về ΔBP qua phiên của RQ1.
 
 ## 6. Kết quả kiểm tra kỹ thuật
 
@@ -251,6 +255,27 @@ mô phỏng riêng 20.000 nghiên cứu, và phép xáo cột để tách ảnh 
   thêm là do các mô hình LOSO học trên gần cùng tập người. Percentile và BCa trượt phía dưới tới
   3,8 % và 4,3 %, nên giữ khoảng bao; SAP ghi độ phủ hai phía khoảng 92–95 % là giới hạn.
 
+### 6.6. B5 trên PulseDB Train 400 người, val (2026-11-11)
+
+Duyệt nguyên trạng bằng commit riêng `38f23fe` rồi mới chạy; report ghi `workspace_has_changes:
+false` và `approval_committed` đủ ba phần (config, định nghĩa, mã). Val 40 người, 14.400 đoạn;
+MAE trung bình đều theo người, CI 95 % bootstrap theo người (2.000 lượt, seed 20261013). Chi
+tiết và hash: [pulsedb_b5_v0/](pulsedb_b5_v0/README.md).
+
+| Model | SBP MAE [CI 95 %] | DBP MAE [CI 95 %] |
+| --- | --- | --- |
+| B0 | 15,11 [13,47; 16,88] | 10,40 [9,12; 11,80] |
+| B3 | 14,58 [12,89; 16,49] | 10,12 [8,94; 11,44] |
+| B5 | 13,24 [11,84; 14,64] | 9,76 [8,56; 11,20] |
+
+- B5 − B0: SBP −1,87 [−3,23; −0,45], DBP −0,64 [−1,35; 0,15] mmHg.
+- B5 − B3: SBP −1,34 [−2,53; −0,16], DBP −0,36 [−0,91; 0,18] mmHg.
+- B0/B3 trùng số Tuần 5; trọng số B5 trùng từng byte với lần chạy `inner`. Học 21,3 phút (SBP)
+  và 12,2 phút (DBP) trên GPU RTX 4050 Laptop; suy luận 0,27 ms mỗi đoạn; 3,84 triệu tham số
+  mỗi mô hình.
+- Nhãn là ABP xâm lấn công khai, không phải cuff; B5 học trên 288 người (B0/B3 trên 320) nhưng
+  được chọn epoch, nên đây là so sánh hai quy trình. Test và CalFree chưa chấm.
+
 ## 7. Mốc đóng Tuần 7 và việc chuyển sang Tuần 8
 
 Đánh giá ngày 2026-11-11 theo mục "Mốc đóng tuần" của
@@ -261,7 +286,7 @@ mô phỏng riêng 20.000 nghiên cứu, và phép xáo cột để tách ảnh 
 | Mọi đơn có ngày giao | **Chưa:** nơi bán, ngày giao, mã đơn chưa ghi | Đức Anh | Tuần 8, trước khi hàng về |
 | Chuẩn bị bring-up, tiêu chí dòng rò và VLED | **Đạt phần viết** (chờ duyệt): checklist, kế hoạch dòng rò/nhiệt/VLED, tiêu chí đồng bộ A1–A9. Giới hạn IEC 60601-1 chưa đối chiếu nguyên văn; chưa có người có chuyên môn duyệt | Đức Anh | Tuần 8: đối chiếu IEC, tìm người duyệt; bring-up khi hàng về |
 | Logger qua các test mới | **Đạt trên máy tính:** ghi theo dòng, hiển thị khi đang ghi, hạn `MARK_EVENT`, RAM đo lại (mục 6.2). Chưa chạy với thiết bị | Linh | Bring-up: chạy 120 phút cả hệ |
-| B5 trên val trong bảng tổng hợp | **Chưa:** định nghĩa, code, test, lần chạy `inner` và review rò rỉ (2026-11-11) có; chờ commit duyệt rồi chạy val | Linh, Huy (review) | Khi có commit duyệt |
+| B5 trên val trong bảng tổng hợp | **Đạt:** review rò rỉ, commit duyệt `38f23fe`, chạy trên val ngày 2026-11-11, có trong bảng tổng hợp (mục 6.6) | Linh, Huy (review) | — |
 | SQI v1 và SAP v1 có commit | **Đạt một phần:** có commit, chờ thầy duyệt; hai mô phỏng còn thiếu đã chạy 2026-11-11; còn quyết định baseline mạnh hơn zero-change (mục 5.1) | Huy | Tuần 8 và trước pilot |
 | Kết quả `gate` lần 1 | **Chưa:** phiên 2026-10-25 bị bỏ, lần 1 bắt đầu lại từ 0/80 đoạn | Huy | Tuần 8: xong 80 đoạn; lần 2 (16 đoạn) sau ít nhất 2 ngày; rồi `gate` |
 | Biên bản gặp thầy | **Chưa có biên bản:** ngày 2026-11-10 thầy cho biết hồ sơ đạo đức chưa cần làm gấp; các đề xuất 2.1–2.8 chưa có trả lời ghi lại | Huy | Tuần 8: ghi biên bản và các mục đã chốt |
