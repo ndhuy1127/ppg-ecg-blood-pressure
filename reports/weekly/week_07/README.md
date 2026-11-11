@@ -4,7 +4,7 @@
 
 Theo [kế hoạch Tuần 7](../../../docs/plans/WEEK_07.md):
 
-1. Đường găng vẫn là phần cứng: ghi đủ đơn hàng và ngày giao, truy vết gói Gerber, chuẩn bị
+1. Đường găng vẫn là phần cứng: ghi đủ đơn hàng và ngày giao, chuẩn bị
    bring-up (checklist, dòng rò, VLED).
 2. Sửa logger theo review ngày 2026-11-07 (RAM, kết quả lệnh, mức DC khi chỉnh LED,
    `MARK_EVENT` trễ) trước lần chạy cả hệ 120 phút.
@@ -21,7 +21,7 @@ Không đo trên người.
 | Thành viên | Công việc Tuần 7 |
 | --- | --- |
 | Linh | B5 trên PulseDB; sửa logger theo review 2026-11-07 |
-| Đức Anh | Ghi đủ đơn hàng, ngày giao, gói Gerber; chuẩn bị bring-up: checklist, đo dòng rò, thử nhiệt, quy tắc VLED; tiêu chí đo đồng bộ ECG–PPG |
+| Đức Anh | Ghi đủ đơn hàng, ngày giao; chuẩn bị bring-up: checklist, đo dòng rò, thử nhiệt, quy tắc VLED; tiêu chí đo đồng bộ ECG–PPG |
 | Huy | SQI v1, SAP v1, mô phỏng độ nhạy RQ1; đánh dấu tay và `gate`; gặp thầy; review B5; rà soát tài liệu |
 
 ## 3. Tóm tắt công việc đã hoàn thành của từng người
@@ -45,7 +45,8 @@ Không đo trên người.
   ([định nghĩa B5](../../../docs/protocol/b5_pulsedb_definition.md)). Config
   `PENDING_REVIEW`; runner từ chối chế độ `val` khi chưa có commit duyệt. PyTorch 2.6.0 là
   dependency tùy chọn (`requirements-dl.txt`), chờ duyệt. Đã chạy chế độ `inner` chỉ trên
-  train (mục 6.4); chưa có số trên val.
+  train (mục 6.4); chưa có số trên val. Review rò rỉ xong ngày 2026-11-11; chờ commit duyệt
+  để chạy val.
 
 ### Đức Anh
 
@@ -66,9 +67,9 @@ Không đo trên người.
   ≤ 0,4 ms, độ trễ ECG so với 32,558 ms, độ phủ pha kích thích); ngân sách sai số PAT ở mục 10.
   Firmware `stim_plan`: test mới cho thấy 600 cạnh kích thích phủ đều cả chu kỳ mẫu PPG 5 ms,
   kể cả khi tốc độ PPG lệch ± 3 %. Checklist thêm ba phép kiểm chặn đường thời gian.
-- **Đơn hàng:** chưa ghi thêm nơi bán, ngày giao, mã đơn; gói Gerber gửi CXT vẫn chưa có commit
-  và SHA-256 ([danh sách mua](../../../hardware/bom/purchase_list_v1_module.md) mục 5). Hàng
-  dự kiến về Tuần 8.
+- **Đơn hàng:** chưa ghi thêm nơi bán, ngày giao, mã đơn
+  ([danh sách mua](../../../hardware/bom/purchase_list_v1_module.md) mục 5). Hàng dự kiến về
+  Tuần 8.
 
 ### Huy
 
@@ -79,7 +80,9 @@ Không đo trên người.
     phương án A (Holm giữa SBP và DBP), đọc theo δ, quy tắc δ chốt sau pilot, dữ liệu thiếu;
   - [SQI v1](../../../docs/protocol/sqi_specification_v1.md): gộp `features-sqi-v2`,
     `motion-sqi-v0` và cờ phần cứng V1; ngưỡng chưa có nguồn, khóa trên bản ghi G2;
-  - mô phỏng chỉ dùng giả định (mục 5.1, 6.3);
+  - mô phỏng chỉ dùng giả định (mục 5.1, 6.3); ngày 2026-11-11 thêm hai mô phỏng còn thiếu:
+    SBP và DBP chung một nghiên cứu với Holm, và Ridge huấn luyện thật trong LOSO (mục 6.5);
+    SAP thêm thang trọng số của Ridge;
   - `mean_intervals.py`: năm kiểu CI (percentile, BCa, bootstrap-t, Student t, khoảng bao) cho
     hiệu MAE trung bình đều theo người, dùng chung cho phân tích thật và mô phỏng, có test đáp
     án biết trước.
@@ -101,7 +104,12 @@ Không đo trên người.
     0)"; PPG trễ so với ECG trên PulseDB là "giả thuyết, chưa kiểm chứng"; MAE B3 nằm trong
     khoảng của y văn nhưng B0 hằng số cũng vậy;
   - sửa trích dẫn (Meziane 2015), tên nhánh `dev/ngoclinh`, README trạng thái Tuần 7.
-- **Review B5** về rò rỉ và so sánh công bằng: chưa ghi vào tài liệu B5.
+- **Review B5** về rò rỉ và so sánh công bằng (2026-11-11, kèm một phản biện độc lập): không
+  có lỗi chặn. Sửa trọng số của phần học (chuẩn hóa trên 288 người học thay vì cả 320 người
+  rồi cắt; trên split v2 mọi trọng số vẫn bằng 1 nên lần chạy `inner` không đổi), thêm test;
+  viết lại mục chống rò rỉ cho đúng (nhãn và dạng sóng val/test vẫn được đọc để băm và QC,
+  không vào mô hình); ghi rõ B5 − B0/B3 là so sánh quy trình
+  ([định nghĩa B5](../../../docs/protocol/b5_pulsedb_definition.md) mục 5, 6, 9).
 
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
@@ -121,6 +129,8 @@ Không đo trên người.
 | 12 | Kết quả mô phỏng v2 (khoảng bao) và v1 (percentile) | Huy | [rq1_sensitivity_v2/](rq1_sensitivity_v2/summary.md), [rq1_sensitivity/](rq1_sensitivity/summary.md) |
 | 13 | Năm kiểu CI cho hiệu MAE theo người | Huy | [mean_intervals.py](../../../software/evaluation/mean_intervals.py), [subject_bootstrap.py](../../../software/evaluation/subject_bootstrap.py), [test_subject_bootstrap.py](../../../tests/test_subject_bootstrap.py) |
 | 14 | Ghi nhận bỏ phiên đánh dấu tay 2026-10-25 | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) |
+| 15 | Mô phỏng Holm chung SBP–DBP và Ridge trong LOSO | Huy | [rq1_holm_loso.py](../../../software/evaluation/rq1_holm_loso.py), [simulate_rq1_holm_loso.py](../../../scripts/simulate_rq1_holm_loso.py), [rq1_holm_loso_v1.json](../../../configs/analysis/rq1_holm_loso_v1.json), [test_rq1_holm_loso.py](../../../tests/test_rq1_holm_loso.py), [kết quả](rq1_holm_loso/summary.md) |
+| 16 | Review B5, sửa trọng số phần học | Huy | [b5_pulsedb_definition.md](../../../docs/protocol/b5_pulsedb_definition.md) mục 9, [pipeline_b5.py](../../../software/pulsedb/pipeline_b5.py), [test_b5_pipeline.py](../../../tests/test_b5_pipeline.py) |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
@@ -136,9 +146,9 @@ Không đo trên người.
 - **δ** = max(1 mmHg; 0,5 × SD lặp lại của cuff), chốt sau pilot, không đổi sau khi thấy dữ liệu
   chính.
 - **P2 mới:** trung vị ΔSBP có dấu ở M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả.
-- **Việc phải xong trước khi khóa SAP:** mô phỏng có huấn luyện Ridge thật trong LOSO (d_s có
-  thể phụ thuộc nhau); mô phỏng chung SBP và DBP để có xác suất sau đủ các bước Holm; quyết
-  định baseline mạnh hơn zero-change (trung bình ΔBP theo nghiệm pháp, hoặc "static" của S4).
+- **Hai mô phỏng còn thiếu đã chạy ngày 2026-11-11** (mục 6.5). Việc còn lại trước khi khóa
+  SAP: quyết định baseline mạnh hơn zero-change (trung bình ΔBP theo nghiệm pháp, hoặc
+  "static" của S4).
 
 ### 5.2. Bring-up: điều cần biết trước khi hàng về
 
@@ -162,7 +172,8 @@ trúc, quy trình học hay cách chọn epoch; nếu đổi thì tạo version 
 
 ### 6.1. Kiểm tra toàn repo
 
-Ngày 2026-11-11 trên `87dc563`: `ruff check .` sạch; `pytest -q` 1.288 đạt, 1 bỏ qua (tạo
+Ngày 2026-11-11, sau mọi thay đổi của mục 3 (kể cả review B5 và mô phỏng mục 6.5): `ruff
+check .` sạch; `pytest -q` 1.299 đạt, 1 bỏ qua (tạo
 symlink cần quyền trên Windows), test firmware chạy bằng trình dịch C `ziglang`;
 `scripts/check_environment.py` và `pip check` đạt. Không có trình dịch C thì 105 test firmware
 tự bỏ qua.
@@ -222,6 +233,24 @@ thuộc train.
 Chỉ kiểm mô hình học được với lr của bài. Các MAE này lạc quan vì chính chúng được dùng để chọn
 epoch; không so được với B0/B3 trên val. Không đổi điểm nào của định nghĩa sau lần chạy này.
 
+### 6.5. Mô phỏng Holm chung SBP–DBP và Ridge trong LOSO (2026-11-11, chỉ giả định)
+
+Config `rq1_holm_loso_v1.json` (SHA-256 `a2b4aac7…`), 2.000 nghiên cứu mỗi kịch bản, CI khoảng
+bao; chạy trên bản chưa commit, hash của code trong [report.json](rq1_holm_loso/report.json),
+bảng đầy đủ ở [summary.md](rq1_holm_loso/summary.md). Code và cách đọc đã qua một phản biện độc
+lập; theo đó đã thêm nhiễu cho nền đặc trưng, kịch bản một đầu ra không có hiệu ứng, θ lấy từ
+mô phỏng riêng 20.000 nghiên cứu, và phép xáo cột để tách ảnh hưởng của phụ thuộc.
+
+- **Holm:** khi PAT không thêm gì ở cả hai đầu ra, cận trên của sai lầm là 1,5–2,8 % (danh nghĩa
+  2,5 %); khi chỉ một đầu ra có hiệu ứng, đầu ra kia bị tuyên bố nhầm ≤ 0,6 %. Ví dụ M2 vừa,
+  "strong", 25 người × 2 phiên: tuyên bố SBP 26,7 % (một mình 36,6 %), DBP 13,3 %.
+- **LOSO:** tương quan d giữa hai người gần 0 và sai số chuẩn không bị đánh giá thấp (tỷ số
+  0,82–1,03), nhưng trung bình d của mỗi nghiên cứu lệch trái. CI khoảng bao nằm hẳn dưới θ ở
+  0,4–2,1 % nghiên cứu (phía kết luận nhầm là PAT có lợi, trong mức 2,5 %), nằm hẳn trên θ ở
+  0,6–8,1 % (đánh giá thấp lợi ích). Xáo cột đưa cả hai phía về khoảng 1–3 %, nên phần trượt
+  thêm là do các mô hình LOSO học trên gần cùng tập người. Percentile và BCa trượt phía dưới tới
+  3,8 % và 4,3 %, nên giữ khoảng bao; SAP ghi độ phủ hai phía khoảng 92–95 % là giới hạn.
+
 ## 7. Mốc đóng Tuần 7 và việc chuyển sang Tuần 8
 
 Đánh giá ngày 2026-11-11 theo mục "Mốc đóng tuần" của
@@ -229,11 +258,11 @@ epoch; không so được với B0/B3 trên val. Không đổi điểm nào củ
 
 | Mốc đóng tuần | Trạng thái | Người xử lý | Chuyển sang |
 | --- | --- | --- | --- |
-| Mọi đơn có ngày giao, gói Gerber truy vết được | **Chưa:** nơi bán, ngày giao, mã đơn và commit/SHA-256 của Gerber chưa ghi | Đức Anh | Tuần 8, trước khi hàng về |
+| Mọi đơn có ngày giao | **Chưa:** nơi bán, ngày giao, mã đơn chưa ghi | Đức Anh | Tuần 8, trước khi hàng về |
 | Chuẩn bị bring-up, tiêu chí dòng rò và VLED | **Đạt phần viết** (chờ duyệt): checklist, kế hoạch dòng rò/nhiệt/VLED, tiêu chí đồng bộ A1–A9. Giới hạn IEC 60601-1 chưa đối chiếu nguyên văn; chưa có người có chuyên môn duyệt | Đức Anh | Tuần 8: đối chiếu IEC, tìm người duyệt; bring-up khi hàng về |
 | Logger qua các test mới | **Đạt trên máy tính:** ghi theo dòng, hiển thị khi đang ghi, hạn `MARK_EVENT`, RAM đo lại (mục 6.2). Chưa chạy với thiết bị | Linh | Bring-up: chạy 120 phút cả hệ |
-| B5 trên val trong bảng tổng hợp | **Chưa:** định nghĩa, code, test và lần chạy `inner` có; chờ review rò rỉ và commit duyệt trước khi chạy val | Linh, Huy (review) | Tuần 8 |
-| SQI v1 và SAP v1 có commit | **Đạt một phần:** có commit, chờ thầy duyệt; ba việc phải xong trước khi khóa (mục 5.1) | Huy | Tuần 8 và trước pilot |
+| B5 trên val trong bảng tổng hợp | **Chưa:** định nghĩa, code, test, lần chạy `inner` và review rò rỉ (2026-11-11) có; chờ commit duyệt rồi chạy val | Linh, Huy (review) | Khi có commit duyệt |
+| SQI v1 và SAP v1 có commit | **Đạt một phần:** có commit, chờ thầy duyệt; hai mô phỏng còn thiếu đã chạy 2026-11-11; còn quyết định baseline mạnh hơn zero-change (mục 5.1) | Huy | Tuần 8 và trước pilot |
 | Kết quả `gate` lần 1 | **Chưa:** phiên 2026-10-25 bị bỏ, lần 1 bắt đầu lại từ 0/80 đoạn | Huy | Tuần 8: xong 80 đoạn; lần 2 (16 đoạn) sau ít nhất 2 ngày; rồi `gate` |
 | Biên bản gặp thầy | **Chưa có biên bản:** ngày 2026-11-10 thầy cho biết hồ sơ đạo đức chưa cần làm gấp; các đề xuất 2.1–2.8 chưa có trả lời ghi lại | Huy | Tuần 8: ghi biên bản và các mục đã chốt |
 
