@@ -1,6 +1,7 @@
 # Đặc tả SQI v1: chất lượng tín hiệu của một lần đo cuff
 
-> **Trạng thái: đề xuất ngày 2026-11-07, chờ duyệt.** Gộp các quyết định đã chốt ở
+> **Trạng thái: đề xuất ngày 2026-11-07; cấu trúc cờ và cách dùng chốt 2026-11-12 (báo thầy);
+> ngưỡng khóa trên bản ghi G2.** Gộp các quyết định đã chốt ở
 > [protocol v0.3](protocol_outline_v0.2.md) mục 7.3, cờ `features-sqi-v2`
 > ([week04.py](../../software/feature_extraction/week04.py)) và `motion-sqi-v0`
 > ([motion_sqi.py](../../software/feature_extraction/motion_sqi.py)) thành một đặc tả cho dữ

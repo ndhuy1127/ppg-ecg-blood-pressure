@@ -146,10 +146,10 @@ Mục này được viết lại ở v0.4 (đề xuất 2026-10-29, chờ thầy
   2. CI 95% bootstrap theo người của trung bình $d_s$ (PPG + PAT so với PPG-only) nằm hoàn toàn dưới 0.
 
   Mức 95% ở đây là mức trước hiệu chỉnh; mức thực dùng theo phương án đa kiểm định bên dưới. Mức độ lợi ích được đọc theo δ ở dưới, và chỉ gọi là lợi ích đáng quan tâm khi $U < -\delta$.
-- **Đa kiểm định, chọn một phương án trước khi chạy vòng ngoài:**
-  - **Phương án A (đề xuất):** với mỗi đầu ra, kết luận chính là giao của hai điều kiện trên (kiểm định giao–hợp, intersection–union). Mỗi điều kiện được xét bằng CI hai phía ở cùng một mức, không hiệu chỉnh thêm trong cùng một đầu ra, vì kết luận chỉ đúng khi cả hai cùng đạt. Giữa SBP và DBP dùng Holm, nên mức CI của từng đầu ra theo thứ tự Holm. Các kết luận riêng lẻ khác (ví dụ chỉ vượt PPG-only) là phân tích phụ, không dùng để tuyên bố.
-  - **Phương án B:** Holm trên bốn phép so sánh (2 đầu ra × 2 đối chứng).
-  - Dù chọn phương án nào cũng báo CI ứng với mức hiệu chỉnh đã chọn.
+- **Đa kiểm định (chốt 2026-11-12: phương án A; [SAP v1](protocol/sap_v1.md) mục 6):**
+  - **Phương án A (chọn):** với mỗi đầu ra, kết luận chính là giao của hai điều kiện trên (kiểm định giao–hợp, intersection–union). Mỗi điều kiện được xét bằng CI hai phía ở cùng một mức, không hiệu chỉnh thêm trong cùng một đầu ra, vì kết luận chỉ đúng khi cả hai cùng đạt. Giữa SBP và DBP dùng Holm, nên mức CI của từng đầu ra theo thứ tự Holm. Các kết luận riêng lẻ khác (ví dụ chỉ vượt PPG-only) là phân tích phụ, không dùng để tuyên bố.
+  - **Phương án B (cân nhắc, không chọn):** Holm trên bốn phép so sánh (2 đầu ra × 2 đối chứng); chia mức thêm trong một đầu ra mà kiểm định giao–hợp không cần.
+  - Báo CI ứng với mức hiệu chỉnh của phương án A.
 - **Mức hiệu ứng nhỏ nhất đáng quan tâm δ** ($`\delta_{\text{SBP}}`$, $`\delta_{\text{DBP}}`$, mmHg) được khóa trước vòng ngoài, căn cứ vào độ lặp lại của cuff tham chiếu và vào lý do ứng dụng. Độ lặp lại ở đây là chênh lệch giữa các lần cuff M0 liền nhau ở pilot. Không dùng lại 1,5/1,0 mmHg của bản v0.1 vì con số đó chưa có căn cứ. CI của trung bình $d_s$, ở cùng mức với kết luận chính, được ký hiệu là $[L; U]$ và đọc như sau:
   - $U < -\delta$: thêm PAT giảm sai số ít nhất δ.
   - $U < 0$ và $L < -\delta \le U$: thêm PAT có lợi, nhưng chưa chắc đạt δ.
@@ -325,15 +325,15 @@ Tên B0/B1/B3 trong code không khớp với số thứ tự "Baseline 1/2/3" c�
 ## 8. Các điểm cần nhóm và giảng viên xác nhận
 
 > [!IMPORTANT]
-> - [ ] **Đại lượng dự đoán:** xác nhận rằng RQ1 dự đoán ΔSBP/ΔDBP có hiệu chuẩn cá nhân, không làm BP tuyệt đối không hiệu chuẩn.
-> - [ ] **Phép so sánh chính của RQ1:** PPG-only so với PPG + PAT trên cùng tập lần đo, cùng thuật toán.
-> - [ ] **Endpoint RQ1 khi có nghiệm pháp M0–M2** (đề xuất của nhóm 2026-10-29, mục 4.B): mọi lần cuff hợp lệ ở phiên ≥ 2, so với $`\text{BP}_0`$ = trung bình M0 phiên 1; nghiệm pháp là biến phân tầng; phân tích chỉ trên M0 là phân tích phụ.
-> - [ ] **Cỡ mẫu và kiểm định:** trần tuyển 35 người, mục tiêu ≥ 25 người đạt chuẩn, luật dừng tuyển và số phiên (mục 4.G; đề xuất 2026-10-29, sửa 2026-10-30). Tất cả được khóa trước khi mở test, dựa trên pilot.
-> - [ ] **Tiêu chí kết luận RQ1 v0.4** (mục 4.E, đề xuất 2026-10-29):
->   - cùng chuẩn CI cho so sánh với zero-change và với PPG-only;
->   - chọn phương án đa kiểm định A (giao–hợp, Holm giữa SBP/DBP) hay B (Holm trên bốn so sánh);
->   - giá trị δ và cách lấy δ từ độ lặp lại của cuff ở pilot;
->   - estimand (mục 4.A).
+> - [x] **Đại lượng dự đoán** (chốt 2026-11-12, [SAP v1](protocol/sap_v1.md) mục 1, báo thầy)**:** xác nhận rằng RQ1 dự đoán ΔSBP/ΔDBP có hiệu chuẩn cá nhân, không làm BP tuyệt đối không hiệu chuẩn.
+> - [x] **Phép so sánh chính của RQ1** (chốt 2026-11-12, SAP v1 mục 3–4)**:** PPG-only so với PPG + PAT trên cùng tập lần đo, cùng thuật toán.
+> - [x] **Endpoint RQ1 khi có nghiệm pháp M0–M2** (đề xuất của nhóm 2026-10-29, chốt 2026-11-12 trong SAP v1 mục 2–3; mục 4.B): mọi lần cuff hợp lệ ở phiên ≥ 2, so với $`\text{BP}_0`$ = trung bình M0 phiên 1; nghiệm pháp là biến phân tầng; phân tích chỉ trên M0 là phân tích phụ.
+> - [x] **Cỡ mẫu và kiểm định** (quy tắc chốt 2026-11-12, SAP v1 mục 9; số người và số phiên tính sau pilot)**:** trần tuyển 35 người, mục tiêu ≥ 25 người đạt chuẩn, luật dừng tuyển và số phiên (mục 4.G; đề xuất 2026-10-29, sửa 2026-10-30). Tất cả được khóa trước khi mở test, dựa trên pilot.
+> - [x] **Tiêu chí kết luận RQ1 v0.4** (mục 4.E; chốt 2026-11-12 trong [SAP v1](protocol/sap_v1.md), báo thầy):
+>   - cùng chuẩn CI cho so sánh với zero-change và với PPG-only (CI chính là khoảng bao của bootstrap-t và Student t, SAP mục 5);
+>   - phương án đa kiểm định A (giao–hợp, Holm giữa SBP/DBP), không chọn B;
+>   - cách lấy δ từ độ lặp lại của cuff ở pilot (SAP mục 8); giá trị δ tính sau pilot;
+>   - estimand (mục 4.A; SAP mục 3).
 > - [x] **RQ2:** phần (a) dùng train ∪ val của split v2, không dùng test, CalFree hay CalBased (chốt 2026-10-29, mục 5.G); random split chỉ là đối chứng để minh họa.
 > - [ ] **RQ2 v0.4** (đề xuất 2026-10-29): RQ2a báo ở phụ lục; RQ2b đổi thành so sánh cùng phiên với khác phiên (mục 5.B), và cần sinh dự đoán cho cuff nghiệm pháp phiên 1 trong cùng lần chạy vòng ngoài.
 > - [ ] **RQ3:**

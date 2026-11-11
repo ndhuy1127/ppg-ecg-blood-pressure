@@ -73,7 +73,7 @@ Không đo trên người.
 ### Huy
 
 - **SAP v1, SQI v1 và mô phỏng độ nhạy RQ1** (f85d4d5, 2026-11-10; sửa a8f21a8 và e0e6912,
-  2026-11-11; chờ duyệt):
+  2026-11-11; mọi mục chốt 2026-11-12, báo thầy):
   - [SAP v1](../../../docs/protocol/sap_v1.md): estimand và endpoint, Ridge α = 1, CI chính
     là khoảng bao của bootstrap-t và Student t (đổi từ percentile ngày 2026-11-10), đa kiểm định
     phương án A (Holm giữa SBP và DBP), đọc theo δ, quy tắc δ chốt sau pilot, dữ liệu thiếu;
@@ -140,21 +140,22 @@ Không đo trên người.
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
-### 5.1. SAP v1: các đề xuất chính (chờ duyệt)
+### 5.1. SAP v1: các quyết định chính (chốt 2026-11-12, báo thầy)
 
 - **Kết luận chính** cho một đầu ra cần cả hai CI, của trung bình d_s (PPG + PAT so với
   PPG-only) và d⁰_s (so với zero-change), nằm dưới 0. Holm giữa SBP và DBP: bước 1 ở 97,5 %,
-  bước 2 ở 95 %.
+  bước 2 ở 95 % (phương án A; không chọn B, Holm trên bốn phép so sánh).
 - **CI chính đổi từ percentile sang khoảng bao của bootstrap-t và Student t** (2026-11-10).
   Trong mô phỏng khi PAT không thêm gì, percentile cho CI nằm dưới 0 ở 3,7 % nghiên cứu (danh
   nghĩa 2,5 %); khoảng bao 2,3 %, tối đa 4,1 % ở các dạng phân bố đã thử. Cái giá là CI rộng
-  hơn 9–23 %.
+  hơn 9–23 %. Không chọn Student t riêng vì lên tới 8,3 % khi d_s lệch phải.
 - **δ** = max(1 mmHg; 0,5 × SD lặp lại của cuff), chốt sau pilot, không đổi sau khi thấy dữ liệu
   chính.
-- **P2 mới:** trung vị ΔSBP có dấu ở M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả.
+- **P2 mới:** trung vị ΔSBP có dấu ở M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả, bỏ khỏi
+  điều kiện kích hoạt P A. Protocol 6.5 và kịch bản bài báo đã sửa theo.
 - **Hai mô phỏng còn thiếu đã chạy ngày 2026-11-11** (mục 6.5).
 - **Baseline không dùng tín hiệu** (2026-11-12): HR từ PPG đổi rõ theo nghiệm pháp, nên mô hình
-  có thể vượt zero-change chỉ nhờ nhận ra pha. Đề xuất thêm baseline trung bình theo pha, tính
+  có thể vượt zero-change chỉ nhờ nhận ra pha. Thêm baseline trung bình theo pha, tính
   trong cùng các lượt LOSO từ nhãn người huấn luyện và lịch đo, làm endpoint phụ bắt buộc
   (dᴾ), không phải điều kiện của kết luận chính; chỉ được viết mô hình theo được BP của từng
   người khi CI của dᴾ nằm dưới 0. Chốt 2026-11-12, báo thầy. Thêm endpoint phụ cho mô hình có
@@ -310,7 +311,7 @@ tiết và hash: [pulsedb_b5_v0/](pulsedb_b5_v0/README.md).
 | Chuẩn bị bring-up, tiêu chí dòng rò và VLED | **Đạt phần viết** (chờ duyệt): checklist, kế hoạch dòng rò/nhiệt/VLED, tiêu chí đồng bộ A1–A9. Giới hạn IEC 60601-1 chưa đối chiếu nguyên văn; chưa có người có chuyên môn duyệt | Đức Anh | Tuần 8: đối chiếu IEC, tìm người duyệt; bring-up khi hàng về |
 | Logger qua các test mới | **Đạt trên máy tính:** ghi theo dòng, hiển thị khi đang ghi, hạn `MARK_EVENT`, RAM đo lại (mục 6.2). Chưa chạy với thiết bị | Linh | Bring-up: chạy 120 phút cả hệ |
 | B5 trên val trong bảng tổng hợp | **Đạt:** review rò rỉ, commit duyệt `38f23fe`, chạy trên val ngày 2026-11-11, có trong bảng tổng hợp (mục 6.6) | Linh, Huy (review) | — |
-| SQI v1 và SAP v1 có commit | **Đạt một phần:** có commit, chờ thầy duyệt; hai mô phỏng còn thiếu đã chạy 2026-11-11; baseline không dùng tín hiệu chốt 2026-11-12, báo thầy (mục 5.1) | Huy | Tuần 8 và trước pilot |
+| SQI v1 và SAP v1 có commit | **Đạt:** có commit; mọi mục của SAP chốt 2026-11-12 (nhóm tự quyết, báo thầy), kể cả baseline không dùng tín hiệu; protocol 6.5 và kịch bản bài báo sửa theo P2/R3 mới. Còn lại: ngưỡng SQI khóa trên bản ghi G2, commit khóa SAP trước pilot, δ và số người sau pilot | Huy | Trước pilot |
 | Kết quả `gate` lần 1 | **Chưa:** phiên 2026-10-25 bị bỏ, lần 1 bắt đầu lại từ 0/80 đoạn | Huy | Tuần 8: xong 80 đoạn; lần 2 (16 đoạn) sau ít nhất 2 ngày; rồi `gate` |
 | Biên bản gặp thầy | **Chưa có biên bản:** ngày 2026-11-10 thầy cho biết hồ sơ đạo đức chưa cần làm gấp; các đề xuất 2.1–2.8 chưa có trả lời ghi lại | Huy | Tuần 8: ghi biên bản và các mục đã chốt |
 

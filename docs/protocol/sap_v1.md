@@ -1,11 +1,13 @@
 # Kế hoạch phân tích thống kê (SAP) v1 cho RQ1
 
-> **Trạng thái: đề xuất ngày 2026-11-07, chờ duyệt.**
+> **Trạng thái: đề xuất ngày 2026-11-07; mọi mục chốt ngày 2026-11-12 (báo thầy); chưa khóa.**
+> Các giá trị ghi "chốt sau pilot" và ngưỡng SQI (khóa trên bản ghi G2) vẫn để trống theo quy
+> tắc ở đây.
 >
 > - **Nguồn đã chốt hay đề xuất trước đó:** [RQ v0.4](../research_questions_v0.1.md) mục 4,
 >   [protocol v0.3](protocol_outline_v0.2.md) mục 4.1, 6.4–6.5, 7.3, 9, 10;
->   [kịch bản bài báo](../paper_scenarios_v0.1.md). Chỗ nào SAP khác các file đó đều ghi rõ
->   "đề xuất đổi".
+>   [kịch bản bài báo](../paper_scenarios_v0.1.md). Chỗ nào SAP đổi so với các file đó đều ghi rõ;
+>   các file đó đã được sửa theo ngày 2026-11-12.
 > - **Khi nào khóa:** bằng một commit có ngày, **trước pilot**. Sau pilot chỉ được điền những giá
 >   trị ghi "chốt sau pilot" (δ, số người, phân bổ phiên), theo đúng quy tắc ở đây, trước khi thu
 >   dữ liệu chính.
@@ -13,11 +15,11 @@
 >   pilot hay dữ liệu chính, để chốt bất kỳ mục nào.
 > - **Dữ liệu:** SAP này không phụ thuộc dữ liệu người nào. Mô phỏng ở mục 9 chỉ dùng giả định.
 > - **RQ2b và RQ3:** dùng lại các quy tắc ở đây; RQ3 là thăm dò.
-> - **Sửa 2026-11-10 (đề xuất, chờ duyệt), sau rà soát tài liệu và một vòng phản biện độc lập:**
+> - **Sửa 2026-11-10 (chốt 2026-11-12), sau rà soát tài liệu và một vòng phản biện độc lập:**
 >   mục 5 đổi kiểu khoảng tin cậy chính, vì kiểu percentile thiếu phủ ở 15–35 người; mục 6 và 7
 >   thêm giới hạn của cách đọc; mục 9 chạy lại mô phỏng với config v2 (cùng giả định, thêm so
 >   sánh các kiểu CI và bảng xác suất của từng cách đọc theo δ); mục 13 cập nhật.
-> - **Sửa 2026-11-11 (đề xuất, chờ duyệt):** mục 9 thêm hai mô phỏng còn thiếu (SBP và DBP chung
+> - **Sửa 2026-11-11 (chốt 2026-11-12):** mục 9 thêm hai mô phỏng còn thiếu (SBP và DBP chung
 >   một nghiên cứu với Holm; Ridge huấn luyện thật trong LOSO), mục 4 thêm thang trọng số, mục 5
 >   và 6 ghi kết quả, mục 13 cập nhật.
 > - **Sửa 2026-11-12 (chốt, báo thầy), sau một vòng phản biện độc lập:** thêm hai baseline
@@ -105,7 +107,7 @@
   - ablation: thêm HR và HRV từ ECG.
 
   Cửa sổ, phương pháp mốc R và chân sóng, quy tắc ghép nhịp cũng khóa trên pilot.
-- **Thuật toán (đề xuất, chờ duyệt):** Ridge trên Δ đặc trưng, α = 1 cố định, không hệ số chặn.
+- **Thuật toán (chốt 2026-11-12):** Ridge trên Δ đặc trưng, α = 1 cố định, không hệ số chặn.
   Hai mô hình của phép so sánh chính dùng cùng thuật toán và cùng α. Vì α cố định nên bỏ vòng
   trong (protocol 9.1 cho phép).
   - Không hệ số chặn để zero-change là trường hợp riêng: mọi Δ đặc trưng bằng 0 thì dự đoán 0.
@@ -114,7 +116,7 @@
     cho dự đoán 0. ΔBP cũng không trừ trung bình.
   - Mô hình học trên mọi lần cuff có nhãn của người huấn luyện: M0, M1, M2 của mọi phiên, mỗi
     người cùng tổng trọng số.
-  - **Thang trọng số (đề xuất 2026-11-11, chờ duyệt):** mỗi lần cuff của người s có trọng số
+  - **Thang trọng số (đề xuất 2026-11-11, chốt 2026-11-12):** mỗi lần cuff của người s có trọng số
     1 / (số lần cuff của s trong tập huấn luyện), nên mỗi người huấn luyện có tổng trọng số 1 và
     tổng các trọng số bằng số người huấn luyện. α = 1 áp trên thang này. Phải khóa thang, vì với
     α cố định, nhân mọi trọng số với một hằng số sẽ đổi độ co của Ridge.
@@ -152,7 +154,7 @@
 - **Bootstrap theo người:**
   - lấy mẫu lại người có hoàn lại, cùng các lượt rút cho d và d⁰;
   - 10 000 lượt, seed cố định ghi trong commit khóa.
-- **Khoảng tin cậy chính (đề xuất đổi ngày 2026-11-10, chờ duyệt; bản 2026-11-07 dùng
+- **Khoảng tin cậy chính (đổi ngày 2026-11-10, chốt 2026-11-12; bản 2026-11-07 dùng
   percentile):** khoảng bao của hai khoảng sau, tức lấy cận rộng hơn ở mỗi phía:
   - bootstrap-t theo người: mỗi lượt rút chia cho sai số chuẩn của chính lượt đó;
   - Student t trên d_s: trung bình ± t(n − 1) × SD / √n.
@@ -167,6 +169,8 @@
     vài người ngoại lệ;
   - khoảng bao giữ 2,3 % ở mô hình BP và tối đa 4,1 % ở các dạng phân bố đã thử. Cái giá là CI
     rộng hơn percentile từ 9 % (35 người) tới 23 % (15 người).
+  - Phương án đã cân nhắc và không chọn: chỉ dùng Student t. Đơn giản hơn, nhưng lên tới 8,3 %
+    khi d_s lệch phải, mà với 15–35 người thì không kiểm được phân bố của d_s trước khi chạy.
 - **Phân tích độ nhạy khai trước:** báo thêm CI percentile, BCa, bootstrap-t riêng và Student t
   riêng. Nếu kết luận chính đổi theo kiểu CI thì ghi rõ là kết luận không vững.
 - **Giới hạn:**
@@ -184,7 +188,7 @@
     và mô phỏng tính CI giống hệt nhau.
 - Phân tích hỗ trợ: Wilcoxon signed-rank trên d_s, hai phía, không dùng để kết luận.
 
-## 6. Đa kiểm định (đề xuất: phương án A, chờ duyệt)
+## 6. Đa kiểm định (phương án A, chốt 2026-11-12)
 
 Kết luận chính cho một đầu ra cần **cả hai** CI của trung bình d_s và d⁰_s nằm hoàn toàn dưới 0
 (kiểm định giao–hợp, RQ mục 4.E). Mỗi CI dùng cùng một mức. Giữa SBP và DBP dùng Holm theo đúng
@@ -195,9 +199,11 @@ các bước sau:
 3. Nếu cả hai đều đạt ở bước 1 thì cả hai đều được tuyên bố.
 4. Nếu không đầu ra nào đạt ở bước 1 thì dừng: không đầu ra nào được tuyên bố.
 
-Bảng báo CI ở mức thật đã dùng cho từng đầu ra. Phương án B (Holm trên bốn phép so sánh) ghi lại
-để thầy chọn. Lý do đề xuất A: kết luận chỉ đúng khi cả hai điều kiện cùng đạt, nên kiểm định
-giao–hợp không cần chia mức trong một đầu ra.
+Bảng báo CI ở mức thật đã dùng cho từng đầu ra. Lý do chọn A: kết luận chỉ đúng khi cả hai điều
+kiện cùng đạt, nên kiểm định giao–hợp không cần chia mức trong một đầu ra; mô phỏng chung SBP và
+DBP (kết quả 7) cho thấy A giữ sai lầm quanh mức danh nghĩa. Phương án đã cân nhắc và không chọn:
+B, Holm trên bốn phép so sánh (2 đầu ra × 2 đối chứng). B chia mức thêm trong một đầu ra mà kiểm
+định giao–hợp không cần, nên mất độ nhạy mà không giảm sai lầm của kết luận chính.
 
 Ghi chú thêm ngày 2026-11-10:
 
@@ -242,7 +248,7 @@ mục 4.E: "thêm PAT làm giảm sai số so với PPG-only và vượt zero-ch
 
 ## 8. Mức hiệu ứng nhỏ nhất đáng quan tâm δ (chốt sau pilot)
 
-- **Quy tắc đề xuất (chờ duyệt, chưa có nguồn):**
+- **Quy tắc (chốt 2026-11-12, chưa có nguồn; giá trị tính sau pilot):**
   - σ_rep,X = SD của hiệu hai lần M0 liền nhau trong cùng phiên, chia √2, tính trên mọi phiên
     pilot có hai lần M0 hợp lệ. Đây là SD lặp lại của một lần đo cuff.
   - δ_X = max(1 mmHg; 0,5 × σ_rep,X), làm tròn lên bước 0,5 mmHg.
@@ -327,7 +333,7 @@ code ghi trong `report.json`). Bản 2026-11-07 dùng CI percentile vẫn ở
    | BCa | 4,0 % | 2,5 % | 7,1 % (lệch phải, 15 người) | 7,1 % |
    | Bootstrap-t | 2,9 % | 1,5 % | 5,1 % (người ngoại lệ, 35 người) | 4,5 % |
    | Student t | 2,5 % | 1,2 % | 8,3 % (lệch phải, 15 người) | 8,2 % |
-   | Khoảng bao (đề xuất) | 2,3 % | 1,1 % | 4,1 % (lệch phải, 15 người) | 4,2 % |
+   | Khoảng bao (chọn) | 2,3 % | 1,1 % | 4,1 % (lệch phải, 15 người) | 4,2 % |
 
    - Bản 2026-11-07 ghi tỷ lệ của percentile là "3–5 %, gần mức 2,5 %". Câu đó sai: tỷ lệ này
      cao gấp rưỡi mức danh nghĩa, và ở mức 97,5 % của bước Holm đầu thì gần gấp đôi.
@@ -411,7 +417,7 @@ code ghi trong `report.json`). Bản 2026-11-07 dùng CI percentile vẫn ở
      với hệ số khác nhau giữa người, không gì đánh dấu M1, và Ridge không có hệ số chặn. Baseline
      theo pha thì biết đúng mức đổi trung bình của cả ba pha.
    - **Hệ quả:** nếu dᴾ là điều kiện của kết luận chính thì, dưới các giả định này, kết luận chính
-     gần như không bao giờ đạt; đó là lý do đề xuất để dᴾ là endpoint phụ bắt buộc. Kết quả cũng
+     gần như không bao giờ đạt; đó là lý do giữ dᴾ là endpoint phụ bắt buộc. Kết quả cũng
      cho thấy vượt zero-change có thể còn rất xa mới vượt được mức đoán theo pha, nên quy tắc
      viết bài ở mục 7 là cần. Mọi số phụ thuộc mô hình đặc trưng tự đặt; chạy lại với tham số
      từ pilot.
@@ -442,17 +448,21 @@ kết luận chính ở mức 95 % theo thống kê P2:
 Không có mức P2 nào bảo đảm kết luận chính: xác suất phụ thuộc mạnh vào việc PAT giúp bao nhiêu,
 mà điều này chưa biết trước pilot.
 
-**Đề xuất cho P2/R3 (đề xuất đổi so với protocol 6.5, chờ duyệt):**
+**P2/R3 (chốt 2026-11-12, đổi so với bản 2026-10-29 của protocol 6.5; protocol và kịch bản
+bài báo đã sửa theo):**
 
 - **Thống kê:** P2 ở pilot dùng trung vị qua người của ΔSBP **có dấu** ở lần cuff M2, so với
   trung bình M0 cùng buổi. Thống kê này đi theo đáp ứng M2, khác R3.
-- **Ngưỡng:** đề xuất **10 mmHg** làm mức báo động, không phải mức bảo đảm.
+- **Ngưỡng:** **10 mmHg** làm mức báo động, không phải mức bảo đảm.
   - Ở mức 10 mmHg, ngay cả kịch bản PAT giúp mạnh cũng chỉ có khoảng hai phần ba khả năng đạt
     kết luận chính, còn kịch bản giúp vừa khoảng 15 % (số chạy lại 2026-11-10 với khoảng bao;
     bản trước ghi ba phần tư và dưới 25 %). Dưới 10 mmHg thì thấp hơn nữa.
   - Dưới ngưỡng thì báo thầy và rà lại nghiệm pháp (protocol 6.4, "Dự phòng") trước khi thu chính.
   - Con số 10 là lựa chọn dựa trên các kịch bản đã chạy, không suy ra được từ dữ liệu.
-- **R3:** giữ làm chỉ số mô tả ở G4 kèm SD của ΔBP tham chiếu, không làm ngưỡng kích hoạt.
+- **R3:** giữ làm chỉ số mô tả ở G4 kèm SD của ΔBP tham chiếu, không làm ngưỡng kích hoạt. Lý do:
+  thống kê median |ΔSBP| trên mọi lần cuff phiên ≥ 2 gồm cả M0 các phiên sau, nên rất nhỏ ở người
+  trẻ, và mô phỏng cho thấy không có ngưỡng nào của nó bảo đảm được kết luận chính; độ nhạy đã
+  được phản ánh trong độ rộng CI.
 
 **Chốt sau pilot (quy tắc, không theo kết quả RQ1):**
 
@@ -498,31 +508,31 @@ Theo protocol mục 10, khóa lại ở đây:
 - Vòng ngoài chạy bằng một script ghi commit, hash dữ liệu, config, và từ chối chạy khi file
   này hay config chưa commit (như các runner B2, B5).
 
-## 13. Các mục chờ duyệt
+## 13. Các quyết định đã chốt và việc còn lại
 
-1. Phương án A cho đa kiểm định (mục 6).
-2. Quy tắc δ (mục 8).
+Đã chốt 2026-11-12, báo thầy (nhóm tự quyết; mỗi mục có lý do và phương án đã cân nhắc ở mục
+tương ứng):
+
+1. Phương án A cho đa kiểm định (mục 6); không chọn B.
+2. Quy tắc δ (mục 8); giá trị tính sau pilot theo đúng quy tắc.
 3. Ridge với α = 1, không hệ số chặn, không vòng trong (mục 4).
-4. 10 000 lượt bootstrap, seed cố định; CI chính là khoảng bao của bootstrap-t và Student t,
-   thay percentile (mục 5, đề xuất 2026-11-10). Phương án đơn giản hơn để thầy chọn: chỉ dùng
-   Student t, chấp nhận rủi ro khi d_s lệch.
-5. P2 mới: ΔSBP có dấu của M2, ngưỡng báo động 10 mmHg (phụ thuộc kịch bản mô hình). R3 chỉ
-   để mô tả (mục 9).
+4. 10 000 lượt bootstrap, seed cố định ghi trong commit khóa; CI chính là khoảng bao của
+   bootstrap-t và Student t (mục 5); không chọn Student t riêng.
+5. P2: ΔSBP có dấu của M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả (mục 9).
 6. Quy tắc chọn số người và phân bổ phiên sau pilot (mục 9).
-7. Các endpoint phụ (mục 3).
-8. SQI v1 ([sqi_specification_v1.md](sqi_specification_v1.md)).
-9. Thang trọng số của Ridge (mục 4, đề xuất 2026-11-11).
+7. Các endpoint phụ 1–11 (mục 3).
+8. SQI v1 ([sqi_specification_v1.md](sqi_specification_v1.md)): cấu trúc cờ và cách dùng; ngưỡng
+   khóa trên bản ghi G2.
+9. Thang trọng số của Ridge (mục 4).
+10. Hai baseline không dùng tín hiệu, endpoint phụ bắt buộc dᴾ (không phải điều kiện của kết luận
+    chính) và cách dùng khi viết bài (mục 3, 4, 7; mục 9, kết quả 9).
 
-Đã chốt 2026-11-12, báo thầy:
+Còn lại trước khi khóa (cập nhật 2026-11-12):
 
-- hai baseline không dùng tín hiệu, endpoint phụ bắt buộc dᴾ (không phải điều kiện của kết luận
-  chính) và cách dùng khi viết bài (mục 3, 4, 7; lý do ở mục 3 và mục 9, kết quả 9);
-- endpoint phụ 10 (biến chỉ pha, chỉ để mô tả) và 11 (trung vị theo pha) (mục 3; mục 9, kết quả
-  10).
+- ngưỡng SQI v1, khóa trên bản ghi G2;
+- commit khóa SAP có ngày, trước buổi pilot đầu tiên, ghi seed bootstrap;
+- sau pilot, trước thu chính: δ, số người, phân bổ phiên, theo quy tắc ở mục 8 và 9.
 
-Việc còn mở, phải xong trước khi khóa (ghi 2026-11-10, cập nhật 2026-11-12):
-
-- ~~mô phỏng có huấn luyện Ridge thật trong LOSO~~ và ~~mô phỏng chung SBP và DBP~~: đã chạy
-  2026-11-11 (mục 9, kết quả 7 và 8);
-- ~~baseline không dùng tín hiệu mạnh hơn zero-change~~: chốt 2026-11-12 (xem trên;
-  [RQ](../research_questions_v0.1.md) mục 8).
+Đã xong: mô phỏng có huấn luyện Ridge thật trong LOSO và mô phỏng chung SBP và DBP (2026-11-11,
+mục 9, kết quả 7 và 8); baseline không dùng tín hiệu mạnh hơn zero-change (2026-11-12, kết quả 9
+và 10; [RQ](../research_questions_v0.1.md) mục 8).

@@ -1,7 +1,7 @@
 # Khung protocol nghiên cứu thực nghiệm (Protocol Outline), phiên bản v0.3
 
 > **Phiên bản:** v0.3, thay cho v0.2 (bản trước nữa: [v0.1](protocol_outline_v0.1.md)). Tên file vẫn giữ `v0.2` để không làm gãy liên kết.
-> **Ngày lập:** 2026-09-22. **Cập nhật:** 2026-10-14 (v0.1: đồng bộ với RQ v0.2, với yêu cầu phần cứng V0 và với nguồn bổ sung); 2026-10-21 (v0.2); 2026-10-22 (sửa theo review); 2026-10-29 (v0.3); 2026-10-30 (dẫn N7 cho dạng bài của M2; ngưỡng P2/R3 dùng các kịch bản δ khai báo trước; mục 4.1: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, giới hạn công suất và luật dừng tuyển); 2026-10-31 (rà soát hồ sơ đạo đức: mô tả thiết kế ở mục 3, L1/L4/L5 chép đúng phiếu sàng lọc, cách đo hai tay, liên kết tới đề cương nộp hội đồng; số mục của các file hồ sơ đổi theo bản viết lại).
+> **Ngày lập:** 2026-09-22. **Cập nhật:** 2026-11-12 (mục 6.5: P2 theo ΔSBP có dấu của M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả; theo SAP v1); 2026-10-14 (v0.1: đồng bộ với RQ v0.2, với yêu cầu phần cứng V0 và với nguồn bổ sung); 2026-10-21 (v0.2); 2026-10-22 (sửa theo review); 2026-10-29 (v0.3); 2026-10-30 (dẫn N7 cho dạng bài của M2; ngưỡng P2/R3 dùng các kịch bản δ khai báo trước; mục 4.1: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, giới hạn công suất và luật dừng tuyển); 2026-10-31 (rà soát hồ sơ đạo đức: mô tả thiết kế ở mục 3, L1/L4/L5 chép đúng phiếu sàng lọc, cách đo hai tay, liên kết tới đề cương nộp hội đồng; số mục của các file hồ sơ đổi theo bản viết lại).
 > **Lưu ý:** Chưa thu dữ liệu trên người, và chỉ thu sau khi có phê duyệt đạo đức. Phân bổ tay và điện cực ở mục 5.1–5.2 đã được xác nhận về phần cứng ngày 2026-10-23. Các nghiệm pháp ở 6.4–6.5 chưa được hội đồng đạo đức duyệt. Những mục ghi "đề xuất của nhóm, chờ thầy/hội đồng" trong v0.3 là phương án mặc định mang đi xin ý kiến, chưa phải quyết định cuối cùng.
 
 **Changelog v0.3 (2026-10-29):** chốt các mục thiết kế nghiên cứu còn mở để chuẩn bị hồ sơ đạo đức.
@@ -415,47 +415,33 @@ cuff, cửa sổ tín hiệu là `[t0 − L, t0)`.
   này chưa có nguồn. Sau buổi diễn tập, trần này chỉ được giảm.
 - Mỗi người tối đa 3 buổi, trong cửa sổ 4 tuần (mục 3).
 
-### 6.5. Tiêu chí biên độ ΔBP kiểm ở pilot — **ĐỀ XUẤT, KHÓA TRƯỚC PILOT**
+### 6.5. Tiêu chí biên độ ΔBP kiểm ở pilot — **CHỐT 2026-11-12, KHÓA TRƯỚC PILOT**
 
 Định nghĩa trong pilot: ΔBP của một lần cuff trong nghiệm pháp bằng giá trị cuff đó trừ
 trung bình các lần cuff M0 cùng buổi, tính riêng cho SBP và DBP.
 
-**Thống kê chung cho P2 và R3 (chốt 2026-10-29):** với mỗi người $s$, tính
-$m_s$ là median của $|\Delta\text{SBP}|$ trên các lần cuff không dùng để hiệu chuẩn. Chỉ số
-là median của $m_s$ qua các người. Hai chỉ số dùng cùng thống kê này, nhưng mỗi chỉ số có mốc
-so sánh riêng:
+**P2 và R3 (chốt 2026-11-12 theo [SAP v1](sap_v1.md) mục 9, thay định nghĩa 2026-10-29):**
 
-- **P2 (pilot, một buổi):** các lần cuff M1, M2, so với trung bình M0 cùng buổi.
-- **R3 (cổng G4, [kịch bản bài báo](../paper_scenarios_v0.1.md)):** mọi lần cuff
-  hợp lệ ở phiên ≥ 2, so với $\text{BP}_0$ của phiên 1. Đây chính là nhãn của RQ1
-  (6.4), nên R3 đo được độ nhạy của RQ1.
+- **P2 (pilot, một buổi):** trung vị qua người của ΔSBP **có dấu** ở lần cuff M2, so với trung
+  bình M0 cùng buổi. Thống kê này đi theo đáp ứng M2.
+- **R3 (cổng G4, [kịch bản bài báo](../paper_scenarios_v0.1.md)):** với mỗi người $s$, $m_s$ là
+  median của $|\Delta\text{SBP}|$ trên mọi lần cuff hợp lệ ở phiên ≥ 2 so với $\text{BP}_0$ của
+  phiên 1; R3 là median của $m_s$ qua người. R3 chỉ để mô tả, báo kèm SD của ΔBP tham chiếu,
+  không làm ngưỡng kích hoạt.
 
-So với max (định nghĩa ở v0.2 dùng max), median ít bị sai số cuff kéo lên hơn. Nhưng median
-cũng chặt hơn max nhiều, vì các lần M0 ở phiên sau và các lần M1 thường có $|\Delta\text{SBP}|$
-nhỏ. Ngưỡng 15 mmHg vốn được đặt theo câu chữ cũ, nên phải cùng thầy xem lại ngưỡng trước khi
-khóa ở pilot.
-
-Từ 2026-10-29, bộ nghiệm pháp chỉ còn M1, M2 (6.4), nên việc xem lại ngưỡng không còn là tùy
-chọn. Dưới đây là suy luận của nhóm, chưa có số liệu:
-- Ở pilot, $m_s$ chỉ là trung bình $|\Delta\text{SBP}|$ của hai lần cuff M1 và M2, trong khi
-  M1 chỉ làm SBP giảm khoảng 3 mmHg (Adler 2019). Muốn P2 đạt 15 mmHg thì M2 phải làm SBP
-  tăng gần 27 mmHg ở người đứng giữa.
-- R3 tính thêm cả các lần M0 ở các phiên sau, nên còn khó đạt hơn P2.
-
-Ngưỡng mới, và nhánh "≥ 15 người đạt chuẩn nhưng R3 dưới ngưỡng" ở
-[kịch bản bài báo](../paper_scenarios_v0.1.md), phải được chốt cùng thầy trước pilot, kèm lý
-do. Đề xuất của nhóm là suy ngưỡng từ mô phỏng độ nhạy ở
-[RQ](../research_questions_v0.1.md) mục 4.E, tức là dải ΔBP cần có để CI của $d_s$ phân
-biệt được với $\pm\delta$, làm riêng cho SBP và DBP. Không chọn một con số theo cảm tính, và không
-chọn ngưỡng sau khi xem dữ liệu pilot. δ chính thức chỉ được chốt sau pilot, dựa trên độ lặp
-lại của các lần cuff M0 (RQ mục 4.E). Vì vậy, mô phỏng để đặt ngưỡng P2/R3 dùng vài kịch bản δ
-khai báo trước; mỗi kịch bản ghi rõ giá trị giả định và lý do. Ngưỡng P2/R3 không bị đổi lại
-sau khi δ chính thức được chốt.
+Lý do đổi: bản 2026-10-29 dùng chung median $|\Delta\text{SBP}|$ cho P2 và R3 với ngưỡng
+15 mmHg. Khi bộ nghiệm pháp chỉ còn M1, M2, mô phỏng độ nhạy cho thấy thống kê đó chỉ từ 3,7 lên
+4,5 mmHg khi đáp ứng M2 tăng từ +3 lên +15 mmHg, vì một nửa số lần cuff là M0, nên ngưỡng
+15 mmHg không bao giờ đạt. Thống kê P2 mới đi theo đáp ứng M2. Ngưỡng 10 mmHg chọn từ lưới P2
+của mô phỏng ([SAP v1](sap_v1.md) mục 9): ở mức này, kịch bản PAT giúp mạnh có khoảng hai phần
+ba khả năng đạt kết luận chính, kịch bản giúp vừa khoảng 15 %. Đây là mức báo động, không bảo
+đảm kết luận chính, và không suy ra được từ dữ liệu. Ngưỡng không đổi sau khi δ chính thức được
+chốt hay sau khi xem dữ liệu pilot.
 
 | # | Tiêu chí | Nguồn của ngưỡng |
 | --- | --- | --- |
 | P1 | Báo cáo theo người và theo nghiệm pháp: median, IQR của ΔSBP/ΔDBP và tỷ lệ lần cuff có hướng thay đổi đúng như 6.4 | Hướng thay đổi: nguồn ở 6.4. Không có ngưỡng đạt/không đạt cho tỷ lệ (**chưa có nguồn**) |
-| P2 | Median qua người của $m_s$ (median \|ΔSBP\| của các lần cuff M1, M2 so với M0 cùng buổi) **≥ 15 mmHg** (phải đặt lại trước pilot, xem ở trên); nếu thấp hơn thì báo thầy và rà lại protocol trước khi thu chính | Lấy từ dấu hiệu R3 của kế hoạch 28 tuần (tài liệu nội bộ ngoài repo, áp dụng ở thu chính) — **ngưỡng nội bộ, không có nguồn khoa học**. Dùng chung thống kê với R3 nhưng mốc so sánh khác (chốt 2026-10-29, xem ở trên). Ngưỡng cần xem lại vì median chặt hơn max |
+| P2 | Trung vị qua người của ΔSBP có dấu ở M2 so với M0 cùng buổi **≥ 10 mmHg** (mức báo động); thấp hơn thì báo thầy và rà lại nghiệm pháp (6.4, "Dự phòng") trước khi thu chính | Chọn từ mô phỏng độ nhạy ([SAP v1](sap_v1.md) mục 9) — **ngưỡng nội bộ, không có nguồn khoa học** |
 | P3 | Báo SD của ΔBP tham chiếu và tỷ lệ \|ΔBP\| > 5 mmHg | [RQ, mục 4](../research_questions_v0.1.md) (quy ước nội bộ) |
 | P4 | Không tăng cường độ hay thời lượng nghiệm pháp ngoài bản đã duyệt để đạt P2 | Kế hoạch 28 tuần (nội bộ) |
 

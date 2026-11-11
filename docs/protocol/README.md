@@ -36,9 +36,10 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   (ECG + PPG), chọn epoch bằng 10 % người train; đề xuất 2026-11-07, duyệt nguyên trạng 2026-11-11
   bằng commit riêng trước khi chạy val; kết quả trên val ở mục 10
 - [SAP v1 cho RQ1](sap_v1.md): estimand, endpoint, đa kiểm định, δ, mô phỏng độ nhạy, dữ liệu
-  thiếu; đề xuất 2026-11-07, chờ duyệt, khóa trước pilot
+  thiếu, baseline không dùng tín hiệu; đề xuất 2026-11-07, mọi mục chốt 2026-11-12, khóa bằng
+  commit trước pilot
 - [Đặc tả SQI v1](sqi_specification_v1.md): cờ chất lượng của một lần đo cuff, vai trò trong
-  phân tích; đề xuất 2026-11-07, chờ duyệt
+  phân tích; đề xuất 2026-11-07, cấu trúc chốt 2026-11-12, ngưỡng khóa trên bản ghi G2
 - [Theo dõi thí nghiệm và kiểm tính tất định nhiều seed](experiment_tracking.md):
   quy ước tên thí nghiệm/artifact, bảng tổng hợp sinh từ `report.json`, B3 nhiều seed
   (2026-11-07)
