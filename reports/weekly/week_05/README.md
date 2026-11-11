@@ -26,8 +26,7 @@ Không đo trên người trong tuần này.
 | Thành viên | Công việc Tuần 5 |
 | --- | --- |
 | Linh | Logger packet V0.1 phía máy tính (decoder, kiểm tra, ghi raw, replay); mô phỏng `synthetic-packet-v3`; chuẩn bị chạy B0/B3 trên raw và phương án chọn pool PulseDB |
-| Đức Anh | Danh sách mua module V1-module |
-| Phần cứng và firmware | Firmware khung; pin map chuẩn theo KiCad; phân bổ điện cực; chốt các điểm mở của packet schema và review logger theo spec; trình tự bring-up; sơ đồ khối V1 |
+| Đức Anh | Danh sách mua module V1-module; firmware khung; pin map chuẩn theo KiCad; phân bổ điện cực; chốt các điểm mở của packet schema và review logger theo spec; trình tự bring-up; sơ đồ khối V1 |
 | Huy | Trạng thái G1; hồ sơ đạo đức; protocol v0.2 (phân bổ tay, nghiệm pháp, tiêu chí pilot); mốc R/foot thứ hai, PAT hợp lệ, công cụ so với đánh dấu tay; kịch bản bài báo |
 
 ## 3. Tóm tắt công việc đã hoàn thành của từng người
@@ -79,7 +78,7 @@ Không đo trên người trong tuần này.
 - **Kịch bản bài báo P A/P B/P C**: điều kiện kích hoạt, thông điệp chính, RQ trả lời
   được, bảng/hình chính.
 
-### Phần cứng và firmware
+### Đức Anh: phần cứng và firmware
 
 - **Danh sách mua dạng Markdown** thay file Excel: đợt 1 gồm MAX30001 (breakout
   ProtoCentral), MAX30101 (SparkFun SEN-16474), BMI270 (SparkFun SEN-22397),
@@ -285,32 +284,32 @@ Không đo trên người trong tuần này.
 | 16 | Test mốc Tuần 5 | Huy | [test_week05_fiducials.py](../../../tests/test_week05_fiducials.py) |
 | 17 | Kết quả SYNTHETIC | Huy | [synthetic_fiducials/](synthetic_fiducials/agreement_synthetic.json) (thêm biến thể [refractory_040/](synthetic_fiducials/refractory_040/agreement_synthetic.json)) |
 | 18 | Kịch bản bài báo | Huy | [paper_scenarios_v0.1.md](../../../docs/paper_scenarios_v0.1.md) |
-| 19 | Danh sách mua V1-module | Phần cứng | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md) |
-| 20 | KiCad V1-module (bo đế, bo cổ tay) | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/) |
-| 21 | Pin map chuẩn A.7, trạng thái A.6 | Phần cứng | [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) |
-| 22 | Phân bổ điện cực | Phần cứng | [protocol_outline_v0.2.md](../../../docs/protocol/protocol_outline_v0.2.md) mục 5.2 |
-| 23 | Firmware khung V1-module | Firmware | [firmware/](../../../firmware/README.md) |
-| 24 | Test firmware–logger | Firmware | [test_firmware_packet_kat.py](../../../tests/test_firmware_packet_kat.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py), [test_firmware_stream_compat.py](../../../tests/test_firmware_stream_compat.py) |
-| 25 | Chốt packet schema V0.1, review logger | Firmware | [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) mục 2, 5, 6, 9, [packet_logger.md](../../../docs/protocol/packet_logger.md) |
-| 26 | Trình tự bring-up V1-module | Phần cứng | [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
-| 27 | Sơ đồ khối V1 | Phần cứng | [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
+| 19 | Danh sách mua V1-module | Đức Anh | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md) |
+| 20 | KiCad V1-module (bo đế, bo cổ tay) | Đức Anh | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/) |
+| 21 | Pin map chuẩn A.7, trạng thái A.6 | Đức Anh | [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) |
+| 22 | Phân bổ điện cực | Đức Anh | [protocol_outline_v0.2.md](../../../docs/protocol/protocol_outline_v0.2.md) mục 5.2 |
+| 23 | Firmware khung V1-module | Đức Anh | [firmware/](../../../firmware/README.md) |
+| 24 | Test firmware–logger | Đức Anh | [test_firmware_packet_kat.py](../../../tests/test_firmware_packet_kat.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py), [test_firmware_stream_compat.py](../../../tests/test_firmware_stream_compat.py) |
+| 25 | Chốt packet schema V0.1, review logger | Đức Anh | [Packet_Schema_V0.1.md](../../../configs/hardware/Packet_Schema_V0.1.md) mục 2, 5, 6, 9, [packet_logger.md](../../../docs/protocol/packet_logger.md) |
+| 26 | Trình tự bring-up V1-module | Đức Anh | [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
+| 27 | Sơ đồ khối V1 | Đức Anh | [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
 | 28 | Quyết định pool PulseDB, quy tắc QC nhãn (2026-10-24) | Huy | [pulsedb_provenance.md](../../../docs/pulsedb_provenance.md), [run_b3_pulsedb.md](../../../docs/protocol/run_b3_pulsedb.md) |
 | 29 | `motion-sqi-v0` | Huy | [motion_sqi.py](../../../software/feature_extraction/motion_sqi.py), [protocol v0.2](../../../docs/protocol/protocol_outline_v0.2.md) mục 7.3 |
-| 30 | Packet Schema V0.2 | Phần cứng và firmware | [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) |
+| 30 | Packet Schema V0.2 | Đức Anh | [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) |
 | 31 | Logger và mô phỏng V0.2 | Huy | [packet_receiver.py](../../../software/data_io/packet_receiver.py), [packet_simulation_v3_v02.json](../../../configs/hardware/packet_simulation_v3_v02.json), [test_packet_v02.py](../../../tests/test_packet_v02.py) |
-| 32 | Firmware V0.2 (encoder, `0xD1`, IMU giả, `SAMP`, PPG) | Firmware | [firmware/](../../../firmware/README.md) |
-| 33 | Test firmware V0.2 | Firmware | [test_firmware_imu_plan.py](../../../tests/test_firmware_imu_plan.py), [test_firmware_samp_map.py](../../../tests/test_firmware_samp_map.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py) |
-| 34 | KiCad V1-draft4 | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3, A.7 |
+| 32 | Firmware V0.2 (encoder, `0xD1`, IMU giả, `SAMP`, PPG) | Đức Anh | [firmware/](../../../firmware/README.md) |
+| 33 | Test firmware V0.2 | Đức Anh | [test_firmware_imu_plan.py](../../../tests/test_firmware_imu_plan.py), [test_firmware_samp_map.py](../../../tests/test_firmware_samp_map.py), [test_firmware_c_encoder.py](../../../tests/test_firmware_c_encoder.py) |
+| 34 | KiCad V1-draft4 | Đức Anh | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3, A.7 |
 | 35 | Reader `h5py` và split Train 400 người (2026-10-25) | Huy | [h5_reader.py](../../../software/pulsedb/h5_reader.py), [run_pulsedb_split.md](../../../docs/protocol/run_pulsedb_split.md), [pulsedb_train400_split.json](../../../configs/data/pulsedb_train400_split.json) |
 | 36 | `b3-pipeline-v1` và kết quả B0/B3 trên val (2026-10-25) | Huy | [run_b3_pulsedb.md](../../../docs/protocol/run_b3_pulsedb.md), [b3_pulsedb_v1.json](../../../configs/models/b3_pulsedb_v1.json), [pulsedb_b3_v1/](pulsedb_b3_v1/README.md) |
 | 37 | Kế hoạch đánh dấu tay, ngưỡng chấp nhận, lệnh `repeat`/`gate`, `annotate --resume` (2026-10-25) | Huy | [week05_fiducials_pat_validity.md](../../../docs/protocol/week05_fiducials_pat_validity.md) mục 9, [fiducial_gate.py](../../../software/evaluation/fiducial_gate.py), [week05_fiducials.json](../../../configs/data/week05_fiducials.json) |
 | 38 | B2: định nghĩa, code, test SYNTHETIC; chưa chạy (2026-10-26) | Huy | [b2_pulsedb_definition.md](../../../docs/protocol/b2_pulsedb_definition.md), [b2_pulsedb_v0.json](../../../configs/models/b2_pulsedb_v0.json), [features_b2.py](../../../software/pulsedb/features_b2.py), [pipeline_b2.py](../../../software/pulsedb/pipeline_b2.py), [run_b2_pulsedb.py](../../../scripts/run_b2_pulsedb.py), [test_b2_pipeline.py](../../../tests/test_b2_pipeline.py) |
-| 39 | Lệnh PC → thiết bị, packet `0xD2`/`0xD3`, `packet-logger-v2` | Phần cứng và firmware | [device_command.py](../../../scripts/device_command.py), [command_desk.py](../../../software/data_io/command_desk.py), [command_wire.py](../../../software/data_io/command_wire.py), [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) mục 12–13 |
-| 40 | Sự kiện mã 3 và kế hoạch đo đồng bộ 10 phút | Firmware | [stim_plan.c](../../../firmware/app/stim_plan.c), [sync_10min_test_plan.md](../../../hardware/test_reports/sync_10min_test_plan.md) |
-| 41 | Ước lượng dòng V1-module | Phần cứng | [power_budget_v1.md](../../../configs/hardware/power_budget_v1.md) |
-| 42 | KiCad V1-draft5 và đối chiếu footprint với file CAD và bản vẽ của nhà sản xuất (2026-10-27) | Phần cứng | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3 |
-| 43 | Danh sách mua và bring-up cập nhật theo bo Waveshare và lưu ý lắp ráp (2026-10-27) | Phần cứng | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md), [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
-| 44 | So sánh hai phương án điện cực ECG (Markdown) | Phần cứng | [Hai_phuong_an_dien_cuc_ECG.md](../../../hardware/Hai_phuong_an_dien_cuc_ECG.md) |
+| 39 | Lệnh PC → thiết bị, packet `0xD2`/`0xD3`, `packet-logger-v2` | Đức Anh | [device_command.py](../../../scripts/device_command.py), [command_desk.py](../../../software/data_io/command_desk.py), [command_wire.py](../../../software/data_io/command_wire.py), [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) mục 12–13 |
+| 40 | Sự kiện mã 3 và kế hoạch đo đồng bộ 10 phút | Đức Anh | [stim_plan.c](../../../firmware/app/stim_plan.c), [sync_10min_test_plan.md](../../../hardware/test_reports/sync_10min_test_plan.md) |
+| 41 | Ước lượng dòng V1-module | Đức Anh | [power_budget_v1.md](../../../configs/hardware/power_budget_v1.md) |
+| 42 | KiCad V1-draft5 và đối chiếu footprint với file CAD và bản vẽ của nhà sản xuất (2026-10-27) | Đức Anh | [hardware/kicad/v1_module/](../../../hardware/kicad/v1_module/), [custom_board_proposal.md](../../../configs/hardware/custom_board_proposal.md) A.2, A.3 |
+| 43 | Danh sách mua và bring-up cập nhật theo bo Waveshare và lưu ý lắp ráp (2026-10-27) | Đức Anh | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md), [v1_bringup_procedure.md](../../../hardware/test_reports/v1_bringup_procedure.md) |
+| 44 | So sánh hai phương án điện cực ECG (Markdown) | Đức Anh | [Hai_phuong_an_dien_cuc_ECG.md](../../../hardware/Hai_phuong_an_dien_cuc_ECG.md) |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
@@ -537,9 +536,9 @@ bên nào đúng. Chưa có kết quả chấm ngưỡng nào: bảng sẽ có s
 | --- | --- | --- | --- |
 | Bảng B0/B3 trên raw có CI | Đạt trên val (mục 6.4). Test của split và CalFree chưa chấm; chỉ chấm khi model đã khóa | Huy | — |
 | Module đã đặt mua | **Đạt một phần** (2026-10-28): bo Waveshare ESP32-S3-DEV-KIT-N8R8-M đã đặt 2026-10-27; MAX30001, MAX30101, BMI270 và điện cực chưa đặt ([danh sách mua](../../../hardware/bom/purchase_list_v1_module.md)) | Huy | Tuần 6 |
-| A.6 đóng, một pin map chuẩn | Đạt: pin map A.7, KiCad V1-draft5 qua ERC/DRC, footprint đối chiếu với file CAD và bản vẽ của nhà sản xuất (2026-10-27). Độ rộng xung LED (411 hay 215 µs) chờ số đo bring-up | Phần cứng và firmware | Độ rộng xung: khi bring-up |
+| A.6 đóng, một pin map chuẩn | Đạt: pin map A.7, KiCad V1-draft5 qua ERC/DRC, footprint đối chiếu với file CAD và bản vẽ của nhà sản xuất (2026-10-27). Độ rộng xung LED (411 hay 215 µs) chờ số đo bring-up | Đức Anh | Độ rộng xung: khi bring-up |
 | Đặt gia công PCB V1 | **Đang đặt** (2026-10-28): Gerber V1-draft5 đã xuất và kiểm; đặt ở CXT thành hai thiết kế riêng, 5 tấm mỗi mạch; chưa có ngày giao | Huy | Tuần 6 |
-| Firmware khung gửi packet tới logger | Đạt một phần: firmware V0.2 build được, logger đọc đúng luồng dựng theo quy ước firmware (mục 6.1, 6.2); thêm lệnh PC → thiết bị và sự kiện mã 3 (2026-10-26). Chưa chạy trên bo thật | Phần cứng và firmware, Linh | Khi nhận bo Waveshare |
+| Firmware khung gửi packet tới logger | Đạt một phần: firmware V0.2 build được, logger đọc đúng luồng dựng theo quy ước firmware (mục 6.1, 6.2); thêm lệnh PC → thiết bị và sự kiện mã 3 (2026-10-26). Chưa chạy trên bo thật | Đức Anh, Linh | Khi nhận bo Waveshare |
 | Hồ sơ đạo đức sẵn sàng nộp | Chưa: bản nháp v0.1 đủ năm file, còn các ô `[...]` chưa điền | Huy | Tuần 6 |
 | Sơ đồ phân bổ tay được xác nhận | Đạt (2026-10-23, protocol v0.2 mục 5.2) | — | — |
 | Bảng sai số mốc so với đánh dấu tay | Chưa: kế hoạch, ngưỡng và bộ 80 đoạn đã sẵn (mục 6.5); chưa đánh dấu tay | Huy | Tuần 6 (lần 1); lần 2 sau ít nhất 2 ngày |

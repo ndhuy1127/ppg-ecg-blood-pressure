@@ -25,12 +25,12 @@ Không đo trên người.
 | Thành viên | Công việc Tuần 6 |
 | --- | --- |
 | Linh | Theo dõi thí nghiệm, bảng nhiều seed; logger với bo Waveshare khi nhận hàng |
-| Phần cứng và firmware | Đặt module, PCB V1; `MARK_EVENT`, logger v3, env `all_real`; ước lượng dòng; bring-up khi có hàng |
+| Đức Anh | Đặt module, PCB V1; `MARK_EVENT`, logger v3, env `all_real`; ước lượng dòng; bring-up khi có hàng |
 | Huy | Hồ sơ đạo đức và protocol v0.3; RQ v0.4 và tổng quan tài liệu; duyệt và chạy B2; đánh dấu tay và `gate` |
 
 ## 3. Tóm tắt công việc đã hoàn thành
 
-### Phần cứng và firmware
+### Đức Anh: phần cứng và firmware
 
 - KiCad V1-draft5 (9a10274, 2026-10-28): bo MCU Waveshare ESP32-S3-DEV-KIT-N8R8-M, footprint
   đối chiếu với file CAD và bản vẽ của nhà sản xuất, lưu ý lắp ráp. ERC/DRC chạy lại ngày
@@ -102,21 +102,21 @@ Bộ Word hồ sơ ngày 2026-10-31 phải dựng lại theo các file nguồn �
 
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
-| Sản phẩm | Đường dẫn |
-| --- | --- |
-| KiCad V1-draft5 | `hardware/kicad/v1_module/` |
-| Danh sách mua và trạng thái đơn | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md) |
-| Packet Schema V0.2 mục 13 (`MARK_EVENT`) | [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) |
-| Logger v3, metadata phiên v1 | [packet_logger.md](../../../docs/protocol/packet_logger.md) |
-| Protocol v0.3 | [protocol_outline_v0.2.md](../../../docs/protocol/protocol_outline_v0.2.md) |
-| Hồ sơ đạo đức | [docs/ethics/](../../../docs/ethics/README.md) |
-| RQ v0.4 | [research_questions_v0.1.md](../../../docs/research_questions_v0.1.md) |
-| Tổng quan tài liệu 2026-10-29 | [literature_update_2026-10-29.md](../../../docs/literature/literature_update_2026-10-29.md) |
-| Đăng ký trước cách chấm test | [pulsedb_test_scoring_preregistration.md](../../../docs/protocol/pulsedb_test_scoring_preregistration.md) |
-| Định nghĩa B2 (đã duyệt) | [b2_pulsedb_definition.md](../../../docs/protocol/b2_pulsedb_definition.md) |
-| Theo dõi thí nghiệm | [experiment_tracking.md](../../../docs/protocol/experiment_tracking.md) |
-| Bảng và report B2 v1 trên val | [pulsedb_b2_v1/](pulsedb_b2_v1/README.md) |
-| Bảng nhiều seed và bảng tổng hợp | [experiment_tracking/](experiment_tracking/README.md) |
+| STT | Sản phẩm | Người làm | Đường dẫn |
+| --- | --- | --- | --- |
+| 1 | KiCad V1-draft5 | Đức Anh | `hardware/kicad/v1_module/` |
+| 2 | Danh sách mua và trạng thái đơn | Đức Anh | [purchase_list_v1_module.md](../../../hardware/bom/purchase_list_v1_module.md) |
+| 3 | Packet Schema V0.2 mục 13 (`MARK_EVENT`) | Đức Anh | [Packet_Schema_V0.2.md](../../../configs/hardware/Packet_Schema_V0.2.md) |
+| 4 | Logger v3, metadata phiên v1 | Đức Anh | [packet_logger.md](../../../docs/protocol/packet_logger.md) |
+| 5 | Protocol v0.3 | Huy | [protocol_outline_v0.2.md](../../../docs/protocol/protocol_outline_v0.2.md) |
+| 6 | Hồ sơ đạo đức | Huy | [docs/ethics/](../../../docs/ethics/README.md) |
+| 7 | RQ v0.4 | Huy | [research_questions_v0.1.md](../../../docs/research_questions_v0.1.md) |
+| 8 | Tổng quan tài liệu 2026-10-29 | Huy | [literature_update_2026-10-29.md](../../../docs/literature/literature_update_2026-10-29.md) |
+| 9 | Đăng ký trước cách chấm test | Huy | [pulsedb_test_scoring_preregistration.md](../../../docs/protocol/pulsedb_test_scoring_preregistration.md) |
+| 10 | Định nghĩa B2 (đã duyệt) | Huy | [b2_pulsedb_definition.md](../../../docs/protocol/b2_pulsedb_definition.md) |
+| 11 | Theo dõi thí nghiệm | Linh | [experiment_tracking.md](../../../docs/protocol/experiment_tracking.md) |
+| 12 | Bảng và report B2 v1 trên val | Huy | [pulsedb_b2_v1/](pulsedb_b2_v1/README.md) |
+| 13 | Bảng nhiều seed và bảng tổng hợp | Linh | [experiment_tracking/](experiment_tracking/README.md) |
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
@@ -215,12 +215,12 @@ của bệnh nhân gây mê, không phải cuff; test split và CalFree chưa ch
 
 | Mốc đóng tuần | Trạng thái | Người xử lý | Chuyển sang |
 | --- | --- | --- | --- |
-| Module và PCB đã đặt, có ngày giao | **Đạt một phần:** mọi đơn đã đặt (báo 2026-11-07); chưa ghi ngày giao, mã đơn, nơi bán; Gerber gửi CXT chưa có commit/SHA-256 | Phần cứng | Tuần 7: ghi đủ đơn và ngày giao; bring-up khi nhận hàng |
+| Module và PCB đã đặt, có ngày giao | **Đạt một phần:** mọi đơn đã đặt (báo 2026-11-07); chưa ghi ngày giao, mã đơn, nơi bán; Gerber gửi CXT chưa có commit/SHA-256 | Đức Anh | Tuần 7: ghi đủ đơn và ngày giao; bring-up khi nhận hàng |
 | Hồ sơ đạo đức đã nộp, hoặc đã báo giám sát viên | **Chưa nộp;** bộ Word đã gửi thầy 2026-10-31; điều kiện nộp chưa đủ (mục 5.1) | Huy | Tuần 7: gặp thầy; nộp khi đủ điều kiện |
 | B2 trên val có CI | **Đạt:** B2 v1 trên val có CI (mục 6.5); v0 dừng trước khi fit, không có số | Huy | — |
 | Bảng nhiều seed sinh tự động | **Đạt:** bảng tổng hợp và bảng nhiều seed sinh tự động; B3 `DETERMINISTIC` (mục 6.4) | Linh | — |
 | Kết quả cổng mốc lần 1 | **Chưa:** đánh dấu tay 28/80 đoạn | Huy | Tuần 7: xong 80 đoạn; lần 2 (16 đoạn) sau ít nhất 2 ngày; rồi `gate` |
-| Lệnh PC→thiết bị, packet cấu hình AFE, sự kiện mã 3 có test | Đạt trên máy tính (từ Tuần 5; `MARK_EVENT` thêm 2026-10-29). Chưa chạy trên chip | Phần cứng và firmware | Khi bring-up |
+| Lệnh PC→thiết bị, packet cấu hình AFE, sự kiện mã 3 có test | Đạt trên máy tính (từ Tuần 5; `MARK_EVENT` thêm 2026-10-29). Chưa chạy trên chip | Đức Anh | Khi bring-up |
 
 **Đường găng** vẫn là phần cứng: chưa có ngày giao của module và PCB, nên chưa xếp được tuần
 cho bring-up, đo đồng bộ 10 phút, đo dòng rò và G2 (thu liên tục 30 phút trên 3 người, kế
