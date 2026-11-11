@@ -1,12 +1,11 @@
 # Định nghĩa B5 trên PulseDB: ResNet-18 1D của bài PulseDB (ECG + PPG)
 
-> **Trạng thái: đề xuất ngày 2026-11-07, chờ duyệt.** Config
-> `configs/models/b5_pulsedb_v0.json` có `status: PENDING_REVIEW`. Như B2, định nghĩa này
-> phải được review và duyệt nguyên trạng bằng một commit riêng đổi `status` thành
-> `APPROVED_NOT_TEST_EVALUATED` **trước** khi tính bất kỳ số B5 nào trên val. Runner từ chối
+> **Trạng thái: đề xuất ngày 2026-11-07, review ngày 2026-11-11 (mục 9), duyệt nguyên trạng
+> ngày 2026-11-11** bằng commit riêng đổi `status` của `configs/models/b5_pulsedb_v0.json`
+> thành `APPROVED_NOT_TEST_EVALUATED`, **trước** khi tính bất kỳ số B5 nào trên val. Runner từ chối
 > chế độ `val` nếu config, file này và code chưa commit hoặc đã đổi. Trước khi duyệt chỉ
 > chạy chế độ `inner` (mục 7): chỉ dùng người của train, không có số nào trên val hay test.
-> Thêm PyTorch (`requirements-dl.txt`, tùy chọn, chỉ cho B5) cũng chờ duyệt. Sau khi đã thấy
+> Thêm PyTorch (`requirements-dl.txt`, tùy chọn, chỉ cho B5) được duyệt cùng commit đó. Sau khi đã thấy
 > số trên val thì không đổi kiến trúc, quy trình học, cách chọn epoch hay phép so sánh; nếu
 > phải đổi thì tạo version mới và báo cả hai.
 
@@ -182,5 +181,5 @@ tách theo người, chỉ từ train. Các điểm đã xử lý:
 4. Lần chạy `inner` ở mục 7 là bằng chứng phát triển, không phải bằng chứng hiệu năng độc lập:
    đã ghi ở mục 7, và không điểm nào của mục 3 đổi sau lần chạy đó.
 
-**Chờ duyệt:** đổi `status` của config thành `APPROVED_NOT_TEST_EVALUATED` bằng một commit
-riêng, rồi mới chạy chế độ `val`.
+**Duyệt:** ngày 2026-11-11, nguyên trạng, bằng commit riêng đổi `status` của config thành
+`APPROVED_NOT_TEST_EVALUATED`, trước khi chạy chế độ `val`.

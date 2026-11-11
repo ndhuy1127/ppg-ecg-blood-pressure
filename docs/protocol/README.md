@@ -33,8 +33,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   hai bảng so sánh định trước; v0 duyệt 2026-11-07, dừng đúng chốt kiểm trước khi fit
   (không có số); v1 (nhân khẩu học theo từng đoạn) duyệt 2026-11-07
 - [Định nghĩa B5 trên PulseDB](b5_pulsedb_definition.md): ResNet-18 1D của bài PulseDB
-  (ECG + PPG), chọn epoch bằng 10 % người train; đề xuất 2026-11-07, chờ duyệt; chưa chạy trên
-  val
+  (ECG + PPG), chọn epoch bằng 10 % người train; đề xuất 2026-11-07, duyệt nguyên trạng 2026-11-11
+  bằng commit riêng trước khi chạy val
 - [SAP v1 cho RQ1](sap_v1.md): estimand, endpoint, đa kiểm định, δ, mô phỏng độ nhạy, dữ liệu
   thiếu; đề xuất 2026-11-07, chờ duyệt, khóa trước pilot
 - [Đặc tả SQI v1](sqi_specification_v1.md): cờ chất lượng của một lần đo cuff, vai trò trong
