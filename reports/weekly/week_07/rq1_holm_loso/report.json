@@ -1,0 +1,19 @@
+{
+  "script_version": "rq1-holm-loso-runner-v1",
+  "source_type": "SIMULATED_ASSUMPTIONS_ONLY",
+  "config_sha256": "a2b4aac7b3b57bbd329fe73988d8d9294cf23bdda1b380ec74bbdd6670013dfe",
+  "base_config_sha256": "7f6f0cd88bd1061d720ef0fd247bb001749905b17edcce3d92ec1cd81ec0ae37",
+  "code_sha256_lf": {
+    "scripts/simulate_rq1_holm_loso.py": "262cc7e4b235b6c71ac3336453bfb8a1f4ac15c6d5e0b831fbee7c428f03c939",
+    "software/evaluation/rq1_holm_loso.py": "9051e8d8bdbcb501e7d5324b91e767a372327759f32227344872964273937648",
+    "software/evaluation/rq1_sensitivity.py": "dd8c390d3b0ee8f845c54671cc597073cfba96a989eaec0a38adefe29671ab1f",
+    "software/evaluation/mean_intervals.py": "d43d12d97c77bbcf5800312d664e915a66fe87db4490c9235d721c68b8e6a1d4"
+  },
+  "git_commit": "480b96837a22eff7873d22d2cd6fabedc76bba39",
+  "workspace_has_changes": true,
+  "outputs_sha256": {
+    "results.json": "47760b1d5087d5bbe9d171360d339665fdfb04fd5efeb137005d621f47529dca",
+    "summary.md": "80d58cf5141b571ff18596ee4748191a6c09f4a48b123c47631d88573ddfea49"
+  },
+  "run_time_utc": "2026-11-11T15:20:53.418801+00:00"
+}

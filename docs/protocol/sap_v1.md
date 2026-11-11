@@ -17,6 +17,9 @@
 >   mục 5 đổi kiểu khoảng tin cậy chính, vì kiểu percentile thiếu phủ ở 15–35 người; mục 6 và 7
 >   thêm giới hạn của cách đọc; mục 9 chạy lại mô phỏng với config v2 (cùng giả định, thêm so
 >   sánh các kiểu CI và bảng xác suất của từng cách đọc theo δ); mục 13 cập nhật.
+> - **Sửa 2026-11-11 (đề xuất, chờ duyệt):** mục 9 thêm hai mô phỏng còn thiếu (SBP và DBP chung
+>   một nghiên cứu với Holm; Ridge huấn luyện thật trong LOSO), mục 4 thêm thang trọng số, mục 5
+>   và 6 ghi kết quả, mục 13 cập nhật.
 
 ## 1. Câu hỏi và nguyên tắc
 
@@ -87,6 +90,10 @@
     cho dự đoán 0. ΔBP cũng không trừ trung bình.
   - Mô hình học trên mọi lần cuff có nhãn của người huấn luyện: M0, M1, M2 của mọi phiên, mỗi
     người cùng tổng trọng số.
+  - **Thang trọng số (đề xuất 2026-11-11, chờ duyệt):** mỗi lần cuff của người s có trọng số
+    1 / (số lần cuff của s trong tập huấn luyện), nên mỗi người huấn luyện có tổng trọng số 1 và
+    tổng các trọng số bằng số người huấn luyện. α = 1 áp trên thang này. Phải khóa thang, vì với
+    α cố định, nhân mọi trọng số với một hằng số sẽ đổi độ co của Ridge.
 - Ghi chú: **zero-change** dự đoán ΔBP = 0, tức BP = BP₀.
 
 ## 5. Ước lượng và khoảng tin cậy
@@ -114,9 +121,12 @@
   riêng. Nếu kết luận chính đổi theo kiểu CI thì ghi rõ là kết luận không vững.
 - **Giới hạn:**
   - Mọi kiểu CI ở đây coi d_s của các người là độc lập. Trong LOSO, các mô hình được huấn luyện
-    trên những tập người chồng lấp nhau, nên d_s có thể phụ thuộc nhau. Mô phỏng ở mục 9 không
-    huấn luyện mô hình, nên chưa kiểm được điều này. **Việc phải làm trước khi khóa:** một mô
-    phỏng có huấn luyện Ridge thật trong LOSO.
+    trên những tập người chồng lấp nhau, nên d_s phụ thuộc nhau. Mô phỏng có huấn luyện Ridge
+    thật trong LOSO (mục 9, kết quả 8; 2026-11-11) cho thấy phụ thuộc này làm CI trượt nhiều
+    hơn danh nghĩa **ở phía trên** (CI nằm hẳn trên θ: tối đa khoảng 8 % so với 2,5 %), tức
+    đánh giá thấp lợi ích. Phía dưới, chiều dẫn tới kết luận sai là PAT có lợi, không vượt
+    2,5 % ở mọi kịch bản đã chạy. CI chính vì vậy giữ nguyên; độ phủ hai phía chỉ khoảng 92–95 %
+    và phải nêu là giới hạn khi báo kết quả.
   - Code: `bootstrap_bp(..., contrasts=..., contrast_ci_methods=(...))` trong
     `software/evaluation/subject_bootstrap.py` tính năm kiểu CI cho hiệu MAE trung bình đều theo
     người (thêm 2026-11-11, có test đáp án biết trước). Công thức nằm ở
@@ -149,7 +159,9 @@ Ghi chú thêm ngày 2026-11-10:
 - CI ở mức của Holm không phải CI đồng thời cho các phát biểu tại ±δ. Cách đọc theo δ ở mục 7 vì
   vậy là cách phân loại mô tả đi kèm kết luận chính, không phải một kiểm định có kiểm soát sai
   lầm chung.
-- Chưa mô phỏng chung SBP và DBP, nên chưa có xác suất của kết luận chính sau đủ các bước Holm.
+- Mô phỏng chung SBP và DBP (mục 9, kết quả 7; 2026-11-11) cho xác suất sau đủ các bước Holm.
+  Khi một đầu ra không có hiệu ứng, tỷ lệ tuyên bố nhầm đầu ra đó không quá 0,6 %, kể cả khi đầu
+  ra kia mạnh và đi qua bước 1.
 
 ## 7. Đọc kết quả theo δ
 
@@ -282,6 +294,41 @@ code ghi trong `report.json`). Bản 2026-11-07 dùng CI percentile vẫn ở
    - **Khi PAT giúp ở mức vừa, kết quả dễ gặp nhất là "tương đương trong δ"** (85–99 % ở kịch
      bản hẹp và vừa), dù hiệu ứng thật khác 0. Bài báo khi đó phải viết là lợi ích, nếu có, nhỏ
      hơn δ; không viết là PAT không có tác dụng.
+7. **SBP và DBP chung một nghiên cứu, áp Holm (thêm 2026-11-11).** Code
+   `software/evaluation/rq1_holm_loso.py`, `scripts/simulate_rq1_holm_loso.py`, config
+   `configs/analysis/rq1_holm_loso_v1.json` (dùng nguyên target và mô hình của config v2); mọi
+   thành phần ngẫu nhiên của DBP tương quan ρ với thành phần tương ứng của SBP, ρ ∈ {0; 0,6}
+   (giả định). Kết quả: [rq1_holm_loso/summary.md](../../reports/weekly/week_07/rq1_holm_loso/summary.md)
+   (SHA-256 `80d58cf5…`, kèm `report.json`; chạy 2026-11-11 trên bản chưa commit).
+   - Khi PAT không thêm gì ở cả hai đầu ra: tỷ lệ tuyên bố ít nhất một đầu ra ≤ 0,2 %. Cận
+     trên khi mô hình chắc chắn vượt zero-change (Holm chỉ trên CI của d) là 1,5–2,8 %, quanh
+     mức danh nghĩa 2,5 % (sai số Monte Carlo khoảng 0,35 điểm %).
+   - Khi một đầu ra không có hiệu ứng và đầu ra kia mạnh: tuyên bố nhầm đầu ra không có hiệu
+     ứng ≤ 0,6 %. Bước 2 của Holm vì vậy không làm tăng sai lầm trong các kịch bản đã chạy.
+   - Cái giá của Holm: ví dụ M2 vừa, "strong" cả hai, 25 người × 2 phiên, ρ = 0: tuyên bố SBP
+     26,7 % (một mình ở 95 %: 36,6 %), DBP 13,3 % (17,5 %), cả hai 6,3 %. ρ = 0,6 cho số gần
+     như trùng.
+   - Giới hạn: phần này dùng sai số mô hình đặt sẵn như các kết quả 1–6, không huấn luyện mô
+     hình; chưa thử trường hợp phép so với zero-change là điều kiện chặn.
+8. **Ridge huấn luyện thật trong LOSO (thêm 2026-11-11).** Cùng code và config, chỉ SBP, M2
+   vừa và rộng. Đặc trưng sinh từ ΔBP thật theo một mô hình tự đặt: ba đặc trưng PPG yếu, một
+   đặc trưng HR từ PPG chỉ đánh dấu M2, và ΔPAT với ba mức (không liên quan BP, vừa, mạnh); nền
+   đặc trưng đo có nhiễu như BP₀. Mỗi lượt ngoài học Ridge như mục 4 trên n − 1 người. θ (trung
+   bình d kỳ vọng của thiết kế) lấy từ một mô phỏng riêng 20 000 nghiên cứu.
+   - Tương quan d giữa hai người cùng nghiên cứu gần 0 (−0,017 tới 0,004), và SD của trung bình
+     d qua các nghiên cứu xấp xỉ sai số chuẩn ngây thơ (tỷ số 0,82–1,03).
+   - Nhưng trung bình d của từng nghiên cứu lệch trái (độ lệch −0,26 tới −2,0): vài nghiên cứu
+     có lợi ích lớn hơn hẳn, do các mô hình của một nghiên cứu học trên gần cùng một tập người.
+     CI khoảng bao nằm hẳn dưới θ ở 0,4–2,1 % nghiên cứu, nằm hẳn trên θ ở 0,6–8,1 %. Xáo cột
+     theo người giữa các nghiên cứu (giữ phân bố từng d_s, bỏ phụ thuộc) đưa hai tỷ lệ về
+     1,8–3,3 % và 0,9–2,8 %, nên phần trượt thêm do phụ thuộc giữa các d_s.
+   - Phía dưới là phía dẫn tới kết luận sai là PAT có lợi; phía này vẫn trong mức danh nghĩa với
+     khoảng bao và Student t (≤ 2,5 %), nhưng không với percentile (tới 3,8 %) và BCa (tới
+     4,3 %). Phía trên làm đánh giá thấp lợi ích, tức bảo thủ cho kết luận chính.
+   - Khi ΔPAT không liên quan BP, thêm nó làm sai số tăng thật (θ = 0,012–0,050 mmHg); CI nằm
+     dưới 0 ở ≤ 0,5 % nghiên cứu.
+   - **Hệ quả:** giữ khoảng bao làm CI chính; báo độ phủ hai phía khoảng 92–95 % là giới hạn đã
+     biết. Mọi số phụ thuộc mô hình đặc trưng tự đặt; chạy lại với tham số từ pilot.
 
 **Lưới P2** (cùng summary, mục "P2 grid"): giữ mọi giả định khác, cho trung bình đáp ứng M2 đổi
 từ 4 đến 15 mmHg SBP (2 đến 9 mmHg DBP), với 25 người × 2 phiên và 20 người × 3 phiên. Tỷ lệ đạt
@@ -363,10 +410,12 @@ Theo protocol mục 10, khóa lại ở đây:
 7. Các endpoint phụ (mục 3).
 8. SQI v1 ([sqi_specification_v1.md](sqi_specification_v1.md)).
 
-Việc còn mở, phải xong trước khi khóa (ghi 2026-11-10):
+9. Thang trọng số của Ridge (mục 4, đề xuất 2026-11-11).
 
-- mô phỏng có huấn luyện Ridge thật trong LOSO, để kiểm sự phụ thuộc giữa các d_s (mục 5);
-- mô phỏng chung SBP và DBP để có xác suất kết luận chính sau đủ các bước Holm (mục 6);
+Việc còn mở, phải xong trước khi khóa (ghi 2026-11-10, cập nhật 2026-11-11):
+
+- ~~mô phỏng có huấn luyện Ridge thật trong LOSO~~ và ~~mô phỏng chung SBP và DBP~~: đã chạy
+  2026-11-11 (mục 9, kết quả 7 và 8);
 - baseline không dùng tín hiệu mạnh hơn zero-change (trung bình ΔBP theo nghiệm pháp, hoặc
   baseline "static" của S4): mô hình PPG-only có HR từ PPG, nên có thể vượt zero-change chỉ nhờ
   nhận ra đang ở nghiệm pháp nào. Chờ quyết định ([RQ](../research_questions_v0.1.md) mục 8).

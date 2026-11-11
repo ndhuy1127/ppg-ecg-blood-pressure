@@ -1,0 +1,40 @@
+{
+  "schema_version": "rq1-holm-loso-v1",
+  "status": "PROPOSED_PENDING_REVIEW",
+  "note": "Assumptions only, no human data (SAP v1 sections 5, 6, 9). The joint part reuses the SBP and DBP targets and models of rq1_sensitivity_v2.json unchanged; rho is the assumed correlation between every matching SBP and DBP random term (0 = independent outcomes; 0.6 = an invented, plausible value). The LOSO part invents a feature model (gains, drift and noise in feature SD units); the numbers are scenarios, not estimates. Joint scenarios are [M2, SBP model, DBP model]; the mixed ones (one outcome null) check the second Holm step. The feature baseline is measured with noise (mean of the two session-1 M0 cuffs, as BP0). theta of the LOSO part comes from a separate simulation of theta_replicates studies. 'hr_ppg' only marks the M2 maneuver, so PPG-only can beat zero-change without tracking BP (SAP section 13).",
+  "seed": 20261111,
+  "base_config": "configs/analysis/rq1_sensitivity_v2.json",
+  "replicates": 2000,
+  "bootstrap_draws": 1000,
+  "draw_blocks": 10,
+  "ci_method": "t_envelope",
+  "joint": {
+    "designs": [[15, 2], [25, 2], [20, 3], [35, 3]],
+    "rho": [0.0, 0.6],
+    "scenarios": [
+      ["narrow", "null", "null"], ["moderate", "null", "null"], ["wide", "null", "null"],
+      ["moderate", "benefit", "benefit"], ["moderate", "strong", "strong"],
+      ["wide", "benefit", "benefit"], ["wide", "strong", "strong"],
+      ["moderate", "strong", "null"], ["wide", "strong", "null"],
+      ["wide", "null", "strong"]
+    ]
+  },
+  "loso": {
+    "target": "SBP",
+    "alpha": 1.0,
+    "level": 0.95,
+    "theta_replicates": 20000,
+    "ci_methods": ["percentile", "bca", "bootstrap_t", "student_t", "t_envelope"],
+    "designs": [[15, 2], [15, 3], [25, 2], [20, 3], [35, 2], [35, 3]],
+    "m2": ["moderate", "wide"],
+    "pat_gain": {"null": 0.0, "benefit": 0.08, "strong": 0.15},
+    "base_features": ["ppg_rise", "ppg_width", "ppg_amp", "hr_ppg"],
+    "features": {
+      "ppg_rise": {"driver": "bp", "a": 0.05, "g_sd": 0.3, "drift_sd": 0.5, "noise_sd": 1.0},
+      "ppg_width": {"driver": "bp", "a": 0.04, "g_sd": 0.3, "drift_sd": 0.5, "noise_sd": 1.0},
+      "ppg_amp": {"driver": "bp", "a": 0.03, "g_sd": 0.3, "drift_sd": 0.5, "noise_sd": 1.0},
+      "hr_ppg": {"driver": "m2", "a": 1.0, "g_sd": 0.3, "drift_sd": 0.3, "noise_sd": 0.7},
+      "pat": {"driver": "bp", "a": null, "g_sd": 0.3, "drift_sd": 0.5, "noise_sd": 1.0}
+    }
+  }
+}
