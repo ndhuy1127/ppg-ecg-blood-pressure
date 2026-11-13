@@ -35,11 +35,17 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Định nghĩa B5 trên PulseDB](b5_pulsedb_definition.md): ResNet-18 1D của bài PulseDB
   (ECG + PPG), chọn epoch bằng 10 % người train; đề xuất 2026-11-07, duyệt nguyên trạng 2026-11-11
   bằng commit riêng trước khi chạy val; kết quả trên val ở mục 10
+- [Định nghĩa RQ2a trên PulseDB](rq2a_pulsedb_definition.md): chia ngẫu nhiên theo cửa sổ (A) so với chia
+  theo người (B), cùng tập đánh giá, B3 v1 nguyên trạng, split ghim, chỉ train ∪ val; đề xuất 2026-11-13, chờ
+  duyệt, chưa chạy
 - [SAP v1 cho RQ1](sap_v1.md): estimand, endpoint, đa kiểm định, δ, mô phỏng độ nhạy, dữ liệu
   thiếu, baseline không dùng tín hiệu; đề xuất 2026-11-07, mọi mục chốt 2026-11-12, khóa bằng
   commit trước pilot
 - [Đặc tả SQI v1](sqi_specification_v1.md): cờ chất lượng của một lần đo cuff, vai trò trong
   phân tích; đề xuất 2026-11-07, cấu trúc chốt 2026-11-12, ngưỡng khóa trên bản ghi G2
+- [Pipeline dữ liệu thiết bị](device_session_pipeline.md): ingest bản ghi logger, mốc và PAT ở
+  ECG 512 / PPG 200 sps, phân tích RQ1 theo SAP v1 bằng một lệnh; đề xuất 2026-11-13, chờ duyệt,
+  mới chạy trên SYNTHETIC
 - [Theo dõi thí nghiệm và kiểm tính tất định nhiều seed](experiment_tracking.md):
   quy ước tên thí nghiệm/artifact, bảng tổng hợp sinh từ `report.json`, B3 nhiều seed
   (2026-11-07)

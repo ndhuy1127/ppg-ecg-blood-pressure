@@ -1,0 +1,25 @@
+{
+  "schema_version": "rq2a-pipeline-v0",
+  "status": "PROPOSED_NOT_RUN",
+  "unit": "mmHg",
+  "pool_splits": ["train", "val"],
+  "split_sha256": {
+    "raw": "20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002",
+    "inventory": "17d3a8c2aa7a7d5a304d219aaaabada10a696232d529a1b0e19788f5d1fb7c26",
+    "manifest": "257d9653d6d42de26b77c291de79031b77ad7f3d29c6365d2319940acbe07d36",
+    "config": "437f84f409c73809ceb6d101950d6236c30b359815443bfb4e25f1f9d472fe55"
+  },
+  "baseline_config": "configs/models/b3_pulsedb_v1.json",
+  "baseline_config_sha256": "d66d299d789207e518fb88a96e39af7fe548ab8e42d2f4df9f2449a6ba94f521",
+  "design": {
+    "seeds": [20261113, 20261114, 20261115, 20261116, 20261117],
+    "eval_subject_fraction": 0.1,
+    "eval_window_fraction": 0.2
+  },
+  "bootstrap": {
+    "seed": 20261113,
+    "repetitions": 2000,
+    "confidence": 0.95,
+    "min_subjects": 2
+  }
+}
