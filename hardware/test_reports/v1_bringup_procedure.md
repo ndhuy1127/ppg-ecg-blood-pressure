@@ -29,12 +29,32 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 | Bo Waveshare | Đọc ký hiệu trên vỏ module | ESP32-S3-WROOM-1-N8R8 (A.6 mục 4). Bản N16R16VA hoặc chip R16V thì dừng: GPIO47 chạy 1,8 V |
 | Bo Waveshare | Đọc mã khắc trên LDO 3,3 V của bo (thêm 2026-10-29) | Ghi mã vào báo cáo và [power_budget_v1.md](../../configs/hardware/power_budget_v1.md); tìm datasheet trước bước 8.9 |
 | Bo Waveshare | Đối chiếu nhãn từng chân với bảng A.7 (đủ kích thước chưa đủ: phải đúng vị trí) | Pad U1 1–2 là 3V3, 21 là 5V, 22–24 và 44 là GND; các GPIO ở đúng pad như A.7 |
-| Breakout MAX30001 | So với `pc_max30001_brk_v1.0` | Có R3 (10 kΩ, cỡ 0805) nối sleeve của jack với VCM; R7, R8 (0 Ω, cỡ 0402); header SV1 10 chân (A.2) |
+| Breakout MAX30001 | Đọc revision trên silkscreen. Bo nhận về là bản v2 (silkscreen `pc_max30001/3/4_brk`, `v2`, `03/24`), khác file công khai `pc_max30001_brk_v1.0` (03/22): xem ghi chú dưới bảng (thêm 2026-11-14) | Xác định được, bằng schematic v2 hoặc bằng đo thông mạch: điện trở nối sleeve của jack với VCM (R3 ở v1.0, 10 kΩ); các 0 Ω nối tip/ring sang BIN/BIP (R7, R8 ở v1.0, cỡ 0402); header 10 chân (SV1) và thứ tự nhãn chân (A.2) |
 | Cáp ECG của kit | Đếm số dây; đo thông mạch từng đầu bấm với tip/ring/sleeve của giắc 3,5 mm | Ba dây: LA ↔ ring, RA ↔ tip, RL ↔ sleeve (protocol v0.2 mục 5.2). Khác thì dán nhãn lại theo kết quả đo, không theo màu nắp. Chỉ có hai dây hoặc không có dây nối sleeve: dừng cấu hình 3 điện cực cho tới khi có cáp 3 dây (danh sách mua mục 3) |
 | SparkFun MAX30101 | Mã và vị trí jumper | SEN-16474; có JP1 (LED nguồn), hàng chân GND, 3.3V, SDA, SCL, INT, 1.8V |
 | SparkFun BMI270 | Mã và kích thước | SEN-22397 (1" × 1"), không phải SEN-22398; có jumper `I2C` và `ADR` |
 | Cả bốn module (bo Waveshare, breakout MAX30001, MAX30101, BMI270) | Trước khi hàn, đo từng module bằng thước kẹp: kích thước bo, bước chân header, vị trí lỗ bắt vít so với hàng chân; so với footprint KiCad (thêm 2026-10-29: footprint mới đối chiếu với file CAD và bản vẽ của nhà sản xuất, chưa với module thật) | Khớp footprint; ghi số đo vào báo cáo. Lệch thì dừng, không hàn (A.6 mục 2) |
 | Cả bốn module | Đặt lên bản in 1:1 của hai bo | Lỗ bắt vít, hàng chân và lỗ spacer trùng footprint (A.6 mục 2) |
+
+**Breakout MAX30001 bản v2 (ghi 2026-11-14, cách xử lý chờ duyệt).** Bo nhận về in `v2`,
+`03/24`. ProtoCentral chỉ công bố file Eagle v1.0 (03/22); repo `protocentral_max30001_arduino_library`
+không có thư mục `hardware/` dù trang sản phẩm có nhắc. Bố trí linh kiện của v2 khác v1.0,
+nên không dùng vị trí linh kiện của file v1.0. Đọc từ ảnh bo (chưa đo):
+
+- hai điện trở 0805 in `4992` (49,9 kΩ), nhiều khả năng là điện trở nối tiếp đầu vào ECG (v1.0:
+  R4, R5 51 kΩ);
+- một điện trở 0805 in `01C` (10,0 kΩ theo mã EIA-96) ở mép trên, cạnh giắc: ứng viên R3;
+- một điện trở 0805 in `0` (0 Ω) cạnh TXB0108, nhiều khả năng là R1 bật chân OE: **không gỡ**;
+- thứ tự nhãn 10 chân như v1.0: `GND, VCC, GND, INT2, INT1, FCLK, CSB, SCK, MOSI, MISO`.
+
+Cách xác định khi chưa có schematic v2: rút nguồn, cắm cáp ECG đã đo thông mạch (đầu bấm ↔
+tip/ring/sleeve), đồng hồ ở thang Ω (không dùng tiếng bíp), chờ số ổn định và đảo que. Điện trở
+có một pad 0 Ω với sleeve là ứng viên R3. Linh kiện có cả hai pad 0 Ω với tip (hoặc ring) là
+ứng viên R7 (hoặc R8). Đây chỉ là ứng viên: jumper khác, ferrite hay đường song song cũng có thể
+cho 0 Ω, và chân BIN/BIP của MAX30001 (WLP) nằm dưới thân chip nên không chạm que được. Không
+thấy ứng viên thì ghi "chưa xác định được nhánh BIN/BIP", không kết luận v2 đã bỏ nhánh này.
+Bước 4 phần breakout chỉ làm khi có schematic hoặc BOM v2 (đã đề nghị ProtoCentral gửi), hoặc
+khi kết quả đo được người duyệt xác nhận.
 
 ## 2. Bo Waveshare đứng riêng (chỉ cắm USB)
 
@@ -103,8 +123,8 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 
 | Module | Việc | Đạt khi |
 | --- | --- | --- |
-| Breakout MAX30001 | Thay R3 bằng 220 kΩ ±1 %, cỡ 0805 (datasheet yêu cầu ≥ 200 kΩ, A.2) | Đo R3 trước khi hàn lên bo: 220 kΩ ±1 % |
-| Breakout MAX30001 | Gỡ R7, R8 (0 Ω, cỡ 0402): ngắt jack khỏi BIP/BIN của BioZ; đường ECG đi qua R4, R5 51 kΩ vẫn giữ nguyên | Pad R7, R8 hở mạch |
+| Breakout MAX30001 | Thay R3 bằng 220 kΩ ±1 %, cỡ 0805 (datasheet yêu cầu ≥ 200 kΩ, A.2). Bo v2: chỉ làm khi đã xác định được điện trở sleeve → VCM (mục 1, ghi chú v2) | Đo R3 trước khi hàn lên bo: 220 kΩ ±1 %. Sau khi hàn, sleeve → điện trở mới khoảng 220 kΩ |
+| Breakout MAX30001 | Gỡ R7, R8 (0 Ω, cỡ 0402): ngắt jack khỏi BIP/BIN của BioZ; đường ECG đi qua điện trở nối tiếp đầu vào (v1.0: R4, R5 51 kΩ; v2: hai điện trở `4992`) vẫn giữ nguyên. Bo v2: chỉ làm khi đã xác định được hai linh kiện này (mục 1, ghi chú v2) | Pad R7, R8 hở mạch; tip và ring vẫn thông tới điện trở nối tiếp đầu vào |
 | Breakout MAX30001 | Hàn header SV1 10 chân (có trong kit) từ mặt dưới: thân nhựa header ở mặt dưới, chân dài chĩa xuống, mặt linh kiện và jack 3,5 mm quay lên (thêm 2026-10-27) | Chân thẳng, không cầu thiếc. Đặt breakout lên bản in 1:1 của bo đế: chân GND ở đầu hàng phía jack trùng J1.1, lỗ vít trùng lỗ NPTH (23,37; 2,97). Lỗ vít không trùng nghĩa là breakout đang bị lật; một trong hai cách lật làm đảo thứ tự chân (VCC rơi vào lỗ MOSI) |
 | SparkFun MAX30101 | Cắt JP1 để tắt LED nguồn đỏ (LED cùng mặt với cảm biến, A.3) | Khi cấp nguồn, LED nguồn không sáng |
 | SparkFun BMI270 | Cắt jumper `I2C` và `ADR` để chạy SPI (A.3) | Hai jumper hở mạch |

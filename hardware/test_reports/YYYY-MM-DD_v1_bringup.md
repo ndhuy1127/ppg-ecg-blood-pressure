@@ -40,7 +40,7 @@ Ghi riêng giá trị thiết kế/datasheet và giá trị đo.
 | Bo Waveshare | Ký hiệu module | ESP32-S3-WROOM-1-N8R8 | | |
 | Bo Waveshare | Mã khắc LDO 3,3 V | — | | |
 | Bo Waveshare | Nhãn chân so với bảng A.7 | Bảng A.7 | | |
-| Breakout MAX30001 | Revision; R3, R7, R8, SV1 | `pc_max30001_brk_v1.0` | | |
+| Breakout MAX30001 | Revision; R3, R7, R8, SV1 (bo v2: cách xác định ở BU mục 1) | v2, 03/24 (file công khai chỉ có v1.0) | | |
 | Cáp ECG | Số dây; LA/RA/RL ↔ ring/tip/sleeve | 3 dây; LA ring, RA tip, RL sleeve | | |
 | SparkFun MAX30101 | Mã, JP1, hàng chân | SEN-16474 | | |
 | SparkFun BMI270 | Mã, kích thước, jumper | SEN-22397, 1" × 1" | | |

@@ -162,7 +162,8 @@ Trình tự đầy đủ, kể cả bước cấp nguồn:
    R7, R8. Theo file Eagle ở commit `99705eb` (2022-10-11) của repo
    `Protocentral/protocentral_max30001`: R3 10 kΩ cỡ 0805, R7/R8 0 Ω cỡ 0402. Silkscreen
    trong file `.brd` này là `pc_max30001/3/4_brk 03/22`, giống ảnh bo đã mua
-   (đối chiếu 2026-10-27).
+   (đối chiếu 2026-10-27). Bo nhận về in `v2`, `03/24` (ghi 2026-11-14), khác file v1.0: xem
+   [bring-up](../test_reports/v1_bringup_procedure.md) mục 1, ghi chú v2.
 3. **Cáp ECG của kit:** đếm số dây. Phương án 3 điện cực ở A.2 cần dây thứ ba nối
    VCM (sleeve của jack). Chỉ có 2 dây thì phải có cáp 3 điện cực trước khi chạy
    cấu hình này (cáp 3 dây của ProtoCentral, hoặc tự làm từ jack 3,5 mm và 3 dây

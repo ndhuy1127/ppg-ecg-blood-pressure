@@ -171,7 +171,7 @@ giữ ngón tay trong lúc cuff bơm.
 | Điện cực LA (ECGP) | Cổ tay **trái**, mặt lòng, không nằm dưới dây đeo hay bo PPG | Phía tay trái của đạo trình I |
 | Điện cực RA (ECGN) | Cổ tay **phải**, mặt lòng | Phía tay phải, nằm xa cuff ở bắp tay. Điện cực 4 × 3,3 cm dán vừa, không cần loại nhỏ dành cho ngón tay |
 | Điện cực RL (tham chiếu, VCM) | Cẳng tay **trái**, mặt lòng, cách LA khoảng 5 cm về phía khuỷu | Mặt lòng cổ tay không đủ chỗ cho hai miếng dán; tay đeo cuff chỉ mang một dây điện cực |
-| Cực tính | Tay trái là cực dương của đạo trình I: LA → ECGP (vòng giữa, ring của jack), RA → ECGN (đầu, tip), RL → sleeve → VCM qua R3 (theo schematic `pc_max30001_brk_v1.0`); tắt lead bias nội (`custom_board_proposal.md` A.2) | `ecg_polarity = 1`. Màu nắp đầu bấm khác nhau tùy lô cáp, nên phải đo thông mạch giữa đầu bấm và tip/ring/sleeve trước buổi đo đầu tiên |
+| Cực tính | Tay trái là cực dương của đạo trình I: LA → ECGP (vòng giữa, ring của jack), RA → ECGN (đầu, tip), RL → sleeve → VCM qua R3 (theo schematic `pc_max30001_brk_v1.0`; bo nhận về là v2 `03/24`, phải đo xác nhận); tắt lead bias nội (`custom_board_proposal.md` A.2) | `ecg_polarity = 1`. Màu nắp đầu bấm khác nhau tùy lô cáp, nên phải đo thông mạch giữa đầu bấm và tip/ring/sleeve trước buổi đo đầu tiên |
 | Cáp | Cáp dẹt PPG và dây điện cực đi dọc cẳng tay, cố định bằng băng dính y tế, không kéo căng bo PPG | Giảm nhiễu do cáp lay động |
 | Tư thế | Như mục 5.3 | |
 
