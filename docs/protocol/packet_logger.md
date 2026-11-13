@@ -806,7 +806,8 @@ config/metadata được so với manifest.
     1. Trước buổi đo, đóng trình duyệt và trình soạn thảo nặng, tắt máy ảo WSL
        (`wsl --shutdown`), và chỉ bấm dừng khi RAM khả dụng còn ít nhất 2 GB. Công:
        không có; mất vài phút ở danh sách việc trước buổi đo. Chưa đo tác dụng thật
-       trên máy sạch.
+       trên máy sạch. Đã đưa vào protocol v0.2 mục 5.1 (2026-11-14, chờ duyệt); bước 2 chỉ làm
+       nếu phép đo trên máy đã đóng ứng dụng vẫn cho RAM trống dưới 2 GB.
     2. Nếu bước 1 chưa đủ: giải mã theo khối ở khâu cuối buổi, ghi tạm theo từng kênh
        rồi gộp theo khóa sắp xếp hiện có của `samples.csv`, để đỉnh không còn tỷ lệ
        với số packet (hiện khoảng 1,1 KB mỗi packet). Ước 2–3 ngày làm và kiểm (so

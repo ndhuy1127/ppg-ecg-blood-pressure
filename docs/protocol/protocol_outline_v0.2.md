@@ -138,6 +138,13 @@ Theo [custom_board_proposal.md, Phần A](../../configs/hardware/custom_board_pr
 - **Nguồn và dữ liệu:** bo MCU nối với laptop bằng một cáp USB; laptop **chạy pin, rút sạc**.
   Khi người tham gia đang đeo thiết bị, không thiết bị nào được nối điện lưới
   ([quy tắc an toàn](../ethics/session_safety_stopping_v0.1.md)).
+- **RAM của laptop trước buổi đo (đề xuất 2026-11-14, chờ duyệt).** Trước khi bắt đầu ghi: đóng
+  trình duyệt và trình soạn thảo nặng, tắt máy ảo WSL (`wsl --shutdown`); chỉ bấm dừng ghi khi
+  RAM khả dụng còn ít nhất 2 GB. Đỉnh RAM của logger chỉ xuất hiện ở khâu giải mã cuối buổi
+  (khoảng 0,9 GB với 120 phút) và `raw.bin` đã ở trên đĩa trước khâu đó, nên thiếu RAM không làm
+  mất dữ liệu: chạy `replay` sau khi đóng ứng dụng
+  ([packet_logger.md](packet_logger.md), RAM trên laptop dùng cho buổi đo). Chưa đo trên máy đã
+  đóng ứng dụng.
 - **ECG:** dùng **ba** điện cực dán Ag/AgCl có gel, loại dùng một lần (LA, RA và RL tham
   chiếu), nối qua cáp 3 điện cực đi kèm kit và jack 3,5 mm của breakout. Đạo trình I lấy giữa
   **hai cổ tay** (chốt 2026-10-23, vị trí ở 5.2). **Trên người chỉ dùng cấu hình này**
