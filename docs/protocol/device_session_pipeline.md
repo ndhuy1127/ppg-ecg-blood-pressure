@@ -100,7 +100,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 | Mục 5: độ nhạy theo kiểu CI | `ci_sensitivity`: làm lại kết luận chính (d, d⁰, Holm) với percentile, BCa, bootstrap-t, Student t; `changed` liệt kê kiểu CI làm kết luận đổi |
 | Mục 6: Holm phương án A | `main_decision` (dùng `rq1_holm_loso.holm`) |
 | Mục 7: đọc theo δ | `reading`; δ null thì `delta_not_set` |
-| Mục 10: dữ liệu thiếu, lượt dừng | Không điền; lần cuff mất PAT vẫn vào endpoint 3; lượt dừng giữ ở phân tích chính, bỏ ở endpoint 7 (báo số dòng bỏ và số lần cuff chính mất); tỷ lệ mất ECG theo người (`ecg_loss_share`) |
+| Mục 10: dữ liệu thiếu, lượt dừng | Không điền; lần cuff mất PAT vẫn vào endpoint 3; lượt dừng giữ ở phân tích chính, bỏ ở endpoint 7 (hiệu chuẩn giữ như phân tích chính; báo số lần cuff bỏ và số lần cuff chính mất); tỷ lệ mất ECG theo người (`ecg_loss_share`) |
 | Mục 3 endpoint 11 | Trung bình hiệu và CI 95 % theo cách tính chính |
 
 ### 4.2. Kết quả test (`tests/test_rq1_analysis.py`, SYNTHETIC)
@@ -142,17 +142,19 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 6. **Màu PPG.** Xanh (khe 1, gốc thời gian của các khe); cả ba màu đều được tính.
 7. **Thứ tự phiên.** Số của `session_id` (`S001` là phiên 1).
 8. **Seed bootstrap.** 20261113, đề xuất; ghi lại trong commit khóa SAP.
-9. **Endpoint 5 (lọc SQI) và 7 (bỏ lượt dừng).** Chạy lại toàn bộ, kể cả phần học, trên tập đã lọc.
-   SAP chỉ nói "lặp lại phép so sánh chính sau khi bỏ".
+9. **Endpoint 5 (lọc SQI) và 7 (bỏ lượt dừng).** Sửa 2026-11-14 (chờ duyệt): giữ BP₀, đặc trưng
+   nền và tư cách đạt chuẩn của phân tích chính; chỉ bỏ lần cuff có cờ khỏi tập học và tập đánh
+   giá rồi học lại ([SAP v1](sap_v1.md) mục 3, cách tính endpoint 5 và 7). Report ghi
+   `calibration: main_analysis`, người không còn lần cuff đánh giá và số lần cuff còn lại theo
+   người.
 10. **Endpoint 1, 2, 4, 11.** Báo trung bình hiệu và CI 95 % (1, 2, 11) hoặc MAE và hiệu trung
     bình (4); chưa áp Holm cho endpoint phụ.
 11. **Chưa làm:** endpoint 8 (RQ2b), Bland–Altman (SAP để chọn phương pháp LoA sau), hình.
 
 Thêm 2026-11-13 (liệt kê để chốt, chưa sửa theo):
 
-12. **Endpoint 5 và 7 đổi BP₀.** Chạy lại toàn bộ nên một lần cuff M0 phiên 1 bị lọc (cờ SQI) hay
-    có cờ dừng an toàn cũng ra khỏi phần hiệu chuẩn, làm BP₀ và đặc trưng nền đổi. SAP không nói
-    lần cuff hiệu chuẩn có bị bỏ theo không.
+12. **Endpoint 5 và 7 đổi BP₀.** Đã xử lý 2026-11-14 (chờ duyệt) theo mục 9: hiệu chuẩn giữ như
+    phân tích chính; SAP mục 3 có thêm quy tắc này.
 13. **"Mất ECG".** Code đếm lần cuff hợp lệ ở phiên ≥ 2 không có HR từ ECG (`ecg_hr_bpm` trống).
     SAP mục 2 và 10 không định nghĩa; lần cuff có ECG nhưng không ghép được PAT không tính là mất
     ECG.

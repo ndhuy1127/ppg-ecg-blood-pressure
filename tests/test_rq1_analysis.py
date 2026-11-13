@@ -406,3 +406,40 @@ def test_empty_phase_folds_are_counted():
         "M0": 0, "M1": 0, "M2": 1}
     skipped = report["counts"]["skipped_by_phase"]["M2"]
     assert skipped["later_sessions_without_main_cuff"] == 10
+
+
+def test_endpoints_5_and_7_keep_the_main_calibration():
+    """SAP section 3 (rule of 2026-11-14): a flagged session-1 M0 cuff leaves the
+    training set but not BP0 or the feature baseline, so the labels of every other
+    cuff stay those of the main analysis and no subject is lost."""
+    rows = table(6, sbp_pat=2.0)
+    for r in rows:
+        if r["subject_id"] == "SYN_03" and r["session_id"] == "S001" and r["event_id"] == "E01":
+            r["flags"] = "motion"
+            r["safety_stop"] = 1
+    report = ra.analyze(rows, FAST)
+    for name in ("5_sqi_filtered", "7_without_safety_stops"):
+        endpoint = report["secondary"][name]
+        assert endpoint["rows_dropped"] == 1 and endpoint["main_cuffs_change"] == 0
+        assert endpoint["subjects_without_evaluated_cuffs"] == []
+        assert endpoint["calibration"] == "main_analysis"
+        for target in ("SBP", "DBP"):
+            # Zero-change depends only on the labels of the evaluated cuffs: a new BP0
+            # for SYN_03 (recalibration without E01) would change it.
+            assert (endpoint["targets"][target]["models"]["zero_change"]["mae"]
+                    == pytest.approx(report["main"]["targets"][target]["models"]
+                                     ["zero_change"]["mae"], abs=1e-12))
+
+
+def test_endpoint_5_reports_a_subject_left_without_evaluated_cuffs():
+    rows = table(7, sbp_pat=2.0)
+    for r in rows:
+        if r["subject_id"] == "SYN_05" and r["session_id"] != "S001":
+            r["flags"] = "stream:gap"
+    report = ra.analyze(rows, FAST)
+    endpoint = report["secondary"]["5_sqi_filtered"]
+    assert endpoint["subjects_without_evaluated_cuffs"] == ["SYN_05"]
+    assert endpoint["evaluated_cuffs_by_subject"]["SYN_05"] == [0, 8]
+    assert endpoint["n_folds"] == 19 and endpoint["main_cuffs_change"] == -8
+    # Eligibility is not re-examined: the main analysis keeps all 20 subjects.
+    assert report["main"]["n_folds"] == 20

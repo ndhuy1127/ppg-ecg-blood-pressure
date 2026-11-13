@@ -499,6 +499,40 @@ def _rerun(rows, config, keep, main_cuffs):
             "main_cuffs_change": kept - main_cuffs, **out}
 
 
+def _filtered(prep, config, drop, main_cuffs):
+    """Endpoints 5 and 7 (SAP section 3, rule of 2026-11-14): BP0, the feature
+    baseline and eligibility stay those of the main analysis; the cuffs ``drop``
+    selects leave both the training and the evaluated sets, then the folds are
+    refitted. A subject left without evaluated cuffs has no d_s here (reported)."""
+    cuffs = [dict(c) for c in prep["cuffs"]]
+    dropped = 0
+    for c in cuffs:
+        if drop(c):
+            dropped += 1
+            c["in_main"] = c["trainable"] = False
+    remaining = {c["subject"] for c in cuffs if c["in_main"]}
+    lost = [s for s in prep["eligible"] if s not in remaining]
+    sub = {**prep, "cuffs": cuffs, "eligible": [s for s in prep["eligible"] if s in remaining]}
+    main_per = {}
+    for c in prep["cuffs"]:
+        if c["in_main"]:
+            main_per[c["subject"]] = main_per.get(c["subject"], 0) + 1
+    kept_per = {}
+    for c in cuffs:
+        if c["in_main"]:
+            kept_per[c["subject"]] = kept_per.get(c["subject"], 0) + 1
+    info = {"rows_dropped": dropped, "calibration": "main_analysis",
+            "subjects_without_evaluated_cuffs": lost,
+            "evaluated_cuffs_by_subject": {s: [kept_per.get(s, 0), n]
+                                           for s, n in sorted(main_per.items())}}
+    try:
+        out = _core(sub, config)
+    except ValueError as exc:
+        return {**info, "not_computed": str(exc)}
+    kept = sum(c["in_main"] for c in cuffs)
+    return {**info, "main_cuffs": kept, "main_cuffs_change": kept - main_cuffs, **out}
+
+
 def _secondary(rows, prep, config, main):
     """Secondary endpoints of SAP section 3 (descriptive, not confirmatory)."""
     full, base = config["comparison"]["full"], config["comparison"]["base"]
@@ -557,12 +591,12 @@ def _secondary(rows, prep, config, main):
     out["3_ppg_only_all_cuffs"] = _ppg_all_cuffs(prep, config)
     exclusion = set(config["sqi_exclusion_flags"])
     main_cuffs = sum(c["in_main"] for c in prep["cuffs"])
-    out["5_sqi_filtered"] = _rerun(rows, config, lambda r: not exclusion & set(
-        filter(None, str(r.get("flags") or "").split(";"))), main_cuffs)
+    out["5_sqi_filtered"] = _filtered(prep, config, lambda c: bool(exclusion & c["flags"]),
+                                      main_cuffs)
     out["6_with_led_readjusted"] = _rerun(
         [{**r, "led_readjusted": 0} for r in rows], config, lambda r: True, main_cuffs)
-    out["7_without_safety_stops"] = _rerun(
-        rows, config, lambda r: not flag01(r, "safety_stop"), main_cuffs)
+    out["7_without_safety_stops"] = _filtered(prep, config, lambda c: c["safety_stop"],
+                                              main_cuffs)
     out["8_rq2b"] = {"not_computed": "RQ2b same- vs other-session is not part of v1"}
     return out
 

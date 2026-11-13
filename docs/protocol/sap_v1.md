@@ -93,6 +93,16 @@
       nên không thay phép so chính. Độ nhạy thấp (mục 9, kết quả 10), nên chỉ dùng để mô tả.
   11. Baseline theo pha dùng trung vị thay trung bình (mục 4; chốt 2026-11-12): MAE tối ưu ở trung vị, nên vượt
       trung bình theo pha có thể chỉ nhờ phân bố ΔBP lệch.
+- **Cách tính endpoint 5 và 7 (đề xuất 2026-11-14, chờ duyệt).** BP₀, đặc trưng nền và tư cách
+  đạt chuẩn giữ nguyên như phân tích chính. Bộ lọc của endpoint (cờ SQI thuộc tập loại; cờ dừng
+  an toàn) chỉ bỏ lần cuff khỏi tập học và tập đánh giá, rồi học lại theo mục 4; không xét lại
+  ngưỡng ≥ 2 lần cuff mỗi phiên sau khi lọc. Các mô hình so trên cùng tập cuff còn lại. Người
+  không còn lần cuff đánh giá nào thì không có d_s trong endpoint đó; báo số người, lý do và số
+  lần cuff còn lại theo người. Ước lượng và CI theo mục 5, riêng SBP và DBP. Phương án đã cân
+  nhắc và không chọn: lọc cả lần cuff hiệu chuẩn (đổi BP₀ nên đổi nhãn ΔBP của mọi lần cuff,
+  trộn hai hiệu ứng và có thể loại người); giữ BP₀ nhưng tính lại đặc trưng nền từ lần cuff qua
+  lọc (BP₀ và đặc trưng nền lệch mốc với nhau). Endpoint 6 vẫn chạy lại toàn bộ vì nó đổi chính
+  tập phân tích.
 
 ## 4. Hiệu chuẩn và đặc trưng
 
