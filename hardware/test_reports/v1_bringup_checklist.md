@@ -1,6 +1,6 @@
 # Checklist bring-up V1-module
 
-> **Trạng thái: đề xuất ngày 2026-11-07, chờ duyệt.** Phần cứng dự kiến về trong Tuần 8. File này
+> **Trạng thái: đề xuất ngày 2026-11-07, duyệt ngày 2026-11-14.** Phần cứng dự kiến về trong Tuần 8. File này
 > chỉ để đánh dấu tiến độ; nội dung từng bước nằm ở [trình tự bring-up](v1_bringup_procedure.md)
 > (BU) và [kế hoạch đo dòng rò, thử nhiệt và VLED](leakage_thermal_test_plan_v1.md) (AT).
 > Bước nào không đạt thì dừng ở đó, ghi lại, xử lý xong mới đi tiếp. Không gắn điện cực lên người.
@@ -65,10 +65,10 @@
 - Metadata bring-up: [metadata/v1_bringup_s2_default_env.json](metadata/v1_bringup_s2_default_env.json)
   (SHA-256 `a2eda2bc2e12cc26ac7343082230d35b9d671531d2f982596ee99773e100a608`). Dùng cho BU mục 2
   với env `esp32s3_devkitc`. Qua `validate_metadata`. Khi nhận bo: điền `device_id`.
-- Chốt 2026-11-13, chờ duyệt: `source_type` là `DEVICE` vì byte đến từ bo thật, dù env mặc định
+- Chốt 2026-11-13, duyệt 2026-11-14: `source_type` là `DEVICE` vì byte đến từ bo thật, dù env mặc định
   gửi giá trị giả. Kênh ghi rõ "nguồn giả" trong `sensor`. Logger sẽ báo `afe_fake_source`
   với env này; đó là kết quả chờ đợi. Cùng ngày, Packet Schema V0.2 mục 11.1 sửa theo cùng
-  quy tắc (`DEVICE` khi byte đến từ MCU thật, `SYNTHETIC` chỉ cho luồng PC sinh), chờ duyệt.
+  quy tắc (`DEVICE` khi byte đến từ MCU thật, `SYNTHETIC` chỉ cho luồng PC sinh), duyệt 2026-11-14.
 - Env có chip thật (`ppg_real`, `all_real`, `sync10`) cần metadata riêng, có `afe_config` theo
   `0xD2`. Chưa tạo.
 - Chạy thử:
@@ -107,7 +107,7 @@
 | 13 | Đo dòng rò: bệnh nhân và phụ, AC và DC, ≤ 50 % giới hạn | AT mục 2 | [ ] | |
 | 14 | Biên bản dòng rò và nhiệt có chữ ký người có chuyên môn | AT mục 5 | [ ] | |
 
-**Ba phép kiểm chặn đường thời gian** (ghi 2026-11-11, đề xuất, chờ duyệt). Mọi mốc thời gian
+**Ba phép kiểm chặn đường thời gian** (ghi 2026-11-11, duyệt 2026-11-14). Mọi mốc thời gian
 dựa vào ba hành vi của chip mà datasheet không bảo đảm. Bước nào dưới đây không đạt thì dừng,
 không đi tiếp sang bước 11:
 

@@ -540,7 +540,7 @@ dưới đây là null; `record` từ chối v0 khi `source_type` là `DEVICE`. 
     chuẩn của buổi đầu (chưa khóa) và ở bring-up. Kiểm ở mục "Mã LED đã khóa";
   - `cuff_log`: đường dẫn tương đối tới tệp nhật ký cuff của buổi (`event_id` ↔
     SBP/DBP ↔ nghiệm pháp), tính từ `data/raw/<subject_id>/<session_id>/`, ví dụ
-    `cuff_log.csv`. Cần `session_id`. Định dạng tệp: đề xuất 2026-11-13, chờ duyệt, ở
+    `cuff_log.csv`. Cần `session_id`. Định dạng tệp: đề xuất 2026-11-13, duyệt 2026-11-14, ở
     [quy ước dữ liệu](../data_convention.md) mục 4.4 (ingest đọc và hash tệp này,
     `scripts/device_session.py`); logger không đọc và không hash tệp này, vì nó được
     điền trong hoặc sau lúc ghi. Null kèm lý do khi chưa có tệp số (chỉ có phiếu giấy);
@@ -609,7 +609,7 @@ chạy), theo từng `SESSION_ID`:
 Không có `ppg_led_lock` thì `sessions[].ppg_led_lock` là null và không kiểm gì sau buổi;
 trong lúc ghi logger vẫn in mã LED của mỗi trạng thái MAX30101 mới.
 
-## Hiển thị khi đang ghi (đề xuất 2026-11-07, chờ duyệt)
+## Hiển thị khi đang ghi (đề xuất 2026-11-07, duyệt 2026-11-14)
 
 `software/data_io/live_monitor.py` đọc các packet vừa giải mã và in từng dòng ra
 stderr của `record`. Module này không đổi `raw.bin`, output decode hay file nào khác.
@@ -756,7 +756,7 @@ config/metadata được so với manifest.
     khoảng 9 GB cho 120 phút); nay luồng đó cần 120 MB.
   - Đây là số đo trên luồng tổng hợp, chưa đo trên laptop dùng cho buổi đo hay với
     thiết bị thật. Nghiệm thu bằng lần chạy cả hệ 120 phút ở bring-up.
-- **RAM trên laptop dùng cho buổi đo (đo 2026-11-13, chờ duyệt).** Luồng vẫn là
+- **RAM trên laptop dùng cho buổi đo (đo 2026-11-13, đề xuất duyệt 2026-11-14).** Luồng vẫn là
   SYNTHETIC, nên số này chỉ nói về bộ nhớ của logger và máy, không nói về tín hiệu
   hay thiết bị thật.
   - Máy: Intel Core i7-13700HX (16 lõi, 24 luồng), RAM 16 106 MiB (16 886 MB), Windows
@@ -799,14 +799,14 @@ config/metadata được so với manifest.
     xem chạy liên tục. Repo không có trình xem tín hiệu dạng cửa sổ, nên "trình xem"
     ở lần 3 chỉ là dòng báo của `live_monitor.py`. Đỉnh RAM chỉ lấy mẫu mỗi 0,5 s,
     còn đỉnh working set từ bộ đếm của hệ điều hành. Mỗi điều kiện đo 1–2 lần.
-  - Đề xuất (chờ duyệt, chưa sửa code, định dạng output không đổi). Đỉnh chỉ xuất hiện
+  - Đề xuất (duyệt 2026-11-14: làm bước 1; chưa sửa code, định dạng output không đổi). Đỉnh chỉ xuất hiện
     ở khâu giải mã cuối buổi (khoảng 36–40 s); lúc ghi, logger chỉ dùng khoảng
     24 MB. `raw.bin` đã nằm trên đĩa trước khi giải mã, nên thiếu RAM ở bước này không
     làm mất dữ liệu: chạy `replay` trên `raw.bin` sau khi đóng ứng dụng.
     1. Trước buổi đo, đóng trình duyệt và trình soạn thảo nặng, tắt máy ảo WSL
        (`wsl --shutdown`), và chỉ bấm dừng khi RAM khả dụng còn ít nhất 2 GB. Công:
        không có; mất vài phút ở danh sách việc trước buổi đo. Chưa đo tác dụng thật
-       trên máy sạch. Đã đưa vào protocol v0.2 mục 5.1 (2026-11-14, chờ duyệt); bước 2 chỉ làm
+       trên máy sạch. Đã đưa vào protocol v0.2 mục 5.1 (duyệt 2026-11-14); bước 2 chỉ làm
        nếu phép đo trên máy đã đóng ứng dụng vẫn cho RAM trống dưới 2 GB.
     2. Nếu bước 1 chưa đủ: giải mã theo khối ở khâu cuối buổi, ghi tạm theo từng kênh
        rồi gộp theo khóa sắp xếp hiện có của `samples.csv`, để đỉnh không còn tỷ lệ

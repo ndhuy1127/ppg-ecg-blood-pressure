@@ -565,7 +565,7 @@ cùng ngày (thiết kế, rồi code); chờ duyệt.
   `0xB1` với giá trị giả theo công thức trong code, qua cùng máy trạng thái, để
   logger thử đường đi của kênh trước khi có bo. Env trộn nguồn thật và giả ghi nguồn của
   từng kênh trong `afe_config`.
-- `source_type` của phiên (sửa 2026-11-13, chờ duyệt; bản trước ghi phiên của env toàn
+- `source_type` của phiên (sửa 2026-11-13, duyệt 2026-11-14; bản trước ghi phiên của env toàn
   nguồn giả là `SYNTHETIC`): `source_type` cho biết **luồng byte đến từ đâu**. Luồng đọc
   từ MCU thật qua USB là `DEVICE`, kể cả khi mọi kênh là nguồn giả của firmware.
   `SYNTHETIC` chỉ dành cho luồng do PC sinh (`scripts/simulate_packets.py`, có mục

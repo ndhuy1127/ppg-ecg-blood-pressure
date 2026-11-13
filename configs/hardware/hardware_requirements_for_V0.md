@@ -126,7 +126,7 @@ $$
 
 theo thời gian.
 Nếu độ lệch thay đổi theo thời gian, phải ghi nhận drift và xác định phương pháp hiệu chỉnh trước khi sử dụng dữ liệu để tính PAT.
-Giới hạn cho độ lệch, jitter và drift là các tiêu chí A1–A9 ở `hardware/test_reports/sync_10min_test_plan.md` mục 9 (đề xuất 2026-11-11, chờ duyệt), được viết **trước** khi đo. Bản trước của mục này ghi giới hạn sẽ được xác định sau khi thử nghiệm đồng bộ; đặt giới hạn sau khi đã thấy số đo thì giới hạn không còn kiểm được gì. Ngân sách sai số của PAT ở mục 10 của cùng tài liệu.
+Giới hạn cho độ lệch, jitter và drift là các tiêu chí A1–A9 ở `hardware/test_reports/sync_10min_test_plan.md` mục 9 (đề xuất 2026-11-11, duyệt 2026-11-14), được viết **trước** khi đo. Bản trước của mục này ghi giới hạn sẽ được xác định sau khi thử nghiệm đồng bộ; đặt giới hạn sau khi đã thấy số đo thì giới hạn không còn kiểm được gì. Ngân sách sai số của PAT ở mục 10 của cùng tài liệu.
 ## 5. Yêu cầu MCU
 Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M (module Espressif ESP32-S3-WROOM-1-N8R8, chân giống DevKitC-1; đặt 2026-10-27, thay bản DevKitC-1-N8R8 chốt 2026-10-24) là MCU chính của prototype V1-module.
 MCU có các nhiệm vụ:

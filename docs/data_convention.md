@@ -40,7 +40,7 @@ Không giả định hai kênh dùng chung một tần số lấy mẫu hay mộ
 
 Tính lại khi đổi số mẫu mỗi packet hay tốc độ lấy mẫu.
 
-## 4. Đầu ra của ingest phiên thiết bị (`device-session-v1`, đề xuất 2026-11-13, chờ duyệt)
+## 4. Đầu ra của ingest phiên thiết bị (`device-session-v1`, đề xuất 2026-11-13, định dạng duyệt 2026-11-14)
 
 Giao diện giữa ingest, mốc/PAT và phân tích RQ1. Code:
 [session_ingest.py](../software/device/session_ingest.py),
@@ -90,7 +90,7 @@ Giao diện giữa ingest, mốc/PAT và phân tích RQ1. Code:
 
 ### 4.4. Nhật ký cuff (`cuff_log.csv`, đầu vào) và cửa sổ (`cuffs.json`)
 
-Định dạng nhật ký cuff (chốt 2026-11-13, chờ duyệt; trước đó metadata ghi "chưa chốt"). Một
+Định dạng nhật ký cuff (chốt 2026-11-13, duyệt 2026-11-14; trước đó metadata ghi "chưa chốt"). Một
 dòng mỗi lần bấm cuff, cột đúng thứ tự:
 
 `recording, event_id, phase, device_session_id, t0_event_ordinal, phase_mark_event_ordinal,
@@ -101,7 +101,7 @@ pilot, note`
 - `status`: `valid` (có SBP/DBP), `no_result` (máy xả bình thường nhưng không ra số; lần đo lại
   là một dòng mới), `device_error` (máy lỗi). Chỉ dòng `valid` có SBP/DBP; DBP < SBP.
 - `safety_stop`: 1 nếu lượt có cờ dừng an toàn (SAP mục 10), ngược lại 0.
-- `led_readjusted`, `pilot` (thêm 2026-11-13, chờ duyệt): 0 hoặc 1, **giống nhau trên mọi dòng**
+- `led_readjusted`, `pilot` (thêm 2026-11-13, duyệt 2026-11-14): 0 hoặc 1, **giống nhau trên mọi dòng**
   của một nhật ký (một nhật ký là một buổi của một người); ingest từ chối nếu khác. `led_readjusted`
   = 1 khi buổi đó chỉnh lại mã LED (protocol 6.1, "Buổi sau lệch thang"). `pilot` = 1 khi người
   này làm pilot (SAP mục 1–2). Lý do điền ở nhật ký cuff, không ở metadata phiên của logger:
@@ -139,7 +139,7 @@ ecg_hr_bpm, ecg_rmssd_ms, pat_ms, pat_sqi_v2_median_ms, pat_n_valid, flags, sour
 - `pat_ms` là trung vị PAT hợp lệ của `pat-validity-v1`; `pat_sqi_v2_median_ms` là trung vị
   của cách ghép `features-sqi-v2`, giữ để so.
 - `flags`: cờ SQI v1 (mục 3.1, 3.3) và cờ cửa sổ, nối bằng `;`.
-- `led_readjusted`, `pilot` (0/1) chép từ nhật ký cuff (mục 4.4; thêm 2026-11-13, chờ duyệt).
+- `led_readjusted`, `pilot` (0/1) chép từ nhật ký cuff (mục 4.4; thêm 2026-11-13, duyệt 2026-11-14).
   Phân tích RQ1 bắt buộc hai cột này và `safety_stop` trên mọi dòng không phải SYNTHETIC; thiếu
   hay sai giá trị thì dừng, không mặc định 0. `led_readjusted` loại cả buổi đó (phiên ≥ 2) khỏi tập
   chính và tập học; `pilot` loại người đó (SAP mục 1–2).

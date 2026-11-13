@@ -28,7 +28,7 @@ Không đo trên người.
 
 ### Đức Anh
 
-- **Chuẩn bị bring-up** (8eb833a, 2026-11-13; chờ duyệt):
+- **Chuẩn bị bring-up** (8eb833a, 2026-11-13; duyệt 2026-11-14):
   - [checklist bring-up](../../../hardware/test_reports/v1_bringup_checklist.md): bảng firmware
     build sẵn bốn env kèm SHA-256 của ELF (build ở commit `0df0ba6`), metadata buổi đo, nơi ghi
     output `runs/bringup_v1/<YYYY-MM-DD>_<bước>/`, kết quả chạy thử logger không cần thiết bị;
@@ -46,18 +46,18 @@ Không đo trên người.
 
 ### Linh
 
-- **RAM logger trên laptop dùng cho buổi đo** (8eb833a, 2026-11-13; đề xuất chờ duyệt): luồng
+- **RAM logger trên laptop dùng cho buổi đo** (8eb833a, 2026-11-13; đề xuất duyệt 2026-11-14): luồng
   SYNTHETIC 120 phút, ba lần đo; đỉnh 894–895 MB ở khâu giải mã cuối buổi, lúc ghi chỉ khoảng
   24 MB. RAM trống của máy chỉ còn 9–15 % ngay trước khi chạy vì ứng dụng đang mở
   ([packet_logger.md](../../../docs/protocol/packet_logger.md)). Đề xuất đưa vào protocol 5.1
   bước đóng ứng dụng, `wsl --shutdown` và chỉ dừng ghi khi còn ≥ 2 GB (e9af9a6, 2026-11-14,
-  chờ duyệt). Chưa đo trên máy đã đóng ứng dụng.
-- **Pipeline dữ liệu thiết bị** (4630bc1, 2026-11-13; chờ duyệt):
+  duyệt 2026-11-14). Chưa đo trên máy đã đóng ứng dụng.
+- **Pipeline dữ liệu thiết bị** (4630bc1, 2026-11-13; định dạng `cuff_log.csv`, `cuff_features.csv` duyệt 2026-11-14, các mục tự chốt khác chờ duyệt):
   [device_session.py](../../../scripts/device_session.py) ingest bản ghi `packet-logger-v3`,
   kiểm metadata, cắt cửa sổ quanh lần cuff, tính đặc trưng, PAT, cờ SQI và tóm tắt phiên;
   định dạng `cuff_log.csv` và `cuff_features.csv` ghi ở
   [data_convention.md](../../../docs/data_convention.md) mục 4. Quy tắc `source_type`: DEVICE
-  khi byte đến từ MCU thật, SYNTHETIC chỉ cho luồng sinh trên PC (8eb833a, chờ duyệt).
+  khi byte đến từ MCU thật, SYNTHETIC chỉ cho luồng sinh trên PC (8eb833a, duyệt 2026-11-14).
 - **RQ2a trên PulseDB** (định nghĩa và code b5a2f00, 2026-11-13; duyệt nguyên trạng bằng
   commit riêng 6f6372b, 2026-11-14; chạy cùng ngày; kết quả a08eaea): mục 6.2.
 
@@ -67,8 +67,11 @@ Không đo trên người.
   512 sps và PPG 200 sps ba khe trước khi tính PAT; bộ sinh dạng sóng SYNTHETIC có PAT biết
   trước; test có đáp án ([device_session_pipeline.md](../../../docs/protocol/device_session_pipeline.md)).
 - **Duyệt RQ2a** (6f6372b, 2026-11-14): duyệt nguyên trạng định nghĩa trước khi chạy.
-- **Chưa xong:** duyệt checklist bring-up, kế hoạch dòng rò/nhiệt/VLED, tiêu chí A1–A9 và phần
-  hiển thị DC; đánh dấu tay lần 1 (chưa có file đánh dấu mới sau khi bỏ phiên 2026-10-25, kiểm
+- **Duyệt tiêu chí phần cứng và các mục tự chốt** (2026-11-14, commit duyệt riêng): checklist
+  bring-up, kế hoạch dòng rò/nhiệt/VLED (phương pháp và quy tắc; giá trị giới hạn vẫn chờ đối
+  chiếu IEC), tiêu chí A1–A9 và ngân sách sai số PAT, phần hiển thị DC; quy tắc `source_type`,
+  định dạng `cuff_log.csv`/`cuff_features.csv`, endpoint 5/7, bước RAM trước buổi đo.
+- **Chưa xong:** đánh dấu tay lần 1 (chưa có file đánh dấu mới sau khi bỏ phiên 2026-10-25, kiểm
   2026-11-14), nên chưa chạy `gate`.
 
 ### Linh, Huy
@@ -78,7 +81,7 @@ Không đo trên người.
   (zero-change, PAT-only, PPG-only, PPG + PAT, baseline theo pha, LOSO, Holm) với bảng đặc trưng
   theo lần cuff; `pilot` và `led_readjusted` bắt buộc với dữ liệu không phải SYNTHETIC; phiên
   chỉnh LED ra khỏi cả tập chính và tập học; kết luận chính cần cả d và d⁰; độ nhạy theo kiểu CI.
-- **Endpoint 5 và 7 giữ hiệu chuẩn của phân tích chính** (75aa449, 2026-11-14; chờ duyệt, kèm
+- **Endpoint 5 và 7 giữ hiệu chuẩn của phân tích chính** (75aa449, duyệt 2026-11-14, kèm
   một phản biện độc lập): mục 5.1.
 - **Cổng khóa cho dữ liệu thật** (a163e33, 2026-11-14; chờ duyệt): khóa cả code của bước tính
   đặc trưng và config của nó; mỗi bảng đặc trưng phải có `provenance.json` khớp code đang khóa;
@@ -99,7 +102,7 @@ Không đo trên người.
 
 ## 5. Tóm tắt các nội dung chuyên môn chính
 
-### 5.1. Endpoint 5 và 7 của SAP (đề xuất 2026-11-14, chờ duyệt)
+### 5.1. Endpoint 5 và 7 của SAP (đề xuất và duyệt 2026-11-14)
 
 SAP chưa nói lần cuff hiệu chuẩn (M0 phiên 1) có bị bỏ theo bộ lọc của endpoint 5 (cờ SQI) và
 7 (cờ dừng an toàn) hay không. Bản đầu chạy lại toàn bộ nên BP₀ và đặc trưng nền đổi, kéo theo
@@ -148,10 +151,10 @@ phải hiệu năng huyết áp.
 | Mốc đóng tuần | Trạng thái | Người xử lý | Chuyển sang |
 | --- | --- | --- | --- |
 | Phần A checklist xong | **Chưa:** phần viết và firmware build sẵn xong; các ô làm tay và mạch đo MD chưa làm | Đức Anh | Tuần 9, trước bước 1 bring-up |
-| Tiêu chí phần cứng có commit duyệt | **Chưa:** checklist, kế hoạch dòng rò/nhiệt/VLED, A1–A9, phần hiển thị DC vẫn chờ duyệt | Huy | Tuần 9, trước khi đo PCB trần |
+| Tiêu chí phần cứng có commit duyệt | **Đạt** (2026-11-14): checklist, kế hoạch dòng rò/nhiệt/VLED, A1–A9, phần hiển thị DC; giá trị giới hạn dòng rò vẫn chờ đối chiếu IEC | Huy | — |
 | Giới hạn dòng rò có điều khoản nguồn | **Chưa:** chưa đối chiếu nguyên văn IEC 60601-1, chưa có người duyệt | Đức Anh | Tuần 9, trước bước 13 |
-| RAM đo trên laptop buổi đo | **Đạt phần đo:** đo 2026-11-13; đề xuất bước RAM trước buổi đo chờ duyệt; chưa đo trên máy đã đóng ứng dụng | Linh | Tuần 9: đo lại khi đã đóng ứng dụng |
-| Pipeline ingest và mốc/PAT chạy trên SYNTHETIC, có test | **Đạt** (chờ duyệt định dạng và các mục tự chốt) | Linh, Huy | — |
+| RAM đo trên laptop buổi đo | **Đạt phần đo:** đo 2026-11-13; bước RAM trước buổi đo duyệt 2026-11-14; chưa đo trên máy đã đóng ứng dụng | Linh | Tuần 9: đo lại khi đã đóng ứng dụng |
+| Pipeline ingest và mốc/PAT chạy trên SYNTHETIC, có test | **Đạt** (định dạng duyệt 2026-11-14; các mục tự chốt khác của pipeline và cổng khóa chờ duyệt) | Linh, Huy | — |
 | RQ2a | **Đạt:** duyệt, chạy, có bảng và CI (mục 6.2) | Linh | — |
 | Đủ 80 đoạn đánh dấu lần 1 | **Chưa:** chưa bắt đầu lại | Huy | Tuần 9; `gate` rồi B4 sau đó |
 

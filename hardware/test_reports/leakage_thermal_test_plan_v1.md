@@ -1,6 +1,8 @@
 # Kế hoạch đo dòng rò, thử nhiệt và nghiệm thu VLED trên V1-module
 
-> **Trạng thái: đề xuất ngày 2026-11-07, chờ duyệt.**
+> **Trạng thái: đề xuất ngày 2026-11-07; phương pháp, ánh xạ phép đo, quy tắc đạt và quy tắc VLED
+> duyệt ngày 2026-11-14.** Giá trị giới hạn số vẫn chờ đối chiếu nguyên văn và người có chuyên
+> môn duyệt (gạch đầu dòng thứ hai dưới đây).
 >
 > - Chi tiết hóa [an toàn buổi đo](../../docs/ethics/session_safety_stopping_v0.1.md) mục 9 và
 >   [bring-up](v1_bringup_procedure.md) mục 8 bước 3 và mục 10, để làm được ngay khi nhận
@@ -59,14 +61,14 @@
 Mỗi phép đo ghi giá trị AC và DC, thang đo và độ bất định của đồng hồ.
 
 **Giới hạn đề xuất, bộ phận ứng dụng kiểu BF** (IEC 60601-1:2005 + AMD1:2012, Bảng 3 và 4;
-chưa đối chiếu nguyên văn, chờ duyệt):
+chưa đối chiếu nguyên văn; giá trị chờ đối chiếu và người có chuyên môn duyệt):
 
 | Đại lượng | Bình thường, AC | Bình thường, DC | Lỗi đơn, AC | Lỗi đơn, DC |
 | --- | --- | --- | --- | --- |
 | Dòng rò bệnh nhân | 100 µA | 10 µA | 500 µA | 50 µA |
 | Dòng phụ bệnh nhân | 100 µA | 10 µA | 500 µA | 50 µA |
 
-**Ánh xạ phép đo với giới hạn (đề xuất, chờ duyệt):**
+**Ánh xạ phép đo với giới hạn (duyệt 2026-11-14):**
 
 - **Một bộ phận ứng dụng.** Ba điện cực ECG và mặt bo cổ tay tiếp xúc da được coi là **một** bộ
   phận ứng dụng kiểu BF. Phép đo 1, với mọi đầu nối với người nối chung, so với giới hạn **dòng
@@ -78,7 +80,7 @@ chưa đối chiếu nguyên văn, chờ duyệt):
 - Coi bo cổ tay là cùng bộ phận ứng dụng hay bộ phận riêng: người có chuyên môn quyết. Nếu là
   bộ phận riêng thì mỗi bộ phận đo riêng theo phép 1, và đo thêm dòng tổng.
 
-**Quy tắc đạt (đề xuất, chờ duyệt):**
+**Quy tắc đạt (duyệt 2026-11-14):**
 
 - mọi giá trị đo ở điều kiện bình thường, kể cả cộng độ bất định của mạch tự dựng, **không quá
   50 %** giới hạn bình thường tương ứng;
@@ -87,7 +89,7 @@ chưa đối chiếu nguyên văn, chờ duyệt):
 
 Lý do lấy 50 %: mạch tự dựng và đồng hồ vạn năng có độ bất định lớn ở mức µA.
 
-## 3. Nguồn LED VLED+ (quy tắc nghiệm thu, đề xuất, chờ duyệt)
+## 3. Nguồn LED VLED+ (quy tắc nghiệm thu, duyệt 2026-11-14)
 
 **Bối cảnh.** Bo SparkFun tạo VLED+ bằng boost PAM2401 với chia áp R1 750 kΩ / R4 100 kΩ, tức
 5,1 V danh định. Nhóm chốt ngày 2026-10-24 giữ nguyên, không sửa bo

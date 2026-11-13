@@ -150,7 +150,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 6. **Màu PPG.** Xanh (khe 1, gốc thời gian của các khe); cả ba màu đều được tính.
 7. **Thứ tự phiên.** Số của `session_id` (`S001` là phiên 1).
 8. **Seed bootstrap.** 20261113, đề xuất; ghi lại trong commit khóa SAP.
-9. **Endpoint 5 (lọc SQI) và 7 (bỏ lượt dừng).** Sửa 2026-11-14 (chờ duyệt): giữ BP₀, đặc trưng
+9. **Endpoint 5 (lọc SQI) và 7 (bỏ lượt dừng).** Sửa và duyệt 2026-11-14: giữ BP₀, đặc trưng
    nền và tư cách đạt chuẩn của phân tích chính; chỉ bỏ lần cuff có cờ khỏi tập học và tập đánh
    giá rồi học lại ([SAP v1](sap_v1.md) mục 3, cách tính endpoint 5 và 7). Report ghi
    `calibration: main_analysis`, người không còn lần cuff đánh giá và số lần cuff còn lại theo
@@ -161,7 +161,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 
 Thêm 2026-11-13 (liệt kê để chốt, chưa sửa theo):
 
-12. **Endpoint 5 và 7 đổi BP₀.** Đã xử lý 2026-11-14 (chờ duyệt) theo mục 9: hiệu chuẩn giữ như
+12. **Endpoint 5 và 7 đổi BP₀.** Đã xử lý và duyệt 2026-11-14 theo mục 9: hiệu chuẩn giữ như
     phân tích chính; SAP mục 3 có thêm quy tắc này.
 13. **"Mất ECG".** Code đếm lần cuff hợp lệ ở phiên ≥ 2 không có HR từ ECG (`ecg_hr_bpm` trống).
     SAP mục 2 và 10 không định nghĩa; lần cuff có ECG nhưng không ghép được PAT không tính là mất
