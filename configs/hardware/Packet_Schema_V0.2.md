@@ -563,8 +563,19 @@ cùng ngày (thiết kế, rồi code); chờ duyệt.
 - Nguồn gốc dữ liệu: env có chip thật (`BOARD_PPG_REAL=1`) chỉ gửi nhiệt độ đọc từ
   chip, **không bao giờ** thay bằng giá trị giả khi chip lỗi. Env toàn nguồn giả gửi
   `0xB1` với giá trị giả theo công thức trong code, qua cùng máy trạng thái, để
-  logger thử đường đi của kênh trước khi có bo; phiên đó có `source_type` là
-  `SYNTHETIC`. Env trộn nguồn thật và giả ghi nguồn của từng kênh trong `afe_config`.
+  logger thử đường đi của kênh trước khi có bo. Env trộn nguồn thật và giả ghi nguồn của
+  từng kênh trong `afe_config`.
+- `source_type` của phiên (sửa 2026-11-13, chờ duyệt; bản trước ghi phiên của env toàn
+  nguồn giả là `SYNTHETIC`): `source_type` cho biết **luồng byte đến từ đâu**. Luồng đọc
+  từ MCU thật qua USB là `DEVICE`, kể cả khi mọi kênh là nguồn giả của firmware.
+  `SYNTHETIC` chỉ dành cho luồng do PC sinh (`scripts/simulate_packets.py`, có mục
+  `simulation` trong metadata). Kênh nào là giá trị giả thì do `0xD2` byte `[2]` = 0 cho
+  biết (mục 12), logger báo `afe_fake_source`, và `sensor` của kênh trong metadata ghi
+  "nguồn giả". Lý do: các phép kiểm chỉ chạy với `DEVICE` (`device_info_missing`,
+  `afe_config_missing`, `afe_fake_source`, `record` từ chối metadata v0) là chính thứ
+  bring-up cần thử trên bo; `simulation` chỉ hợp lệ với `SYNTHETIC` mà luồng của firmware
+  không có cấu hình mô phỏng của PC. Hệ quả: một bản ghi `DEVICE` chưa chắc là dữ liệu
+  sinh lý; phải xem `afe_fake_source` trước khi dùng.
 - Tải thêm 1 packet/s, 46 B/s (mục 10: 13,9 kB/s với PPG N = 8).
 
 ### 11.2. Logger, metadata, simulator

@@ -540,8 +540,9 @@ dưới đây là null; `record` từ chối v0 khi `source_type` là `DEVICE`. 
     chuẩn của buổi đầu (chưa khóa) và ở bring-up. Kiểm ở mục "Mã LED đã khóa";
   - `cuff_log`: đường dẫn tương đối tới tệp nhật ký cuff của buổi (`event_id` ↔
     SBP/DBP ↔ nghiệm pháp), tính từ `data/raw/<subject_id>/<session_id>/`, ví dụ
-    `cuff_log.csv`. Cần `session_id`. Định dạng tệp chưa chốt (protocol mục 6.2 mới
-    ghi "biểu mẫu nghiên cứu"); logger không đọc và không hash tệp này, vì nó được
+    `cuff_log.csv`. Cần `session_id`. Định dạng tệp: đề xuất 2026-11-13, chờ duyệt, ở
+    [quy ước dữ liệu](../data_convention.md) mục 4.4 (ingest đọc và hash tệp này,
+    `scripts/device_session.py`); logger không đọc và không hash tệp này, vì nó được
     điền trong hoặc sau lúc ghi. Null kèm lý do khi chưa có tệp số (chỉ có phiếu giấy);
 - `source_type` (`SYNTHETIC` hoặc `DEVICE`), `clock_id`, `firmware_version`,
   `firmware_commit`, `device_id`, `operator`, `electrode_type`,
@@ -755,6 +756,63 @@ config/metadata được so với manifest.
     khoảng 9 GB cho 120 phút); nay luồng đó cần 120 MB.
   - Đây là số đo trên luồng tổng hợp, chưa đo trên laptop dùng cho buổi đo hay với
     thiết bị thật. Nghiệm thu bằng lần chạy cả hệ 120 phút ở bring-up.
+- **RAM trên laptop dùng cho buổi đo (đo 2026-11-13, chờ duyệt).** Luồng vẫn là
+  SYNTHETIC, nên số này chỉ nói về bộ nhớ của logger và máy, không nói về tín hiệu
+  hay thiết bị thật.
+  - Máy: Intel Core i7-13700HX (16 lõi, 24 luồng), RAM 16 106 MiB (16 886 MB), Windows
+    11 Home 10.0.26300, Python 3.11.9 (bản gốc của venv, không qua file chạy
+    `python.exe` của venv, vì file đó chỉ là lớp khởi chạy và chiếm khoảng 4 MB).
+  - Luồng: V1, ECG 512 Hz (16 mẫu/packet), ba khe PPG 200 Hz (29 mẫu/packet), sáu
+    kênh IMU 100 Hz (10 mẫu/packet), `0xB1` mỗi 1 s, `0xD1` mỗi 10 s, hai sự kiện
+    `0xC1`; 819 288 packet (113,8 packet/s), 83,8 MB, 120 phút, 0 issue. Không có
+    `0xD2`. Config gốc chỉ cho tối đa 10 000 packet mỗi kênh (khoảng 5 phút ECG), nên
+    luồng này do một script tạm trong `tmp/` sinh theo từng kênh rồi trộn theo mốc
+    thời gian; script đó không nằm trong repo.
+  - Lệnh (mỗi lần, thư mục output mới; metadata từ `session_metadata()` của simulator):
+    `python scripts/packet_logger.py record --source-file stream.bin --metadata
+    session_metadata.json --output <thư mục mới>`; lần 3 thêm `--dc-every-s 2`.
+  - Cách đo: một script tạm chạy logger như tiến trình con, lấy mẫu mỗi 0,5 s working
+    set của tiến trình đó và RAM khả dụng của hệ thống (`GlobalMemoryStatusEx`,
+    gồm cả vùng đệm đĩa thu hồi được, khớp `FreePhysicalMemory` lúc bắt đầu). Đỉnh
+    working set lấy từ bộ đếm đỉnh của hệ điều hành, đọc ngay khi logger in
+    `Capture ended` (đỉnh lúc ghi) và ở lần lấy mẫu cuối (đỉnh lúc giải mã). MB ở bảng
+    là 10⁶ byte.
+
+    | Lần | Điều kiện | Đỉnh lúc ghi | Đỉnh lúc giải mã | Thời gian giải mã | RAM trống tối thiểu của máy | % RAM còn trống (tối thiểu) |
+    | --- | --- | --- | --- | --- | --- | --- |
+    | 1 | Máy như đang dùng (trình soạn thảo, trình duyệt, máy ảo WSL đang mở) | 24 MB | 894 MB | 36 s | 847 MB | 5,0 % (lúc bắt đầu 12,2 %) |
+    | 2 | Như lần 1, chạy lặp lại | 24 MB | 895 MB | 36 s | 1 193 MB | 7,1 % (lúc bắt đầu 14,5 %) |
+    | 3 | Thêm `--dc-every-s 2` và một Edge (hồ sơ riêng, bốn tab trang tĩnh, khoảng 900 MB) | 24 MB | 895 MB | 40 s | 715 MB | 4,2 % (lúc bắt đầu 9,2 %) |
+
+    Phần thu mất 4–5 s vì `--source-file` đọc file nhanh hết mức, không phát lại theo
+    thời gian thực; cả `record` xong sau khoảng 39–46 s.
+  - Kết quả: đỉnh 894–895 MB (khoảng 5,3 % RAM) khớp bảng 2026-11-07 (921–936 MB),
+    nên luồng này không làm bộ nhớ của logger tăng thêm. RAM trống tối thiểu của máy
+    đều **dưới 25 %**, kể cả ngay lúc bắt đầu (9–15 %), trước khi logger chạy. Phần lớn
+    RAM đã bị các ứng dụng đang mở chiếm (khoảng 2,5 GB trình soạn thảo, 1,7 GB trình
+    duyệt, 1,7 GB máy ảo WSL, hơn 1 GB dịch vụ hệ thống ở thời điểm đo). Chưa có số
+    của máy sạch (đóng hết ứng dụng), vì phải làm việc trên chính máy này.
+  - Giới hạn của phép đo: luồng tổng hợp một phiên, không có lỗi; không có thiết bị,
+    cổng serial, `--commands`, lệnh xuống hay `0xD2`. Chế độ `--source-file` không
+    phát lại thời gian thực, nên phần ghi chỉ kéo dài vài giây và các dòng báo mức DC
+    (`--dc-every-s`) gần như không xuất hiện; chưa đo lúc ghi 120 phút thật với trình
+    xem chạy liên tục. Repo không có trình xem tín hiệu dạng cửa sổ, nên "trình xem"
+    ở lần 3 chỉ là dòng báo của `live_monitor.py`. Đỉnh RAM chỉ lấy mẫu mỗi 0,5 s,
+    còn đỉnh working set từ bộ đếm của hệ điều hành. Mỗi điều kiện đo 1–2 lần.
+  - Đề xuất (chờ duyệt, chưa sửa code, định dạng output không đổi). Đỉnh chỉ xuất hiện
+    ở khâu giải mã cuối buổi (khoảng 36–40 s); lúc ghi, logger chỉ dùng khoảng
+    24 MB. `raw.bin` đã nằm trên đĩa trước khi giải mã, nên thiếu RAM ở bước này không
+    làm mất dữ liệu: chạy `replay` trên `raw.bin` sau khi đóng ứng dụng.
+    1. Trước buổi đo, đóng trình duyệt và trình soạn thảo nặng, tắt máy ảo WSL
+       (`wsl --shutdown`), và chỉ bấm dừng khi RAM khả dụng còn ít nhất 2 GB. Công:
+       không có; mất vài phút ở danh sách việc trước buổi đo. Chưa đo tác dụng thật
+       trên máy sạch.
+    2. Nếu bước 1 chưa đủ: giải mã theo khối ở khâu cuối buổi, ghi tạm theo từng kênh
+       rồi gộp theo khóa sắp xếp hiện có của `samples.csv`, để đỉnh không còn tỷ lệ
+       với số packet (hiện khoảng 1,1 KB mỗi packet). Ước 2–3 ngày làm và kiểm (so
+       từng byte với output hiện tại; đã có các test tương đương trong
+       `tests/test_packet_streaming.py`). Chỉ làm khi bước 1 không đủ, vì chưa có
+       trường hợp thiếu RAM cụ thể.
 - Chỉ dùng thư viện chuẩn; chưa có hiệu chỉnh `L`, fs thật hay drift.
 
 ## Quy ước packet của firmware (D1–D10)

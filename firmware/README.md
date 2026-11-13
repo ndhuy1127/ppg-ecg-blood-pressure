@@ -137,7 +137,9 @@ Remove-Item Env:PLATFORMIO_BUILD_FLAGS   # để bản build sau không mang c�
   215); test [tests/test_firmware_board.py](../tests/test_firmware_board.py).
 - Cờ truyền bằng biến môi trường không nằm trong commit. Ghi nguyên văn giá trị của
   `PLATFORMIO_BUILD_FLAGS` vào báo cáo cùng commit và ELF SHA-256 (packet `0xD1`); ELF
-  SHA-256 là thứ định danh bản đã nạp. Độ rộng xung còn thấy được trong `SPO2_CONFIG`
+  SHA-256 là thứ định danh bản đã nạp. Trước khi ghi ELF SHA-256, build sạch
+  (`pio run -d firmware -e <env> -t clean` rồi build): build tăng dần không chạy lại CMake
+  nên giữ phiên bản `git describe` cũ trong image (gặp 2026-11-13). Độ rộng xung còn thấy được trong `SPO2_CONFIG`
   của packet `0xD2`; cực tính `SAMP` thì không có trong luồng packet.
 
 ## Hai cổng USB
@@ -516,7 +518,9 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
     giữa lần đọc `Status 1` và lần đọc nhiệt độ (`MAX30101_ERR_MODE`);
   - env `ppg_real` chỉ gửi giá trị đọc từ chip, không bao giờ thay bằng giá trị giả.
     Env toàn nguồn giả gửi 25 °C cộng răng cưa 1/16 °C (chuyển đổi giả 29 ms) qua cùng
-    máy trạng thái; dữ liệu đó là `SYNTHETIC`.
+    máy trạng thái; giá trị đó là giả (`0xD2` nguồn 0), nhưng `source_type` của phiên
+    vẫn là `DEVICE` vì byte đến từ MCU thật (Packet Schema V0.2 mục 11.1, sửa
+    2026-11-13, chờ duyệt).
 - **Test** [tests/test_firmware_die_temp.py](../tests/test_firmware_die_temp.py):
   `app/die_temp.c` trên máy tính (lưới nhịp, đo trễ, quá hạn, lỗi, reset chip).
 - **Test** [tests/test_firmware_max30101.py](../tests/test_firmware_max30101.py):
