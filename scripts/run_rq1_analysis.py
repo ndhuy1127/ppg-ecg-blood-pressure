@@ -26,12 +26,17 @@ if str(REPO) not in sys.path:
 from software._provenance import text_file_sha256  # noqa: E402
 from software.device.session_ingest import sha256_file  # noqa: E402
 from software.evaluation.rq1_analysis import TARGETS, analyze  # noqa: E402
+from scripts.device_session import CODE as FEATURE_CODE  # noqa: E402
+from scripts.device_session import CONFIG as FEATURE_CONFIG  # noqa: E402
 
-LOCKED = ("docs/protocol/sap_v1.md", "software/evaluation/rq1_analysis.py",
-          "software/evaluation/mean_intervals.py", "software/evaluation/rq1_holm_loso.py",
-          "software/evaluation/rq1_sensitivity.py", "software/_provenance.py",
-          "software/device/session_ingest.py", "software/device/features.py",
-          "scripts/run_rq1_analysis.py", "scripts/run_b2_pulsedb.py")
+ANALYSIS_CODE = ("software/evaluation/rq1_analysis.py",
+                 "software/evaluation/mean_intervals.py",
+                 "software/evaluation/rq1_holm_loso.py",
+                 "software/evaluation/rq1_sensitivity.py", "software/_provenance.py",
+                 "scripts/run_rq1_analysis.py", "scripts/run_b2_pulsedb.py")
+# The analysis, the feature step that made the tables and its config (added 2026-11-14).
+LOCKED = tuple(dict.fromkeys(("docs/protocol/sap_v1.md", *ANALYSIS_CODE, *FEATURE_CODE,
+                              FEATURE_CONFIG)))
 # Config status set by the SAP locking commit (proposed 2026-11-13, pending review).
 LOCKED_STATUS = "LOCKED"
 
@@ -71,6 +76,41 @@ def check_committed(config, config_path):
         raise ValueError("Real data: commit the SAP, the config and the analysis code "
                          f"first (SAP section 12); not committed or changed: {bad}")
     return files
+
+
+def check_feature_provenance(tables, rows_by_table):
+    """Each feature table must come with the provenance.json that
+    scripts/device_session.py wrote next to it. Its source type must match the
+    rows (any table); for non-SYNTHETIC rows it must also show a clean workspace
+    and the feature code and config hashes of the files locked now (added
+    2026-11-14). Returns {table: provenance} for the report."""
+    out = {}
+    for path in tables:
+        rows = rows_by_table[str(path)]
+        row_sources = sorted({r.get("source_type") or "UNKNOWN" for r in rows})
+        prov_path = Path(path).with_name("provenance.json")
+        if not prov_path.is_file():
+            if row_sources != ["SYNTHETIC"]:
+                raise ValueError(f"Real data: no provenance.json next to {path}")
+            out[str(path)] = None
+            continue
+        prov = json.loads(prov_path.read_text(encoding="utf-8"))
+        if [prov.get("source_type")] != row_sources:
+            raise ValueError(f"{path}: rows say {row_sources}, provenance.json says "
+                             f"{prov.get('source_type')!r}")
+        if row_sources != ["SYNTHETIC"]:
+            if prov.get("git_dirty") is not False or not prov.get("git_commit"):
+                raise ValueError(f"{path}: features made from an uncommitted workspace")
+            code = prov.get("code_sha256") or {}
+            wrong = sorted(c for c in FEATURE_CODE
+                           if code.get(c) != text_file_sha256(REPO / c))
+            if wrong:
+                raise ValueError(f"{path}: feature code differs from the locked code: {wrong}")
+            if prov.get("config_sha256") != text_file_sha256(REPO / FEATURE_CONFIG):
+                raise ValueError(f"{path}: feature config differs from {FEATURE_CONFIG}")
+        out[str(path)] = {k: prov.get(k) for k in ("git_commit", "git_dirty", "source_type",
+                                                   "config_sha256")}
+    return out
 
 
 def fmt(value):
@@ -117,11 +157,13 @@ def run(tables, config_path, output):
     if output.exists():
         raise ValueError(f"Output {output} exists; choose a new directory")
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
-    rows = read_tables(tables)
+    by_table = {str(p): read_tables([p]) for p in tables}
+    rows = [r for p in tables for r in by_table[str(p)]]
     sources = sorted({r.get("source_type") or "UNKNOWN" for r in rows})
     committed = None
     if sources != ["SYNTHETIC"]:
         committed = check_committed(config, config_path)
+    feature_provenance = check_feature_provenance(tables, by_table)
     report = analyze(rows, config)
     report["source_types"] = sources
     report["provenance"] = {
@@ -131,6 +173,7 @@ def run(tables, config_path, output):
         "code_sha256": {p: text_file_sha256(REPO / p) for p in LOCKED},
         "git_commit": _git("rev-parse", "HEAD"),
         "approval_committed": committed,
+        "feature_provenance": feature_provenance,
         "git_dirty": bool(_git("status", "--porcelain")),
         "python": platform.python_version()}
     output.mkdir(parents=True)

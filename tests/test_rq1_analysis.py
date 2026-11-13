@@ -443,3 +443,93 @@ def test_endpoint_5_reports_a_subject_left_without_evaluated_cuffs():
     assert endpoint["n_folds"] == 19 and endpoint["main_cuffs_change"] == -8
     # Eligibility is not re-examined: the main analysis keeps all 20 subjects.
     assert report["main"]["n_folds"] == 20
+
+
+def _local_imports(start, leaves=("scripts/run_b2_pulsedb.py",)):
+    """Local modules reachable from ``start`` by import (``leaves`` not expanded)."""
+    import ast
+
+    seen, todo = set(), list(start)
+    while todo:
+        name = todo.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        if name in leaves:
+            continue
+        for node in ast.walk(ast.parse((ROOT / name).read_text(encoding="utf-8"))):
+            mods = []
+            if isinstance(node, ast.ImportFrom) and node.module:
+                mods = [node.module] + [f"{node.module}.{a.name}" for a in node.names]
+            elif isinstance(node, ast.Import):
+                mods = [a.name for a in node.names]
+            for mod in mods:
+                if mod.split(".")[0] not in ("software", "scripts"):
+                    continue
+                for candidate in (mod.replace(".", "/") + ".py",
+                                  mod.replace(".", "/") + "/__init__.py"):
+                    if (ROOT / candidate).is_file():
+                        todo.append(candidate)
+    return seen
+
+
+def test_lock_covers_every_module_of_the_analysis_and_the_feature_step():
+    from scripts import device_session
+
+    feature = _local_imports(["scripts/device_session.py"])
+    assert feature <= set(device_session.CODE)
+    every = _local_imports(["scripts/run_rq1_analysis.py", "scripts/device_session.py"])
+    assert every <= set(run_rq1_analysis.LOCKED)
+    assert device_session.CONFIG in run_rq1_analysis.LOCKED
+
+
+def _provenance(path, **override):
+    from scripts import device_session
+    from software._provenance import text_file_sha256
+
+    prov = {"source_type": "DEVICE", "git_commit": "abc", "git_dirty": False,
+            "code_sha256": {c: text_file_sha256(ROOT / c) for c in device_session.CODE},
+            "config_sha256": text_file_sha256(ROOT / device_session.CONFIG), **override}
+    (path.parent / "provenance.json").write_text(json.dumps(prov))
+
+
+def test_feature_provenance_gate(tmp_path, monkeypatch):
+    import scripts.run_b2_pulsedb as b2
+
+    monkeypatch.setattr(b2, "committed_unchanged", lambda repo, p: True)
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps({**FAST, "status": "LOCKED"}))
+    cases = {
+        "none": None,
+        "dirty": {"git_dirty": True},
+        "code": {"code_sha256": {}},
+        "config": {"config_sha256": "0" * 64},
+        "source": {"source_type": "SYNTHETIC"},
+    }
+    messages = {"none": "no provenance.json", "dirty": "uncommitted workspace",
+                "code": "feature code differs", "config": "feature config differs",
+                "source": "provenance.json says"}
+    for name, override in cases.items():
+        folder = tmp_path / name
+        folder.mkdir()
+        path = _write(folder / "cuff_features.csv", _real(table(8, n=8)))
+        if override is not None:
+            _provenance(path, **override)
+        with pytest.raises(ValueError, match=messages[name]):
+            run_rq1_analysis.run([path], config_path, folder / "out")
+        assert not (folder / "out").exists()
+    good = tmp_path / "good"
+    good.mkdir()
+    path = _write(good / "cuff_features.csv", _real(table(8, n=8)))
+    _provenance(path)
+    report = run_rq1_analysis.run([path], config_path, good / "out")
+    assert report["provenance"]["feature_provenance"][str(path)]["git_dirty"] is False
+
+
+def test_rows_labelled_synthetic_with_device_provenance_are_refused(tmp_path):
+    path = _write(tmp_path / "cuff_features.csv", table(8, n=8))
+    _provenance(path)  # the logger says DEVICE, the rows say SYNTHETIC
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(FAST))
+    with pytest.raises(ValueError, match="provenance.json says 'DEVICE'"):
+        run_rq1_analysis.run([path], config_path, tmp_path / "out")

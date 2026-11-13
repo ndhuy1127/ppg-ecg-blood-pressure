@@ -28,6 +28,14 @@ của config chưa là `LOCKED`, hoặc khi chính file config đã truyền, `s
 trong `LOCKED` (phân tích, CI, mô phỏng, provenance, ingest, đặc trưng) chưa được Git theo dõi hay
 khác HEAD (SAP mục 12; sửa 2026-11-13, chờ duyệt). Report ghi `approval_committed`.
 
+Thêm 2026-11-14 (chờ duyệt): `LOCKED` gồm cả toàn bộ code của bước tính đặc trưng
+(`device_session.py` và mọi module nó import, danh sách `CODE`; test so danh sách với đồ thị
+import) và `configs/data/device_session_v1.json`. Mỗi `cuff_features.csv` phải có
+`provenance.json` do `device_session.py` ghi cạnh nó. Với dữ liệu thật: provenance phải ghi
+workspace sạch, có commit, hash code và config bằng hash của các file đang khóa. Với mọi bảng có
+provenance: `source_type` của dòng phải khớp provenance, nên bảng thiết bị bị gắn nhầm SYNTHETIC
+sẽ bị từ chối. Report ghi `feature_provenance`.
+
 ## 2. Ingest (việc F)
 
 - Kiểm bản ghi theo manifest của logger. Thiếu manifest, lệch SHA-256, lệch số packet hay số mẫu

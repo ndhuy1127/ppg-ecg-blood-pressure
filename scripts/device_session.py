@@ -39,10 +39,16 @@ FEATURE_COLUMNS = (
     "ecg_rmssd_ms", "pat_ms", "pat_sqi_v2_median_ms", "pat_n_valid", "flags",
     "source_type",
 )
-CODE = ("scripts/device_session.py", "software/device/session_ingest.py",
-        "software/device/features.py", "software/feature_extraction/week04.py",
+# Every local module the feature step imports (tests/test_rq1_analysis.py checks the
+# list against the import graph); their hashes go to provenance.json.
+CODE = ("scripts/device_session.py", "software/device/__init__.py",
+        "software/device/session_ingest.py", "software/device/features.py",
+        "software/device/synthetic_session.py", "software/feature_extraction/week04.py",
         "software/signal_processing/fiducials.py",
-        "software/signal_processing/pat_validity.py")
+        "software/signal_processing/pat_validity.py", "software/data_io/live_monitor.py",
+        "software/data_io/packet_receiver.py", "software/data_io/packet_wire.py",
+        "software/data_io/command_wire.py", "software/_provenance.py")
+CONFIG = "configs/data/device_session_v1.json"
 
 
 def _git(*args):
