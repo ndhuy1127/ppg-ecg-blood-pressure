@@ -1,0 +1,41 @@
+{
+  "version": "device-session-v1",
+  "status": "PROPOSED_PENDING_REVIEW",
+  "note": "Ingest windows, fiducial settings and SQI flags for device recordings (docs/data_convention.md section 4, docs/protocol/device_session_pipeline.md). Proposed 2026-11-13, pending review. SQI thresholds are copies of the proposals in docs/protocol/sqi_specification_v1.md and stay unlocked until G2; nothing here was chosen on BP or on any device recording.",
+  "expected_rates_hz": {"0xE1": 512.0, "0xF1": 200.0, "0xF2": 200.0, "0xF3": 200.0},
+  "window": {
+    "stored_pre_s": 60,
+    "analysis_pre_s": [10, 20, 30, 60],
+    "primary_pre_s": 30
+  },
+  "pat_ppg_color": "green",
+  "signal": {
+    "flat_std": 1e-8,
+    "min_beats": 3,
+    "refractory_s": 0.4,
+    "prominence_fraction": 0.2,
+    "foot_lookback_s": 0.5,
+    "pat_min_s": 0.08,
+    "pat_max_s": 0.4,
+    "gap_factor": 1.5,
+    "sampling_rtol": 0.05,
+    "sampling_atol_s": 1e-6,
+    "shape_min_correlation": 0.8,
+    "edge_s": 0.1,
+    "ecg_polarity": 1,
+    "ppg_polarity": 1,
+    "filter_mode": "none"
+  },
+  "pat_validity": {"min_ms": 80.0, "max_ms": 400.0, "mad_k": 3.0, "mad_floor_ms": 10.0, "min_pairs": 3},
+  "sqi_hardware": {
+    "status": "PROPOSAL_NOT_LOCKED",
+    "adc_saturation_max_fraction": 0.05
+  },
+  "sources": {
+    "window": "Protocol v0.3 section 6.2: 60 s stored before t0; sensitivity windows 10/20/30/60 s; primary 30 s is the proposal of sqi_specification_v1.md section 2, to be locked on the pilot.",
+    "pat_ppg_color": "Slot 1 (green on V1) is the time origin of the PPG slots (Packet Schema V0.1 section 7), so its PAT does not depend on the LED_PW spacing. Choice of colour for PAT is not locked; proposal 2026-11-13, pending review. Features are computed for every colour.",
+    "signal": "Defaults of features-sqi-v1/v2 (software/signal_processing/fiducials.py SignalConfig), unchanged; every value is in seconds, so nothing depends on 125 Hz. The rate comes from the data (ECG 512, PPG 200 sps).",
+    "pat_validity": "Same values as configs/data/week05_fiducials.json (pat-validity-v1). mad_floor_ms 10 ms stays above the PPG sample period at 200 sps (5 ms).",
+    "sqi_hardware": "sqi_specification_v1.md section 3.3: ADC saturation > 5 % of the window (protocol 6.1 and 7.3); the other hardware flags fire on any packet. Not locked (G2)."
+  }
+}

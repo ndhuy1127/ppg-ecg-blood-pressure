@@ -119,7 +119,9 @@ def extract_window(window: SignalWindow, config: SignalConfig,
         if (not isinstance(window.metadata[k], str) or not window.metadata[k].strip()
                 or window.metadata[k].strip() != window.metadata[k]):
             raise ValueError("Missing identity/provenance")
-    if window.metadata["split"] not in ("train", "val", "test"):
+    # "device" (2026-11-13): a device-session window, which has no dataset split
+    # (software/device/features.py). Outputs for train/val/test are unchanged.
+    if window.metadata["split"] not in ("train", "val", "test", "device"):
         raise ValueError("Invalid split")
     checksum = window.metadata["source_sha256"]
     if len(checksum) != 64 or any(c not in "0123456789abcdef" for c in checksum):
