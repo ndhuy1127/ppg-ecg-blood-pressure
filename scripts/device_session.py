@@ -39,9 +39,12 @@ FEATURE_COLUMNS = (
     "ecg_rmssd_ms", "pat_ms", "pat_sqi_v2_median_ms", "pat_n_valid", "flags",
     "source_type",
 )
-# Every local module the feature step imports (tests/test_rq1_analysis.py checks the
-# list against the import graph); their hashes go to provenance.json.
-CODE = ("scripts/device_session.py", "software/device/__init__.py",
+# Every local module the feature step imports, with the parent package __init__ files
+# Python runs on import (tests/test_rq1_analysis.py checks the list against the import
+# graph); their hashes go to provenance.json.
+CODE = ("scripts/device_session.py", "software/__init__.py",
+        "software/device/__init__.py", "software/feature_extraction/__init__.py",
+        "software/signal_processing/__init__.py", "software/data_io/__init__.py",
         "software/device/session_ingest.py", "software/device/features.py",
         "software/device/synthetic_session.py", "software/feature_extraction/week04.py",
         "software/signal_processing/fiducials.py",
@@ -142,6 +145,9 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
         "cuff_log_sha256": si.sha256_file(cuff_log),
         "config_sha256": text_file_sha256(config_path),
         "code_sha256": {c: text_file_sha256(REPO / c) for c in CODE},
+        # Binds this provenance to the tables it describes (checked by run_rq1_analysis).
+        "outputs_sha256": {name: si.sha256_file(output / name)
+                           for name in ("cuff_features.csv", "cuff_features.json")},
         "git_commit": _git("rev-parse", "HEAD"),
         "git_dirty": bool(_git("status", "--porcelain")),
         "python": platform.python_version(), "source_type": manifest["source_type"],

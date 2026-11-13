@@ -29,7 +29,8 @@ from software.evaluation.rq1_analysis import TARGETS, analyze  # noqa: E402
 from scripts.device_session import CODE as FEATURE_CODE  # noqa: E402
 from scripts.device_session import CONFIG as FEATURE_CONFIG  # noqa: E402
 
-ANALYSIS_CODE = ("software/evaluation/rq1_analysis.py",
+ANALYSIS_CODE = ("software/__init__.py", "software/evaluation/__init__.py",
+                 "software/evaluation/rq1_analysis.py",
                  "software/evaluation/mean_intervals.py",
                  "software/evaluation/rq1_holm_loso.py",
                  "software/evaluation/rq1_sensitivity.py", "software/_provenance.py",
@@ -78,12 +79,37 @@ def check_committed(config, config_path):
     return files
 
 
+def commit_text_sha256(commit, path):
+    """LF-normalised SHA-256 of ``path`` as stored in ``commit``; None when the
+    object is not a commit of this repository (a tree id is refused) or the file
+    does not exist in it."""
+    import subprocess
+
+    from software._provenance import text_sha256
+
+    if not commit or not all(ch in "0123456789abcdef" for ch in str(commit).lower()):
+        return None
+    try:
+        kind = subprocess.check_output(["git", "cat-file", "-t", str(commit)], cwd=REPO,
+                                       text=True, stderr=subprocess.DEVNULL).strip()
+        if kind != "commit":
+            return None
+        blob = subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=REPO,
+                                       stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return text_sha256(blob)
+
+
 def check_feature_provenance(tables, rows_by_table):
     """Each feature table must come with the provenance.json that
     scripts/device_session.py wrote next to it. Its source type must match the
-    rows (any table); for non-SYNTHETIC rows it must also show a clean workspace
-    and the feature code and config hashes of the files locked now (added
-    2026-11-14). Returns {table: provenance} for the report."""
+    rows and, when it lists the table, the table hash must match (any table).
+    For non-SYNTHETIC rows it must also list the table, show a clean workspace,
+    name a commit of this repository that holds exactly the recorded feature code
+    and config, and those hashes must equal the files locked now (added
+    2026-11-14; binding and commit check after review the same day). Returns
+    {table: provenance summary} for the report."""
     out = {}
     for path in tables:
         rows = rows_by_table[str(path)]
@@ -98,8 +124,14 @@ def check_feature_provenance(tables, rows_by_table):
         if [prov.get("source_type")] != row_sources:
             raise ValueError(f"{path}: rows say {row_sources}, provenance.json says "
                              f"{prov.get('source_type')!r}")
-        if row_sources != ["SYNTHETIC"]:
-            if prov.get("git_dirty") is not False or not prov.get("git_commit"):
+        listed = (prov.get("outputs_sha256") or {}).get(Path(path).name)
+        real = row_sources != ["SYNTHETIC"]
+        if (listed is not None or real) and listed != sha256_file(path):
+            raise ValueError(f"{path}: table is not the one provenance.json describes "
+                             "(hash differs or not listed)")
+        if real:
+            commit = prov.get("git_commit")
+            if prov.get("git_dirty") is not False or not commit:
                 raise ValueError(f"{path}: features made from an uncommitted workspace")
             code = prov.get("code_sha256") or {}
             wrong = sorted(c for c in FEATURE_CODE
@@ -108,8 +140,16 @@ def check_feature_provenance(tables, rows_by_table):
                 raise ValueError(f"{path}: feature code differs from the locked code: {wrong}")
             if prov.get("config_sha256") != text_file_sha256(REPO / FEATURE_CONFIG):
                 raise ValueError(f"{path}: feature config differs from {FEATURE_CONFIG}")
-        out[str(path)] = {k: prov.get(k) for k in ("git_commit", "git_dirty", "source_type",
-                                                   "config_sha256")}
+            recorded = {**{c: code.get(c) for c in FEATURE_CODE},
+                        FEATURE_CONFIG: prov.get("config_sha256")}
+            at_commit = sorted(c for c, value in recorded.items()
+                               if commit_text_sha256(commit, c) != value)
+            if at_commit:
+                raise ValueError(f"{path}: commit {commit!r} does not hold the recorded "
+                                 f"feature code and config: {at_commit}")
+        out[str(path)] = {"provenance_sha256": sha256_file(prov_path),
+                          **{k: prov.get(k) for k in ("git_commit", "git_dirty",
+                                                      "source_type", "config_sha256")}}
     return out
 
 

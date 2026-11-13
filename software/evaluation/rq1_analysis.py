@@ -505,10 +505,12 @@ def _filtered(prep, config, drop, main_cuffs):
     selects leave both the training and the evaluated sets, then the folds are
     refitted. A subject left without evaluated cuffs has no d_s here (reported)."""
     cuffs = [dict(c) for c in prep["cuffs"]]
-    dropped = 0
+    flagged = from_training = from_evaluation = 0
     for c in cuffs:
         if drop(c):
-            dropped += 1
+            flagged += 1
+            from_training += bool(c["trainable"])
+            from_evaluation += bool(c["in_main"])
             c["in_main"] = c["trainable"] = False
     remaining = {c["subject"] for c in cuffs if c["in_main"]}
     lost = [s for s in prep["eligible"] if s not in remaining]
@@ -521,7 +523,12 @@ def _filtered(prep, config, drop, main_cuffs):
     for c in cuffs:
         if c["in_main"]:
             kept_per[c["subject"]] = kept_per.get(c["subject"], 0) + 1
-    info = {"rows_dropped": dropped, "calibration": "main_analysis",
+    n = len(sub["eligible"])
+    info = {"confirmatory": False, "rows_dropped": flagged,
+            "dropped_from_training": from_training,
+            "dropped_from_evaluation": from_evaluation,
+            "calibration": "main_analysis", "n_evaluated_subjects": n,
+            "below_min_eligible": n < MIN_ELIGIBLE,
             "subjects_without_evaluated_cuffs": lost,
             "evaluated_cuffs_by_subject": {s: [kept_per.get(s, 0), n]
                                            for s, n in sorted(main_per.items())}}

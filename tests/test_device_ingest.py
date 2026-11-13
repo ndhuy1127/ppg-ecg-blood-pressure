@@ -159,6 +159,11 @@ def test_script_writes_outputs_and_refuses_overwrite_and_raw(lossy, tmp_path):
                  "provenance.json"):
         assert (out / name).is_file()
     assert len(rows) == 1 and rows[0]["source_type"] == "SYNTHETIC"
+    # The provenance names the table it describes, for the RQ1 gate.
+    prov = json.loads((out / "provenance.json").read_text(encoding="utf-8"))
+    assert prov["outputs_sha256"]["cuff_features.csv"] == si.sha256_file(
+        out / "cuff_features.csv")
+    assert set(device_session.CODE) <= set(prov["code_sha256"])
     with pytest.raises(ValueError, match="exists"):
         device_session.run(directory, log, DEVICE_CONFIG, out)
     with pytest.raises(ValueError, match="data/raw"):

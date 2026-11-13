@@ -36,6 +36,14 @@ workspace sạch, có commit, hash code và config bằng hash của các file �
 provenance: `source_type` của dòng phải khớp provenance, nên bảng thiết bị bị gắn nhầm SYNTHETIC
 sẽ bị từ chối. Report ghi `feature_provenance`.
 
+Sửa 2026-11-14 sau rà soát độc lập (chờ duyệt): `provenance.json` ghi hash của
+`cuff_features.csv` và `cuff_features.json` (`outputs_sha256`); runner từ chối bảng không
+khớp hash này, nên không thể đặt bảng khác hay bảng đã sửa cạnh một provenance. Với dữ liệu
+thật, `git_commit` phải là commit có thật của repo và chứa đúng code và config đã ghi trong
+provenance. Danh sách khóa có thêm các `__init__.py` của package cha (Python chạy chúng khi
+import). Endpoint 5 và 7 báo thêm `confirmatory: false`, số người còn được đánh giá, cờ dưới
+15 người, và tách số lần cuff có cờ thành số bỏ khỏi tập học và số bỏ khỏi tập đánh giá.
+
 ## 2. Ingest (việc F)
 
 - Kiểm bản ghi theo manifest của logger. Thiếu manifest, lệch SHA-256, lệch số packet hay số mẫu
