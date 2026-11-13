@@ -1,14 +1,14 @@
 # Định nghĩa RQ2a trên PulseDB: chia theo cửa sổ so với chia theo người
 
-> **Trạng thái: đề xuất ngày 2026-11-13, chờ duyệt.** Duyệt bằng commit riêng đổi `status` của
-> [rq2a_pulsedb_v0.json](../../configs/models/rq2a_pulsedb_v0.json) từ `PROPOSED_NOT_RUN` thành
-> `APPROVED_NOT_RUN`, **trước** khi chạy bất kỳ số nào (mục 8). Runner từ chối chạy nếu chính
+> **Trạng thái: đề xuất ngày 2026-11-13, duyệt nguyên trạng ngày 2026-11-14** bằng commit riêng
+> đổi `status` của [rq2a_pulsedb_v0.json](../../configs/models/rq2a_pulsedb_v0.json) từ
+> `PROPOSED_NOT_RUN` thành `APPROVED_NOT_RUN`, **trước** khi chạy bất kỳ số nào (mục 8). Runner từ chối chạy nếu chính
 > file config truyền vào, file này hoặc một file code chưa được Git theo dõi, khác HEAD hay là
 > symlink (`committed_unchanged`, như B2 và B5), hoặc nếu split khác split đã ghim (mục 2).
-> Chưa chạy lần nào, kể cả trên dữ liệu thật. Sau khi thấy số thì không đổi gì; nếu phải đổi thì
+> Trước commit duyệt chưa chạy lần nào trên dữ liệu thật. Sau khi thấy số thì không đổi gì; nếu phải đổi thì
 > tạo version mới và báo cả hai.
 >
-> **Sửa 2026-11-13 (chờ duyệt), sau rà soát độc lập, trước mọi lần chạy:** nhãn A/B đổi cho khớp
+> **Sửa 2026-11-13 (duyệt 2026-11-14), sau rà soát độc lập, trước mọi lần chạy:** nhãn A/B đổi cho khớp
 > [câu hỏi nghiên cứu](../research_questions_v0.1.md) mục 5.B (A = chia ngẫu nhiên theo cửa sổ,
 > B = chia theo người; bản đầu dùng ngược lại); hiệu vẫn là MAE(theo người) − MAE(theo cửa sổ),
 > tức B − A; thêm chỉ số theo mục 5.D (RMSE, ME ± SD, % suy giảm, CI cho từng MAE và cho hiệu
@@ -31,7 +31,7 @@ nhân duy nhất là mô hình nhận dạng người.
   `make_designs` từ chối mọi dòng có `split` khác; runner không featurize đoạn test (như B3,
   `verify_inputs` vẫn đọc lại raw để băm, mọi dòng, nhưng không giá trị nào đi vào mô hình).
 - QC nhãn như B3 v1: loại dòng có DBP ≥ SBP (trên split v2 là 0 dòng).
-- **Split ghim** (thêm 2026-11-13, chờ duyệt): `split_sha256` của config ghi SHA-256 của raw,
+- **Split ghim** (thêm 2026-11-13, duyệt 2026-11-14): `split_sha256` của config ghi SHA-256 của raw,
   inventory, manifest và config của split. Runner so bốn giá trị này trước khi đọc đoạn nào;
   lệch là dừng. Giá trị là của split v2 `data/processed/pulsedb_train400_split_run01`: ba hash
   inventory, manifest, config tính lại từ file ngày 2026-11-13 và khớp `report.json` của split;
@@ -150,10 +150,10 @@ cho từng cách chia, trên E (sai số = dự đoán − tham chiếu):
   Với 5 lần lặp, chính ước lượng này rất thô (4 bậc tự do), nên chỉ dùng để nêu giới hạn, không
   thay CI.
 
-## 8. Chờ duyệt bằng commit riêng trước khi chạy
+## 8. Duyệt bằng commit riêng trước khi chạy
 
-Trước khi chạy cần một commit riêng, chỉ đổi `status` của config thành `APPROVED_NOT_RUN`, sau khi
-nhóm đồng ý các điểm tự chốt dưới đây:
+**Duyệt ngày 2026-11-14, nguyên trạng,** bằng commit riêng đổi `status` của config thành
+`APPROVED_NOT_RUN`, trước khi chạy. Các điểm tự chốt được duyệt:
 
 1. Chọn B3 v1 làm mô hình duy nhất (mục 3).
 2. Thiết kế cùng E, khác tập huấn luyện; 10 % người, 20 % cửa sổ mỗi người (mục 4).

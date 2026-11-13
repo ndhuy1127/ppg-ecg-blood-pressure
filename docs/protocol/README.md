@@ -36,8 +36,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   (ECG + PPG), chọn epoch bằng 10 % người train; đề xuất 2026-11-07, duyệt nguyên trạng 2026-11-11
   bằng commit riêng trước khi chạy val; kết quả trên val ở mục 10
 - [Định nghĩa RQ2a trên PulseDB](rq2a_pulsedb_definition.md): chia ngẫu nhiên theo cửa sổ (A) so với chia
-  theo người (B), cùng tập đánh giá, B3 v1 nguyên trạng, split ghim, chỉ train ∪ val; đề xuất 2026-11-13, chờ
-  duyệt, chưa chạy
+  theo người (B), cùng tập đánh giá, B3 v1 nguyên trạng, split ghim, chỉ train ∪ val; đề xuất 2026-11-13, duyệt
+  nguyên trạng 2026-11-14 bằng commit riêng trước khi chạy
 - [SAP v1 cho RQ1](sap_v1.md): estimand, endpoint, đa kiểm định, δ, mô phỏng độ nhạy, dữ liệu
   thiếu, baseline không dùng tín hiệu; đề xuất 2026-11-07, mọi mục chốt 2026-11-12, khóa bằng
   commit trước pilot

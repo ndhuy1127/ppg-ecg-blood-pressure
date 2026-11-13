@@ -221,7 +221,7 @@ def test_shipped_config_loads_and_pins_the_split():
     payload = (REPO / "configs/models/rq2a_pulsedb_v0.json").read_bytes()
     config = rq2a.load_config(payload)
     assert config["pool_splits"] == ["train", "val"]
-    assert config["status"] == "PROPOSED_NOT_RUN"
+    assert config["status"] == "APPROVED_NOT_RUN"
     # Same split as B5 (the B3 v1 split v2 run01).
     b5 = json.loads((REPO / "configs/models/b5_pulsedb_v0.json").read_bytes())
     assert config["split_sha256"] == b5["split_sha256"]

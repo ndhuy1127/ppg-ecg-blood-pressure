@@ -1,6 +1,6 @@
 {
   "schema_version": "rq2a-pipeline-v0",
-  "status": "PROPOSED_NOT_RUN",
+  "status": "APPROVED_NOT_RUN",
   "unit": "mmHg",
   "pool_splits": ["train", "val"],
   "split_sha256": {
