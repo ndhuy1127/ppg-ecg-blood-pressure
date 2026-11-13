@@ -10,3 +10,4 @@ trách, đầu ra bắt buộc, tiêu chí hoàn thành và phụ thuộc.
 - [Kế hoạch Tuần 5](WEEK_05.md)
 - [Kế hoạch Tuần 6](WEEK_06.md)
 - [Kế hoạch Tuần 7](WEEK_07.md)
+- [Kế hoạch Tuần 8](WEEK_08.md)
