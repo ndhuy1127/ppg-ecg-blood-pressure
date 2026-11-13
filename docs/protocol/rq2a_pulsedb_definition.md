@@ -189,3 +189,24 @@ không nói gì về hiệu năng huyết áp.
 - Output `runs/rq2a_pulsedb/<UTC>/`: `rq2a_table.md`, `report.json` (provenance: commit,
   `workspace_has_changes`, `approval_committed`, SHA-256 đầu vào và mã, phiên bản thư viện,
   `source_type`). Runner từ chối ghi đè thư mục output.
+
+## 10. Kết quả (chạy 2026-11-14)
+
+Chạy một lần sau commit duyệt `6f6372b`; report ghi `workspace_has_changes: false` và
+`approval_committed` đủ config, định nghĩa và code. Không đổi điểm nào của định nghĩa sau khi
+thấy số. Bảng, report và hash:
+[reports/weekly/week_08/pulsedb_rq2a_v0/](../../reports/weekly/week_08/pulsedb_rq2a_v0/README.md).
+
+| Mô hình | Đầu ra | MAE A (theo cửa sổ) | MAE B (theo người) | ΔMAE = B − A [CI 95 %] | % suy giảm [CI 95 %] |
+| --- | --- | --- | --- | --- | --- |
+| B0 | SBP | 14,99 | 14,99 | 0,01 [−0,00; 0,02] | 0,06 [−0,03; 0,16] |
+| B0 | DBP | 9,33 | 9,35 | 0,01 [−0,00; 0,02] | 0,12 [−0,02; 0,26] |
+| B3 | SBP | 13,86 | 14,81 | 0,95 [0,64; 1,34] | 6,82 [4,66; 9,54] |
+| B3 | DBP | 8,51 | 9,20 | 0,69 [0,50; 0,92] | 8,09 [5,97; 10,74] |
+
+- Cả 5 lần lặp đều cho ΔMAE của B3 dương (SBP 0,70–1,29; DBP 0,55–0,76 mmHg).
+- `between_replicate_se` nhỏ hơn `bootstrap_se` (B3 SBP 0,10 so với 0,18; DBP 0,04 so với
+  0,11), nên ước lượng thô ở mục 7 không cho thấy CI bị hẹp do dùng chung mô hình.
+- Đọc: với B3, chia theo cửa sổ cho MAE thấp hơn chia theo người khoảng 1 mmHg (7–8 %), CI trên
+  0 ở cả SBP và DBP. Đây là cận dưới tương đối của hiệu ứng rò rỉ cho mô hình yếu (mục 7), báo
+  ở phụ lục; không dùng để chọn mô hình hay báo hiệu năng.
