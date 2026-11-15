@@ -37,7 +37,7 @@ ECG + PPG, và mô tả đủ để dựng lại. Benchmark học sâu trên Pul
 
 Vì vậy "tái lập" ở đây là dựng lại kiến trúc và quy trình theo mô tả, không có con số đích để
 so. Hình 4 (sơ đồ lớp) chưa được đối chiếu. Bố cục lớp chi tiết ở mục 2 là của ResNet-18 gốc,
-chờ duyệt.
+duyệt nguyên trạng 2026-11-11.
 
 ## 2. Phần bám bài gốc
 
@@ -51,7 +51,7 @@ chờ duyệt.
 
 ## 3. Phần chỉnh vì dữ liệu và quy trình của dự án
 
-Bài không nêu hoặc khác dữ liệu ở các điểm dưới. Mỗi điểm là đề xuất, chờ duyệt.
+Bài không nêu hoặc khác dữ liệu ở các điểm dưới. Mỗi điểm là đề xuất, duyệt nguyên trạng 2026-11-11.
 
 - **Dữ liệu và split:** đúng split `pulsedb-split-v2` của B3 v1 (pool VitalDB Train 400
   người, seed 72); config ghim bốn hash, runner từ chối split khác. Bài huấn luyện trên tập

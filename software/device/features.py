@@ -20,7 +20,7 @@ not locked (SQI v1: locked on G2). BP is never read here.
 
 import numpy as np
 
-from software.data_io.live_monitor import adc_ceiling
+from software.data_io.live_monitor import adc_ceiling, led_codes
 from software.feature_extraction.week04 import VERSION_V2, SignalWindow, extract_window
 from software.signal_processing.fiducials import Channel, SignalConfig
 from software.signal_processing.pat_validity import (
@@ -29,6 +29,9 @@ from software.signal_processing.pat_validity import (
 
 VERSION = "device-features-v1"
 PPG_KEYS = ("0xF1", "0xF2", "0xF3", "0xF4")
+# LED lock states of a window (led_lock_status) that set ppg:led_not_locked.
+LOCK_NOT_HELD = ("no_lock_metadata", "not_applied", "applied_after_window_start",
+                 "state_unverified", "codes_differ")
 
 
 def ecg_codes(words):
@@ -64,9 +67,58 @@ def _packets_in(packets, key, chain, low, high):
             and p["sample_index_ext"] + p["sample_count"] - 1 >= low]
 
 
-def hardware_flags(series, rows_by_key, packets, session, colors, sqi, lock_applied_us,
-                   start_us):
-    """SQI v1 section 3.3 flags and continuous indices for one window."""
+def led_lock_status(session, start_us, end_us, study):
+    """State of the locked LED codes (protocol 6.1) in the window [start_us, end_us),
+    from the decoded session (SQI v1 section 3.3; fixed 2026-11-15). ``study``: the
+    recording belongs to a subject (``subject_id`` set).
+
+    - ``not_checked``: no ``ppg_led_lock`` and no subject (bring-up, SYNTHETIC);
+    - ``no_lock_metadata``: a subject's recording without a lock (the LED
+      calibration recording of the first session, or a metadata error);
+    - ``not_applied``: no MAX30101 state of this device session carried the locked
+      codes (logger issue ``ppg_led_lock_not_applied``: an MCU restart with the
+      codes not sent again, say);
+    - ``applied_after_window_start``: the locked codes took effect after the start;
+    - ``state_unverified``: the state where the lock took effect is not found by
+      sequence and generation, or the MAX30101 state in effect at the start, or one
+      that began inside the window, is not a configured chip state (a fake source
+      or a chip that is down); an earlier state is never carried across it;
+    - ``codes_differ``: such a state has other LED codes than the state where the
+      lock took effect (logger issue ``ppg_led_lock_mismatch``);
+    - ``locked`` otherwise.
+
+    Every state in ``LOCK_NOT_HELD`` sets ``ppg:led_not_locked``. The lock is the one
+    of this recording's metadata; that a subject keeps the same codes in every
+    session is not checked here (open, docs/protocol/device_session_pipeline.md)."""
+    lock = session.get("ppg_led_lock")
+    if lock is None:
+        return "no_lock_metadata" if study else "not_checked"
+    applied = lock.get("applied")
+    if applied is None:
+        return "not_applied"
+    if applied["t_anchor_us"] > start_us:
+        return "applied_after_window_start"
+    states = sorted(((session.get("afe_config") or {}).get("MAX30101") or []),
+                    key=lambda s: (s["t_anchor_us"], s["first_seq"]))
+    locked = [led_codes(s["registers"]) for s in states
+              if s["first_seq"] == applied["seq"]
+              and s["generation"] == applied["generation"]
+              and s["source"] == "chip" and s["configured"]]
+    if not locked:
+        return "state_unverified"
+    before = [s for s in states if s["t_anchor_us"] <= start_us]
+    during = [s for s in states if start_us < s["t_anchor_us"] < end_us]
+    for state in before[-1:] + during:
+        if not (state["source"] == "chip" and state["configured"]):
+            return "state_unverified"
+        if led_codes(state["registers"]) != locked[0]:
+            return "codes_differ"
+    return "locked"
+
+
+def hardware_flags(series, rows_by_key, packets, session, colors, sqi, lock_status):
+    """SQI v1 section 3.3 flags and continuous indices for one window;
+    ``lock_status`` comes from ``led_lock_status``."""
     flags, quality = [], {}
     states = [s for s in ((session.get("afe_config") or {}).get("MAX30101") or [])
               if s["source"] == "chip" and s["configured"]]
@@ -96,7 +148,7 @@ def hardware_flags(series, rows_by_key, packets, session, colors, sqi, lock_appl
                 quality[f"{colors.get(key, key)}_saturation_fraction"] = fraction
                 if fraction > sqi["adc_saturation_max_fraction"]:
                     flags.append("ppg:adc_saturation")
-    if lock_applied_us is not None and lock_applied_us > start_us:
+    if lock_status in LOCK_NOT_HELD:
         flags.append("ppg:led_not_locked")
     return sorted(set(flags)), quality
 
@@ -113,13 +165,13 @@ def window_features(cuff, series, packets, session, config, identity):
     start = t0 - pre * 1e6
     colors = {key: s.name for key, s in series.items() if key in PPG_KEYS}
     rows = {key: _slice(s, start, t0) for key, s in series.items()}
-    lock = session.get("ppg_led_lock") or {}
-    applied = (lock.get("applied") or {}).get("t_anchor_us") if lock else None
+    lock_status = led_lock_status(session, start, t0, bool(identity.get("subject_id")))
     hw_flags, hw_quality = hardware_flags(series, rows, packets, session, colors,
-                                          config["sqi_hardware"], applied, start)
+                                          config["sqi_hardware"], lock_status)
     out = {"version": VERSION, "event_id": cuff["event_id"], "phase": cuff["phase"],
            "window_pre_s": pre, "hardware_flags": hw_flags,
-           "hardware_quality": hw_quality, "by_color": {}}
+           "hardware_quality": hw_quality, "led_lock_status": lock_status,
+           "by_color": {}}
     has_ecg = "0xE1" in series and len(rows["0xE1"]) > 0
     if has_ecg:
         codes, _ = ecg_codes(series["0xE1"].value[rows["0xE1"]])
@@ -153,15 +205,24 @@ def window_features(cuff, series, packets, session, config, identity):
                                                "fit, latency L from session metadata")
                               if verified else "")
         result = extract_window(window, signal, VERSION_V2)
-        validity = None
+        validity, color_flags = None, list(result["flags"])
         r = np.asarray(result["fiducials"]["r_times_s"])
         feet = np.asarray(result["fiducials"]["foot_times_s"])
         if verified and len(rows[key]) > 1 and len(r):
-            span = detectable_foot_span(ppg.timestamps, signal.edge_s,
-                                        signal.foot_lookback_s)
-            validity = pat_beats(r, feet, rules, foot_span=span)
+            try:
+                span = detectable_foot_span(ppg.timestamps, signal.edge_s,
+                                            signal.foot_lookback_s)
+            except ValueError:
+                # The PPG covers too little of the window for any foot (under
+                # 2 x edge_s + foot_lookback_s, 0.7 s) or its times are not
+                # strictly increasing: no PAT for this colour, and the session
+                # goes on (fixed 2026-11-15; before, one such window stopped the
+                # whole session).
+                color_flags.append("pat:no_foot_span")
+            else:
+                validity = pat_beats(r, feet, rules, foot_span=span)
         out["by_color"][series[key].name] = {
-            "channel": key, "features": result["features"], "flags": result["flags"],
+            "channel": key, "features": result["features"], "flags": color_flags,
             "quality": result["quality"], "fiducials": result["fiducials"],
             "pat_validity": None if validity is None else {
                 k: validity[k] for k in ("version", "n_pairs", "n_valid",

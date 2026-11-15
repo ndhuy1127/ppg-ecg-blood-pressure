@@ -1,6 +1,7 @@
 # Pipeline dữ liệu thiết bị: ingest, mốc và PAT, phân tích RQ1
 
-> **Trạng thái: đề xuất ngày 2026-11-13; sửa theo rà soát độc lập và duyệt 2026-11-14.** Mới chạy
+> **Trạng thái: đề xuất ngày 2026-11-13; sửa theo rà soát độc lập và duyệt 2026-11-14; sửa
+> 2026-11-15 sau rà soát toàn dự án (chờ duyệt): mục 2, 3.3, 3.4, 4.1–4.3, 5.** Mới chạy
 > trên dữ liệu SYNTHETIC. Chưa có bản ghi thiết bị nào. Kết quả SYNTHETIC chỉ kiểm chứng code, không nói gì về thiết bị hay BP.
 
 Ba bước, mỗi bước dùng đầu ra của bước trước:
@@ -66,6 +67,15 @@ Sửa 2026-11-14 sau rà soát độc lập lần hai (duyệt 2026-11-14):
   tốc độ thực của từng kênh.
 - Cửa sổ theo protocol 6.2 và 6.4: lưu `[t0 − 60 s, t0)`; phân tích 10/20/30/60 s; đoạn bơm
   `[t0, cuff_end]`; với M1/M2 kiểm cửa sổ có nằm sau mốc pha (mã 4) không.
+- Khoảng cách khe PPG theo `LED_PW` lấy từ `software/device/max30101.py` (datasheet MAX30101
+  Table 11); trước 2026-11-15 ingest lấy hằng số này từ module SYNTHETIC, nên test ingest và bộ
+  tạo dùng chung một giá trị và không bắt được giá trị sai. A4 kiểm giá trị này trên bàn.
+- Tiêu chí A3 trên mọi bản ghi (thêm 2026-11-15, chờ duyệt): trung vị phần dư của hồi quy mốc theo
+  khối 10 s, lớn nhất theo trị tuyệt đối, ghi ở cột `residual_block_max_us` của `timebase.csv`;
+  vượt 0,2 ms thì có cờ phiên `<kênh>:chain<k>:timebase_residual_above_a3`. Khối cuối ngắn hơn
+  5 s gộp vào khối trước, để vài mốc cuối không mang riêng jitter của chúng; chuỗi dưới 3 mốc
+  không đánh giá được (ô trống). Chỉ báo, không đổi thời gian mẫu; khi đó một đường thẳng cho
+  cả chuỗi không còn đủ (kế hoạch đo đồng bộ mục 9).
 - Test (`tests/test_device_ingest.py`, luồng qua `packet_logger.record`): số packet, tốc độ thực
   (−40 và +2 500 ppm đặt trước, sai ≤ 5 ppm), packet mất chèn cố ý (ECG 2, PPG khe 1 một packet,
   8 mẫu), thời gian mẫu so với thời gian thật (≤ 60 µs), metadata hay output bị sửa thì báo lỗi,
@@ -99,6 +109,15 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 - Mất một packet PPG trong cửa sổ: cờ `stream:gap`, kênh đó có `ppg:time_gap` và không có PAT;
   hai khe còn lại không bị ảnh hưởng.
 - Test PulseDB cũ không đổi (`week04.py` chỉ nhận thêm giá trị split `device`).
+- Thêm 2026-11-15:
+  - các test thời gian ở trên chạy với `filter_mode = none` để tách riêng phép ghép trục;
+  - trôi nền (ECG khoảng 3 lần đỉnh R, PPG khoảng 4 lần biên độ xung, đỉnh–đỉnh): không lọc thì
+    chỉ tìm được 8/34 đỉnh R; với bộ lọc của config tìm đủ 34, sai số PAT lớn nhất 2,7 ms,
+    trung bình +1,2 ms do bộ lọc làm tròn góc của sườn lên tuyến tính (mục 3.4);
+  - PPG dừng ngay sau đầu cửa sổ (còn 0,32 s): kênh đó có cờ `pat:no_foot_span`, không có PAT,
+    buổi vẫn chạy tiếp; trước đó lỗi này làm dừng cả buổi;
+  - `led_lock_status` đủ các trường hợp (mục 4.3 ý 19), và cờ `ppg:led_not_locked` tới được bảng
+    theo lần cuff.
 
 ### 3.4. Ghi chú và giới hạn
 
@@ -112,6 +131,22 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 - Ngưỡng SQI vẫn là đề xuất của [SQI v1](sqi_specification_v1.md), khóa trên G2.
 - L của PPG chưa có giá trị thiết kế; PAT tuyệt đối có thể lệch cố định
   ([kế hoạch đo đồng bộ](../../hardware/test_reports/sync_10min_test_plan.md) mục 9–10).
+- **Bộ lọc (đổi 2026-11-15, chờ duyệt):** `filter_mode = zero_phase`, ECG 0,5–40 Hz, PPG
+  0,5–8 Hz, Butterworth bậc 2 chạy xuôi rồi ngược trong từng cửa sổ (mặc định của
+  `features-sqi-v1`). Trước đó config để `none`, trong khi bộ lọc thông cao số của MAX30001 đã
+  tắt vì lọc 0,5 Hz được định làm offline
+  ([đề xuất bo](../../configs/hardware/custom_board_proposal.md), 2026-10-25). Ngưỡng
+  prominence bằng 0,2 lần biên độ đỉnh–đỉnh của cả cửa sổ, nên khi không lọc, trôi nền che phần
+  lớn nhịp (mục 3.3). Đây là giá trị cho pilot, khóa trên pilot theo độ chính xác mốc, không theo
+  sai số RQ1. Giới hạn đã biết, nêu ở vòng phản biện độc lập:
+  - đệm mặc định của bộ lọc chỉ 15 mẫu (75 ms PPG, 29 ms ECG) và `edge_s` 0,1 s không chứng minh
+    bộ lọc 0,5 Hz đã ổn định ở mép; ngưỡng prominence tính trên cả cửa sổ trước khi bỏ mép, nên
+    quá độ ở mép có thể che nhịp bên trong;
+  - bộ lọc đổi hình thái: trên xung giả, thời gian lên tăng từ 103 lên 126 ms; độ lệch có thể đổi
+    theo HR (trên xung giả, biên độ chênh 0,3 % giữa 70 và 90 nhịp/phút);
+  - trước khi khóa: đo trên bản ghi G2 độ phủ nhịp, PAT, ΔPAT, biên độ, thời gian lên, độ rộng
+    khi có và không có lọc; cân nhắc lọc trên đoạn dài hơn trước cửa sổ, không lọc qua khoảng
+    trống, ranh giới cấu hình hay đoạn bơm sau `t0`.
 
 ## 4. Phân tích RQ1 (việc H)
 
@@ -119,7 +154,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 
 | SAP | Code |
 | --- | --- |
-| Mục 2: lần cuff hợp lệ, người đạt chuẩn, tập phân tích chính | `prepare`: `status = valid`; phiên đạt khi ≥ 2 lần cuff tính được PPG và PAT; một lần cuff có `led_readjusted` ở phiên ≥ 2 thì **cả phiên** không đạt, ra khỏi tập chính và tập học; một dòng có `pilot` thì loại người đó. Ba cột 0/1 đọc qua một hàm `flag01`; dòng không phải SYNTHETIC thiếu cột thì dừng |
+| Mục 2: lần cuff hợp lệ, người đạt chuẩn, tập phân tích chính | `prepare`: `status = valid`; lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, phiên đạt, tập chính, tập học và endpoint 3, vào lại endpoint 6 (sửa 2026-11-15, chờ duyệt; mục 4.3 ý 19); phiên đạt khi ≥ 2 lần cuff tính được PPG và PAT; một lần cuff có `led_readjusted` ở phiên ≥ 2 thì **cả phiên** không đạt, ra khỏi tập chính và tập học; một dòng có `pilot` thì loại người đó. Ba cột 0/1 đọc qua một hàm `flag01`; dòng không phải SYNTHETIC thiếu cột thì dừng |
 | Mục 2, 9: ≥ 15 người đạt chuẩn | Dưới 15 vẫn chạy, report có `below_min_eligible` và `warnings` |
 | Mục 4: BP₀, đặc trưng nền, Δ | Trung bình M0 hợp lệ phiên 1; trung vị đặc trưng trên các lần M0 đó |
 | Mục 4: Ridge α = 1, không hệ số chặn, chia SD, trọng số 1 / số lần cuff | `loso_ridge`, cùng phép tính với `rq1_holm_loso.loso_ridge` |
@@ -166,6 +201,15 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
   - cửa sổ không có ECG vẫn ra đúng đặc trưng PPG như khi có ECG, PAT trống, có cờ `ecg:absent`
     (`tests/test_device_features.py`);
   - file đánh dấu `assume-unchanged` rồi sửa thì `committed_unchanged` báo đã đổi (repo Git tạm).
+- Thêm 2026-11-15:
+  - chỉ SYN_00 còn lần cuff M1: ở lượt giữ SYN_00 lại, cột chỉ M1 của mô hình endpoint 10 bằng 0
+    trên mọi lần cuff học, nên mô hình đó không học được. Phân tích vẫn chạy, kết luận chính
+    giống hệt lần chạy bỏ hai mô hình endpoint 10, endpoint 10 ghi `not_computed`; trước đó cả
+    phân tích dừng;
+  - mô hình của phép so chính không học được thì vẫn dừng;
+  - cờ `ppg:led_not_locked`: lần cuff mang cờ ra khỏi tập chính và tập học; phiên 1 hiệu chuẩn
+    bằng lần M0 còn lại; người không còn lần M0 nào thì bị loại
+    (`session1_m0_led_not_locked`); endpoint 6 đưa chúng trở lại; report đếm theo người và pha.
 
 ### 4.3. Chỗ SAP chưa đủ rõ để code (đã tự chọn; sửa theo rà soát độc lập và duyệt 2026-11-14)
 
@@ -210,9 +254,9 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
     HRV bị bỏ khỏi ablation nhưng vẫn ở PPG-only, trộn hiệu ứng mô hình với hiệu ứng tập cuff.
     Report ghi `paired_cuffs`, `main_set_cuffs`, `paired_subjects`. MAE riêng của từng mô hình
     vẫn tính trên các lần cuff của mô hình đó.
-11. **Chưa làm:** endpoint 8 (RQ2b), Bland–Altman (SAP để chọn phương pháp LoA sau), hình. Duyệt
-    việc hoãn, không phải coi SAP đã đủ: hình vẫn bắt buộc (SAP mục 11); phương pháp LoA cho đo
-    lặp phải chọn trước khi xem kết quả.
+11. **Chưa làm:** endpoint 8 (RQ2b), Bland–Altman, hình. Duyệt việc hoãn, không phải coi SAP đã
+    đủ: hình vẫn bắt buộc (SAP mục 11). Phương pháp LoA cho đo lặp đã chọn trước khi có dữ liệu
+    (SAP mục 11, 2026-11-15, chờ duyệt); code chưa làm.
 
 Thêm 2026-11-13 (liệt kê để chốt, chưa sửa theo):
 
@@ -238,6 +282,29 @@ Thêm 2026-11-13 (liệt kê để chốt, chưa sửa theo):
     theo δ và việc vượt baseline theo pha không được so. `robust` chỉ nói về việc tuyên bố.
 17. **Mức CI của endpoint 11.** 95 %, như dᴾ; SAP chỉ nói "cùng cách tính".
 
+Thêm 2026-11-15 sau rà soát toàn dự án (chờ duyệt):
+
+18. **Mô hình phụ không học được ở một lượt.** Vòng ngoài chỉ chạy một lần, nên một mô hình
+    ngoài phép so chính (PAT-only, ablation, hai mô hình endpoint 10) không được làm dừng kết
+    quả chính. Lượt đó không có dự đoán của mô hình phụ; report ghi lượt và lý do
+    (`main.model_fit_failures`, `fit_failures` ở từng mô hình); MAE của mỗi mô hình có kèm
+    `n_subjects`, số người đứng sau MAE đó. Endpoint 10 cần dự đoán ghép cặp
+    cho mọi người đạt chuẩn, thiếu thì ghi `not_computed` thay vì báo trên một tập con; endpoint 3
+    lỗi cũng chỉ ghi `not_computed`. Mô hình của phép so chính không học được thì vẫn dừng.
+19. **Cờ khóa LED.** Trước đó `ppg:led_not_locked` chỉ bật khi mã khóa có hiệu lực sau đầu
+    cửa sổ. `led_lock_status` của mỗi cửa sổ nay là một trong: `locked`; `not_checked` (không có
+    mã khóa và không có `subject_id`: bring-up, SYNTHETIC); `no_lock_metadata`; `not_applied`;
+    `applied_after_window_start`; `state_unverified` (không tìm được trạng thái nơi mã khóa có
+    hiệu lực theo `seq` và `generation`, hay trạng thái đang chạy không phải chip đã cấu hình);
+    `codes_differ`. Mọi trạng thái trừ `locked` và `not_checked` bật cờ. Phân tích bỏ đúng lần
+    cuff mang cờ ([SAP v1](sap_v1.md) mục 2, sửa 2026-11-15). Giới hạn đã biết: thời điểm của
+    một trạng thái là mốc của packet `0xD2` đầu tiên báo nó, nên một thay đổi ngay trước mép
+    cửa sổ mà packet báo tới sau mép thì không thấy; khoảng hở bằng độ trễ firmware gửi `0xD2`
+    sau khi cấu hình chip.
+20. **Còn mở: mã khóa giữa các phiên.** Mỗi bản ghi chỉ được so với mã trong metadata của chính
+    nó, nên metadata ghi sai mã ở một phiên sau vẫn qua. Cần kiểm mã khóa giống nhau giữa các
+    phiên của cùng một người trước pilot (SAP mục 13).
+
 ## 5. Tự chốt trong việc này (duyệt 2026-11-14)
 
 | Chỗ | Giá trị | Lý do |
@@ -250,4 +317,7 @@ Thêm 2026-11-13 (liệt kê để chốt, chưa sửa theo):
 | Tham số PAT hợp lệ | như `week05_fiducials.json` | Đã duyệt 2026-10-25; là quy tắc kỹ thuật, chưa kiểm chứng sinh lý |
 | Phần học, nền, HRV, seed | Mục 4.3 | SAP chưa nói rõ |
 | `led_readjusted`, `pilot` điền ở nhật ký cuff (2026-11-13) | [quy ước dữ liệu](../data_convention.md) mục 4.4 | Metadata logger viết trước khi biết buổi có chỉnh LED |
+| Bộ lọc tín hiệu thiết bị (2026-11-15, chờ duyệt) | `zero_phase`, ECG 0,5–40 Hz, PPG 0,5–8 Hz, bậc 2 | Bộ lọc thông cao số của MAX30001 đã tắt vì lọc 0,5 Hz làm offline; không lọc thì trôi nền che nhịp; khóa trên pilot (mục 3.4) |
+| Cờ khóa LED và cách loại (2026-11-15, chờ duyệt) | Mục 4.3 ý 19; [SAP v1](sap_v1.md) mục 2 | Biên độ PPG đổi theo dòng LED; nền M0 chưa khóa làm lệch mọi Δ |
+| Ngưỡng cờ A3 trên mọi bản ghi (2026-11-15, chờ duyệt) | 0,2 ms trên trung vị khối 10 s | Đúng tiêu chí A3 của kế hoạch đo đồng bộ; chỉ báo |
 | Trạng thái khóa của config RQ1 (2026-11-13) | `status = LOCKED`, đặt trong commit khóa SAP; trước đó là `APPROVED_NOT_LOCKED` | Cổng dữ liệu thật cần một giá trị cố định; cổng so nội dung với HEAD và chỉ chặn chạy nhầm (mục 1) |

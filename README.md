@@ -104,6 +104,15 @@ python scripts/check_environment.py
 python -m pip check
 ~~~
 
+Test firmware C (`tests/test_firmware_*.py`) cần một trình biên dịch C trên máy chạy test. Không có thì pytest **bỏ qua** các test này mà vẫn báo đạt (gần 190 test bị bỏ qua khi thử 2026-11-15); CI trên Ubuntu có sẵn `cc`. Trên Windows, đặt `CC` trỏ tới ziglang trong `.venv` (gói `ziglang`, cài riêng, không nằm trong `requirements.txt`) trước khi chạy `pytest`:
+
+~~~text
+$env:CC = "$PWD\.venv\Scripts\python.exe -m ziglang cc"   # PowerShell, từ thư mục gốc
+pytest -q
+~~~
+
+Đường dẫn có dấu cách thì đặt phần đường dẫn trong ngoặc kép bên trong giá trị của `CC`.
+
 ## Quy trình nhánh
 
 Luồng tích hợp:
@@ -126,15 +135,15 @@ lượng lớn, bí mật, token hay tệp môi trường. Chỉ dữ liệu m�
 
 ## Trạng thái dự án
 
-Dự án đang ở tuần 7 trong lộ trình 28 tuần (bắt đầu 2026-09-17; cập nhật 2026-11-10). Tóm tắt theo mức bằng chứng:
+Dự án vừa đóng tuần 8 trong lộ trình 28 tuần (bắt đầu 2026-09-17; cập nhật 2026-11-16). Tóm tắt theo mức bằng chứng:
 
 | Mức | Nội dung |
 | --- | --- |
-| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; đặc trưng PPG/HR/PAT, SQI `features-sqi-v1` và bootstrap theo người (Tuần 4); pipeline B0/B3 (XGBoost, đặc trưng `pulsedb-simple-stats-v0`) trên split v2, fit trên train và chỉ chấm val ([hướng dẫn](docs/protocol/run_b3_pulsedb.md)); logger packet V0.1 và V0.2 (mốc `SAMP` bit 8, nhiệt độ `0xB1`, cấu hình AFE `0xD2`, lệnh và xác nhận `0xD3`, kênh im lặng), mô phỏng `synthetic-packet-v3`, mốc R/foot thứ hai và quy tắc PAT hợp lệ (Tuần 5) |
+| Có code và test cục bộ (dữ liệu giả lập) | Reader PulseDB; inventory và split theo người `pulsedb-split-v2`; baseline hằng số B0/B1; MAE/bias/SD; đặc trưng PPG/HR/PAT, SQI `features-sqi-v1` và bootstrap theo người (Tuần 4); pipeline B0/B3 (XGBoost, đặc trưng `pulsedb-simple-stats-v0`) trên split v2, fit trên train và chỉ chấm val ([hướng dẫn](docs/protocol/run_b3_pulsedb.md)); logger packet V0.1 và V0.2 (mốc `SAMP` bit 8, nhiệt độ `0xB1`, cấu hình AFE `0xD2`, lệnh và xác nhận `0xD3`, kênh im lặng), mô phỏng `synthetic-packet-v3`, mốc R/foot thứ hai và quy tắc PAT hợp lệ (Tuần 5); pipeline dữ liệu thiết bị (ECG 512 sps, PPG 200 sps ba khe) và phân tích RQ1 theo SAP v1, mới chạy trên SYNTHETIC ([hướng dẫn](docs/protocol/device_session_pipeline.md): `scripts/device_session.py`, `scripts/run_rq1_analysis.py`) |
 | Build được, chưa chạy trên bo | Firmware ESP32-S3 gửi packet V0.2 (`0xD1`, IMU, mốc `SAMP`, nhiệt độ `0xB1`, cấu hình AFE `0xD2`, lệnh từ PC, xung kích thích đồng bộ) từ nguồn AFE giả, và driver chip thật MAX30001, MAX30101, BMI270 chưa chạy trên chip ([firmware/](firmware/README.md)) |
-| Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3, lịch sử: tập AAMI Cal đã lộ test, xem [hướng dẫn](docs/protocol/run_b0_pulsedb_csv.md)); B0/B3 trên PulseDB VitalDB Train 400 người, chỉ chấm val, nhãn ABP công khai, không phải cuff ([Tuần 5](reports/weekly/week_05/pulsedb_b3_v1/README.md)); B2 v1 (nhân khẩu học, và thêm HR từ đỉnh R của ECG; [định nghĩa B2](docs/protocol/b2_pulsedb_definition.md)) trên cùng split, chỉ chấm val ngày 2026-11-07, chưa thấy khác biệt so với B0 ([Tuần 6](reports/weekly/week_06/pulsedb_b2_v1/README.md)); B3 chạy ba seed cho cùng kết quả ([theo dõi thí nghiệm](reports/weekly/week_06/experiment_tracking/README.md)). Chưa chấm test |
-| Bản thảo | Câu hỏi nghiên cứu, protocol v0.3 ([protocol_outline_v0.2.md](docs/protocol/protocol_outline_v0.2.md)), hồ sơ đạo đức (các mục thiết kế/đạo đức đã có phương án của nhóm ngày 2026-10-29, chờ thầy duyệt trước khi nộp), tổng quan tài liệu, danh sách mua |
-| Phần cứng V1, chưa có trong tay | Thiết kế KiCad V1-draft5: PCB V1 đang đặt gia công ở CXT từ 2026-10-28. Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M đã đặt 2026-10-27; các đơn còn lại (DigiKey, kit MAX30001, điện cực, cáp) được báo đã đặt ngày 2026-11-07, ngày giao chưa ghi ([báo cáo Tuần 6](reports/weekly/week_06/README.md)) |
+| Đã chạy sơ bộ trên dữ liệu công khai | B0 trên CSV nhãn PulseDB 1.000 đoạn (Tuần 3, lịch sử: tập AAMI Cal đã lộ test, xem [hướng dẫn](docs/protocol/run_b0_pulsedb_csv.md)); B0/B3 trên PulseDB VitalDB Train 400 người, chỉ chấm val, nhãn ABP công khai, không phải cuff ([Tuần 5](reports/weekly/week_05/pulsedb_b3_v1/README.md)); B2 v1 (nhân khẩu học, và thêm HR từ đỉnh R của ECG; [định nghĩa B2](docs/protocol/b2_pulsedb_definition.md)) trên cùng split, chỉ chấm val ngày 2026-11-07, chưa thấy khác biệt so với B0 ([Tuần 6](reports/weekly/week_06/pulsedb_b2_v1/README.md)); B3 chạy ba seed cho cùng kết quả ([theo dõi thí nghiệm](reports/weekly/week_06/experiment_tracking/README.md)); B5 (ResNet-18 1D của bài PulseDB, [định nghĩa](docs/protocol/b5_pulsedb_definition.md)) duyệt nguyên trạng rồi chạy trên val ngày 2026-11-11 ([Tuần 7](reports/weekly/week_07/pulsedb_b5_v0/README.md)); RQ2a (chia theo cửa sổ so với theo người, [định nghĩa](docs/protocol/rq2a_pulsedb_definition.md)) duyệt rồi chạy trên train ∪ val ngày 2026-11-14 ([Tuần 8](reports/weekly/week_08/pulsedb_rq2a_v0/README.md)). Nhãn là ABP công khai, không phải cuff. Chưa chấm test. Đánh dấu tay mốc R/foot trên PulseDB dừng ngày 2026-11-16 ở 69/80 đoạn, vì định nghĩa foot không vận hành được nhất quán; không làm B4 trên PulseDB ([Tuần 5](docs/protocol/week05_fiducials_pat_validity.md) mục 9.7) |
+| Bản thảo | Câu hỏi nghiên cứu, protocol v0.3 ([protocol_outline_v0.2.md](docs/protocol/protocol_outline_v0.2.md)), hồ sơ đạo đức (phương án của nhóm ngày 2026-10-29; ngày 2026-11-10 thầy cho biết chưa cần làm gấp), tổng quan tài liệu, danh sách mua; [SAP v1](docs/protocol/sap_v1.md) (mọi mục chốt 2026-11-12, chưa khóa, khóa bằng commit trước pilot) và [SQI v1](docs/protocol/sqi_specification_v1.md) (ngưỡng chưa có nguồn, khóa trên bản ghi G2) |
+| Phần cứng V1, chưa có trong tay | Thiết kế KiCad V1-draft5: PCB V1 đang đặt gia công ở CXT từ 2026-10-28. Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M đã đặt 2026-10-27; các đơn còn lại (DigiKey, kit MAX30001, điện cực, cáp) được báo đã đặt ngày 2026-11-07, ngày giao chưa ghi ([báo cáo Tuần 6](reports/weekly/week_06/README.md)). Tiêu chí phần cứng (checklist bring-up, kế hoạch dòng rò/nhiệt/VLED, A1–A9) duyệt 2026-11-14; giới hạn dòng rò chưa đối chiếu IEC 60601-1. Breakout MAX30001 đã về nhưng là bản v2 03/24, chờ schematic; bo ESP32-S3, MAX30101, BMI270 chưa về, kế hoạch Tuần 8 dự kiến đầu Tuần 9 ([báo cáo Tuần 8](reports/weekly/week_08/README.md)) |
 | Chưa có | Phần cứng lắp ráp, bản ghi ECG/PPG của nhóm, dữ liệu cuff, mô hình ΔBP và mọi kết quả trả lời RQ1–RQ3 |
 
 Kết quả trên dữ liệu giả lập chỉ kiểm tra code, không phải hiệu năng ước lượng

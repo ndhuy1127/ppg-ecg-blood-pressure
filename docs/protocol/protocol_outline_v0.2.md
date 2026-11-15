@@ -1,7 +1,7 @@
 # Khung protocol nghiên cứu thực nghiệm (Protocol Outline), phiên bản v0.3
 
 > **Phiên bản:** v0.3, thay cho v0.2 (bản trước nữa: [v0.1](protocol_outline_v0.1.md)). Tên file vẫn giữ `v0.2` để không làm gãy liên kết.
-> **Ngày lập:** 2026-09-22. **Cập nhật:** 2026-11-12 (mục 6.5: P2 theo ΔSBP có dấu của M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả; theo SAP v1); 2026-10-14 (v0.1: đồng bộ với RQ v0.2, với yêu cầu phần cứng V0 và với nguồn bổ sung); 2026-10-21 (v0.2); 2026-10-22 (sửa theo review); 2026-10-29 (v0.3); 2026-10-30 (dẫn N7 cho dạng bài của M2; ngưỡng P2/R3 dùng các kịch bản δ khai báo trước; mục 4.1: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, giới hạn công suất và luật dừng tuyển); 2026-10-31 (rà soát hồ sơ đạo đức: mô tả thiết kế ở mục 3, L1/L4/L5 chép đúng phiếu sàng lọc, cách đo hai tay, liên kết tới đề cương nộp hội đồng; số mục của các file hồ sơ đổi theo bản viết lại).
+> **Ngày lập:** 2026-09-22. **Cập nhật:** 2026-11-16 (mục 8.1: dừng đánh dấu tay PulseDB, phải chốt định nghĩa foot trước khi đánh dấu trên dữ liệu thiết bị); 2026-11-15 (nhãn của các mục đã chốt trong SAP v1; mục 9.2 ghi CI và đa kiểm định theo SAP mục 5–6); 2026-11-12 (mục 6.5: P2 theo ΔSBP có dấu của M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả; theo SAP v1); 2026-10-14 (v0.1: đồng bộ với RQ v0.2, với yêu cầu phần cứng V0 và với nguồn bổ sung); 2026-10-21 (v0.2); 2026-10-22 (sửa theo review); 2026-10-29 (v0.3); 2026-10-30 (dẫn N7 cho dạng bài của M2; ngưỡng P2/R3 dùng các kịch bản δ khai báo trước; mục 4.1: trần tuyển 35, mục tiêu ≥ 25 người đạt chuẩn, giới hạn công suất và luật dừng tuyển); 2026-10-31 (rà soát hồ sơ đạo đức: mô tả thiết kế ở mục 3, L1/L4/L5 chép đúng phiếu sàng lọc, cách đo hai tay, liên kết tới đề cương nộp hội đồng; số mục của các file hồ sơ đổi theo bản viết lại).
 > **Lưu ý:** Chưa thu dữ liệu trên người, và chỉ thu sau khi có phê duyệt đạo đức. Phân bổ tay và điện cực ở mục 5.1–5.2 đã được xác nhận về phần cứng ngày 2026-10-23. Các nghiệm pháp ở 6.4–6.5 chưa được hội đồng đạo đức duyệt. Những mục ghi "đề xuất của nhóm, chờ thầy/hội đồng" trong v0.3 là phương án mặc định mang đi xin ý kiến, chưa phải quyết định cuối cùng.
 
 **Changelog v0.3 (2026-10-29):** chốt các mục thiết kế nghiên cứu còn mở để chuẩn bị hồ sơ đạo đức.
@@ -12,7 +12,7 @@
 - Mục 6.4: endpoint chính của RQ1 tính trên mọi lần cuff hợp lệ ở phiên ≥ 2; trục thời gian của M2, M3, M4.
 - Mục 6.5: P2 và R3 dùng cùng một thống kê (median |ΔSBP|), nhưng mỗi chỉ số có mốc so sánh riêng.
 - Mục 9.1: LOSO lồng. Mục 10: quy tắc cho lượt đo bị dừng vì an toàn.
-- Bổ sung cùng ngày theo RQ v0.4 (đề xuất, chờ thầy): mục 9.1 thêm dự đoán vòng ngoài cho các lần cuff nghiệm pháp ở phiên 1, chỉ dùng cho RQ2b; mục 9.2 dẫn về RQ mục 4.E cho tiêu chí kết luận, đa kiểm định và δ.
+- Bổ sung cùng ngày theo RQ v0.4 (đề xuất; chốt 2026-11-12 cùng [SAP v1](sap_v1.md)): mục 9.1 thêm dự đoán vòng ngoài cho các lần cuff nghiệm pháp ở phiên 1, chỉ dùng cho RQ2b; mục 9.2 dẫn về RQ mục 4.E cho tiêu chí kết luận, đa kiểm định và δ.
 - Bổ sung cùng ngày: bỏ M3 (ngâm chân nước lạnh) và M4 (đạp xe tư thế ngồi) vì khó thực hiện ở phòng thí nghiệm của nhóm. Bộ nghiệm pháp còn M0–M2 và không thay bằng nghiệm pháp mới trong hồ sơ lần này (6.4, mục "Dự phòng"). Các mục sửa theo: 3; 4.2–4.3 (bỏ L9 cũ, L10 đổi thành L9); 5.2–5.4; 6.4 (nhịp thở của M1; dạng bài, thời lượng và cách kiểm mức tham gia của M2; thứ tự và thời gian nghỉ; số lần cuff; thời lượng buổi; quy tắc nếu xin sửa đổi để thêm nghiệm pháp); 6.5 (phải đặt lại ngưỡng P2/R3, đề xuất suy ngưỡng từ mô phỏng độ nhạy); 7.3; 9.1; 10–12.
 
 **Changelog v0.2 (2026-10-21):**
@@ -71,7 +71,7 @@
   - Yavarimanesh et al. (2022, N18) ước tính cần 31 người cho một phép so sánh tương tự ([RQ](../research_questions_v0.1.md) mục 4.G);
   - với trần 25, sau khi trừ 2–3 người pilot và người bỏ cuộc hay bị loại, chỉ còn khoảng 20 người phân tích được (ước tính của nhóm, giả định hao hụt 10–15%, chưa có số liệu).
 - **Giới hạn công suất:** nhóm có một bộ thiết bị, mỗi lúc đo một người. Ước tính của nhóm là khoảng 8–10 buổi mỗi tuần, tức khoảng 50–60 buổi cho đợt thu chính. Ví dụ, 25 người × 2 phiên là 50 buổi, còn 25 người × 3 phiên là 75 buổi. Vì vậy, số buổi là giới hạn thật, và mục tiêu ≥ 25 người có thể buộc một phần người tham gia chỉ làm 2 phiên.
-- **Luật dừng tuyển (đề xuất 2026-10-30, chờ thầy):**
+- **Luật dừng tuyển (đề xuất 2026-10-30; ý 1 chốt 2026-11-12 theo [SAP v1](sap_v1.md) mục 9; ý 2 và 3 chưa có trong SAP, chờ duyệt):**
   - Số người cần tuyển $N$ và cách phân bổ phiên được chốt sau pilot, bằng mô phỏng độ nhạy ở [RQ](../research_questions_v0.1.md) mục 4.E, rồi ghi vào SAP trước khi thu dữ liệu chính. Mô phỏng so cả hai cách dùng cùng một số buổi: nhiều người với 2 phiên, hay ít người hơn với 3 phiên.
   - Nhóm ngừng tuyển người mới khi đủ $N$ người có phiên 1 đạt, hoặc khi hết cửa sổ thu dữ liệu chính đã lên lịch, tùy điều nào đến trước.
   - Quyết định dừng hay tuyển tiếp không dựa trên kết quả RQ1. Không xem sai số của mô hình trước khi dừng tuyển, để tránh tuyển thêm cho tới khi kết quả "đẹp".
@@ -316,7 +316,7 @@ bài báo. Dải ΔBP dự kiến sẽ hẹp hơn, nên RQ1 kém nhạy hơn và
 luận" tăng lên ([RQ](../research_questions_v0.1.md) mục 4.E–4.F). Hồ sơ lần này không thay
 bằng nghiệm pháp mới; hướng bổ sung nằm ở mục "Dự phòng" bên dưới.
 
-**Endpoint chính của RQ1 (đề xuất của nhóm 2026-10-29, chờ thầy xác nhận):**
+**Endpoint chính của RQ1 (đề xuất 2026-10-29; chốt 2026-11-12 trong [SAP v1](sap_v1.md) mục 2–3):**
 
 - Tập đánh giá gồm mọi lần cuff hợp lệ ở phiên ≥ 2, cả M0, M1 lẫn M2.
 - Với mỗi lần cuff, $\Delta\text{BP}$ = giá trị cuff − $\text{BP}_0$, trong đó
@@ -532,7 +532,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
   - đạo hàm bậc hai cực đại ($d^2\text{PPG}/dt^2$);
   - cực tiểu trước sườn lên (`valley_min`; thêm 2026-10-29, [Tuần 5](week05_fiducials_pat_validity.md)).
 
-  Mốc đánh dấu tay ở Tuần 5 là cực tiểu trước sườn lên, nên phương pháp tiếp tuyến gần như không thể đạt khi so với mốc tay. Khoảng PAT hợp lệ 80–400 ms chỉ dùng cho dữ liệu thiết bị; PulseDB dùng chế độ ghép riêng `pat-validity-pulsedb-v0` (Tuần 5 mục 3.1, chốt 2026-10-29). Phương pháp foot và quy tắc ghép nhịp vẫn chưa khóa. Chúng phải được khóa trên pilot/validation, không điều chỉnh theo test.
+  Mốc đánh dấu tay ở Tuần 5 là cực tiểu trước sườn lên, nên phương pháp tiếp tuyến gần như không thể đạt khi so với mốc tay. Khoảng PAT hợp lệ 80–400 ms chỉ dùng cho dữ liệu thiết bị; PulseDB dùng chế độ ghép riêng `pat-validity-pulsedb-v0` (Tuần 5 mục 3.1, chốt 2026-10-29). Phương pháp foot và quy tắc ghép nhịp vẫn chưa khóa. Chúng phải được khóa trên pilot/validation, không điều chỉnh theo test. Đánh dấu tay trên PulseDB đã dừng ngày 2026-11-16 vì định nghĩa foot không vận hành được nhất quán khi đáy có gờ hoặc đáy phẳng (Tuần 5 mục 9.7); trước khi đánh dấu tay trên dữ liệu thiết bị phải chốt một định nghĩa foot có quy tắc cho các trường hợp này, kèm hình ví dụ, và thử trên bản ghi ngoài tập thẩm định trước khi khóa.
 
 ### 8.2. Cảnh báo phương pháp luận: $\text{PAT} \neq \text{PTT}$
 - Nhóm nghiên cứu ghi nhận rõ:
@@ -564,7 +564,7 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
    - Với người test của mỗi lượt ngoài:
      - `Session 1`: chỉ dùng làm mốc hiệu chuẩn ($\text{BP}_0$, $\text{PAT}_0$, $\text{Features}_0$, lấy từ M0; mục 3).
      - Phiên 2 trở đi: mọi lần cuff hợp lệ dùng để kiểm tra dự đoán $\Delta\text{SBP}$ và $\Delta\text{DBP}$ (endpoint ở 6.4).
-     - Các lần cuff nghiệm pháp M1, M2 ở phiên 1 (đề xuất 2026-10-29, chờ thầy): vòng ngoài sinh dự đoán cho các lần này trong cùng lần chạy. Các dự đoán này chỉ dùng cho RQ2b (cùng phiên so với khác phiên, [RQ](../research_questions_v0.1.md) mục 5.B), không dùng để hiệu chuẩn và không vào endpoint của RQ1.
+     - Các lần cuff nghiệm pháp M1, M2 ở phiên 1 (đề xuất 2026-10-29; chốt 2026-11-12 cùng endpoint 8 của [SAP v1](sap_v1.md) mục 3): vòng ngoài sinh dự đoán cho các lần này trong cùng lần chạy. Các dự đoán này chỉ dùng cho RQ2b (cùng phiên so với khác phiên, [RQ](../research_questions_v0.1.md) mục 5.B), không dùng để hiệu chuẩn và không vào endpoint của RQ1.
    - Tuyệt đối không xáo trộn ngẫu nhiên dữ liệu giữa các phiên đo.
 
 ### 9.2. Kế hoạch thống kê và kiểm định giả thuyết
@@ -574,8 +574,8 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
   - Tuyệt đối **KHÔNG bootstrap theo từng cửa sổ đo riêng rẽ**, vì làm vậy vi phạm giả định các quan sát độc lập (i.i.d).
 - **Kiểm định giả thuyết (chưa khóa):**
   - Phép so sánh chính của RQ1 là giữa mô hình PPG-only và mô hình PPG + PAT, dùng cùng thuật toán, trên **cùng tập lần đo** tính được cả PAT lẫn đặc trưng PPG (xem [RQ](../research_questions_v0.1.md), mục 4.C). Tập này lấy từ endpoint ở 6.4 và không lọc thêm theo ngưỡng SQI (7.3). Sai số được báo cả gộp chung lẫn theo từng nghiệm pháp; phân tích chỉ dùng M0 là phân tích phụ định trước.
-  - Hiệu ứng chính là chênh lệch MAE tính theo từng người; báo cáo trung bình và CI 95% bootstrap theo người. Kiểm định Wilcoxon signed-rank ghép cặp theo người ($\alpha = 0{,}05$) là phân tích hỗ trợ.
-  - Tiêu chí kết luận theo [RQ v0.4](../research_questions_v0.1.md) mục 4.E (đề xuất 2026-10-29, chờ thầy): so sánh với zero-change cũng phải có CI theo người, như so sánh với PPG-only; trước khi chạy vòng ngoài phải chọn xong phương án đa kiểm định (A: giao–hợp cho từng đầu ra, Holm giữa SBP và DBP; B: Holm trên bốn so sánh) và mức hiệu ứng nhỏ nhất đáng quan tâm δ.
+  - Hiệu ứng chính là chênh lệch MAE tính theo từng người; báo cáo trung bình và CI theo người theo [SAP v1](sap_v1.md) mục 5 (khoảng bao của bootstrap-t theo người và Student t, ở mức của Holm: 97,5 %, rồi 95 % cho đầu ra còn lại). Kiểm định Wilcoxon signed-rank ghép cặp theo người ($\alpha = 0{,}05$) là phân tích hỗ trợ.
+  - Tiêu chí kết luận theo [RQ v0.4](../research_questions_v0.1.md) mục 4.E và [SAP v1](sap_v1.md) mục 6–8 (chốt 2026-11-12): so sánh với zero-change cũng phải có CI theo người, như so sánh với PPG-only; đa kiểm định theo phương án A (giao–hợp cho từng đầu ra, Holm giữa SBP và DBP; không chọn B: Holm trên bốn so sánh); mức hiệu ứng nhỏ nhất đáng quan tâm δ tính sau pilot theo SAP mục 8, ghi vào SAP trước buổi thu chính đầu tiên.
   - Luôn báo cáo kèm baseline zero-change và SD của $\Delta\text{BP}$ tham chiếu.
 
 ---

@@ -139,6 +139,15 @@ max30101_err_t max30101_latch(const max30101_bus_t *bus, max30101_latch_t *latch
 max30101_err_t max30101_read_samples(const max30101_bus_t *bus, uint16_t count,
                                      max30101_samples_t *out);
 
+/* Timeout (ms) of one I2C transfer that puts `bytes` bytes on the bus (address
+ * and register bytes included) at `clock_hz`: each byte takes 9 SCL periods
+ * (8 bits and the ACK); the timeout is twice that time plus a fixed 10 ms for
+ * clock stretching and task scheduling. A full FIFO read (291 bytes) takes about
+ * 26 ms at 100 kHz, longer than the fixed 20 ms used before 2026-11-15; the
+ * 100 kHz fallback of bring-up would have timed out on every long read. A clock
+ * of 0 gives 1000 ms. */
+uint32_t max30101_i2c_timeout_ms(size_t bytes, uint32_t clock_hz);
+
 /* Die temperature (p. 23): start one conversion; then read it in 1/16 degC
  * once TEMP_EN has cleared (MAX30101_ERR_BUSY while it runs). After the readout
  * MODE_CONFIG must still hold `mode` (MAX30101_ERR_MODE otherwise): a reset

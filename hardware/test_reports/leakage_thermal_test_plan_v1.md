@@ -6,7 +6,7 @@
 >
 > - Chi tiết hóa [an toàn buổi đo](../../docs/ethics/session_safety_stopping_v0.1.md) mục 9 và
 >   [bring-up](v1_bringup_procedure.md) mục 8 bước 3 và mục 10, để làm được ngay khi nhận
->   hàng (dự kiến Tuần 8).
+>   hàng (dự kiến Tuần 9).
 > - **Giới hạn số ở mục 2 và 4 chưa được đối chiếu với nguyên văn IEC 60601-1.** Trước khi đo
 >   phải đối chiếu từng con số với bản tiêu chuẩn và ghi số trang. Người có chuyên môn phải
 >   duyệt phương pháp, giới hạn và biên bản trước khi gắn điện cực lên bất kỳ ai.

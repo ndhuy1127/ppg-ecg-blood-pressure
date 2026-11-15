@@ -2,12 +2,17 @@
 
 2026-10-21; sửa ngày 2026-10-22 theo review độc lập; bốn quyết định ngày
 2026-10-25 ở mục 8; kế hoạch đánh dấu tay và ngưỡng chấp nhận ngày 2026-10-25 ở
-mục 9; các điểm chốt 2026-10-29 ở mục 3, 4, 7, 8, 9.1–9.4 và 9.6. Version config:
+mục 9; các điểm chốt 2026-10-29 ở mục 3, 4, 7, 8, 9.1–9.4 và 9.6; sai lệch của lần đánh
+dấu 1 và quyết định dừng đánh dấu tay PulseDB ngày 2026-11-16 ở mục 9.7. Version config:
 `fiducials-week05-v2` (v1 sáng 2026-10-25, v0 tới 2026-10-24), trạng thái
 `NOT_TEST_TUNED`; file config giữ nguyên, kể cả câu `note` cũ (mục 9.1). Kết quả mới
 chỉ có trên SYNTHETIC. Bộ đoạn PulseDB để đánh dấu đã được
 xuất (mục 6), nhưng **chưa chạy `compare` hay `gate` trên mốc tay nào**. Không phải
 phương pháp đã khóa.
+
+**Đánh dấu tay PulseDB đã dừng ngày 2026-11-16, không theo đuổi B4 trên PulseDB** (mục 9.7,
+"Dừng đánh dấu tay PulseDB"). Thẩm định mốc trên PulseDB chưa hoàn tất; đây không phải kết
+quả `gate` trượt. Mốc cho PAT sẽ được thẩm định riêng trên dữ liệu thiết bị.
 
 Kế thừa [tài liệu Tuần 4](week04_features_sqi_bootstrap.md). PAT là khoảng
 R → chân sóng PPG, không phải PTT. BP/ABP không là đầu vào của mốc, PAT hay SQI.
@@ -504,9 +509,30 @@ nguồn**; chúng được khóa trong `review_plan` và `acceptance` của conf
 
 - **R**: đỉnh sóng R.
 - **Foot PPG**: **điểm cực tiểu ngay trước sườn lên tâm thu**. `valley_min` nhắm
-  đúng điểm này; `tangent` (giao điểm tiếp tuyến) và `d2_max` nhắm điểm khác, nên
-  lệch có hệ thống so với mốc tay là thông tin về định nghĩa, không phải lỗi của
-  chúng. Nếu sau này cần PAT theo tiếp tuyến thì phải có đợt đánh dấu riêng.
+  điểm này khi vùng đáy không có gờ (khi có gờ, xem quy tắc chốt 2026-11-15 bên dưới);
+  `tangent` (giao điểm tiếp tuyến) và `d2_max` nhắm điểm khác, nên lệch có hệ thống so
+  với mốc tay là thông tin về định nghĩa, không phải lỗi của chúng. Nếu sau này cần PAT
+  theo tiếp tuyến thì phải có đợt đánh dấu riêng.
+- **Hai quy tắc dưới đây (gờ, đáy phẳng) được thêm ngày 2026-11-15 trong lúc đánh dấu và
+  không vận hành được trong thực tế** (mục 9.7, "Dừng đánh dấu tay PulseDB"). Giữ lại làm hồ
+  sơ; không dùng làm định nghĩa cho dữ liệu thiết bị.
+- **Foot khi có gờ trước sườn lên (chốt 2026-11-15).** Foot là **đáy cuối cùng ngay
+  trước sườn lên tâm thu chính**, không phải điểm thấp nhất của cả vùng đáy. Nếu giữa
+  điểm thấp nhất và sườn lên có một gờ (tín hiệu đi lên rồi đi xuống lại, ví dụ sóng
+  dicrotic của nhịp trước hay một sóng nhỏ trước tâm thu), foot là đáy **sau** gờ, kể cả
+  khi đáy này cao hơn điểm thấp nhất. Chỉ tính là gờ khi thấy rõ tín hiệu đi lên rồi đi
+  xuống ở khung nhìn khoảng 4,5 s; gợn nhỏ không thấy rõ ở khung đó thì bỏ qua, và foot là
+  điểm thấp nhất. Trong một đoạn, gờ cỡ nào đã được tính ở nhịp này thì gờ cỡ đó cũng được
+  tính ở mọi nhịp khác. Lý do: định nghĩa ở trên ghi "ngay trước sườn lên", PAT đo thời
+  điểm sóng mạch tới (bắt đầu sườn lên chính), và điểm thấp nhất có thể là khuyết dicrotic
+  của nhịp trước, sớm hơn foot 100–370 ms. Hệ quả cho detector: `valley_min` lấy điểm thấp
+  nhất trong `foot_lookback_s`, nên có thể lệch khỏi mốc tay ở những nhịp có gờ; đó là điều
+  `gate` đo, không sửa mốc tay theo detector.
+- **Đáy phẳng (chốt 2026-11-15).** Đáy phẳng không có gờ thấy rõ thì foot là **điểm thấp
+  nhất của đáy**, không phải góc cuối đáy nơi tín hiệu bắt đầu đi lên (hai điểm này có thể
+  cách nhau hơn 100 ms). Không thấy điểm nào thấp nhất thì phóng to khung hẹp theo chiều dọc
+  để thấy độ chênh giữa các mẫu. Đây là cách áp dụng định nghĩa "cực tiểu", không đổi định
+  nghĩa. Hai quy tắc này áp dụng cho mọi đoạn của lần 1 và lần 2.
 - Dùng zoom của cửa sổ (click không tự hút về đỉnh). Đoạn hay nhịp không chắc thì
   vẫn đánh dấu theo định nghĩa và ghi chú; không âm thầm bỏ đoạn khó.
 - **Nhịp sát biên vùng review (chốt 2026-10-29).** `annotate` chỉ giữ click có thời
@@ -656,6 +682,25 @@ Chốt ngày 2026-10-29, trước khi chạy `compare` hay `gate` trên mốc ta
 chốt, file mốc lần 1 (`manual_main.csv`) có một phiên dở ngày 2026-10-25; chưa có
 bảng so khớp hay kết quả cổng nào.
 
+- `B4_NOT_ALLOWED` là **kết luận cuối cho PulseDB**. Không có vòng đánh dấu 2, không
+  đổi phương pháp hay ngưỡng rồi chấm lại, và không làm B4 trên PulseDB.
+- PAT chỉ được đánh giá trên **dữ liệu thiết bị**. Detector cho thiết bị được thẩm
+  định riêng trên bản ghi thiết bị, vì tần số lấy mẫu khác: thiết bị ECG 512 sps, PPG
+  200 sps; PulseDB 125 Hz.
+- Hệ quả cho [kịch bản bài báo](../paper_scenarios_v0.1.md): bỏ bảng B4 PulseDB.
+  RQ1 không đổi.
+- **`tangent` gần như không thể đạt** theo định nghĩa mốc tay. Mốc tay foot là cực
+  tiểu ngay trước sườn lên (mục 9.2), tức điểm `valley_min` nhắm khi vùng đáy không có
+  gờ. `tangent` lệch có hệ thống khỏi điểm đó: +18,8 đến +47,4 ms trên SYNTHETIC (mục
+  5.2), trong khi giới hạn |bias| của foot là 8 ms. `d2_max` có bias +6,8 ms trên
+  SYNTHETIC v1 (mục 5.1), sát giới hạn, và hỏng trên bản ghi nhiễu. Theo bằng chứng SYNTHETIC này, ở
+  foot thực tế chủ yếu còn `valley_min`.
+
+### 9.7. Sai lệch trong lần 1 và dừng đánh dấu tay PulseDB (2026-11-11 → 2026-11-16)
+
+Các sai lệch so với kế hoạch ở mục 9.1–9.4, theo thứ tự thời gian, rồi quyết định dừng
+ngày 2026-11-16.
+
 **Bỏ phiên ngày 2026-10-25 (ghi 2026-11-11, sai lệch so với kế hoạch).** Người đánh dấu
 báo phiên đó là bấm nhầm. Kiểm file: 62 mốc trên 28 đoạn; 27 đoạn chỉ có 1 đỉnh R và 1 chân
 sóng, trong khi một đoạn 10 s có khoảng 10–15 nhịp; không dòng nào có ghi chú. Đây không phải
@@ -666,16 +711,98 @@ ngày 2026-10-29 (mục 9.2), nên điểm yếu "một phần mốc được đ
 còn. Mốc của lần 2 vẫn phải bắt đầu ít nhất 2 ngày sau ngày cuối của lần 1 mới. Chưa có bảng so
 khớp hay kết quả cổng nào được tính từ các mốc bị bỏ.
 
-- `B4_NOT_ALLOWED` là **kết luận cuối cho PulseDB**. Không có vòng đánh dấu 2, không
-  đổi phương pháp hay ngưỡng rồi chấm lại, và không làm B4 trên PulseDB.
-- PAT chỉ được đánh giá trên **dữ liệu thiết bị**. Detector cho thiết bị được thẩm
-  định riêng trên bản ghi thiết bị, vì tần số lấy mẫu khác: thiết bị ECG 512 sps, PPG
-  200 sps; PulseDB 125 Hz.
-- Hệ quả cho [kịch bản bài báo](../paper_scenarios_v0.1.md): bỏ bảng B4 PulseDB.
-  RQ1 không đổi.
-- **`tangent` gần như không thể đạt** theo định nghĩa mốc tay. Mốc tay foot là cực
-  tiểu ngay trước sườn lên (mục 9.2), tức đúng điểm `valley_min` nhắm. `tangent` lệch
-  có hệ thống khỏi điểm đó: +18,8 đến +47,4 ms trên SYNTHETIC (mục 5.2), trong khi
-  giới hạn |bias| của foot là 8 ms. `d2_max` có bias +6,8 ms trên SYNTHETIC v1 (mục
-  5.1), sát giới hạn, và hỏng trên bản ghi nhiễu. Theo bằng chứng SYNTHETIC này, ở
-  foot thực tế chủ yếu còn `valley_min`.
+**Bỏ phiên ngày 2026-11-15 (sai lệch so với kế hoạch).** Sau 4/80 đoạn, rà soát mốc tay
+so với chính tín hiệu (không xem detector, chưa chạy `compare`) thấy một đoạn thiếu một foot
+trong vùng review (nhịp PPG sát biên 9,5 s). Vì đoạn đã ghi không sửa được, người đánh dấu
+chọn làm lại từ đầu. Hai file `manual_main.csv` (SHA-256 `1d6251dd…`) và
+`manual_main.progress.json` được chuyển nguyên trạng sang
+`data/processed/pulsedb_w5_review_v1/discarded_2026-11-15/`, không dùng cho `compare`,
+`repeat` hay `gate`. Lần 1 bắt đầu lại từ 0/80 đoạn; quy tắc và định nghĩa mốc giữ nguyên.
+
+**Xóa và đánh lại hai đoạn trong lần 1 (2026-11-15, sai lệch so với kế hoạch).** Sau 14/80
+đoạn của phiên mới, rà soát mốc tay so với tín hiệu (không dùng detector của dự án, chưa
+chạy `compare`; chỉ dùng một quy tắc tạm "cực tiểu trong 0,3 s trước sườn lên dốc nhất")
+thấy hai đoạn lỗi: `…_train_16004` thiếu 2 foot; `…_train_35957` thiếu 1 foot và có 3 foot
+đặt ở đáy trước sóng phụ thay vì đáy ngay trước sườn lên (hiểu sai mục 9.2, lệch 310–370 ms).
+12 đoạn còn lại được kiểm và giữ nguyên. Theo yêu cầu của người đánh dấu, chỉ hai đoạn này
+bị xóa: bản gốc `manual_main.csv` (SHA-256 `07718445…`) và progress được chép nguyên trạng
+sang `data/processed/pulsedb_w5_review_v1/removed_segments_2026-11-15/`; 50 dòng của hai
+đoạn bị bỏ khỏi CSV, hai đoạn bị bỏ khỏi `records_done`, và checkpoint được tính lại
+(`10caae67…`) để `--resume` trình lại đúng hai đoạn đó. Đây là sửa tay có chủ đích, có bản
+gốc để đối chiếu, không phải CSV bị sửa lén.
+
+Hạn chế phải nêu khi báo cáo: trước khi đánh lại, người đánh dấu đã được báo thời điểm foot
+ước lượng của hai đoạn này, nên mốc lần 1 của chúng **không còn mù**. Cả hai đoạn đều thuộc
+`repeat/`, nên độ lặp lại của 2/16 đoạn đó cũng bị ảnh hưởng. Không loại được hai đoạn khỏi
+`gate` hay `repeat` mà không đổi quy tắc đã khóa (đủ 80 đoạn, đúng 16 đoạn lặp), nên giữ quy
+tắc và ghi hạn chế này. Từ đây, rà soát giữa chừng chỉ báo đoạn nào cần xem lại và loại lỗi,
+không báo thời điểm mốc.
+
+**Chốt quy tắc foot khi có gờ và xóa thêm 7 đoạn (2026-11-15, sai lệch so với kế hoạch).**
+Sau 22/80 đoạn, rà soát thấy định nghĩa foot ở mục 9.2 hiểu được theo hai cách khi giữa đáy
+thấp nhất và sườn lên có một gờ: (A) đáy cuối cùng ngay trước sườn lên, (B) điểm thấp nhất.
+Người đánh dấu đã theo B ở 7 đoạn (20 nhịp có gờ); đoạn `…_35957` đánh lại theo A; 14 đoạn
+còn lại không có nhịp loại này. Nhóm chốt A (quy tắc ở mục 9.2), trước khi chạy `compare`
+hay `gate`, không xem kết quả detector. Chưa có phản biện độc lập cho quyết định này (công cụ
+hết hạn mức trong ngày). Bảy đoạn theo B bị xóa để đánh lại theo A: `…_322337`,
+`…_322796`, `…_276468`, `…_276132`, `…_378127`, `…_283055`, `…_92569`. Bản gốc
+`manual_main.csv` (SHA-256 `2846c41f…`) và progress được chép nguyên trạng sang
+`data/processed/pulsedb_w5_review_v1/removed_segments_2026-11-15_ruleA/`; 150 dòng bị bỏ,
+checkpoint tính lại (`348200ba…`), còn 15/80 đoạn. Người đánh dấu chỉ được báo số thứ tự
+và loại lỗi của các đoạn, không được báo thời điểm mốc. Trong 7 đoạn này, đoạn nào thuộc
+`repeat/` thì lần 2 cũng đánh theo A.
+
+**Xóa thêm 2 đoạn đánh lại (2026-11-15).** Khi đánh lại theo A, `…_322337` có foot ở đáy
+phẳng đặt tại góc cuối đáy thay vì điểm thấp nhất (72–144 ms), và `…_276468` áp dụng gờ
+không nhất quán trong cùng đoạn (gờ cỡ 2–2,5% biên độ được tính ở nhịp này, bỏ qua ở nhịp
+khác; một nhịp bỏ qua gờ khoảng 9% biên độ). Đã chốt cách xử lý đáy phẳng và quy tắc nhất
+quán ở mục 9.2. Bản gốc (`manual_main.csv` SHA-256 `3d4d7461…`) và progress được chép sang
+`data/processed/pulsedb_w5_review_v1/removed_segments_2026-11-15_flat/`; 48 dòng bị bỏ,
+checkpoint tính lại (`0d2d6f51…`), còn 16/80 đoạn. Với `…_276468`, người đánh dấu đã được
+báo nhịp nào sai (theo thời điểm đỉnh) và loại lỗi trước khi đánh lại, không được báo thời
+điểm foot.
+
+**Ngưỡng xóa đoạn khi rà soát giữa chừng (chốt 2026-11-15).** Để không đánh lại mãi theo
+từng lần rà soát, từ đây chỉ xóa một đoạn khi có lỗi rõ: sót hoặc thừa nhịp trong vùng; bỏ
+qua gờ cao từ 3% biên độ nhịp trở lên; hoặc đặt foot ở góc cuối đáy khi đáy không có gờ (gờ
+dưới 0,5%). Gờ cao 0,5–3% biên độ là vùng mơ hồ của định nghĩa: chấp nhận lựa chọn của người
+đánh dấu, kể cả khi trong cùng đoạn xử lý khác nhau; sai khác này được tính vào độ lặp lại.
+Biên độ nhịp là đỉnh tâm thu trừ đáy thấp nhất; độ cao gờ là đỉnh gờ trừ đáy ngay sau gờ.
+
+**Dừng đánh dấu tay PulseDB (chốt 2026-11-16; nhóm duyệt, có một phản biện độc lập cùng
+ngày).** Đánh dấu tay mốc R/foot trên PulseDB dừng hẳn; **không theo đuổi B4 trên PulseDB**.
+Ghi là "thẩm định chưa hoàn tất", **không** ghi là `gate` ra `B4_NOT_ALLOWED`, vì chưa chạy
+`compare`, `repeat` hay `gate`, và chưa ai xem kết quả detector so với mốc tay.
+
+- **Trạng thái khi dừng:** 69/80 đoạn của lần 1 trong `manual_main.csv` (SHA-256
+  `0658741f…`), chưa có file provenance của `annotate` (chỉ ghi khi xong đoạn 80), chưa có
+  lần 2. R ổn định (mọi R kiểm được lệch đỉnh dưới 8 ms).
+- **Lý do dừng:** định nghĩa foot không vận hành được một cách nhất quán trên hình dạng sóng
+  PPG của bộ đoạn này. Khi giữa đáy thấp nhất và sườn lên có gờ, hoặc đáy phẳng hay hơi
+  nghiêng, có hai điểm ứng viên: điểm thấp nhất và đáy cuối ngay trước sườn lên; chúng cách
+  nhau 50–370 ms, vượt dung sai ghép ±48 ms. Trên 66 đoạn đầu có 164 nhịp như vậy (khoảng 1/5
+  số nhịp), rải trên 37 đoạn; người đánh dấu chọn đáy cuối 82 lần, điểm thấp nhất 72 lần,
+  điểm khác 10 lần. Các quy tắc ngưỡng thêm ngày 2026-11-15 (mục 9.2 và các đoạn trên) không
+  sửa được điều này. Quy tắc đã đổi ba lần sau khi xem mốc tay (chưa xem detector), và người
+  đánh dấu đã nhận phản hồi theo từng đoạn, có lúc kèm thời điểm mốc (hai đoạn, cả hai thuộc
+  `repeat/`), nên tính độc lập của mốc tay và của nhóm xác nhận đã yếu đi.
+- **Phương án đã cân nhắc:** (1) luôn lấy đáy cuối: cần sửa protocol chính thức, rà lại cả
+  66 đoạn, đánh lại khoảng 25 đoạn; `valley_min` lấy điểm thấp nhất nên khả năng cao vẫn
+  trượt, và điều kiện độ lặp lại (mọi mốc ghép được) rất dễ vỡ ở nhịp mơ hồ; (2) luôn lấy
+  điểm thấp nhất: chọn vì khớp code là kiểm định vòng tròn, và sai về sinh lý khi điểm thấp
+  nhất là khuyết dicrotic của nhịp trước; (3) chỉ chấm nhịp không mơ hồ: đổi tập được đánh
+  giá, trái quy tắc đã khóa; (4) dừng. Chọn (4).
+- **Điều không được kết luận:** không viết rằng 125 Hz làm việc đánh dấu bất khả thi (lượng
+  tử 8 ms không giải thích được độ lệch 50–370 ms); không nói gì về độ chính xác của
+  `valley_min`, `tangent` hay `d2_max` trên PulseDB.
+- **Hệ quả** (như trường hợp `B4_NOT_ALLOWED` ở mục 9.6): không có B4 PulseDB và không có mô hình
+  đối chứng B3 + HR/SQI; phần PulseDB còn B0, B2, B3, B5 và RQ2a; không mở lại đánh dấu tay
+  PulseDB sau khi đã thấy kết quả khác; RQ1 không đổi; PAT chỉ được đánh giá trên dữ liệu thiết
+  bị.
+- **Bài học cho đánh dấu tay trên dữ liệu thiết bị:** trước khi đánh, chốt **một** định nghĩa
+  foot có quy tắc cho đáy có gờ, đáy phẳng, nhiễu và nhịp yếu, kèm hình ví dụ; thử trên vài
+  bản ghi không thuộc tập thẩm định để kiểm định nghĩa có vận hành được không, rồi mới khóa;
+  không đổi quy tắc giữa chừng; người rà soát không phản hồi theo từng đoạn trong lúc đánh.
+- **Lưu trữ:** mọi file ở `data/processed/pulsedb_w5_review_v1/` (`manual_main.*`, các thư
+  mục `discarded_*` và `removed_segments_*`) giữ nguyên ngoài Git làm hồ sơ; không dùng cho
+  `compare`, `repeat` hay `gate`.

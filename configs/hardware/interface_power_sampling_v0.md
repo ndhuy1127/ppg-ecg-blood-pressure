@@ -180,7 +180,7 @@ tham số mô phỏng. Nguồn giả của firmware chạy PPG 200 sps, 8 mẫu 
      rõ;
    - (c) ở mã LED cao nhất định dùng, nguồn LED đạt quy tắc V1–V4 của
      [leakage_thermal_test_plan_v1.md](../../hardware/test_reports/leakage_thermal_test_plan_v1.md)
-     mục 3 (bước 3; thay dải 4,5–5,0 V ngày 2026-11-07, chờ duyệt),
+     mục 3 (bước 3; thay dải 4,5–5,0 V ngày 2026-11-07, duyệt 2026-11-14),
      và 3V3 tại M1 không xuống dưới 3,14 V (3,3 V − 5 %) lúc nào trong 60 s đo bằng
      oscilloscope (bước 8). Ngưỡng 3,14 V là đề xuất kỹ thuật, chưa có nguồn.
 

@@ -55,7 +55,7 @@
    logger (bước 2). Đức Anh và Linh.
 2. Tiếp theo: PCB trần, sửa module, hàn lắp, bo đế, MAX30001, bo cổ tay; đo VLED; chọn độ
    rộng xung theo luật đã viết (bước 3–9).
-3. Sau khi chọn độ rộng xung: đo đồng bộ (thử 1 phút, 5 lần 10 phút, 1 lần 120 phút), chạy
+3. Sau khi chọn độ rộng xung: đo đồng bộ (thử 1 phút, 10 lần 10 phút gồm 5 lần mỗi ngày trong hai ngày như tiêu chí A5, 1 lần 120 phút; sửa 2026-11-15, bản trước ghi 5 lần), chạy
    cả hệ 120 phút kèm thử nhiệt, đo dòng rò (bước 11–14).
 4. Huy chạy mốc, PAT và cờ SQI trên log thật đầu tiên.
 

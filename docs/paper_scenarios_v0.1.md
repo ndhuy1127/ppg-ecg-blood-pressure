@@ -5,7 +5,9 @@
 > G5, cách đọc kết quả âm tính và hàng "RQ trả lời" theo RQ v0.4; đề xuất, chờ thầy; cùng ngày ghi
 > hệ quả của việc bỏ M3, M4 đối với R3); 2026-11-12 (R3 chỉ để mô tả, bỏ khỏi điều kiện kích
 > hoạt P A; phương án đa kiểm định A; thêm baseline trung bình theo pha vào bảng chính; theo
-> [SAP v1](protocol/sap_v1.md), chốt, báo thầy).
+> [SAP v1](protocol/sap_v1.md), chốt, báo thầy); 2026-11-15 (theo SAP v1: bỏ r < 0,3 khỏi điều
+> kiện kích hoạt P C vì r chỉ để mô tả; δ ghi trước buổi thu chính đầu tiên; định nghĩa "đạt
+> chuẩn" đã chép vào SAP mục 2 để khóa).
 >
 > Tên file vẫn giữ `v0.1` để các liên kết cũ không bị gãy. R2/R3/R5 ở đây là dấu hiệu của kế hoạch
 > 28 tuần, không phải quy tắc K1–K6 của protocol mục 5.4. Bản phác thảo này dùng để chuẩn bị cho
@@ -37,7 +39,7 @@ báo động 10 mmHg ([protocol](protocol/protocol_outline_v0.2.md) mục 6.5).
 
 | | **P A — đủ dữ liệu** | **P B — thiếu dữ liệu** | **P C — kết quả âm tính** |
 | --- | --- | --- | --- |
-| Kích hoạt | G4: ≥ 15 người đạt chuẩn; G5 đạt kết luận chính của [RQ v0.4](research_questions_v0.1.md) mục 4.E, tức là với từng đầu ra, CI bootstrap theo người ở mức sau hiệu chỉnh đa kiểm định (95% trước hiệu chỉnh; sửa 2026-11-07) của trung bình $d^{0}_s$ (PPG + PAT so với zero-change) và của trung bình $d_s$ = MAE(PPG + PAT) − MAE(PPG-only) đều nằm **hoàn toàn dưới 0**. Đa kiểm định theo phương án A ([SAP v1](protocol/sap_v1.md) mục 6, chốt 2026-11-12); δ tính sau pilot theo quy tắc của SAP mục 8, trước khi chạy vòng ngoài | G4: < 15 người đạt chuẩn (cảnh báo sớm R2: < 12 người ở Tuần 18), hoặc có quá ít người có phiên sau để ước lượng CI | Đủ dữ liệu như P A, nhưng G5 không đạt kết luận chính: CI của trung bình $d_s$ không nằm hoàn toàn dưới 0 (chứa 0 hoặc nằm trên 0), hoặc CI của $d^{0}_s$ không nằm hoàn toàn dưới 0. Hoặc R5: r giữa ΔBP dự đoán và ΔBP tham chiếu < 0,3, hay mô hình không vượt B1 (zero-change). Khi CI của $d_s$ không đạt, kết quả được phân loại tiếp theo RQ mục 4.E thành: tương đương trong phạm vi $[-\delta; \delta]$, chưa kết luận, hoặc sai số tăng |
+| Kích hoạt | G4: ≥ 15 người đạt chuẩn ([SAP v1](protocol/sap_v1.md) mục 2); G5 đạt kết luận chính của [RQ v0.4](research_questions_v0.1.md) mục 4.E, tức là với từng đầu ra, CI bootstrap theo người ở mức sau hiệu chỉnh đa kiểm định (95% trước hiệu chỉnh; sửa 2026-11-07) của trung bình $d^{0}_s$ (PPG + PAT so với zero-change) và của trung bình $d_s$ = MAE(PPG + PAT) − MAE(PPG-only) đều nằm **hoàn toàn dưới 0**. Đa kiểm định theo phương án A ([SAP v1](protocol/sap_v1.md) mục 6, chốt 2026-11-12); δ tính sau pilot theo quy tắc của SAP mục 8 và ghi vào SAP trước buổi thu chính đầu tiên (SAP mục 9) | G4: < 15 người đạt chuẩn (cảnh báo sớm R2: < 12 người ở Tuần 18), hoặc có quá ít người có phiên sau để ước lượng CI | Đủ dữ liệu như P A, nhưng G5 không đạt kết luận chính: CI của trung bình $d_s$ không nằm hoàn toàn dưới 0 (chứa 0 hoặc nằm trên 0), hoặc CI của $d^{0}_s$ không nằm hoàn toàn dưới 0 (R5: mô hình không vượt B1 zero-change). Pearson r giữa ΔBP dự đoán và ΔBP tham chiếu chỉ để mô tả ([SAP v1](protocol/sap_v1.md) endpoint 9), không phải điều kiện kích hoạt (sửa 2026-11-15; bản trước có thêm r < 0,3, có thể xếp một kết quả đạt kết luận chính vào P C). Khi CI của $d_s$ không đạt, kết quả được phân loại tiếp theo RQ mục 4.E thành: tương đương trong phạm vi $[-\delta; \delta]$, chưa kết luận, hoặc sai số tăng |
 | Thông điệp chính | Trên dữ liệu cổ tay nhiều phiên, thêm PAT vào PPG làm giảm sai số ΔBP so với PPG-only ở mức [số đo được], kèm dải ΔBP tham chiếu. Nói rõ lợi ích có đạt mức δ hay không; chỉ gọi là đáng quan tâm khi cận trên của CI < −δ | Nguyên mẫu thu đồng bộ ECG–PPG ở cổ tay, quy trình đánh giá chống rò rỉ và dữ liệu khả thi ban đầu; không kết luận về RQ1 | Sau hiệu chuẩn, chưa chứng minh được rằng thêm PAT cải thiện so với PPG-only, hoặc mô hình không vượt zero-change (R5), tùy điều kiện nào đã kích hoạt; hai phép so sánh này được báo riêng. Phân biệt rõ "tương đương trong phạm vi δ" (kết quả âm tính có thông tin) với "chưa kết luận" (CI rộng, thiếu độ nhạy); chỉ trường hợp đầu mới cho phép nói rằng thêm PAT không cải thiện đáng kể. Báo độ rộng CI, dải ΔBP, các nguồn sai số và điều kiện cần để phép so sánh có độ nhạy |
 | RQ trả lời | RQ1 (chính), RQ2b (cùng phiên so với khác phiên), RQ2a ở phụ lục, RQ3 thăm dò nếu có đủ đoạn nhiễu tự nhiên | RQ2a (phần PulseDB); RQ1 chỉ mô tả, không kiểm định; RQ3 thăm dò | RQ1 (kết quả âm tính có CI và δ), RQ2b, RQ2a ở phụ lục, RQ3 thăm dò nếu đủ dữ liệu |
 | Bảng/hình chính | Bảng MAE/bias/SD theo SBP, DBP cho zero-change, độ lệch hằng số, trung bình theo pha, PPG-only, PAT-only, PPG + PAT, kèm CI theo người; hiệu so với trung bình theo pha ([SAP v1](protocol/sap_v1.md) mục 3, 7); hình chênh lệch MAE theo người; phân bố ΔBP theo nghiệm pháp | Sơ đồ thiết bị và đồng bộ; bảng jitter/offset/mất gói; bảng SQI và tỷ lệ dữ liệu bị loại; bảng RQ2a trên PulseDB (chia theo cửa sổ so với chia theo người) | Như P A, nhấn mạnh SD của ΔBP tham chiếu và hình sai số theo dải ΔBP; phân tích độ nhạy theo cửa sổ và theo phương pháp xác định mốc |
@@ -56,9 +58,8 @@ báo động 10 mmHg ([protocol](protocol/protocol_outline_v0.2.md) mục 6.5).
 
 Việc còn mở:
 
-- định nghĩa chính thức của "đạt chuẩn", khóa ở protocol v1 (Tuần 10);
-- giá trị δ, tính sau pilot theo quy tắc đã chốt ở [SAP v1](protocol/sap_v1.md) mục 8, khóa
-  trước vòng ngoài.
+- giá trị δ, tính sau pilot theo quy tắc đã chốt ở [SAP v1](protocol/sap_v1.md) mục 8, ghi vào
+  SAP trước buổi thu chính đầu tiên (SAP mục 9).
 
 Đã chốt 2026-11-12: phương án đa kiểm định A; R3 chỉ để mô tả và P2 mới (nên không cần nhánh
 "đủ người nhưng R3 dưới ngưỡng").

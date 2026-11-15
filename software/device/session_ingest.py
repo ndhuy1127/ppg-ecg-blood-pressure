@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from software.data_io.live_monitor import slot_colors
-from software.device.synthetic_session import SLOT_SPACING_US
+from software.device.max30101 import SLOT_SPACING_US
 
 VERSION = "device-session-v1"
 LOGGER_VERSION = "packet-logger-v3"
@@ -44,6 +44,11 @@ CUFF_COLUMNS = ("recording", "event_id", "phase", "device_session_id",
 # session of one subject, so they must be the same on every row (data_convention 4.4).
 LOG_CONSTANT_COLUMNS = ("led_readjusted", "pilot")
 CUFF_STATUS = ("valid", "no_result", "device_error")
+# Acceptance criterion A3 (hardware/test_reports/sync_10min_test_plan.md section 9):
+# the median anchor residual of every 10 s block stays within +/- 0.2 ms. Checked on
+# every recording and only flagged; sample times are not changed (added 2026-11-15).
+A3_BLOCK_US = 10_000_000
+A3_LIMIT_US = 200.0
 PHASES = ("M0", "M1", "M2")
 REQUIRED_FILES = ("raw.bin", "decode.json", "packets.csv", "samples.csv",
                   "session_metadata.json", "logger_config.json")
@@ -177,14 +182,28 @@ def load_recording(directory):
             "decode": decode, "packets": packets, "samples": samples}
 
 
+def _a3_block_max(anchor, residuals):
+    """Largest |median residual| over 10 s blocks of anchor time (A3); the last
+    block joins the one before when it spans under half a block."""
+    start = anchor.min()
+    block = np.floor((anchor - start) / A3_BLOCK_US)
+    last = block.max()
+    if last > 0 and anchor.max() - (start + last * A3_BLOCK_US) < A3_BLOCK_US / 2:
+        block[block == last] = last - 1
+    return float(max(abs(np.median(residuals[block == j])) for j in np.unique(block)))
+
+
 def fit_timebase(packets, fs_nominal_hz):
     """Line ``T_ANCHOR_US = a + b k`` over anchor-checked packets of one chain.
 
     ECG packets with STATUS bit 8 (SAMP edges) and FIFO-read anchors have an
     unknown offset between them, so only one source is used: SAMP when present.
-    Returns a dict with a, b (us per sample), fs_hz, n_anchors, residual_sd_us and
-    anchor_source; with fewer than two anchors b is the nominal period and the
-    fit is flagged; with none, None."""
+    Returns a dict with a, b (us per sample), fs_hz, n_anchors, residual_sd_us,
+    residual_block_max_us (largest |median residual| over 10 s blocks of anchor
+    time, the statistic of A3; a last block spanning under half a block joins the
+    one before, so a few trailing anchors do not carry their own jitter; None with
+    fewer than three anchors) and anchor_source; with fewer than two anchors b is
+    the nominal period and the fit is flagged; with none, None."""
     reliable = [p for p in packets if p["disposition"] == "accepted"]
     samp = [p for p in reliable if p["channel_id"] == "0xE1" and p["status"] >> 8 & 1]
     source = "samp" if samp else "fifo_read"
@@ -196,14 +215,17 @@ def fit_timebase(packets, fs_nominal_hz):
     if len(use) == 1 or np.ptp(k) == 0:
         b = 1e6 / fs_nominal_hz
         a = float(anchor[0] - b * k[0])
-        residual, nominal = None, True
+        residual, block_max, nominal = None, None, True
     else:
         b, a = np.polyfit(k - k[0], anchor, 1)
         a = float(a - b * k[0])
-        residual = float(np.std(anchor - (a + b * k), ddof=2)) if len(use) > 2 else None
+        residuals = anchor - (a + b * k)
+        residual = float(np.std(residuals, ddof=2)) if len(use) > 2 else None
+        block_max = _a3_block_max(anchor, residuals) if len(use) > 2 else None
         nominal = False
     return {"a_us": float(a), "b_us": float(b), "fs_hz": 1e6 / float(b),
             "n_anchors": len(use), "residual_sd_us": residual,
+            "residual_block_max_us": block_max,
             "anchor_source": source, "nominal_rate": nominal}
 
 
@@ -262,6 +284,9 @@ def session_series(recording, session_index=0):
                 continue
             if fit["nominal_rate"]:
                 flags.append(f"{key}:chain{int(chain_id)}:single_anchor_nominal_rate")
+            elif (fit["residual_block_max_us"] is not None
+                  and fit["residual_block_max_us"] > A3_LIMIT_US):
+                flags.append(f"{key}:chain{int(chain_id)}:timebase_residual_above_a3")
             mask = chain == chain_id
             t_us[mask] = fit["a_us"] + fit["b_us"] * index[mask] - (latency or 0)
         offset = None

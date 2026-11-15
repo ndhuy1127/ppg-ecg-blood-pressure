@@ -47,7 +47,7 @@ CODE = ("scripts/device_session.py", "software/__init__.py",
         "software/device/__init__.py", "software/feature_extraction/__init__.py",
         "software/signal_processing/__init__.py", "software/data_io/__init__.py",
         "software/device/session_ingest.py", "software/device/features.py",
-        "software/device/synthetic_session.py", "software/feature_extraction/week04.py",
+        "software/device/max30101.py", "software/feature_extraction/week04.py",
         "software/signal_processing/fiducials.py",
         "software/signal_processing/pat_validity.py", "software/data_io/live_monitor.py",
         "software/data_io/packet_receiver.py", "software/data_io/packet_wire.py",
@@ -124,7 +124,8 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
     _json(output / "session_summary.json", summary)
     _csv(output / "timebase.csv", ("device_session_id", "channel", "chain_id", "n_anchors",
                                    "a_us", "b_us", "fs_hz", "residual_sd_us",
-                                   "anchor_source", "nominal_rate", "latency_l_us"),
+                                   "residual_block_max_us", "anchor_source",
+                                   "nominal_rate", "latency_l_us"),
          timebase)
     _csv(output / "events.csv", ("device_session_id", "event_ordinal", "code", "name",
                                  "t_us"), events)

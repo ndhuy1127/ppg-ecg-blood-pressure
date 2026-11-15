@@ -169,13 +169,13 @@ def test_held_out_subject_never_enters_its_fold(monkeypatch):
 def test_held_out_labels_do_not_change_its_predictions():
     rows = table(7, n=6, sbp_pat=1.0)
     prep = ra.prepare(rows, FAST)
-    preds, _ = ra._fold_predictions(prep, FAST)
+    preds, _, _ = ra._fold_predictions(prep, FAST)
     changed = copy.deepcopy(rows)
     for r in changed:
         if r["subject_id"] == "SYN_00" and r["session_id"] != "S001":
             r["sbp_mmhg"] += 30
     prep2 = ra.prepare(changed, FAST)
-    preds2, _ = ra._fold_predictions(prep2, FAST)
+    preds2, _, _ = ra._fold_predictions(prep2, FAST)
     for model in ("ppg", "ppg_pat", "phase_mean", "constant", "phase_ppg_pat"):
         a = [preds[("SBP", model)][id(c)] for c in prep["cuffs"]
              if c["subject"] == "SYN_00" and c["in_main"]]
@@ -683,7 +683,7 @@ def test_secondary_model_contrasts_use_the_same_cuffs():
         if (r["subject_id"], r["session_id"], r["event_id"]) in holes:
             r["ecg_rmssd_ms"] = ""
     prep = ra.prepare(rows, FAST)
-    preds, _ = ra._fold_predictions(prep, FAST)
+    preds, _, _ = ra._fold_predictions(prep, FAST)
     report = ra._secondary(rows, prep, FAST, None)
     main_set = sum(c["in_main"] for c in prep["cuffs"])
     for ti, target in enumerate(ra.TARGETS):
@@ -749,3 +749,76 @@ def test_committed_unchanged_sees_through_assume_unchanged(tmp_path):
     git("update-index", "--assume-unchanged", "code.py")
     path.write_text("ALPHA = 37\n", encoding="utf-8")
     assert not committed_unchanged(tmp_path, path)
+
+
+def test_a_secondary_model_that_cannot_be_fitted_does_not_stop_the_main_result():
+    # Only SYN_00 keeps its M1 cuffs: in the fold that holds SYN_00 out, the M1
+    # indicator of the endpoint 10 models is 0 on every training cuff, so they
+    # cannot be fitted there. Before 2026-11-15 this stopped the whole analysis.
+    rows = table(1, n=16)
+    for r in rows:
+        if r["phase"] == "M1" and r["subject_id"] != "SYN_00":
+            r["status"], r["sbp_mmhg"], r["dbp_mmhg"] = "no_result", "", ""
+    report = ra.analyze(rows, FAST)
+    failures = report["main"]["model_fit_failures"]
+    assert set(failures) == {f"{t}|{m}" for t in ra.TARGETS
+                             for m in ("phase_ppg", "phase_ppg_pat")}
+    assert all(f["held_out"] == "SYN_00" for v in failures.values() for f in v)
+    for t in ra.TARGETS:
+        assert "not_computed" in report["secondary"][t]["10_pat_given_phase"]
+        assert report["secondary"][t]["model_phase_ppg"]["fit_failures"]
+    # The main result is that of the same analysis without the endpoint 10 models.
+    lean = copy.deepcopy(FAST)
+    for m in ("phase_ppg", "phase_ppg_pat"):
+        del lean["models"][m]
+    del lean["comparison"]["with_phase"]
+    other = ra.analyze(rows, lean)
+    assert other["main"]["model_fit_failures"] == {}
+    for t in ra.TARGETS:
+        assert (report["main"]["targets"][t]["contrasts"]
+                == other["main"]["targets"][t]["contrasts"])
+        assert (report["main"]["targets"][t]["main_conclusion"]
+                == other["main"]["targets"][t]["main_conclusion"])
+
+
+def test_a_main_model_that_cannot_be_fitted_still_stops(monkeypatch):
+    ridge = ra.loso_ridge
+    full = FAST["models"][FAST["comparison"]["full"]]["features"]
+
+    def broken(train, test, features, alpha, target, with_phase=False):
+        if list(features) == full and not with_phase:
+            raise ValueError("A feature is constant over the training cuffs of a fold")
+        return ridge(train, test, features, alpha, target, with_phase)
+
+    monkeypatch.setattr(ra, "loso_ridge", broken)
+    with pytest.raises(ValueError, match="constant"):
+        ra.analyze(table(2, n=6), FAST)
+
+
+def test_cuffs_without_the_locked_led_codes_leave_main_training_and_calibration():
+    # SAP sections 2-4, amended 2026-11-15: a cuff measured without the locked LED
+    # codes (ppg:led_not_locked) leaves the calibration, the main set and the
+    # training set on its own; endpoint 6 takes it back, calibration included.
+    rows = table(11, n=6, sbp_pat=1.0)
+    flagged = {("SYN_01", "S002", "E03"), ("SYN_02", "S001", "E01"),
+               ("SYN_03", "S001", "E01"), ("SYN_03", "S001", "E02")}
+    for r in rows:
+        if (r["subject_id"], r["session_id"], r["event_id"]) in flagged:
+            r["flags"] = "ppg:led_not_locked"
+    prep = ra.prepare(rows, FAST)
+    cuff = {(c["subject"], c["session"], c["event_id"]): c for c in prep["cuffs"]}
+    assert not cuff[("SYN_01", 2, "E03")]["in_main"]
+    assert not cuff[("SYN_01", 2, "E03")]["trainable"]
+    assert all(cuff[("SYN_01", 2, e)]["in_main"] for e in ("E01", "E02", "E04"))
+    # SYN_02 calibrates on its other session-1 M0 cuff only.
+    assert prep["calibration_counts"]["SYN_02"]["bp0"] == 1
+    assert cuff[("SYN_02", 1, "E02")]["delta_bp"] == pytest.approx([0.0, 0.0])
+    assert prep["excluded"] == {"SYN_03": "session1_m0_led_not_locked"}
+    report = ra.analyze(rows, FAST)
+    counts = report["counts"]
+    assert counts["led_not_locked_by_subject"] == {
+        "SYN_00": 0, "SYN_01": 1, "SYN_02": 1, "SYN_03": 2, "SYN_04": 0, "SYN_05": 0}
+    assert counts["skipped_by_phase"]["M1"]["led_not_locked"] == 1
+    assert counts["skipped_by_phase"]["M1"]["valid_not_computable"] == 0
+    # Endpoint 6: SYN_01's cuff and the 8 later cuffs of SYN_03 come back.
+    assert report["secondary"]["6_with_led_readjusted"]["main_cuffs_change"] == 9

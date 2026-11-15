@@ -225,6 +225,9 @@ int main(void)
             scanf("%u %u %u", &a, &b, &c);
             max30101_latch_t l = {.waiting = (uint16_t)a, .full = b != 0};
             printf("%u\n", ppg_read_count(&l, (uint16_t)c));
+        } else if (cmd[0] == 'O') { /* I2C timeout: bytes clock_hz */
+            scanf("%u %u", &a, &b);
+            printf("%lu\n", (unsigned long)max30101_i2c_timeout_ms(a, b));
         } else if (cmd[0] == 'X') {
             /* plan: status_ok pointers_ok waiting full status1 count ok anchor */
             unsigned long long anchor;
@@ -508,4 +511,22 @@ def test_ppg_plan_reconfigures_after_a_failed_sample_read(harness):
     assert c.plan(8, 8, 1_280_000)["status"] == BIT4 | BIT0 | BIT3 | BIT5
     # Nothing was read (too few waiting): no read, no failure.
     assert c.plan(5, 0, 1_300_000, samples_ok=False)["reconfigure"] == 0
+    c.close()
+
+
+@pytest.mark.parametrize("clock_hz", [100_000, 400_000])
+def test_i2c_timeout_covers_a_full_fifo_read_at_both_bus_rates(harness, clock_hz):
+    # A full FIFO read puts 32 samples x 3 slots x 3 bytes plus two address bytes
+    # and the register on the bus; each byte is 9 SCL periods (8 bits and the ACK).
+    # The former fixed 20 ms was below the 26 ms of that read at the 100 kHz
+    # fallback of bring-up (changed 2026-11-15).
+    c = Chip(harness)
+    for count in (1, 8, 16, 25, 32):
+        nbytes = count * 9 + 3
+        wire_ms = nbytes * 9 / clock_hz * 1000
+        timeout = int(c(f"O {nbytes} {clock_hz}"))
+        assert timeout >= 2 * wire_ms + 10
+        assert timeout <= 2 * wire_ms + 12
+    assert int(c("O 291 100000")) > 2 * 26.19
+    assert int(c("O 291 0")) == 1000
     c.close()

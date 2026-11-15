@@ -75,8 +75,12 @@ Giao diện giữa ingest, mốc/PAT và phân tích RQ1. Code:
 - L là null thì thời gian không trừ L, kênh mang cờ `latency_unknown`, và PAT không được tính
   (`pat:upstream_delay_unknown`).
 - `timebase.csv`: `device_session_id, channel, chain_id, n_anchors, a_us, b_us, fs_hz,
-  residual_sd_us, anchor_source, nominal_rate, latency_l_us`. Chuỗi chỉ có một mốc dùng tốc độ
-  danh định (`nominal_rate = True`, cờ `single_anchor_nominal_rate`).
+  residual_sd_us, residual_block_max_us, anchor_source, nominal_rate, latency_l_us`. Chuỗi chỉ có
+  một mốc dùng tốc độ danh định (`nominal_rate = True`, cờ `single_anchor_nominal_rate`).
+  `residual_block_max_us` (thêm 2026-11-15, chờ duyệt) là trị tuyệt đối lớn nhất của trung vị
+  phần dư theo khối 10 s, đúng thống kê của tiêu chí A3 (khối cuối dưới 5 s gộp vào khối trước;
+  trống khi chuỗi dưới 3 mốc); vượt 0,2 ms thì có cờ `timebase_residual_above_a3` (chỉ báo,
+  thời gian mẫu không đổi).
 - `window_samples.csv`: `event_id, channel, name, chain_id, sample_index, t_us, value` cho mọi
   mẫu trong cửa sổ lưu `[t0 − 60 s, t0)` của từng lần cuff.
 - Đơn vị `value`: mã ADC như `samples.csv`. ECG là nguyên word 24 bit của MAX30001; phần tính
@@ -143,6 +147,12 @@ pat_sqi_v2_median_ms, pat_n_valid, flags, source_type`
   một bản ghi của phiên sau bắt đầu trước bản ghi muộn nhất của phiên trước.
 - Cửa sổ không có mẫu ECG nào có cờ `ecg:absent` (thêm 2026-11-14); đặc trưng PPG vẫn được tính,
   PAT và đặc trưng ECG để trống.
+- Kênh PPG phủ quá ít cửa sổ để tìm chân sóng (dưới 0,7 s) hay có thời gian không tăng thật sự
+  thì có cờ `pat:no_foot_span` và PAT để trống (thêm 2026-11-15); buổi vẫn chạy tiếp.
+- `ppg:led_not_locked` (sửa 2026-11-15, chờ duyệt): máy không chạy với mã LED đã khóa trong cửa
+  sổ, hay không xác minh được điều đó; trạng thái chi tiết (`led_lock_status`) ghi ở
+  `cuff_features.json` ([SQI v1](protocol/sqi_specification_v1.md) mục 3.3). Phân tích RQ1 bỏ
+  lần cuff mang cờ này khỏi hiệu chuẩn, tập chính và tập học ([SAP v1](protocol/sap_v1.md) mục 2).
 - `pat_ms` là trung vị PAT hợp lệ của `pat-validity-v1`; `pat_sqi_v2_median_ms` là trung vị
   của cách ghép `features-sqi-v2`, giữ để so.
 - `flags`: cờ SQI v1 (mục 3.1, 3.3) và cờ cửa sổ, nối bằng `;`.

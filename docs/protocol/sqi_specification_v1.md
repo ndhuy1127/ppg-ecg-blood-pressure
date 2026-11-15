@@ -11,11 +11,16 @@
 >   thành viên nhóm (ghi ngày và commit) trước khi thu dữ liệu chính.
 > - Không chọn ngưỡng theo sai số dự đoán BP.
 > - Đặc tả này không áp cho PulseDB: PulseDB là dữ liệu đã làm sạch, không có STATUS hay IMU.
+> - **Sửa 2026-11-15 (đề xuất, chờ duyệt):** `ppg:led_not_locked` bắt thêm ba trường hợp và trở
+>   thành cờ tuân thủ protocol (mục 1, 3.3); thêm `pat:no_foot_span` (mục 3.1); mục 8 ghi phần code
+>   đã có.
 
 ## 1. Vai trò của SQI trong phân tích
 
 - **Phân tích chính của RQ1 không loại lần đo nào theo SQI** (chốt 2026-10-29). Lần đo chỉ ra
-  khỏi phép so sánh chính khi không **tính được** đặc trưng (mục 4). Đây là điều kiện tính được,
+  khỏi phép so sánh chính khi không **tính được** đặc trưng (mục 4), hoặc khi máy không chạy với
+  mã LED đã khóa (`ppg:led_not_locked`; cờ tuân thủ protocol 6.1, không phải ngưỡng chất lượng;
+  [SAP v1](sap_v1.md) mục 2, sửa 2026-11-15, chờ duyệt). Đây là điều kiện tính được,
   không phải ngưỡng chất lượng. Mất ECG hay mất PPG xử lý theo protocol mục 10 và
   [SAP v1](sap_v1.md) mục 10.
 - **Phân tích phụ đăng ký trước:** lặp lại phép so sánh chính sau khi bỏ các lần đo có cờ trong
@@ -44,6 +49,7 @@
 | `ppg:shape_inconsistent` | Tương quan hình dạng nhịp với template dưới `shape_min_correlation` |
 | `pat:alignment_unverified`, `pat:clock_unverified`, `pat:upstream_delay_unknown` | Chưa đủ căn cứ thời gian để ghép R với chân sóng; PAT không tính |
 | `pat:unmatched_beats`, `pat:too_few_pairs` | Có nhịp không ghép được, hoặc ít cặp R–foot hơn `min_beats` |
+| `pat:no_foot_span` | PPG phủ quá ít cửa sổ (dưới 2 × `edge_s` + `foot_lookback_s`, tức 0,7 s) hay thời gian PPG không tăng thật sự: không chân sóng nào tìm được, PAT không tính (thêm 2026-11-15; trước đó một cửa sổ như vậy làm dừng cả buổi) |
 | `feature:<tên>:arithmetic_nonfinite` | Một đặc trưng tính ra không hữu hạn |
 
 Chỉ số liên tục cho RQ3: `ppg_shape_correlation`, `pat_pair_fraction`, `pat_iqr_ms`, số đỉnh
@@ -60,7 +66,7 @@ theo protocol 7.3 ý 5:
 
 Chỉ số liên tục: giá trị lớn nhất của P95 trượt, tỷ lệ mẫu vượt ngưỡng.
 
-### 3.3. Cờ của phần cứng V1 (mới ở v1, chưa có code)
+### 3.3. Cờ của phần cứng V1 (mới ở v1; có code từ 2026-11-14)
 
 Lấy từ STATUS và nội dung packet của Packet Schema V0.2 trong cửa sổ:
 
@@ -71,7 +77,7 @@ Lấy từ STATUS và nội dung packet của Packet Schema V0.2 trong cửa s�
 | `ecg:lead_off` | Có packet ECG mang STATUS bit 2 | Bất kỳ |
 | `afe:fifo_overflow` | Có packet ECG hay PPG mang STATUS bit 0 (mẫu cũ, mất mẫu) | Bất kỳ |
 | `stream:gap` | Logger báo khoảng trống của kênh ECG hay PPG trong cửa sổ (`gaps`, `channel_holes` trong `decode.json`) | Bất kỳ |
-| `ppg:led_not_locked` | Trạng thái MAX30101 trong cửa sổ không mang mã LED đã khóa (`ppg_led_lock`) | Bất kỳ |
+| `ppg:led_not_locked` | Trạng thái MAX30101 trong cửa sổ không mang mã LED đã khóa (`ppg_led_lock`). Sửa 2026-11-15, gồm cả: mã khóa có hiệu lực sau đầu cửa sổ; không trạng thái nào của phiên thiết bị mang mã khóa (`ppg_led_lock_not_applied`, ví dụ MCU khởi động lại mà chưa gửi lại mã); trạng thái đang chạy lúc đầu cửa sổ hay bắt đầu trong cửa sổ có mã khác (`ppg_led_lock_mismatch`) hoặc không phải trạng thái chip đã cấu hình; bản ghi có `subject_id` mà metadata không có `ppg_led_lock`. Trạng thái chi tiết ở `led_lock_status` của `cuff_features.json` | Bất kỳ; ra khỏi phân tích chính ([SAP v1](sap_v1.md) mục 2) |
 
 Chỉ số liên tục cho RQ3: tỷ lệ chạm trần theo màu, mức DC theo % thang đo.
 
@@ -92,7 +98,8 @@ Các lần đo không tính được PAT nhưng có PPG vẫn vào phân tích p
 Đề xuất, chờ G2 xác nhận ngưỡng: loại một lần đo nếu nó có bất kỳ cờ nào sau đây.
 
 - `motion`;
-- `ppg:adc_saturation`, `ppg:alc_overflow`, `ppg:shape_inconsistent`, `ppg:led_not_locked`;
+- `ppg:adc_saturation`, `ppg:alc_overflow`, `ppg:shape_inconsistent`, `ppg:led_not_locked` (từ
+  2026-11-15 các lần đo này đã ra khỏi phân tích chính, SAP mục 2);
 - `ecg:lead_off`, `afe:fifo_overflow`, `stream:gap`;
 - `pat:unmatched_beats`.
 
@@ -116,11 +123,13 @@ Không dùng nhãn BP để chọn ngưỡng.
 - Coverage của phân tích phụ lọc SQI trên toàn bộ lần đo, kèm phân bố |ΔBP| của lần đo bị loại
   so với lần đo được giữ (RQ v0.4 mục 6.D).
 
-## 8. Việc còn lại để có code
+## 8. Code (cập nhật 2026-11-15)
 
-- Tính cờ mục 3.3 từ output của logger (`packets.csv`, `decode.json`) theo cửa sổ của từng
-  `event_id`.
-- Gộp các cờ ở mức cửa sổ thành bảng mức lần đo.
-- Test SYNTHETIC cho từng cờ.
-
-Việc này làm sau khi có bản ghi thiết bị đầu tiên (Tuần 8 trở đi).
+- Đã có (2026-11-14): cờ mục 3.3 tính theo cửa sổ của từng `event_id` từ output của logger
+  (`hardware_flags`, `led_lock_status` trong `software/device/features.py`) và gộp vào bảng mức
+  lần đo (`cuff_row`); [pipeline thiết bị](device_session_pipeline.md) mục 3.
+- Có test SYNTHETIC (`tests/test_device_features.py`): `stream:gap`, `ecg:absent`,
+  `ppg:led_not_locked` (mọi trạng thái khóa), `pat:no_foot_span`.
+- Còn lại: test SYNTHETIC cho `ppg:adc_saturation`, `ppg:alc_overflow`, `ecg:lead_off`,
+  `afe:fifo_overflow`; cờ cử động trên dữ liệu thiết bị (ingest v1 chưa đọc IMU); kiểm mọi cờ
+  trên bản ghi thiết bị đầu tiên.

@@ -88,8 +88,17 @@ Không đo trên người.
     liệu ghi rõ cổng chỉ chặn chạy nhầm, không chặn người cố ý lách;
   - điều kiện sửa breakout MAX30001 v2 như ở mục của Đức Anh.
   Đếm lần đo bị bỏ cần sổ lịch đo dự kiến; đã thêm vào việc còn lại trước khi khóa SAP.
-- **Chưa xong:** đánh dấu tay lần 1 (chưa có file đánh dấu mới sau khi bỏ phiên 2026-10-25, kiểm
-  2026-11-14), nên chưa chạy `gate`.
+- **Đánh dấu tay lần 1 và quyết định dừng** (2026-11-15 → 2026-11-16, ghi bổ sung sau khi đóng
+  báo cáo; chi tiết ở [tài liệu mốc Tuần 5](../../../docs/protocol/week05_fiducials_pat_validity.md)
+  mục 9.2 và 9.7): đánh được 69/80 đoạn, R ổn định. Foot không đánh được nhất quán: khi đáy có
+  gờ hoặc đáy phẳng có hai điểm ứng viên cách nhau 50–370 ms, và trên 66 đoạn đầu, 164 nhịp như
+  vậy được chọn gần như chia đôi giữa hai điểm. Các quy tắc bổ sung trong ngày không sửa được
+  điều này; 9 đoạn bị xóa để đánh lại (11 lần xóa, hai đoạn xóa hai lần), có ghi sai lệch.
+  Ngày 2026-11-16 nhóm dừng đánh dấu tay PulseDB, sau khi một phản biện độc lập cũng khuyên
+  dừng; **không theo đuổi B4 trên PulseDB**.
+  Chưa chạy `compare` hay `gate`, nên đây là thẩm định chưa hoàn tất, không phải kết quả cổng.
+  RQ1 không đổi; mốc cho PAT sẽ thẩm định trên dữ liệu thiết bị với một định nghĩa foot chốt
+  trước, có hình ví dụ và thử trước khi khóa.
 
 ### Linh, Huy
 
@@ -178,7 +187,7 @@ phải hiệu năng huyết áp.
 | RAM đo trên laptop buổi đo | **Đạt phần đo:** đo 2026-11-13; bước RAM trước buổi đo duyệt 2026-11-14; chưa đo trên máy đã đóng ứng dụng | Linh | Tuần 9: đo lại khi đã đóng ứng dụng |
 | Pipeline ingest và mốc/PAT chạy trên SYNTHETIC, có test | **Đạt**; định dạng, các mục tự chốt và cổng khóa duyệt 2026-11-14 sau khi sửa sáu chỗ theo phản biện độc lập | Linh, Huy | Sổ lịch đo dự kiến: trước pilot |
 | RQ2a | **Đạt:** duyệt, chạy, có bảng và CI (mục 6.2) | Linh | — |
-| Đủ 80 đoạn đánh dấu lần 1 | **Chưa:** chưa bắt đầu lại | Huy | Tuần 9; `gate` rồi B4 sau đó |
+| Đủ 80 đoạn đánh dấu lần 1 | **Dừng** (2026-11-16): 69/80 đoạn; định nghĩa foot không vận hành được nhất quán; không làm B4 PulseDB (mục 3, Huy) | Huy | Tuần 9: chốt định nghĩa foot cho dữ liệu thiết bị trước pilot |
 
 **Đường găng** vẫn là phần cứng. Bo Waveshare ESP32-S3, MAX30101 và BMI270 chưa về; breakout
 MAX30001 đã về nhưng là bản v2, đang chờ schematic. Các bước không cần ba module này (PCB trần,

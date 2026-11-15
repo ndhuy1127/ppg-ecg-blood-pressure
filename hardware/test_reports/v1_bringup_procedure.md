@@ -364,7 +364,8 @@ rộng xung đã chốt truyền qua `PLATFORMIO_BUILD_FLAGS`.
 
 ## 10. Đo dòng rò trước khi dùng trên người
 
-Đề xuất của nhóm 2026-10-29, chờ thầy duyệt. Phương pháp, giới hạn và biên bản theo
+Đề xuất 2026-10-29; phương pháp duyệt 2026-11-14 cùng kế hoạch đo dòng rò ở dưới, giá trị
+giới hạn chờ đối chiếu IEC 60601-1. Phương pháp, giới hạn và biên bản theo
 [session_safety_stopping_v0.1.md](../../docs/ethics/session_safety_stopping_v0.1.md)
 mục 9 (số mục theo bản viết lại 2026-10-31). Cách đo chi tiết, giới hạn đề xuất và quy tắc
 đạt: [leakage_thermal_test_plan_v1.md](leakage_thermal_test_plan_v1.md) (đề xuất 2026-11-07,
@@ -375,7 +376,7 @@ duyệt 2026-11-14; giá trị giới hạn chờ đối chiếu IEC). Checklist
 - Đo trên cấu hình dùng thật: PCB V1 (bo đế, cáp, bo cổ tay) đã lắp đủ, bo Waveshare,
   một cáp USB-C, laptop chạy pin, rút sạc.
 - Loại bộ phận ứng dụng dự kiến là BF (điện cực ECG dán da), chờ xác nhận.
-- Thử nhiệt (đề xuất 2026-10-31, chờ thầy): chạy liên tục 120 phút với mã LED ở trần
+- Thử nhiệt (đề xuất 2026-10-31, duyệt 2026-11-14 cùng kế hoạch đo dòng rò): chạy liên tục 120 phút với mã LED ở trần
   `0x7F`, ở nhiệt độ phòng đo; đo nhiệt độ bề mặt bo cổ tay ở mặt tiếp xúc da. Giới hạn trích
   từ IEC 60601-1 khi viết biên bản.
 - Chưa có biên bản đạt thì không gắn điện cực lên người.

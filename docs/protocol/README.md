@@ -10,7 +10,7 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   kiểm tra xung đột, nghiệm pháp tạo ΔBP (M0–M2; M3, M4 bỏ ngày 2026-10-29),
   endpoint RQ1, trục thời gian M2, LOSO
   lồng và tiêu chí pilot. Mục 5.1–5.2 đã xác nhận về phần cứng ngày 2026-10-23; các
-  mục ghi "đề xuất của nhóm" chờ thầy, nghiệm pháp chưa được hội đồng đạo đức duyệt.
+  mục của RQ1 chốt 2026-11-12 trong [SAP v1](sap_v1.md), nghiệm pháp chưa được hội đồng đạo đức duyệt.
 - [Khung protocol nghiên cứu thực nghiệm v0.1](protocol_outline_v0.1.md): bản
   lịch sử; thiết kế đo lặp nhiều phiên, quy trình đo đối chứng bằng cuff, ghép
   cửa sổ tín hiệu và kế hoạch phân tích thống kê.
@@ -22,7 +22,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   giao diện trích đặc trưng, mốc R/foot/PAT và CI bootstrap.
 - [Mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay (Tuần 5)](week05_fiducials_pat_validity.md):
   phương pháp ứng viên, quy tắc PAT/outlier, công cụ đánh dấu tay và kết quả
-  SYNTHETIC; mẫu CSV ở [templates/](templates/manual_fiducials_template.csv).
+  SYNTHETIC; mẫu CSV ở [templates/](templates/manual_fiducials_template.csv). Đánh dấu
+  tay PulseDB dừng ngày 2026-11-16, không có B4 PulseDB (mục 9.7).
 
 ## Hướng dẫn chạy
 
