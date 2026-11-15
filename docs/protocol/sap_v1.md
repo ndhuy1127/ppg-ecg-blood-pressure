@@ -109,7 +109,10 @@
 - BP₀ của mỗi người là trung bình các lần cuff M0 hợp lệ ở phiên 1. ΔBP của một lần cuff bằng
   giá trị cuff trừ BP₀.
 - **Đặc trưng nền:** trung vị của từng đặc trưng trên các cửa sổ M0 phiên 1. Mô hình nhận Δ
-  đặc trưng, tức giá trị ở lần cuff trừ giá trị nền.
+  đặc trưng, tức giá trị ở lần cuff trừ giá trị nền. Làm rõ 2026-11-14, theo
+  [protocol v0.3](protocol_outline_v0.2.md) mục 3: chỉ các cửa sổ của lần cuff M0 hợp lệ, tức
+  cùng các lần cuff cho BP₀; mỗi đặc trưng dùng các cửa sổ có đặc trưng đó, và số cửa sổ được
+  báo theo người.
 - **Bộ đặc trưng** (RQ mục 4.B), khóa trên pilot, mỗi mô hình một tập cố định:
   - PPG-only: thời gian lên, độ rộng tại 50 % biên độ, biên độ xung, HR từ PPG;
   - PPG + PAT: thêm ΔPAT;
@@ -541,6 +544,9 @@ Còn lại trước khi khóa (cập nhật 2026-11-12):
 
 - ngưỡng SQI v1, khóa trên bản ghi G2;
 - commit khóa SAP có ngày, trước buổi pilot đầu tiên, ghi seed bootstrap;
+- sổ lịch đo dự kiến (người, phiên, pha, số lần cuff định đo), trước pilot, để đếm lần đo và
+  phiên bị bỏ (mục 4, "Thiếu pha"; mục 10); bảng đặc trưng chỉ có các lần cuff đã bấm (thêm
+  2026-11-14);
 - sau pilot, trước thu chính: δ, số người, phân bổ phiên, theo quy tắc ở mục 8 và 9.
 
 Đã xong: mô phỏng có huấn luyện Ridge thật trong LOSO và mô phỏng chung SBP và DBP (2026-11-11,

@@ -33,7 +33,8 @@ from software.device import features as fe  # noqa: E402
 from software.device import session_ingest as si  # noqa: E402
 
 FEATURE_COLUMNS = (
-    "subject_id", "session_id", "recording", "event_id", "phase", "status",
+    "subject_id", "session_id", "session_start_utc", "recording", "event_id", "phase",
+    "status",
     "safety_stop", "led_readjusted", "pilot", "sbp_mmhg", "dbp_mmhg", "window_pre_s", "ppg_color",
     "ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm", "ecg_hr_bpm",
     "ecg_rmssd_ms", "pat_ms", "pat_sqi_v2_median_ms", "pat_n_valid", "flags",
@@ -106,6 +107,9 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
                            session_index)
     identity = {"subject_id": manifest.get("subject_id"),
                 "session_id": manifest.get("session_id"), "recording": name,
+                # PC clock at the start of the recording; RQ1 checks that session
+                # numbers follow it (added 2026-11-14).
+                "session_start_utc": manifest.get("pc_start_time_utc"),
                 "raw_sha256": manifest["raw"]["sha256"],
                 "source_type": manifest["source_type"],
                 "clock_id": recording["metadata"]["clock_id"]}

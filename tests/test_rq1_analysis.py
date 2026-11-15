@@ -252,7 +252,9 @@ def test_device_feature_table_has_every_model_column():
 
 
 def _real(rows):
-    return [{**r, "source_type": "DEVICE", "led_readjusted": 0, "pilot": 0} for r in rows]
+    return [{**r, "source_type": "DEVICE", "led_readjusted": 0, "pilot": 0,
+             "session_start_utc": f"2026-12-{int(r['session_id'][1:]):02d}T08:00:00+00:00"}
+            for r in rows]
 
 
 def _write(path, rows):
@@ -624,3 +626,126 @@ def test_rows_labelled_synthetic_with_device_provenance_are_refused(tmp_path):
     config_path.write_text(json.dumps(FAST))
     with pytest.raises(ValueError, match="provenance.json says 'DEVICE'"):
         run_rq1_analysis.run([path], config_path, tmp_path / "out")
+
+
+def test_session_numbers_must_follow_time():
+    # BP0 comes from session 1, so a misnumbered session would calibrate on a
+    # later visit: refused, on SYNTHETIC rows too when the column is given.
+    rows = _real(table(13, n=4))
+    ra.prepare(rows, FAST)
+    swapped = copy.deepcopy(rows)
+    for r in swapped:
+        if r["subject_id"] == "SYN_02" and r["session_id"] in ("S001", "S002"):
+            r["session_start_utc"] = ("2026-12-05T08:00:00+00:00" if r["session_id"] == "S001"
+                                      else "2026-12-01T08:00:00+00:00")
+    with pytest.raises(ValueError, match="SYN_02.*S002.*must follow time"):
+        ra.prepare(swapped, FAST)
+    same = copy.deepcopy(rows)
+    for r in same:
+        if r["subject_id"] == "SYN_01" and r["session_id"] == "S003":
+            r["session_start_utc"] = "2026-12-02T08:00:00+00:00"
+    with pytest.raises(ValueError, match="SYN_01.*S003"):
+        ra.prepare(same, FAST)
+    # A late recording filed under session 1 (its earliest start still first):
+    # BP0 would use a visit after session 2, so it is refused too.
+    late = copy.deepcopy(rows)
+    for r in late:
+        if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_03", "S001", "E02"):
+            r["session_start_utc"] = "2026-12-02T12:00:00+00:00"
+    with pytest.raises(ValueError, match="SYN_03.*last recording of S001"):
+        ra.prepare(late, FAST)
+    for value, message in (("", "session_start_utc.*required"),
+                           ("2026-12-01T08:00:00", "UTC offset"),
+                           ("yesterday", "ISO 8601")):
+        broken = copy.deepcopy(rows)
+        broken[3]["session_start_utc"] = value
+        with pytest.raises(ValueError, match=message):
+            ra.prepare(broken, FAST)
+    synthetic = table(13, n=4)
+    synthetic[0]["session_start_utc"] = "2026-12-09T08:00:00+00:00"
+    synthetic[5]["session_start_utc"] = "2026-12-01T08:00:00+00:00"  # SYN_00 S002
+    with pytest.raises(ValueError, match="SYN_00"):
+        ra.prepare(synthetic, FAST)
+
+
+def test_led_readjusted_on_session_1_is_refused():
+    rows = table(14, n=4)
+    rows[1]["led_readjusted"] = 1  # SYN_00, S001
+    with pytest.raises(ValueError, match=r"SYN_00\|S001.*sessions >= 2"):
+        ra.prepare(rows, FAST)
+
+
+def test_secondary_model_contrasts_use_the_same_cuffs():
+    rows = table(15, n=8, sbp_pat=1.0)
+    # No HRV on two main-set cuffs: the ablation has no prediction there.
+    holes = {("SYN_03", "S002", "E03"), ("SYN_05", "S003", "E04")}
+    for r in rows:
+        if (r["subject_id"], r["session_id"], r["event_id"]) in holes:
+            r["ecg_rmssd_ms"] = ""
+    prep = ra.prepare(rows, FAST)
+    preds, _ = ra._fold_predictions(prep, FAST)
+    report = ra._secondary(rows, prep, FAST, None)
+    main_set = sum(c["in_main"] for c in prep["cuffs"])
+    for ti, target in enumerate(ra.TARGETS):
+        entry = report[target]["model_ablation_ecg"]
+        assert entry["main_set_cuffs"] == main_set
+        assert entry["paired_cuffs"] == main_set - len(holes)
+        by = {}
+        for c in prep["cuffs"]:
+            a = preds[(target, "ablation_ecg")].get(id(c), np.nan)
+            if c["in_main"] and np.isfinite(a):
+                b = preds[(target, "ppg")][id(c)]
+                truth = c["delta_bp"][ti]
+                by.setdefault(c["subject"], []).append(abs(a - truth) - abs(b - truth))
+        # The per-subject difference is over the shared cuffs only.
+        assert entry["mean_minus_ppg"] == pytest.approx(
+            np.mean([np.mean(v) for v in by.values()]))
+        # Endpoint 10 reports its own pairing; both phase models use the main
+        # features, so every main-set cuff is shared.
+        ten = report[target]["10_pat_given_phase"]
+        assert ten["paired_cuffs"] == ten["main_set_cuffs"] == main_set
+        assert ten["paired_subjects"] == len(prep["eligible"])
+
+
+def test_counts_split_ecg_loss_and_calibration():
+    rows = table(16, n=6, sbp_pat=1.0)
+    marks = {("SYN_01", "S002", "E02"): "absent", ("SYN_01", "S002", "E03"): "unusable",
+             ("SYN_02", "S003", "E04"): "pat", ("SYN_04", "S001", "E01"): "cal"}
+    for r in rows:
+        mark = marks.get((r["subject_id"], r["session_id"], r["event_id"]))
+        if mark in ("absent", "unusable"):
+            r["ecg_hr_bpm"], r["ecg_rmssd_ms"], r["pat_ms"] = "", "", ""
+            r["flags"] = "ecg:absent" if mark == "absent" else "ecg:too_few_peaks"
+        elif mark == "pat":
+            r["pat_ms"] = ""
+        elif mark == "cal":
+            r["ppg_amplitude"] = ""
+    counts = ra._counts(ra.prepare(rows, FAST))
+    assert counts["ecg_pat_by_subject"]["SYN_01"] == {
+        "ecg_absent": 1, "ecg_unusable": 1, "pat_failed": 0, "pat_available": 6}
+    assert counts["ecg_pat_by_subject"]["SYN_02"]["pat_failed"] == 1
+    assert counts["ecg_pat_by_phase"]["M0"]["ecg_absent"] == 1
+    assert counts["ecg_pat_by_phase"]["M1"]["ecg_unusable"] == 1
+    assert counts["ecg_pat_by_phase"]["M2"]["pat_failed"] == 1
+    cal = counts["calibration_counts"]["SYN_04"]
+    assert cal["bp0"] == 2 and cal["ppg_amplitude"] == 1 and cal["pat_ms"] == 2
+
+
+def test_committed_unchanged_sees_through_assume_unchanged(tmp_path):
+    import subprocess
+
+    from scripts.run_b2_pulsedb import committed_unchanged
+
+    def git(*args):
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+                       cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q")
+    path = tmp_path / "code.py"
+    path.write_text("ALPHA = 1\n", encoding="utf-8")
+    git("add", "code.py")
+    git("commit", "-q", "-m", "x")
+    assert committed_unchanged(tmp_path, path)
+    git("update-index", "--assume-unchanged", "code.py")
+    path.write_text("ALPHA = 37\n", encoding="utf-8")
+    assert not committed_unchanged(tmp_path, path)

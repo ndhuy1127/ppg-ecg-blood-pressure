@@ -130,12 +130,19 @@ sự kiện theo mã, số marker, số lần cuff theo `status`, `issue_counts`
 
 Đầu vào của [run_rq1_analysis.py](../scripts/run_rq1_analysis.py). Một dòng mỗi lần cuff:
 
-`subject_id, session_id, recording, event_id, phase, status, safety_stop, led_readjusted, pilot,
-sbp_mmhg, dbp_mmhg, window_pre_s, ppg_color, ppg_rise_time_ms, ppg_width50_ms, ppg_amplitude, ppg_hr_bpm,
-ecg_hr_bpm, ecg_rmssd_ms, pat_ms, pat_sqi_v2_median_ms, pat_n_valid, flags, source_type`
+`subject_id, session_id, session_start_utc, recording, event_id, phase, status, safety_stop,
+led_readjusted, pilot, sbp_mmhg, dbp_mmhg, window_pre_s, ppg_color, ppg_rise_time_ms,
+ppg_width50_ms, ppg_amplitude, ppg_hr_bpm, ecg_hr_bpm, ecg_rmssd_ms, pat_ms,
+pat_sqi_v2_median_ms, pat_n_valid, flags, source_type`
 
-- Đặc trưng tính trên cửa sổ chính `[t0 − 30 s, t0)` (đề xuất, khóa trên pilot), của màu ghi
-  ở `ppg_color` (đề xuất: xanh, khe 1). Ô trống là không tính được.
+- Đặc trưng tính trên cửa sổ chính `[t0 − 30 s, t0)` (duyệt làm giá trị cho pilot, khóa trên
+  pilot), của màu ghi ở `ppg_color` (xanh, khe 1, duyệt 2026-11-14); màu này dùng cho mọi đặc
+  trưng PPG và PAT của dòng. Ô trống là không tính được.
+- `session_start_utc` (thêm và duyệt 2026-11-14): `pc_start_time_utc` trong manifest của logger,
+  ISO 8601 có múi giờ. Phân tích RQ1 bắt buộc cột này trên dòng không phải SYNTHETIC và dừng khi
+  một bản ghi của phiên sau bắt đầu trước bản ghi muộn nhất của phiên trước.
+- Cửa sổ không có mẫu ECG nào có cờ `ecg:absent` (thêm 2026-11-14); đặc trưng PPG vẫn được tính,
+  PAT và đặc trưng ECG để trống.
 - `pat_ms` là trung vị PAT hợp lệ của `pat-validity-v1`; `pat_sqi_v2_median_ms` là trung vị
   của cách ghép `features-sqi-v2`, giữ để so.
 - `flags`: cờ SQI v1 (mục 3.1, 3.3) và cờ cửa sổ, nối bằng `;`.

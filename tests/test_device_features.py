@@ -107,6 +107,40 @@ def test_lost_packet_in_window_is_a_stream_gap(tmp_path):
     assert result["by_color"]["red"]["flags"] == []
 
 
+def test_window_without_ecg_keeps_ppg_features(tmp_path):
+    # SAP section 10 and endpoint 3: a cuff without ECG still gets its PPG
+    # features (PPG-only on every cuff); PAT and ECG features stay empty.
+    spec = SessionSpec(duration_s=80, events=((1, 70.0),), **CLEAN)
+    directory, _ = make_recording(tmp_path, spec)
+    recording = si.load_recording(directory)
+    series, _, _ = si.session_series(recording)
+    events = si.session_events(recording)
+    _, with_ecg, _, _ = _run(tmp_path / "ref", spec)
+    del series["0xE1"]
+    cuff = {"event_id": "E01", "phase": "M0", "status": "valid", "safety_stop": False,
+            "led_readjusted": False, "pilot": False, "note": "", "device_session_id": 1,
+            "t0_event_ordinal": [e["event_ordinal"] for e in events if e["code"] == 1][0],
+            "phase_mark_event_ordinal": None, "cuff_end_event_ordinal": None,
+            "sbp_mmhg": 120.0, "dbp_mmhg": 80.0, "pulse_rate_bpm": None}
+    window = si.cuff_windows([cuff], events, CONFIG["window"])[0]
+    identity = {"subject_id": None, "session_id": None, "recording": "rec",
+                "raw_sha256": recording["manifest"]["raw"]["sha256"],
+                "source_type": "SYNTHETIC", "clock_id": "SYN_ESP_TIMER_US"}
+    packets = [p for p in recording["packets"] if p["chain_id"] is not None]
+    result = fe.window_features(window, series, packets,
+                                recording["decode"]["sessions"][0], CONFIG, identity)
+    assert result["missing"] == "ecg" and "ecg:absent" in result["hardware_flags"]
+    chosen = result["by_color"]["green"]
+    for name in ("ppg_rise_time_median_ms", "ppg_width50_median_ms",
+                 "ppg_amplitude_median", "ppg_hr_bpm"):
+        assert chosen["features"][name] == pytest.approx(with_ecg["features"][name])
+    assert chosen["features"]["ecg_hr_bpm"] is None
+    assert chosen["features"]["pat_median_ms"] is None and chosen["pat_validity"] is None
+    row = fe.cuff_row(window, result, identity, "green")
+    assert row["pat_ms"] is None and row["ppg_hr_bpm"] is not None
+    assert "ecg:absent" in row["flags"].split(";")
+
+
 def test_unknown_latency_blocks_pat(tmp_path):
     spec = SessionSpec(duration_s=80, events=((1, 70.0),), **CLEAN)
     directory, _ = make_recording(tmp_path, spec)

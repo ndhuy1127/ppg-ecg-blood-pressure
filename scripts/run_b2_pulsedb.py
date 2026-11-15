@@ -39,7 +39,8 @@ def _git(repo, *args):
 
 def committed_unchanged(repo, path) -> bool:
     """Whether ``path`` itself lies in ``repo``, is tracked by Git and equals HEAD
-    (no staged or unstaged change).
+    (no staged or unstaged change), and its bytes, through Git's clean filters,
+    hash to the blob of HEAD (so index flags cannot hide a change).
 
     Symlinks are refused, in the file and in every directory below ``repo``:
     resolving one would check its target, not the path the approval names.
@@ -65,7 +66,13 @@ def committed_unchanged(repo, path) -> bool:
             return False
         if done.returncode != 0:
             return False
-    return True
+    # Content check (added 2026-11-14): `git diff` trusts the index, so a file
+    # marked assume-unchanged or skip-worktree can differ from HEAD unseen. Hash
+    # the file as Git would store it (same clean filters) and compare with HEAD.
+    current = _git(repo, "hash-object", "--", name.as_posix())
+    committed = _git(repo, "rev-parse", "--verify", "--quiet",
+                     f"HEAD:./{name.as_posix()}")
+    return bool(current) and current == committed
 
 
 def panel_table(name, panel) -> str:

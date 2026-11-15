@@ -35,11 +35,13 @@ Không đo trên người.
   - [mẫu báo cáo bring-up](../../../hardware/test_reports/YYYY-MM-DD_v1_bringup.md) và metadata
     env khung;
   - `firmware/README.md`: build sạch trước khi ghi hash.
-- **Breakout MAX30001 nhận về là bản v2** (2dcf770, 2026-11-14; cách xử lý chờ duyệt): bo in
+- **Breakout MAX30001 nhận về là bản v2** (2dcf770, 2026-11-14; cách xử lý sửa sau rà soát độc
+  lập và duyệt 2026-11-14): bo in
   `v2`, `03/24`, khác file công khai duy nhất của ProtoCentral (v1.0, `03/22`); bố trí linh kiện
   khác, điện trở đầu vào in `4992` (49,9 kΩ) thay vì 51 kΩ. Trình tự bring-up mục 1 và 4 thêm
-  cách xác định R3, R7, R8 bằng đo thông mạch; chưa tháo hay thay linh kiện nào cho tới khi có
-  schematic v2 hoặc kết quả đo được duyệt. Footprint breakout trên bo đế mới đối chiếu với file
+  cách xác định ứng viên R3, R7, R8 bằng đo thông mạch. Chỉ sửa breakout khi có sơ đồ net v2
+  được duyệt, có bằng chứng ở cả hai đầu của từng linh kiện (schematic v2, hoặc đường mạch nhìn
+  thấy có ảnh hai mặt); BOM riêng hay một đầu đo thông mạch là chưa đủ. Footprint breakout trên bo đế mới đối chiếu với file
   v1.0 nên bước 1 phải đo header và lỗ vít của bo thật.
 - **Chưa xong:** các ô làm tay của phần A (dụng cụ, dây đo, cáp USB-C đã thử, nút BOOT/RESET,
   bản in 1:1, dựng và kiểm mạch đo MD); đối chiếu nguyên văn IEC 60601-1; người duyệt.
@@ -52,7 +54,7 @@ Không đo trên người.
   ([packet_logger.md](../../../docs/protocol/packet_logger.md)). Đề xuất đưa vào protocol 5.1
   bước đóng ứng dụng, `wsl --shutdown` và chỉ dừng ghi khi còn ≥ 2 GB (e9af9a6, 2026-11-14,
   duyệt 2026-11-14). Chưa đo trên máy đã đóng ứng dụng.
-- **Pipeline dữ liệu thiết bị** (4630bc1, 2026-11-13; định dạng `cuff_log.csv`, `cuff_features.csv` duyệt 2026-11-14, các mục tự chốt khác chờ duyệt):
+- **Pipeline dữ liệu thiết bị** (4630bc1, 2026-11-13; định dạng `cuff_log.csv`, `cuff_features.csv` duyệt 2026-11-14, các mục tự chốt khác sửa sau rà soát độc lập và duyệt 2026-11-14):
   [device_session.py](../../../scripts/device_session.py) ingest bản ghi `packet-logger-v3`,
   kiểm metadata, cắt cửa sổ quanh lần cuff, tính đặc trưng, PAT, cờ SQI và tóm tắt phiên;
   định dạng `cuff_log.csv` và `cuff_features.csv` ghi ở
@@ -71,6 +73,21 @@ Không đo trên người.
   bring-up, kế hoạch dòng rò/nhiệt/VLED (phương pháp và quy tắc; giá trị giới hạn vẫn chờ đối
   chiếu IEC), tiêu chí A1–A9 và ngân sách sai số PAT, phần hiển thị DC; quy tắc `source_type`,
   định dạng `cuff_log.csv`/`cuff_features.csv`, endpoint 5/7, bước RAM trước buổi đo.
+- **Duyệt các mục tự chốt còn lại của pipeline, RQ1, cổng khóa và breakout v2** (2026-11-14,
+  sau một phản biện độc lập; commit duyệt riêng). Phản biện chặn sáu chỗ, đã sửa trước khi duyệt
+  ([device_session_pipeline.md](../../../docs/protocol/device_session_pipeline.md) mục 1, 4.3):
+  - thứ tự phiên kiểm theo giờ bắt đầu ghi (cột mới `session_start_utc`); số phiên ngược thời
+    gian thì dừng, vì BP₀ sẽ lấy từ một buổi sau;
+  - `led_readjusted = 1` ở phiên 1 thì dừng thay vì bị bỏ qua;
+  - hiệu của ablation, PAT-only với PPG-only chỉ tính trên các lần cuff cả hai mô hình cùng có
+    dự đoán; trước đó lần cuff thiếu HRV làm hai bên lệch tập cuff (phép so chính d, d⁰ không
+    bị ảnh hưởng);
+  - cửa sổ không có ECG vẫn được tính đặc trưng PPG (endpoint 3); report tách không có ECG, ECG
+    không dùng được, không có PAT, theo người và theo pha;
+  - cổng khóa so nội dung file với blob của HEAD (file `assume-unchanged` không còn lọt); tài
+    liệu ghi rõ cổng chỉ chặn chạy nhầm, không chặn người cố ý lách;
+  - điều kiện sửa breakout MAX30001 v2 như ở mục của Đức Anh.
+  Đếm lần đo bị bỏ cần sổ lịch đo dự kiến; đã thêm vào việc còn lại trước khi khóa SAP.
 - **Chưa xong:** đánh dấu tay lần 1 (chưa có file đánh dấu mới sau khi bỏ phiên 2026-10-25, kiểm
   2026-11-14), nên chưa chạy `gate`.
 
@@ -83,9 +100,12 @@ Không đo trên người.
   chỉnh LED ra khỏi cả tập chính và tập học; kết luận chính cần cả d và d⁰; độ nhạy theo kiểu CI.
 - **Endpoint 5 và 7 giữ hiệu chuẩn của phân tích chính** (75aa449, duyệt 2026-11-14, kèm
   một phản biện độc lập): mục 5.1.
-- **Cổng khóa cho dữ liệu thật** (a163e33, 2026-11-14; chờ duyệt): khóa cả code của bước tính
-  đặc trưng và config của nó; mỗi bảng đặc trưng phải có `provenance.json` khớp code đang khóa;
-  bảng thiết bị bị gắn nhầm SYNTHETIC bị từ chối. Test so danh sách khóa với đồ thị import.
+- **Cổng khóa cho dữ liệu thật** (a163e33, 2026-11-14; sửa sau rà soát độc lập c62c901, cùng
+  ngày; duyệt 2026-11-14): khóa cả code của bước tính đặc trưng và config của nó; mỗi bảng đặc
+  trưng phải có `provenance.json` khớp code đang khóa và khớp hash của chính bảng đó; với dữ liệu
+  thật, commit ghi trong provenance phải có thật và chứa đúng code; khóa thêm các `__init__.py`
+  của package cha; bảng thiết bị bị gắn nhầm SYNTHETIC bị từ chối. Test so danh sách khóa với đồ
+  thị import.
 
 ## 4. Danh mục sản phẩm đầu ra và đường dẫn
 
@@ -115,14 +135,16 @@ từ lần cuff qua lọc vì BP₀ và đặc trưng nền sẽ lệch mốc v�
 ### 5.2. Breakout MAX30001 v2
 
 Vị trí linh kiện của file v1.0 không dùng được cho bo v2. Trong khi chờ ProtoCentral gửi
-schematic hoặc BOM v2, R3, R7, R8 chỉ xác định bằng đo thông mạch và coi là ứng viên; chân
-BIN/BIP của MAX30001 nằm dưới thân chip nên không đo thẳng được.
+schematic v2, R3, R7, R8 chỉ xác định bằng đo thông mạch và coi là ứng viên; chân BIN/BIP của
+MAX30001 nằm dưới thân chip nên không đo thẳng được. Một đầu nối sleeve hay tip/ring chưa chứng
+minh đầu kia nối VCM hay BIN/BIP, nên việc sửa chờ sơ đồ net v2 có bằng chứng ở cả hai đầu.
 
 ## 6. Kết quả kiểm tra kỹ thuật
 
 ### 6.1. Kiểm tra toàn repo
 
-Ngày 2026-11-14, sau mọi thay đổi của mục 3: `ruff check .` sạch; `pytest -q` 1.368 đạt, 1 bỏ
+Ngày 2026-11-14, sau mọi thay đổi của mục 3 (kể cả các sửa trước khi duyệt): `ruff check .` sạch;
+`pytest -q` 1.378 đạt, 1 bỏ
 qua (tạo symlink cần quyền trên Windows), test firmware chạy bằng trình dịch C `ziglang`;
 `scripts/check_environment.py` và `pip check` đạt.
 
@@ -154,7 +176,7 @@ phải hiệu năng huyết áp.
 | Tiêu chí phần cứng có commit duyệt | **Đạt** (2026-11-14): checklist, kế hoạch dòng rò/nhiệt/VLED, A1–A9, phần hiển thị DC; giá trị giới hạn dòng rò vẫn chờ đối chiếu IEC | Huy | — |
 | Giới hạn dòng rò có điều khoản nguồn | **Chưa:** chưa đối chiếu nguyên văn IEC 60601-1, chưa có người duyệt | Đức Anh | Tuần 9, trước bước 13 |
 | RAM đo trên laptop buổi đo | **Đạt phần đo:** đo 2026-11-13; bước RAM trước buổi đo duyệt 2026-11-14; chưa đo trên máy đã đóng ứng dụng | Linh | Tuần 9: đo lại khi đã đóng ứng dụng |
-| Pipeline ingest và mốc/PAT chạy trên SYNTHETIC, có test | **Đạt** (định dạng duyệt 2026-11-14; các mục tự chốt khác của pipeline và cổng khóa chờ duyệt) | Linh, Huy | — |
+| Pipeline ingest và mốc/PAT chạy trên SYNTHETIC, có test | **Đạt**; định dạng, các mục tự chốt và cổng khóa duyệt 2026-11-14 sau khi sửa sáu chỗ theo phản biện độc lập | Linh, Huy | Sổ lịch đo dự kiến: trước pilot |
 | RQ2a | **Đạt:** duyệt, chạy, có bảng và CI (mục 6.2) | Linh | — |
 | Đủ 80 đoạn đánh dấu lần 1 | **Chưa:** chưa bắt đầu lại | Huy | Tuần 9; `gate` rồi B4 sau đó |
 

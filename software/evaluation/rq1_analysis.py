@@ -19,6 +19,8 @@ weights, the Ridge fit or the phase baseline of its fold. Its own calibration
 No file I/O, no printing. Results on SYNTHETIC tables only verify code.
 """
 
+from datetime import datetime
+
 import numpy as np
 from scipy import stats
 
@@ -49,6 +51,48 @@ def _session_index(text):
     if not isinstance(text, str) or len(text) != 4 or text[0] != "S" or not text[1:].isdigit():
         raise ValueError(f"session_id must look like S001, got {text!r}")
     return int(text[1:])
+
+
+def _start_time(row):
+    """``session_start_utc`` (ISO 8601 with offset) as a datetime, or None when the
+    column is empty; empty is an error on non-SYNTHETIC rows (added 2026-11-14)."""
+    value = row.get("session_start_utc")
+    if value is None or value == "":
+        if row.get("source_type") == "SYNTHETIC":
+            return None
+        raise ValueError("Column 'session_start_utc' is required on non-SYNTHETIC rows "
+                         f"(cuff {row.get('subject_id')}/{row.get('session_id')}/"
+                         f"{row.get('event_id')})")
+    try:
+        when = datetime.fromisoformat(str(value))
+    except ValueError:
+        raise ValueError(f"session_start_utc must be ISO 8601, got {value!r}") from None
+    if when.tzinfo is None:
+        raise ValueError(f"session_start_utc needs a UTC offset, got {value!r}")
+    return when
+
+
+def check_session_order(cuffs):
+    """Session numbers must follow time (SAP section 4: BP0 comes from session 1).
+    Per subject, every recording of a session must start after every recording
+    of the sessions with a lower number (the latest start of session k before the
+    earliest start of the next session); sessions without a start time (SYNTHETIC
+    only) are skipped. A misnumbered session, or a late recording filed under an
+    earlier session, would calibrate on a later visit, so it is an error."""
+    spans = {}
+    for c in cuffs:
+        if c["start"] is not None:
+            key = (c["subject"], c["session"])
+            low, high = spans.get(key, (c["start"], c["start"]))
+            spans[key] = (min(low, c["start"]), max(high, c["start"]))
+    for s in sorted({k[0] for k in spans}):
+        order = sorted((k, span) for (subject, k), span in spans.items() if subject == s)
+        for (k1, (_, last1)), (k2, (first2, _)) in zip(order, order[1:]):
+            if not last1 < first2:
+                raise ValueError(f"Subject {s}: session S{k2:03d} starts at "
+                                 f"{first2.isoformat()}, not after the last recording "
+                                 f"of S{k1:03d} ({last1.isoformat()}); session numbers "
+                                 "must follow time")
 
 
 def flag01(row, column):
@@ -105,11 +149,22 @@ def prepare(rows, config):
             "subject": raw["subject_id"], "session": _session_index(raw["session_id"]),
             "event_id": raw["event_id"], "phase": raw["phase"], "valid": valid,
             **{column: flag01(raw, column) for column in FLAG_COLUMNS},
+            "start": _start_time(raw),
             "ecg_ok": _finite(raw.get("ecg_hr_bpm")),
+            "pat_ok": _finite(raw.get("pat_ms")),
             "flags": set(filter(None, str(raw.get("flags") or "").split(";"))),
             "bp": np.array([float(raw[LABELS[t]]) if valid else np.nan for t in TARGETS]),
             "raw": {name: derive(raw, name) for name in names},
         })
+    check_session_order(cuffs)
+    # led_readjusted marks a later session whose LED codes were set again
+    # (protocol 6.1); session 1 sets them first, so the flag there is a log error
+    # and is refused rather than ignored (added 2026-11-14).
+    bad = sorted({f"{c['subject']}|S001" for c in cuffs
+                  if c["led_readjusted"] and c["session"] == 1})
+    if bad:
+        raise ValueError(f"led_readjusted = 1 on session 1 {bad}: the flag is defined "
+                         "only for sessions >= 2 (SAP section 2); fix the cuff log")
     subjects = sorted({c["subject"] for c in cuffs})
     # SAP section 2: a later session with led_readjusted is out as a whole.
     readjusted = {(c["subject"], c["session"]) for c in cuffs
@@ -117,7 +172,7 @@ def prepare(rows, config):
     pilots = {c["subject"] for c in cuffs if c["pilot"]}
     for c in cuffs:
         c["led_session"] = (c["subject"], c["session"]) in readjusted
-    excluded, base = {}, {}
+    excluded, base, calibration_counts = {}, {}, {}
     for s in subjects:
         cal = [c for c in cuffs if c["subject"] == s and c["session"] == 1
                and c["phase"] == "M0" and c["valid"]]
@@ -126,10 +181,15 @@ def prepare(rows, config):
             continue
         bp0 = np.mean([c["bp"] for c in cal], axis=0)
         feat0 = {}
+        # BP0 uses every valid session-1 M0 cuff; each feature baseline uses those
+        # of them where the feature exists, so the counts can differ (reported).
+        counts = {"bp0": len(cal)}
         for name in names:
             values = [c["raw"][name] for c in cal if c["raw"][name] is not None]
             feat0[name] = float(np.median(values)) if values else None
+            counts[name] = len(values)
         base[s] = (bp0, feat0)
+        calibration_counts[s] = counts
     for c in cuffs:
         if c["subject"] not in base:
             c["delta_bp"], c["x"] = np.full(2, np.nan), {}
@@ -161,6 +221,7 @@ def prepare(rows, config):
         c["trainable"] = c["eligible"] and c.get("main_ok", False) and not c["led_session"]
     return {"cuffs": cuffs, "subjects": subjects, "eligible": eligible,
             "excluded": excluded, "names": names,
+            "calibration_counts": calibration_counts,
             "led_readjusted_sessions": sorted(f"{s}|S{k:03d}" for s, k in readjusted)}
 
 
@@ -263,6 +324,23 @@ def subject_mae(prep, preds, target, model, select=lambda c: c["in_main"]):
         if select(c) and value is not None and np.isfinite(value):
             errors.setdefault(c["subject"], []).append(abs(value - c["delta_bp"][ti]))
     return {s: float(np.mean(v)) for s, v in errors.items()}
+
+
+def paired_subject_mae(prep, preds, target, model, reference,
+                       select=lambda c: c["in_main"]):
+    """MAE_s of two models on the same cuffs: the selected cuffs where both have a
+    finite prediction (added 2026-11-14). A model with extra features (ablation,
+    PAT-only) can lack a prediction on some cuffs; comparing it with a reference
+    scored on more cuffs would mix a model effect with a cuff-set effect.
+    Returns ({subject: MAE_s model}, {subject: MAE_s reference}, cuffs used)."""
+    a, b = preds.get((target, model), {}), preds.get((target, reference), {})
+
+    def both(c):
+        return (select(c) and all(np.isfinite(p.get(id(c), np.nan)) for p in (a, b)))
+
+    used = sum(both(c) for c in prep["cuffs"])
+    return (subject_mae(prep, preds, target, model, both),
+            subject_mae(prep, preds, target, reference, both), used)
 
 
 def _ci(values, counts, level, method):
@@ -464,6 +542,23 @@ def _counts(prep):
         mine = [c for c in later if c["subject"] == s and c["valid"]]
         # ECG lost: no ECG heart rate in the cuff window (SAP 10, "mất ECG").
         ecg_loss[s] = sum(not c["ecg_ok"] for c in mine) / len(mine) if mine else None
+    # The three ways a valid later cuff lacks PAT, by subject and by phase
+    # (added 2026-11-14): no ECG samples in the window (flag ecg:absent), ECG
+    # present but no ECG heart rate, ECG heart rate but no valid PAT.
+    def ecg_state(c):
+        if "ecg:absent" in c["flags"]:
+            return "ecg_absent"
+        if not c["ecg_ok"]:
+            return "ecg_unusable"
+        return "pat_failed" if not c["pat_ok"] else "pat_available"
+
+    states = ("ecg_absent", "ecg_unusable", "pat_failed", "pat_available")
+    ecg_by_subject = {s: dict.fromkeys(states, 0) for s in prep["eligible"]}
+    ecg_by_phase = {p: dict.fromkeys(states, 0) for p in PHASES}
+    for c in later:
+        if c["valid"]:
+            ecg_by_subject[c["subject"]][ecg_state(c)] += 1
+            ecg_by_phase[c["phase"]][ecg_state(c)] += 1
     by_phase = {}
     for p in PHASES:
         rows = [c for c in later if c["phase"] == p]
@@ -479,6 +574,8 @@ def _counts(prep):
             "later_sessions_without_main_cuff": len(sessions - with_phase)}
     return {"main_cuffs": sum(c["in_main"] for c in prep["cuffs"]),
             "by_subject_session_phase": by, "ecg_loss_share": ecg_loss,
+            "ecg_pat_by_subject": ecg_by_subject, "ecg_pat_by_phase": ecg_by_phase,
+            "calibration_counts": prep["calibration_counts"],
             "skipped_by_phase": by_phase,
             "led_readjusted_sessions": prep["led_readjusted_sessions"],
             "safety_stop_in_main": sum(c["in_main"] and c["safety_stop"]
@@ -561,24 +658,32 @@ def _secondary(rows, prep, config, main):
                                config["bootstrap"]["draws"], len(d),
                                np.random.default_rng(config["bootstrap"]["seed"])),
                                0.95, config["ci_method"]) if len(d) >= 3 else None}
+        main_set = sum(c["in_main"] for c in prep["cuffs"])
         for name in [m for m in config["models"] if m not in (full, base)]:
             maes = subject_mae(prep, preds, target, name)
-            ref = subject_mae(prep, preds, target, base)
-            common = sorted(set(maes) & set(ref))
+            # The difference to PPG-only on the cuffs where both predict.
+            a, b, used = paired_subject_mae(prep, preds, target, name, base)
+            common = sorted(set(a) & set(b))
             entry[f"model_{name}"] = {
                 "mae": float(np.mean(list(maes.values()))) if maes else None,
-                "mean_minus_" + base: float(np.mean([maes[s] - ref[s] for s in common]))
-                if common else None}
+                "mean_minus_" + base: float(np.mean([a[s] - b[s] for s in common]))
+                if common else None,
+                "paired_cuffs": used, "main_set_cuffs": main_set,
+                "paired_subjects": len(common)}
         phase_ppg = config["comparison"].get("with_phase")
         if phase_ppg:
-            a = subject_mae(prep, preds, target, phase_ppg[0])
-            b = subject_mae(prep, preds, target, phase_ppg[1])
+            a, b, used = paired_subject_mae(prep, preds, target, *phase_ppg)
+            if set(a) != set(prep["eligible"]) or set(b) != set(prep["eligible"]):
+                raise ValueError("Endpoint 10 needs paired cuffs for every eligible subject")
             d = np.array([a[s] - b[s] for s in prep["eligible"]])
             counts = draw_counts(config["bootstrap"]["draws"], len(d),
                                  np.random.default_rng(config["bootstrap"]["seed"]))
             entry["10_pat_given_phase"] = {"mean_d": float(d.mean()),
                                            "ci_95": _ci(d, counts, 0.95,
-                                                        config["ci_method"])}
+                                                        config["ci_method"]),
+                                           "paired_cuffs": used,
+                                           "main_set_cuffs": main_set,
+                                           "paired_subjects": len(d)}
         a = subject_mae(prep, preds, target, full)
         m = subject_mae(prep, preds, target, "phase_median")
         d = np.array([a[s] - m[s] for s in prep["eligible"]])

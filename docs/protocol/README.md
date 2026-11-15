@@ -44,8 +44,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Đặc tả SQI v1](sqi_specification_v1.md): cờ chất lượng của một lần đo cuff, vai trò trong
   phân tích; đề xuất 2026-11-07, cấu trúc chốt 2026-11-12, ngưỡng khóa trên bản ghi G2
 - [Pipeline dữ liệu thiết bị](device_session_pipeline.md): ingest bản ghi logger, mốc và PAT ở
-  ECG 512 / PPG 200 sps, phân tích RQ1 theo SAP v1 bằng một lệnh; đề xuất 2026-11-13, chờ duyệt,
-  mới chạy trên SYNTHETIC
+  ECG 512 / PPG 200 sps, phân tích RQ1 theo SAP v1 bằng một lệnh; đề xuất 2026-11-13, sửa theo
+  rà soát độc lập và duyệt 2026-11-14, mới chạy trên SYNTHETIC
 - [Theo dõi thí nghiệm và kiểm tính tất định nhiều seed](experiment_tracking.md):
   quy ước tên thí nghiệm/artifact, bảng tổng hợp sinh từ `report.json`, B3 nhiều seed
   (2026-11-07)

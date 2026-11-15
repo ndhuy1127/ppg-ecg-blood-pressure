@@ -120,15 +120,25 @@ def window_features(cuff, series, packets, session, config, identity):
     out = {"version": VERSION, "event_id": cuff["event_id"], "phase": cuff["phase"],
            "window_pre_s": pre, "hardware_flags": hw_flags,
            "hardware_quality": hw_quality, "by_color": {}}
-    if "0xE1" not in series:
+    has_ecg = "0xE1" in series and len(rows["0xE1"]) > 0
+    if has_ecg:
+        codes, _ = ecg_codes(series["0xE1"].value[rows["0xE1"]])
+        ecg = _channel(series["0xE1"], rows["0xE1"], codes, identity["clock_id"])
+    else:
+        # No ECG sample in the window: PPG features are still computed, so the
+        # cuff can enter PPG-only on every cuff (SAP endpoint 3, section 10); PAT
+        # and ECG features stay empty (added 2026-11-14). The empty channel only
+        # carries the nominal ECG rate of the config as a label.
         out["missing"] = "ecg"
-        return out
-    codes, _ = ecg_codes(series["0xE1"].value[rows["0xE1"]])
-    ecg = _channel(series["0xE1"], rows["0xE1"], codes, identity["clock_id"])
+        out["hardware_flags"] = sorted({*hw_flags, "ecg:absent"})
+        ecg = Channel(values=np.array([], dtype=np.int64),
+                      fs_hz=config["expected_rates_hz"]["0xE1"], unit="adc_code", clock_id=identity["clock_id"],
+                      timestamps=np.array([], dtype=float), timestamp_unit="s",
+                      processing_delay_s=None)
     for key in [k for k in PPG_KEYS if k in series]:
         ppg = _channel(series[key], rows[key], series[key].value[rows[key]],
                        identity["clock_id"])
-        verified = all(series[k].latency_applied for k in ("0xE1", key))
+        verified = has_ecg and all(series[k].latency_applied for k in ("0xE1", key))
         metadata = {"sample_id": f"{identity['recording']}:{cuff['event_id']}:{key}",
                     "subject_id": identity["subject_id"] or "SYN_NONE",
                     "source": f"device:{identity['recording']}",
@@ -163,7 +173,8 @@ def window_features(cuff, series, packets, session, config, identity):
 
 
 def ecg_rmssd_ms(r_times_s, min_beats):
-    """RMSSD of RR intervals (ms); proposal for the ablation's HRV, not locked."""
+    """RMSSD of RR intervals (ms), the ablation's HRV (approved 2026-11-14): a rough
+    estimate from as few as three R peaks, with no ectopic-beat correction."""
     rr = np.diff(np.asarray(r_times_s, dtype=float)) * 1000
     if len(rr) < max(2, min_beats - 1):
         return None
@@ -179,6 +190,7 @@ def cuff_row(cuff, result, identity, color):
     r_times = (chosen.get("fiducials") or {}).get("r_times_s") or []
     return {
         "subject_id": identity["subject_id"], "session_id": identity["session_id"],
+        "session_start_utc": identity.get("session_start_utc"),
         "recording": identity["recording"], "event_id": cuff["event_id"],
         "phase": cuff["phase"], "status": cuff["status"],
         "safety_stop": int(cuff["safety_stop"]),

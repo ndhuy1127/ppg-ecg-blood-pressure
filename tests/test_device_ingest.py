@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -154,6 +155,10 @@ def test_script_writes_outputs_and_refuses_overwrite_and_raw(lossy, tmp_path):
         header = handle.readline().strip().split(",")
     assert header == list(device_session.FEATURE_COLUMNS)
     assert rows[0]["pilot"] == 1 and rows[0]["led_readjusted"] == 0
+    # The recording start travels too, for the RQ1 session-order check.
+    manifest = json.loads((Path(directory) / "session_manifest.json").read_text(
+        encoding="utf-8"))
+    assert rows[0]["session_start_utc"] == manifest["pc_start_time_utc"]
     for name in ("session_summary.json", "timebase.csv", "events.csv", "cuffs.json",
                  "window_samples.csv", "cuff_features.csv", "cuff_features.json",
                  "provenance.json"):

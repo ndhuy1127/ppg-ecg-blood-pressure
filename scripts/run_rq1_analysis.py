@@ -8,7 +8,11 @@ non-SYNTHETIC row. Output, to a NEW directory: ``report.json`` (every number) an
 For any non-SYNTHETIC row the run is refused unless the config status is
 ``LOCKED`` and docs/protocol/sap_v1.md, the config and every file of ``LOCKED`` are
 tracked by Git and unchanged against HEAD (SAP section 12), so the outer LOSO loop
-of G5 runs once on committed choices.
+of G5 runs once on committed choices. "Unchanged" compares file contents with the
+blobs of HEAD (added 2026-11-14). The gate guards against running real data by
+mistake through this script; it does not stop a deliberate bypass (calling
+``analyze`` directly, or editing a provenance file), so RQ1 results are reported
+only from a ``report.json`` this script wrote.
 """
 
 import argparse
@@ -38,7 +42,7 @@ ANALYSIS_CODE = ("software/__init__.py", "software/evaluation/__init__.py",
 # The analysis, the feature step that made the tables and its config (added 2026-11-14).
 LOCKED = tuple(dict.fromkeys(("docs/protocol/sap_v1.md", *ANALYSIS_CODE, *FEATURE_CODE,
                               FEATURE_CONFIG)))
-# Config status set by the SAP locking commit (proposed 2026-11-13, pending review).
+# Config status set by the SAP locking commit (proposed 2026-11-13, approved 2026-11-14).
 LOCKED_STATUS = "LOCKED"
 
 
