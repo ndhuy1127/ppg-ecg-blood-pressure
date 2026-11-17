@@ -121,7 +121,7 @@ ghi lại:
      chớp nào làm đổi số đếm: tập các pha có đáp ứng cho biết cửa sổ lấy mẫu nằm ở đâu so với
      clock MCU. Rủi ro: chớp có thể rơi đúng lúc ALC lấy mẫu ánh sáng nền;
   3. chắn và mở đường phản xạ của chính LED cảm biến bằng một màn chắn quang, đo thời điểm chắn
-     bằng một photodiode tham chiếu (gợi ý của phản biện độc lập).
+     bằng một photodiode tham chiếu (gợi ý khi thảo luận).
 
   Bước nhảy lớn hơn 10 lần nhiễu chỉ cho biết kích thích thấy được, không chứng minh thời điểm
   đo được là đúng.
@@ -302,10 +302,10 @@ Cách đọc:
 - Kết quả đạt chỉ đúng cho cấu hình đã đo. Đổi tốc độ, bộ lọc, độ rộng xung, cực tính `SAMP`
   hay firmware phần thời gian thì đo lại.
 
-**Cách đo độ trễ (sửa 2026-11-11 sau phản biện độc lập).** Thời điểm của đáp ứng lấy ở **tâm
+**Cách đo độ trễ (sửa 2026-11-11 sau khi thảo luận).** Thời điểm của đáp ứng lấy ở **tâm
 xung**: trung điểm của hai lần cắt mức 50 % ở sườn lên và sườn xuống của đáp ứng. Tâm xung vào
 bằng mốc sự kiện cộng nửa độ rộng xung, với độ rộng xung đo bằng oscilloscope. Giá trị thiết kế
-32,558 ms được nhà sản xuất xác minh theo tâm xung vào và tâm xung ra (theo phản biện độc lập;
+32,558 ms được nhà sản xuất xác minh theo tâm xung vào và tâm xung ra (theo kết quả thảo luận;
 chưa đối chiếu lại với ghi chú ứng dụng); thời điểm cắt ngưỡng trên
 một sườn đã qua bộ lọc thì phụ thuộc mức ngưỡng và đáp ứng của bộ lọc, nên không so thẳng được
 với giá trị đó. Mục 5 trước đây lấy trung vị qua các sự kiện; nay lấy trung bình và báo kèm trung

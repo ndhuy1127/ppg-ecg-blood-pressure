@@ -1,7 +1,7 @@
 {
   "version": "device-session-v1",
   "status": "APPROVED_NOT_LOCKED",
-  "note": "Ingest windows, fiducial settings and SQI flags for device recordings (docs/data_convention.md section 4, docs/protocol/device_session_pipeline.md). Proposed 2026-11-13; revised after an independent review and approved 2026-11-14 (docs/protocol/device_session_pipeline.md sections 4.3 and 5); window and fiducial settings stay pilot settings, locked on the pilot. SQI thresholds are copies of the proposals in docs/protocol/sqi_specification_v1.md and stay unlocked until G2; nothing here was chosen on BP or on any device recording.",
+  "note": "Ingest windows, fiducial settings and SQI flags for device recordings (docs/data_convention.md section 4, docs/protocol/device_session_pipeline.md). Proposed 2026-11-13; revised after discussion and approved 2026-11-14 (docs/protocol/device_session_pipeline.md sections 4.3 and 5); window and fiducial settings stay pilot settings, locked on the pilot. SQI thresholds are copies of the proposals in docs/protocol/sqi_specification_v1.md and stay unlocked until G2; nothing here was chosen on BP or on any device recording.",
   "expected_rates_hz": {"0xE1": 512.0, "0xF1": 200.0, "0xF2": 200.0, "0xF3": 200.0},
   "window": {
     "stored_pre_s": 60,

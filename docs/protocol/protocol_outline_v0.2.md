@@ -23,7 +23,7 @@
 - Thêm 6.4 về nghiệm pháp tạo ΔBP (có nguồn cho hướng thay đổi) và 6.5 về tiêu chí biên độ ΔBP cho pilot (đề xuất, khóa trước pilot).
 - Mục 3, 11, 12 sửa theo các thay đổi trên. Mục 1 chỉ bỏ chữ "trong Tuần 1" ở tuyên bố không thu dữ liệu. Mục 2, 4, 7–10 giữ nguyên như v0.1.
 
-**Changelog 2026-10-22 (sửa theo review độc lập Tuần 5):**
+**Changelog 2026-10-22 (sửa sau khi thảo luận Tuần 5):**
 
 - 5.1: MAX30101 là module PPG nhóm đã chọn. Số điện cực và việc dùng điện cực khô trên người được ghi là chờ quyết định. Khôi phục hai ý của v0.1 bị mất khi viết lại mục 5: ghi chú Cohen 2025 về sai số cuff truyền vào hiệu chuẩn, và yêu cầu chốt quy trình đo hai tay trước khi thu chính.
 - 5.3, 6.4: ghi rõ mâu thuẫn chưa giải quyết về thời điểm nói ở M2 và về thời điểm của cửa sổ tín hiệu ở M4.

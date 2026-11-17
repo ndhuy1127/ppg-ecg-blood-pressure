@@ -15,18 +15,18 @@
 >   pilot hay dữ liệu chính, để chốt bất kỳ mục nào.
 > - **Dữ liệu:** SAP này không phụ thuộc dữ liệu người nào. Mô phỏng ở mục 9 chỉ dùng giả định.
 > - **RQ2b và RQ3:** dùng lại các quy tắc ở đây; RQ3 là thăm dò.
-> - **Sửa 2026-11-10 (chốt 2026-11-12), sau rà soát tài liệu và một vòng phản biện độc lập:**
+> - **Sửa 2026-11-10 (chốt 2026-11-12), sau rà soát tài liệu và thảo luận:**
 >   mục 5 đổi kiểu khoảng tin cậy chính, vì kiểu percentile thiếu phủ ở 15–35 người; mục 6 và 7
 >   thêm giới hạn của cách đọc; mục 9 chạy lại mô phỏng với config v2 (cùng giả định, thêm so
 >   sánh các kiểu CI và bảng xác suất của từng cách đọc theo δ); mục 13 cập nhật.
 > - **Sửa 2026-11-11 (chốt 2026-11-12):** mục 9 thêm hai mô phỏng còn thiếu (SBP và DBP chung
 >   một nghiên cứu với Holm; Ridge huấn luyện thật trong LOSO), mục 4 thêm thang trọng số, mục 5
 >   và 6 ghi kết quả, mục 13 cập nhật.
-> - **Sửa 2026-11-15 (đề xuất, chờ duyệt), sau rà soát toàn dự án và một vòng phản biện độc
->   lập:** lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, tập phân tích chính và tập học,
+> - **Sửa 2026-11-15 (đề xuất, chờ duyệt), sau rà soát toàn dự án và thảo luận:**
+>   lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, tập phân tích chính và tập học,
 >   rồi vào lại endpoint 6 (mục 2, 3, 4); mục 4 ghi rõ tập học bỏ phiên `led_readjusted` và thêm
 >   bộ lọc vào các lựa chọn khóa trên pilot; mục 11 chọn phương pháp LoA cho đo lặp; mục 13 cập nhật.
-> - **Sửa 2026-11-12 (chốt, báo thầy), sau một vòng phản biện độc lập:** thêm hai baseline
+> - **Sửa 2026-11-12 (chốt, báo thầy), sau khi thảo luận:** thêm hai baseline
 >   không dùng tín hiệu (trung bình theo pha, độ lệch hằng số) và endpoint phụ bắt buộc dᴾ (mục
 >   3, 4, 7, 11); thêm hai endpoint phụ (biến chỉ pha, trung vị theo pha; mục 3); mục 9 thêm kết
 >   quả 9 và 10; mục 13 cập nhật.

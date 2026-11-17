@@ -9,7 +9,7 @@ biến, rồi ghi session manifest có hash. Phiên bản logger: `packet-logger
 
 - **Đã có (2026-10-21):** decoder, kiểm tra, runner `record`/`replay`, test với
   luồng SYNTHETIC `synthetic-packet-v3` ([mô phỏng](packet_simulation.md)).
-- **Sửa theo review độc lập Tuần 5 (2026-10-22):** kiểm
+- **Sửa sau khi thảo luận Tuần 5 (2026-10-22):** kiểm
   `T_ANCHOR_US` hai chiều, thêm dung sai tốc độ, thêm cột `chain_id`, cách ly
   packet `FS_NOMINAL_MHZ = 0`, thêm cận trên số mẫu mất, đổi cách đếm lỗi decode.
   Chi tiết ở các mục dưới và trong `reports/weekly/week_05/README.md`. Vẫn là

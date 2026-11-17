@@ -1,6 +1,6 @@
 # Tuần 5 — mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay
 
-2026-10-21; sửa ngày 2026-10-22 theo review độc lập; bốn quyết định ngày
+2026-10-21; sửa ngày 2026-10-22 sau khi thảo luận; bốn quyết định ngày
 2026-10-25 ở mục 8; kế hoạch đánh dấu tay và ngưỡng chấp nhận ngày 2026-10-25 ở
 mục 9; các điểm chốt 2026-10-29 ở mục 3, 4, 7, 8, 9.1–9.4 và 9.6; sai lệch của lần đánh
 dấu 1 và quyết định dừng đánh dấu tay PulseDB ngày 2026-11-16 ở mục 9.7. Version config:
@@ -743,8 +743,8 @@ Sau 22/80 đoạn, rà soát thấy định nghĩa foot ở mục 9.2 hiểu đ�
 thấp nhất và sườn lên có một gờ: (A) đáy cuối cùng ngay trước sườn lên, (B) điểm thấp nhất.
 Người đánh dấu đã theo B ở 7 đoạn (20 nhịp có gờ); đoạn `…_35957` đánh lại theo A; 14 đoạn
 còn lại không có nhịp loại này. Nhóm chốt A (quy tắc ở mục 9.2), trước khi chạy `compare`
-hay `gate`, không xem kết quả detector. Chưa có phản biện độc lập cho quyết định này (công cụ
-hết hạn mức trong ngày). Bảy đoạn theo B bị xóa để đánh lại theo A: `…_322337`,
+hay `gate`, không xem kết quả detector. Quyết định này chưa được thảo luận thêm.
+Bảy đoạn theo B bị xóa để đánh lại theo A: `…_322337`,
 `…_322796`, `…_276468`, `…_276132`, `…_378127`, `…_283055`, `…_92569`. Bản gốc
 `manual_main.csv` (SHA-256 `2846c41f…`) và progress được chép nguyên trạng sang
 `data/processed/pulsedb_w5_review_v1/removed_segments_2026-11-15_ruleA/`; 150 dòng bị bỏ,
@@ -769,7 +769,7 @@ dưới 0,5%). Gờ cao 0,5–3% biên độ là vùng mơ hồ của định ng
 đánh dấu, kể cả khi trong cùng đoạn xử lý khác nhau; sai khác này được tính vào độ lặp lại.
 Biên độ nhịp là đỉnh tâm thu trừ đáy thấp nhất; độ cao gờ là đỉnh gờ trừ đáy ngay sau gờ.
 
-**Dừng đánh dấu tay PulseDB (chốt 2026-11-16; nhóm duyệt, có một phản biện độc lập cùng
+**Dừng đánh dấu tay PulseDB (chốt 2026-11-16; nhóm duyệt sau khi thảo luận cùng
 ngày).** Đánh dấu tay mốc R/foot trên PulseDB dừng hẳn; **không theo đuổi B4 trên PulseDB**.
 Ghi là "thẩm định chưa hoàn tất", **không** ghi là `gate` ra `B4_NOT_ALLOWED`, vì chưa chạy
 `compare`, `repeat` hay `gate`, và chưa ai xem kết quả detector so với mốc tay.

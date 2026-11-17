@@ -36,7 +36,7 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 | Cả bốn module (bo Waveshare, breakout MAX30001, MAX30101, BMI270) | Trước khi hàn, đo từng module bằng thước kẹp: kích thước bo, bước chân header, vị trí lỗ bắt vít so với hàng chân; so với footprint KiCad (thêm 2026-10-29: footprint mới đối chiếu với file CAD và bản vẽ của nhà sản xuất, chưa với module thật) | Khớp footprint; ghi số đo vào báo cáo. Lệch thì dừng, không hàn (A.6 mục 2) |
 | Cả bốn module | Đặt lên bản in 1:1 của hai bo | Lỗ bắt vít, hàng chân và lỗ spacer trùng footprint (A.6 mục 2) |
 
-**Breakout MAX30001 bản v2 (ghi 2026-11-14; cách xử lý sửa theo rà soát độc lập và duyệt
+**Breakout MAX30001 bản v2 (ghi 2026-11-14; cách xử lý sửa sau khi thảo luận và duyệt
 2026-11-14).** Bo nhận về in `v2`,
 `03/24`. ProtoCentral chỉ công bố file Eagle v1.0 (03/22); repo `protocentral_max30001_arduino_library`
 không có thư mục `hardware/` dù trang sản phẩm có nhắc. Bố trí linh kiện của v2 khác v1.0,

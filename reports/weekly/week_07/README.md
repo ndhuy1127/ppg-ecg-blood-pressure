@@ -103,14 +103,14 @@ Không đo trên người.
     0)"; PPG trễ so với ECG trên PulseDB là "giả thuyết, chưa kiểm chứng"; MAE B3 nằm trong
     khoảng của y văn nhưng B0 hằng số cũng vậy;
   - sửa trích dẫn (Meziane 2015), tên nhánh `dev/ngoclinh`, README trạng thái Tuần 7.
-- **Review B5** về rò rỉ và so sánh công bằng (2026-11-11, kèm một phản biện độc lập): không
+- **Review B5** về rò rỉ và so sánh công bằng (2026-11-11, sau khi thảo luận): không
   có lỗi chặn. Sửa trọng số của phần học (chuẩn hóa trên 288 người học thay vì cả 320 người
   rồi cắt; trên split v2 mọi trọng số vẫn bằng 1 nên lần chạy `inner` không đổi), thêm test;
   viết lại mục chống rò rỉ cho đúng (nhãn và dạng sóng val/test vẫn được đọc để băm và QC,
   không vào mô hình); ghi rõ B5 − B0/B3 là so sánh quy trình
   ([định nghĩa B5](../../../docs/protocol/b5_pulsedb_definition.md) mục 5, 6, 9).
-- **Baseline không dùng tín hiệu cho RQ1** (2026-11-12, chốt, báo thầy; kèm một phản biện độc
-  lập): SAP thêm baseline trung bình theo pha (M0, M1, M2) và độ lệch hằng số, endpoint phụ bắt
+- **Baseline không dùng tín hiệu cho RQ1** (2026-11-12, chốt, báo thầy; sau khi thảo
+  luận): SAP thêm baseline trung bình theo pha (M0, M1, M2) và độ lệch hằng số, endpoint phụ bắt
   buộc dᴾ (không phải điều kiện của kết luận chính), quy tắc viết bài, hai endpoint phụ mới (mô
   hình có biến chỉ pha; trung vị theo pha); mô phỏng LOSO thêm hai baseline và mô hình có biến
   chỉ pha (edbe46d; mục 6.5).
@@ -252,8 +252,8 @@ epoch; không so được với B0/B3 trên val. Không đổi điểm nào củ
 
 Config `rq1_holm_loso_v1.json` (SHA-256 `a2b4aac7…`), 2.000 nghiên cứu mỗi kịch bản, CI khoảng
 bao; chạy trên bản chưa commit, hash của code trong [report.json](rq1_holm_loso/report.json),
-bảng đầy đủ ở [summary.md](rq1_holm_loso/summary.md). Code và cách đọc đã qua một phản biện độc
-lập; theo đó đã thêm nhiễu cho nền đặc trưng, kịch bản một đầu ra không có hiệu ứng, θ lấy từ
+bảng đầy đủ ở [summary.md](rq1_holm_loso/summary.md). Code và cách đọc đã được thảo
+luận; theo đó đã thêm nhiễu cho nền đặc trưng, kịch bản một đầu ra không có hiệu ứng, θ lấy từ
 mô phỏng riêng 20.000 nghiên cứu, và phép xáo cột để tách ảnh hưởng của phụ thuộc.
 
 - **Holm:** khi PAT không thêm gì ở cả hai đầu ra, cận trên của sai lầm là 1,5–2,8 % (danh nghĩa

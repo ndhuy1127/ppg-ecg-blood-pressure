@@ -165,7 +165,7 @@ dùng người của train; không có số nào trên val hay test.
 
 ## 9. Review
 
-**Review về rò rỉ và so sánh công bằng (2026-11-11, rà soát và một phản biện độc lập):**
+**Review về rò rỉ và so sánh công bằng (2026-11-11, rà soát và thảo luận):**
 không có lỗi chặn trên đường học và chấm. Đã kiểm: chuẩn hóa chỉ từ phần học; dự đoán ở chế
 độ `eval`; checkpoint tốt nhất giữ cả trạng thái batch norm; dự đoán đổi lại mmHg; B0/B3/B5
 được ghép theo `sample_id` và chấm trên cùng các lượt bootstrap theo người; tập kiểm tra trong

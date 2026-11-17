@@ -1,6 +1,6 @@
 # Pipeline dữ liệu thiết bị: ingest, mốc và PAT, phân tích RQ1
 
-> **Trạng thái: đề xuất ngày 2026-11-13; sửa theo rà soát độc lập và duyệt 2026-11-14; sửa
+> **Trạng thái: đề xuất ngày 2026-11-13; sửa sau khi thảo luận và duyệt 2026-11-14; sửa
 > 2026-11-15 sau rà soát toàn dự án (chờ duyệt): mục 2, 3.3, 3.4, 4.1–4.3, 5.** Mới chạy
 > trên dữ liệu SYNTHETIC. Chưa có bản ghi thiết bị nào. Kết quả SYNTHETIC chỉ kiểm chứng code, không nói gì về thiết bị hay BP.
 
@@ -37,7 +37,7 @@ workspace sạch, có commit, hash code và config bằng hash của các file �
 provenance: `source_type` của dòng phải khớp provenance, nên bảng thiết bị bị gắn nhầm SYNTHETIC
 sẽ bị từ chối. Report ghi `feature_provenance`.
 
-Sửa 2026-11-14 sau rà soát độc lập (duyệt 2026-11-14): `provenance.json` ghi hash của
+Sửa 2026-11-14 sau khi thảo luận (duyệt 2026-11-14): `provenance.json` ghi hash của
 `cuff_features.csv` và `cuff_features.json` (`outputs_sha256`); runner từ chối bảng không
 khớp hash này, nên không thể đặt bảng khác hay bảng đã sửa cạnh một provenance. Với dữ liệu
 thật, `git_commit` phải là commit có thật của repo và chứa đúng code và config đã ghi trong
@@ -45,7 +45,7 @@ provenance. Danh sách khóa có thêm các `__init__.py` của package cha (Pyt
 import). Endpoint 5 và 7 báo thêm `confirmatory: false`, số người còn được đánh giá, cờ dưới
 15 người, và tách số lần cuff có cờ thành số bỏ khỏi tập học và số bỏ khỏi tập đánh giá.
 
-Sửa 2026-11-14 sau rà soát độc lập lần hai (duyệt 2026-11-14):
+Sửa 2026-11-14 sau khi thảo luận lần hai (duyệt 2026-11-14):
 
 - "Chưa đổi so với HEAD" giờ so cả nội dung: file được băm như Git lưu (cùng bộ lọc dòng) rồi so
   với blob của HEAD. Trước đó chỉ dùng `git diff`, nên file đánh dấu `assume-unchanged` hay
@@ -138,7 +138,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
   ([đề xuất bo](../../configs/hardware/custom_board_proposal.md), 2026-10-25). Ngưỡng
   prominence bằng 0,2 lần biên độ đỉnh–đỉnh của cả cửa sổ, nên khi không lọc, trôi nền che phần
   lớn nhịp (mục 3.3). Đây là giá trị cho pilot, khóa trên pilot theo độ chính xác mốc, không theo
-  sai số RQ1. Giới hạn đã biết, nêu ở vòng phản biện độc lập:
+  sai số RQ1. Giới hạn đã biết, nêu khi thảo luận:
   - đệm mặc định của bộ lọc chỉ 15 mẫu (75 ms PPG, 29 ms ECG) và `edge_s` 0,1 s không chứng minh
     bộ lọc 0,5 Hz đã ổn định ở mép; ngưỡng prominence tính trên cả cửa sổ trước khi bỏ mép, nên
     quá độ ở mép có thể che nhịp bên trong;
@@ -190,7 +190,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
   - đếm lượt có pha rỗng; tỷ lệ mất ECG chỉ đếm lần cuff không có HR từ ECG;
   - cổng dữ liệu thật: config chưa `LOCKED`, config chép ra ngoài repo, một file code đổi đều
     bị từ chối.
-- Thêm 2026-11-14, sau rà soát độc lập lần hai:
+- Thêm 2026-11-14, sau khi thảo luận lần hai:
   - số phiên ngược thời gian (hai phiên đổi giờ, hai phiên cùng giờ, một bản ghi muộn xếp vào phiên 1) thì dừng; dòng thật thiếu
     `session_start_utc`, giờ không có múi giờ hay không đúng ISO 8601 thì dừng;
   - `led_readjusted = 1` ở phiên 1 thì dừng;
@@ -211,7 +211,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
     bằng lần M0 còn lại; người không còn lần M0 nào thì bị loại
     (`session1_m0_led_not_locked`); endpoint 6 đưa chúng trở lại; report đếm theo người và pha.
 
-### 4.3. Chỗ SAP chưa đủ rõ để code (đã tự chọn; sửa theo rà soát độc lập và duyệt 2026-11-14)
+### 4.3. Chỗ SAP chưa đủ rõ để code (đã tự chọn; sửa sau khi thảo luận và duyệt 2026-11-14)
 
 1. **Lần cuff dùng để học.** SAP mục 4: "mọi lần cuff có nhãn của người huấn luyện". Code học trên
    các lần cuff hợp lệ tính được cả PPG và PAT, của người đạt chuẩn, mọi phiên, trừ phiên ≥ 2 có

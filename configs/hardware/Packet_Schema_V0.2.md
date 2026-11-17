@@ -22,7 +22,7 @@
 > Đã duyệt ngày 2026-10-24: `VERSION = 0x02` cho phiên mới; thêm gia tốc
 > **và** con quay của BMI270; gửi hết phần FIFO tồn đọng (bit 7); thêm packet thông
 > tin thiết bị để buổi đo trên người chỉ cần một cáp USB. Thiết kế chi tiết đã qua
-> hai vòng phản biện (thiết kế IMU, rồi spec đầy đủ); chờ duyệt.
+> hai vòng thảo luận (thiết kế IMU, rồi spec đầy đủ); chờ duyệt.
 >
 > Datasheet BMI270: BST-BMI270-DS000 (Bosch Sensortec). Các chi tiết thanh ghi và
 > thứ tự frame FIFO ghi "theo datasheet §…" phải được đối chiếu lại khi viết
@@ -226,7 +226,7 @@ bắt đầu giữa phiên vẫn nhận được trong vòng 10 s.
 Đã duyệt ngày 2026-10-24: bật xung `SAMP` của MAX30001 **luôn** và dùng làm
 mốc thời gian ECG; chốt thời điểm cạnh bằng MCPWM capture của ESP32-S3; sửa V0.2 (chưa
 có firmware V0.2 chạy, chưa có dữ liệu V0.2) thay vì nâng version; không thêm kênh
-ghi mọi cạnh xung. PPG đọc theo mục 7.6. Thiết kế đã qua một vòng phản biện (chờ duyệt);
+ghi mọi cạnh xung. PPG đọc theo mục 7.6. Thiết kế đã qua một vòng thảo luận (chờ duyệt);
 mọi chi tiết thanh ghi phải đối chiếu lại datasheet MAX30001 khi viết driver và kiểm
 trên chip thật ở bring-up.
 
@@ -513,7 +513,7 @@ sau.
 một kênh mới của V0.2, **mỗi packet một giá trị**. `VERSION` vẫn là `0x02`; dữ liệu
 V0.2 đã ghi không có `0xB1` vẫn hợp lệ. Đây là nhiệt độ của chip, không phải nhiệt độ
 da: chỉ dùng làm xu hướng (độ chính xác ±1 °C ở 25 °C, phân giải 0,0625 °C, thời gian
-chuyển đổi 29 ms; MAX30101 tr. 4, 23). Chi tiết dưới đây đã qua hai vòng phản biện
+chuyển đổi 29 ms; MAX30101 tr. 4, 23). Chi tiết dưới đây đã qua hai vòng thảo luận
 cùng ngày (thiết kế, rồi code); chờ duyệt.
 
 | Trường | Giá trị |
@@ -623,7 +623,7 @@ cùng ngày (thiết kế, rồi code); chờ duyệt.
 
 ## 12. Packet cấu hình AFE `0xD2` (sửa đổi 2026-10-25)
 
-Quyết định ngày 2026-10-25 (thiết kế đã qua phản biện): cấu
+Quyết định ngày 2026-10-25 (thiết kế chốt sau khi thảo luận): cấu
 hình thật của từng AFE đi **trong** luồng raw, như thông tin thiết bị `0xD1`, để biết
 chip đã chạy với thanh ghi nào và nguồn của từng kênh (chip thật hay nguồn giả) khi một
 bản build trộn hai loại. Metadata mục 8 do người vận hành viết vẫn giữ nguyên; logger
@@ -703,7 +703,7 @@ thái ấy được gửi lại kèm bit 1). Số thứ tự trạng thái là 6
 
 ## 13. Lệnh từ PC và packet xác nhận `0xD3` (sửa đổi 2026-10-25)
 
-Quyết định ngày 2026-10-25 (thiết kế đã qua phản biện): PC gửi
+Quyết định ngày 2026-10-25 (thiết kế chốt sau khi thảo luận): PC gửi
 lệnh xuống qua chính cổng USB Serial/JTAG của luồng packet. Mục đích trước hết là hiệu
 chuẩn dòng LED PPG theo người (protocol v0.2 mục 6.1): buổi đầu chỉnh rồi khóa, các
 buổi sau PC gửi lại đúng các mã đã khóa ngay đầu phiên. Firmware không lưu dòng LED qua

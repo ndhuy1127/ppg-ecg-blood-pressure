@@ -249,7 +249,7 @@ Không đo trên người trong tuần này.
   - 4 footprint module khớp file Eagle của ProtoCentral và SparkFun và bản vẽ Waveshare, sai số 0 mm;
   - BMI270 ở mặt dưới đúng cho cách lắp mặt chip quay ra ngoài.
 
-  Rà soát độc lập: không có lỗi phải sửa PCB (chờ duyệt).
+  Sau khi thảo luận: không có lỗi phải sửa PCB (chờ duyệt).
 - **Gerber và file khoan V1-draft5** xuất ngày 2026-10-27, không lưu trong repo.
   - Đã kiểm: mọi lỗ khoan khớp pad/via; lỗ mạ có đồng hai lớp; pad có lỗ mở mask.
   - Đặt ở CXT thành hai thiết kế riêng, 5 tấm mỗi mạch.

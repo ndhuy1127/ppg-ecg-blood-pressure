@@ -4,7 +4,7 @@
 > PubMed, Europe PMC và OpenAlex cho giai đoạn 2022–2026; đọc toàn văn N5, N7, N8, N16; thêm
 > N18–N42; viết lại mục 4–6; ghi quyết định ngày 2026-10-29 về S4 và kết quả thử tải N6.
 > **Cập nhật 2026-10-30:** viết lại văn phong, sửa ghi chú của vài dòng trong bảng 3 sau một
-> vòng phản biện, và ghi lại các việc ở mục 5.3 đã làm (chờ duyệt).
+> vòng thảo luận, và ghi lại các việc ở mục 5.3 đã làm (chờ duyệt).
 > **Cập nhật 2026-10-30, lần 2:** đọc toàn văn N6 từ bản PDF (CC BY) do nhóm tải bằng trình duyệt
 > thường; sửa dòng N6 ở bảng 3 và các mục 2, 4, 5, 6 theo kết quả này.
 > **Cập nhật 2026-10-30, lần 3:** đọc toàn văn S4 từ bản PDF miễn phí trên trang Microsoft Research;
