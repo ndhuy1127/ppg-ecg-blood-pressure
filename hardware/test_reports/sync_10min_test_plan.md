@@ -2,7 +2,7 @@
 
 > Chưa thực hiện vì chưa có phần cứng.
 >
-> **Tiêu chí đạt/không đạt ở mục 9 là đề xuất ngày 2026-11-11, chờ duyệt**, viết trước khi
+> **Tiêu chí đạt/không đạt ở mục 9 đề xuất ngày 2026-11-11, duyệt ngày 2026-11-14**, viết trước khi
 > có số đo nào. Bản trước ghi "chưa chốt, chỉ đặt sau khi có số đo đầu tiên"; đặt ngưỡng sau
 > khi đã thấy số thì ngưỡng không còn kiểm được gì. Sau khi đo không đổi ngưỡng. Nếu buộc phải
 > đổi thì ghi lý do, ngày, và báo kết quả theo cả ngưỡng cũ lẫn ngưỡng mới.
@@ -108,7 +108,7 @@ ghi lại:
   ALC chưa tràn, không chứng minh kích thích thấy được trong dữ liệu PPG. Phải
   thử trên bàn với PCB V1 (không người), sau bring-up mục 8, nhìn trực tiếp số đếm
   ADC tại cạnh xung, trước khi chạy đủ 10 phút (mục 8).
-- **Phép thử trước 1 phút và phương án thay thế (đề xuất 2026-11-11, chờ duyệt).** Ghi 1
+- **Phép thử trước 1 phút và phương án thay thế (đề xuất 2026-11-11, duyệt 2026-11-14).** Ghi 1
   phút có kích thích trong hộp tối. Kích thích PPG được coi là **thấy được** khi, ở cả ba
   khe, bước nhảy trung vị của số đếm ADC tại cạnh lên lớn hơn 10 lần độ lệch chuẩn của số đếm
   lúc không có xung, và STATUS bit 6 bằng 0 suốt 1 phút. Không đạt thì **không chạy** phép đo
@@ -121,7 +121,7 @@ ghi lại:
      chớp nào làm đổi số đếm: tập các pha có đáp ứng cho biết cửa sổ lấy mẫu nằm ở đâu so với
      clock MCU. Rủi ro: chớp có thể rơi đúng lúc ALC lấy mẫu ánh sáng nền;
   3. chắn và mở đường phản xạ của chính LED cảm biến bằng một màn chắn quang, đo thời điểm chắn
-     bằng một photodiode tham chiếu (gợi ý của phản biện độc lập).
+     bằng một photodiode tham chiếu (gợi ý khi thảo luận).
 
   Bước nhảy lớn hơn 10 lần nhiễu chỉ cho biết kích thích thấy được, không chứng minh thời điểm
   đo được là đúng.
@@ -270,7 +270,7 @@ hạn. Ghi riêng "giá trị thiết kế/datasheet" và "giá trị đo đư�
    `SMP_AVE = 1`). Chênh lệch nằm trong sai số dao động nội là bình thường; chênh
    theo bội số (ví dụ còn một nửa) nghĩa là chip đã đổi tốc độ.
 
-## 9. Tiêu chí chấp nhận (đề xuất 2026-11-11, chờ duyệt; viết trước khi đo)
+## 9. Tiêu chí chấp nhận (đề xuất 2026-11-11, duyệt 2026-11-14; viết trước khi đo)
 
 Áp cho cấu hình sẽ dùng trên người (512 sps, 200 sps ba khe, độ rộng xung đã chốt). Mọi ngưỡng
 là đề xuất kỹ thuật, **chưa có nguồn**; căn cứ ghi ở cuối mục.
@@ -302,10 +302,10 @@ Cách đọc:
 - Kết quả đạt chỉ đúng cho cấu hình đã đo. Đổi tốc độ, bộ lọc, độ rộng xung, cực tính `SAMP`
   hay firmware phần thời gian thì đo lại.
 
-**Cách đo độ trễ (sửa 2026-11-11 sau phản biện độc lập).** Thời điểm của đáp ứng lấy ở **tâm
+**Cách đo độ trễ (sửa 2026-11-11 sau khi thảo luận).** Thời điểm của đáp ứng lấy ở **tâm
 xung**: trung điểm của hai lần cắt mức 50 % ở sườn lên và sườn xuống của đáp ứng. Tâm xung vào
 bằng mốc sự kiện cộng nửa độ rộng xung, với độ rộng xung đo bằng oscilloscope. Giá trị thiết kế
-32,558 ms được nhà sản xuất xác minh theo tâm xung vào và tâm xung ra (theo phản biện độc lập;
+32,558 ms được nhà sản xuất xác minh theo tâm xung vào và tâm xung ra (theo kết quả thảo luận;
 chưa đối chiếu lại với ghi chú ứng dụng); thời điểm cắt ngưỡng trên
 một sườn đã qua bộ lọc thì phụ thuộc mức ngưỡng và đáp ứng của bộ lọc, nên không so thẳng được
 với giá trị đó. Mục 5 trước đây lấy trung vị qua các sự kiện; nay lấy trung bình và báo kèm trung
@@ -339,7 +339,7 @@ một mẫu PPG 5 000 µs.
 - A3 kiểm tổng của thời gian lấy mẫu và độ trễ đọc FIFO; hai phần có thể bù nhau. A6 là phép kiểm
   độc lập hơn cho trôi.
 
-## 10. Ngân sách sai số PAT (đề xuất 2026-11-11, chờ duyệt)
+## 10. Ngân sách sai số PAT (đề xuất 2026-11-11, duyệt 2026-11-14)
 
 Phân tích dùng ΔPAT: trung vị PAT của một cửa sổ trừ trung vị PAT của cửa sổ hiệu chuẩn
 ([SAP v1](../../docs/protocol/sap_v1.md) mục 4). Bảng dưới là ước lượng khi các tiêu chí ở mục 9 đạt.

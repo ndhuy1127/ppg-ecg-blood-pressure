@@ -64,7 +64,7 @@ ba mảng:
 | 4 | Yêu cầu phần cứng V0 | Đức Anh | [hardware_requirements_for_V0.md](../../../configs/hardware/hardware_requirements_for_V0.md) |
 | 5 | Sơ đồ khối phần cứng | Đức Anh | `Hardware_Diagram.png` (xóa ngày 2026-10-24; còn ở commit `1192a47`); bản hiện hành: [hardware_diagram_v1.svg](../../../configs/hardware/hardware_diagram_v1.svg) |
 | 6 | BOM V0.1 | Đức Anh | [BOM_V0.1.xlsx](../../../hardware/bom/BOM_V0.1.xlsx) |
-| 7 | Hai phương án điện cực ECG | Đức Anh | [Hai_phuong_an_dien_cuc_ECG.pdf](../../../hardware/Hai_phuong_an_dien_cuc_ECG.pdf) |
+| 7 | Hai phương án điện cực ECG | Đức Anh | [Hai_phuong_an_dien_cuc_ECG.md](../../../hardware/Hai_phuong_an_dien_cuc_ECG.md) |
 | 8 | Ma trận 12 bài báo | Huy | [week_01_literature_matrix.md](../../../docs/literature/week_01_literature_matrix.md) |
 | 9 | Câu hỏi nghiên cứu RQ1–RQ3 | Huy | [research_questions_v0.1.md](../../../docs/research_questions_v0.1.md) |
 | 10 | Khung protocol v0.1 | Huy | [protocol_outline_v0.1.md](../../../docs/protocol/protocol_outline_v0.1.md) |

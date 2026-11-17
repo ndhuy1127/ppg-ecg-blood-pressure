@@ -33,17 +33,21 @@ from software.device import features as fe  # noqa: E402
 from software.device import session_ingest as si  # noqa: E402
 
 FEATURE_COLUMNS = (
-    "subject_id", "session_id", "recording", "event_id", "phase", "status",
+    "subject_id", "session_id", "session_start_utc", "recording", "event_id", "phase",
+    "status",
     "safety_stop", "led_readjusted", "pilot", "sbp_mmhg", "dbp_mmhg", "window_pre_s", "ppg_color",
     "ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm", "ecg_hr_bpm",
     "ecg_rmssd_ms", "pat_ms", "pat_sqi_v2_median_ms", "pat_n_valid", "flags",
     "source_type",
 )
-# Every local module the feature step imports (tests/test_rq1_analysis.py checks the
-# list against the import graph); their hashes go to provenance.json.
-CODE = ("scripts/device_session.py", "software/device/__init__.py",
+# Every local module the feature step imports, with the parent package __init__ files
+# Python runs on import (tests/test_rq1_analysis.py checks the list against the import
+# graph); their hashes go to provenance.json.
+CODE = ("scripts/device_session.py", "software/__init__.py",
+        "software/device/__init__.py", "software/feature_extraction/__init__.py",
+        "software/signal_processing/__init__.py", "software/data_io/__init__.py",
         "software/device/session_ingest.py", "software/device/features.py",
-        "software/device/synthetic_session.py", "software/feature_extraction/week04.py",
+        "software/device/max30101.py", "software/feature_extraction/week04.py",
         "software/signal_processing/fiducials.py",
         "software/signal_processing/pat_validity.py", "software/data_io/live_monitor.py",
         "software/data_io/packet_receiver.py", "software/data_io/packet_wire.py",
@@ -103,6 +107,9 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
                            session_index)
     identity = {"subject_id": manifest.get("subject_id"),
                 "session_id": manifest.get("session_id"), "recording": name,
+                # PC clock at the start of the recording; RQ1 checks that session
+                # numbers follow it (added 2026-11-14).
+                "session_start_utc": manifest.get("pc_start_time_utc"),
                 "raw_sha256": manifest["raw"]["sha256"],
                 "source_type": manifest["source_type"],
                 "clock_id": recording["metadata"]["clock_id"]}
@@ -117,7 +124,8 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
     _json(output / "session_summary.json", summary)
     _csv(output / "timebase.csv", ("device_session_id", "channel", "chain_id", "n_anchors",
                                    "a_us", "b_us", "fs_hz", "residual_sd_us",
-                                   "anchor_source", "nominal_rate", "latency_l_us"),
+                                   "residual_block_max_us", "anchor_source",
+                                   "nominal_rate", "latency_l_us"),
          timebase)
     _csv(output / "events.csv", ("device_session_id", "event_ordinal", "code", "name",
                                  "t_us"), events)
@@ -142,6 +150,9 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
         "cuff_log_sha256": si.sha256_file(cuff_log),
         "config_sha256": text_file_sha256(config_path),
         "code_sha256": {c: text_file_sha256(REPO / c) for c in CODE},
+        # Binds this provenance to the tables it describes (checked by run_rq1_analysis).
+        "outputs_sha256": {name: si.sha256_file(output / name)
+                           for name in ("cuff_features.csv", "cuff_features.json")},
         "git_commit": _git("rev-parse", "HEAD"),
         "git_dirty": bool(_git("status", "--porcelain")),
         "python": platform.python_version(), "source_type": manifest["source_type"],

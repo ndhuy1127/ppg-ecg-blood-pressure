@@ -15,14 +15,18 @@
 >   pilot hay dữ liệu chính, để chốt bất kỳ mục nào.
 > - **Dữ liệu:** SAP này không phụ thuộc dữ liệu người nào. Mô phỏng ở mục 9 chỉ dùng giả định.
 > - **RQ2b và RQ3:** dùng lại các quy tắc ở đây; RQ3 là thăm dò.
-> - **Sửa 2026-11-10 (chốt 2026-11-12), sau rà soát tài liệu và một vòng phản biện độc lập:**
+> - **Sửa 2026-11-10 (chốt 2026-11-12), sau rà soát tài liệu và thảo luận:**
 >   mục 5 đổi kiểu khoảng tin cậy chính, vì kiểu percentile thiếu phủ ở 15–35 người; mục 6 và 7
 >   thêm giới hạn của cách đọc; mục 9 chạy lại mô phỏng với config v2 (cùng giả định, thêm so
 >   sánh các kiểu CI và bảng xác suất của từng cách đọc theo δ); mục 13 cập nhật.
 > - **Sửa 2026-11-11 (chốt 2026-11-12):** mục 9 thêm hai mô phỏng còn thiếu (SBP và DBP chung
 >   một nghiên cứu với Holm; Ridge huấn luyện thật trong LOSO), mục 4 thêm thang trọng số, mục 5
 >   và 6 ghi kết quả, mục 13 cập nhật.
-> - **Sửa 2026-11-12 (chốt, báo thầy), sau một vòng phản biện độc lập:** thêm hai baseline
+> - **Sửa 2026-11-15 (đề xuất, chờ duyệt), sau rà soát toàn dự án và thảo luận:**
+>   lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, tập phân tích chính và tập học,
+>   rồi vào lại endpoint 6 (mục 2, 3, 4); mục 4 ghi rõ tập học bỏ phiên `led_readjusted` và thêm
+>   bộ lọc vào các lựa chọn khóa trên pilot; mục 11 chọn phương pháp LoA cho đo lặp; mục 13 cập nhật.
+> - **Sửa 2026-11-12 (chốt, báo thầy), sau khi thảo luận:** thêm hai baseline
 >   không dùng tín hiệu (trung bình theo pha, độ lệch hằng số) và endpoint phụ bắt buộc dᴾ (mục
 >   3, 4, 7, 11); thêm hai endpoint phụ (biến chỉ pha, trung vị theo pha; mục 3); mục 9 thêm kết
 >   quả 9 và 10; mục 13 cập nhật.
@@ -53,6 +57,20 @@
 - **Tập phân tích chính:** mọi lần cuff hợp lệ ở phiên ≥ 2 (M0, M1, M2) của người đạt chuẩn,
   tính được cả PAT lẫn đặc trưng PPG. Không lọc theo SQI. Phiên `led_readjusted` không thuộc tập
   này.
+- **Lần cuff không chạy với mã LED đã khóa (sửa 2026-11-15, đề xuất, chờ duyệt):** cờ
+  `ppg:led_not_locked` ([SQI v1](sqi_specification_v1.md) mục 3.3) bật khi trạng thái MAX30101
+  trong cửa sổ không mang mã LED đã khóa, khi bản ghi của người tham gia không có mã khóa, hay
+  khi không xác minh được trạng thái đó. Protocol 6.1 chỉ cho đo sau khi mã khóa có hiệu lực,
+  nên đây là cờ tuân thủ protocol, không phải ngưỡng chất lượng tín hiệu.
+  - Lần cuff mang cờ không vào hiệu chuẩn (mục 4), không tính cho phiên đạt, không thuộc tập
+    phân tích chính, tập học hay PPG-only trên mọi lần cuff (endpoint 3); endpoint 6 đưa chúng
+    trở lại.
+  - Chỉ bỏ đúng lần cuff đó, không bỏ cả phiên như `led_readjusted`, vì cờ được xác định theo
+    từng cửa sổ; khi mã khóa không có hiệu lực cả buổi thì mọi lần cuff của buổi đều mang cờ.
+  - Lý do: biên độ PPG đổi theo dòng LED, nên Δ đặc trưng so với nền không còn so được; một
+    nền M0 chưa khóa làm lệch mọi Δ về sau, điều endpoint 5 (giữ hiệu chuẩn của phân tích
+    chính) không sửa được.
+  - Phương án đã cân nhắc và không chọn: chỉ dùng cờ cho endpoint 5 như các cờ SQI khác.
 - **Báo kèm:** số người tuyển, sàng lọc, đạt chuẩn, bỏ cuộc và lý do; số lần cuff theo người,
   phiên, nghiệm pháp; tỷ lệ lần đo mất ECG theo người.
 
@@ -82,7 +100,8 @@
   3. PPG-only trên mọi lần cuff có PPG, kể cả lần mất ECG;
   4. PAT-only và ablation PPG + PAT + HR/HRV từ ECG;
   5. tập đã lọc SQI ([SQI v1](sqi_specification_v1.md) mục 5);
-  6. có cả các phiên `led_readjusted`;
+  6. có cả các phiên `led_readjusted` và các lần cuff có cờ `ppg:led_not_locked` (thêm
+     2026-11-15), chạy lại cả hiệu chuẩn và tư cách đạt chuẩn;
   7. bỏ các lần cuff mang cờ dừng an toàn (protocol 10);
   8. RQ2b: cùng phiên so với khác phiên (RQ mục 5.B);
   9. Pearson r giữa ΔBP tham chiếu và dự đoán; tỷ lệ |sai số| ≤ 5 và ≤ 10 mmHg (chỉ mô tả).
@@ -93,7 +112,7 @@
       nên không thay phép so chính. Độ nhạy thấp (mục 9, kết quả 10), nên chỉ dùng để mô tả.
   11. Baseline theo pha dùng trung vị thay trung bình (mục 4; chốt 2026-11-12): MAE tối ưu ở trung vị, nên vượt
       trung bình theo pha có thể chỉ nhờ phân bố ΔBP lệch.
-- **Cách tính endpoint 5 và 7 (đề xuất 2026-11-14, chờ duyệt).** BP₀, đặc trưng nền và tư cách
+- **Cách tính endpoint 5 và 7 (đề xuất và duyệt 2026-11-14).** BP₀, đặc trưng nền và tư cách
   đạt chuẩn giữ nguyên như phân tích chính. Bộ lọc của endpoint (cờ SQI thuộc tập loại; cờ dừng
   an toàn) chỉ bỏ lần cuff khỏi tập học và tập đánh giá, rồi học lại theo mục 4; không xét lại
   ngưỡng ≥ 2 lần cuff mỗi phiên sau khi lọc. Các mô hình so trên cùng tập cuff còn lại. Người
@@ -106,17 +125,23 @@
 
 ## 4. Hiệu chuẩn và đặc trưng
 
-- BP₀ của mỗi người là trung bình các lần cuff M0 hợp lệ ở phiên 1. ΔBP của một lần cuff bằng
-  giá trị cuff trừ BP₀.
+- BP₀ của mỗi người là trung bình các lần cuff M0 hợp lệ ở phiên 1, không có cờ
+  `ppg:led_not_locked` (thêm 2026-11-15, mục 2). ΔBP của một lần cuff bằng giá trị cuff trừ BP₀.
+  Không còn lần cuff M0 nào như vậy ở phiên 1 thì người đó không đạt chuẩn.
 - **Đặc trưng nền:** trung vị của từng đặc trưng trên các cửa sổ M0 phiên 1. Mô hình nhận Δ
-  đặc trưng, tức giá trị ở lần cuff trừ giá trị nền.
+  đặc trưng, tức giá trị ở lần cuff trừ giá trị nền. Làm rõ 2026-11-14, theo
+  [protocol v0.3](protocol_outline_v0.2.md) mục 3: chỉ các cửa sổ của lần cuff M0 hợp lệ, tức
+  cùng các lần cuff cho BP₀; mỗi đặc trưng dùng các cửa sổ có đặc trưng đó, và số cửa sổ được
+  báo theo người.
 - **Bộ đặc trưng** (RQ mục 4.B), khóa trên pilot, mỗi mô hình một tập cố định:
   - PPG-only: thời gian lên, độ rộng tại 50 % biên độ, biên độ xung, HR từ PPG;
   - PPG + PAT: thêm ΔPAT;
   - PAT-only: Δ(1/PAT²);
   - ablation: thêm HR và HRV từ ECG.
 
-  Cửa sổ, phương pháp mốc R và chân sóng, quy tắc ghép nhịp cũng khóa trên pilot.
+  Cửa sổ, bộ lọc (thêm 2026-11-15; giá trị dùng cho pilot ở
+  [pipeline thiết bị](device_session_pipeline.md) mục 3.4), phương pháp mốc R và chân sóng, quy
+  tắc ghép nhịp cũng khóa trên pilot, theo độ chính xác mốc, không theo sai số của RQ1.
 - **Thuật toán (chốt 2026-11-12):** Ridge trên Δ đặc trưng, α = 1 cố định, không hệ số chặn.
   Hai mô hình của phép so sánh chính dùng cùng thuật toán và cùng α. Vì α cố định nên bỏ vòng
   trong (protocol 9.1 cho phép).
@@ -125,7 +150,9 @@
     trong lượt ngoài, **không trừ trung bình**: trừ trung bình sẽ làm Δ đặc trưng = 0 không còn
     cho dự đoán 0. ΔBP cũng không trừ trung bình.
   - Mô hình học trên mọi lần cuff có nhãn của người huấn luyện: M0, M1, M2 của mọi phiên, mỗi
-    người cùng tổng trọng số.
+    người cùng tổng trọng số. Ghi rõ 2026-11-15: trừ các phiên `led_readjusted` và các lần cuff có
+    cờ `ppg:led_not_locked` (mục 2), và chỉ các lần cuff tính được cả PAT lẫn đặc trưng PPG; code
+    làm vậy từ 2026-11-14 ([pipeline thiết bị](device_session_pipeline.md) mục 4.3 ý 1).
   - **Thang trọng số (đề xuất 2026-11-11, chốt 2026-11-12):** mỗi lần cuff của người s có trọng số
     1 / (số lần cuff của s trong tập huấn luyện), nên mỗi người huấn luyện có tổng trọng số 1 và
     tổng các trọng số bằng số người huấn luyện. α = 1 áp trên thang này. Phải khóa thang, vì với
@@ -507,8 +534,30 @@ Theo protocol mục 10, khóa lại ở đây:
   dᴾ_s, CI 95 %; cách đọc theo δ. Thêm MAE và ME theo từng pha cho mọi dòng, vì giảm độ lệch
   thôi chưa đủ để nói mô hình theo được BP.
 - Luôn báo SD của ΔBP tham chiếu và tỷ lệ |ΔBP| > 5 mmHg, gộp và theo nghiệm pháp.
-- **Hình:** d_s theo người; phân bố ΔBP theo nghiệm pháp; Bland–Altman cho dữ liệu đo lặp (phương
-  pháp LoA cho đo lặp, chờ chọn).
+- **Hình:** d_s theo người; phân bố ΔBP theo nghiệm pháp; Bland–Altman cho dữ liệu đo lặp.
+- **Bland–Altman cho đo lặp (chọn 2026-11-15, trước khi có dữ liệu; đề xuất, chờ duyệt):** chỉ để
+  mô tả, không xác nhận.
+  - Trên tập phân tích chính, riêng SBP và DBP, riêng PPG + PAT và PPG-only: mỗi lần cuff cho một
+    hiệu e = ΔBP dự đoán − ΔBP tham chiếu.
+  - Phương sai của e tách theo Bland và Altman (2007, J Biopharm Stat,
+    [doi:10.1080/10543400701329422](https://doi.org/10.1080/10543400701329422)) cho nhiều lần
+    đo mỗi người khi giá trị thật thay đổi: phương sai giữa người và trong người ước lượng bằng
+    ANOVA một yếu tố ngẫu nhiên theo người, theo công thức của bài cho số lần cuff khác nhau
+    giữa người; ước lượng âm thì lấy 0. LoA = độ lệch ± 1,96 × √(phương sai giữa người +
+    phương sai trong người).
+  - Độ lệch là trung bình đều theo người của trung bình e từng người, khớp cách lấy trung bình
+    theo người của mục 3; bài gốc lấy trung bình mọi lần cuff, nên ghi rõ chỗ khác này khi báo.
+  - CI 95 % của độ lệch và hai LoA: bootstrap theo người, 10 000 lượt, cùng seed với mục 5;
+    mỗi lượt tính lại các thành phần phương sai, người được rút lặp tính là người khác nhau. Đây
+    là CI xấp xỉ: dự đoán LOSO giữ cố định nên biến thiên do huấn luyện không được tính (mục 5,
+    giới hạn). Phương pháp của Zou (Stat Methods Med Res,
+    [doi:10.1177/0962280211402548](https://doi.org/10.1177/0962280211402548)) báo thêm làm độ
+    nhạy.
+  - Hình: e theo trung bình của ΔBP dự đoán và ΔBP tham chiếu, màu theo người, ký hiệu theo pha.
+  - Giả định cần nêu khi báo: phương sai trong người như nhau giữa người; sai số trong người
+    độc lập (bỏ qua tương quan theo phiên và theo pha); số lần cuff không phụ thuộc giá trị đo.
+  - Phương án đã cân nhắc và không chọn: LoA của công thức cho đo một lần (coi mọi lần cuff là
+    độc lập), vì nó bỏ cấu trúc đo lặp theo người.
 - Mọi kết quả phụ ghi là không xác nhận.
 
 ## 12. Kiểm soát thay đổi
@@ -541,7 +590,19 @@ Còn lại trước khi khóa (cập nhật 2026-11-12):
 
 - ngưỡng SQI v1, khóa trên bản ghi G2;
 - commit khóa SAP có ngày, trước buổi pilot đầu tiên, ghi seed bootstrap;
-- sau pilot, trước thu chính: δ, số người, phân bổ phiên, theo quy tắc ở mục 8 và 9.
+- sổ lịch đo dự kiến (người, phiên, pha, số lần cuff định đo), trước pilot, để đếm lần đo và
+  phiên bị bỏ (mục 4, "Thiếu pha"; mục 10); bảng đặc trưng chỉ có các lần cuff đã bấm (thêm
+  2026-11-14);
+- sau pilot, trước thu chính: δ, số người, phân bổ phiên, theo quy tắc ở mục 8 và 9;
+- thêm 2026-11-15: code Bland–Altman cho đo lặp (mục 11) có test đáp án biết trước, trước lần
+  chạy xác nhận;
+- thêm 2026-11-15: kiểm mã LED khóa giống nhau giữa các phiên của cùng một người; hiện mỗi bản
+  ghi chỉ được so với mã trong metadata của chính nó (mục 2), cần xong trước pilot;
+- thêm 2026-11-15: đánh giá bộ lọc (mép cửa sổ, độ lệch chân sóng sau lọc) trên bản ghi G2,
+  rồi khóa trên pilot (mục 4).
+
+Đề xuất 2026-11-15, chờ duyệt: cờ `ppg:led_not_locked` loại theo từng lần cuff (mục 2, 3, 4);
+phương pháp LoA cho đo lặp (mục 11).
 
 Đã xong: mô phỏng có huấn luyện Ridge thật trong LOSO và mô phỏng chung SBP và DBP (2026-11-11,
 mục 9, kết quả 7 và 8); baseline không dùng tín hiệu mạnh hơn zero-change (2026-11-12, kết quả 9

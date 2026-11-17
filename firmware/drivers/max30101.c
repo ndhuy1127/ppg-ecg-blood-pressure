@@ -176,6 +176,15 @@ max30101_err_t max30101_latch(const max30101_bus_t *bus, max30101_latch_t *latch
     return MAX30101_OK;
 }
 
+uint32_t max30101_i2c_timeout_ms(size_t bytes, uint32_t clock_hz)
+{
+    if (clock_hz == 0) {
+        return 1000u;
+    }
+    const uint64_t wire_us = ((uint64_t)bytes * 9u * 1000000u + clock_hz - 1u) / clock_hz;
+    return 10u + (uint32_t)((2u * wire_us + 999u) / 1000u);
+}
+
 max30101_err_t max30101_read_samples(const max30101_bus_t *bus, uint16_t count,
                                      max30101_samples_t *out)
 {

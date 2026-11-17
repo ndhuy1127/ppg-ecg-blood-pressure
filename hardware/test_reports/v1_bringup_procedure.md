@@ -36,7 +36,8 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 | Cả bốn module (bo Waveshare, breakout MAX30001, MAX30101, BMI270) | Trước khi hàn, đo từng module bằng thước kẹp: kích thước bo, bước chân header, vị trí lỗ bắt vít so với hàng chân; so với footprint KiCad (thêm 2026-10-29: footprint mới đối chiếu với file CAD và bản vẽ của nhà sản xuất, chưa với module thật) | Khớp footprint; ghi số đo vào báo cáo. Lệch thì dừng, không hàn (A.6 mục 2) |
 | Cả bốn module | Đặt lên bản in 1:1 của hai bo | Lỗ bắt vít, hàng chân và lỗ spacer trùng footprint (A.6 mục 2) |
 
-**Breakout MAX30001 bản v2 (ghi 2026-11-14, cách xử lý chờ duyệt).** Bo nhận về in `v2`,
+**Breakout MAX30001 bản v2 (ghi 2026-11-14; cách xử lý sửa sau khi thảo luận và duyệt
+2026-11-14).** Bo nhận về in `v2`,
 `03/24`. ProtoCentral chỉ công bố file Eagle v1.0 (03/22); repo `protocentral_max30001_arduino_library`
 không có thư mục `hardware/` dù trang sản phẩm có nhắc. Bố trí linh kiện của v2 khác v1.0,
 nên không dùng vị trí linh kiện của file v1.0. Đọc từ ảnh bo (chưa đo):
@@ -53,8 +54,17 @@ có một pad 0 Ω với sleeve là ứng viên R3. Linh kiện có cả hai pad
 ứng viên R7 (hoặc R8). Đây chỉ là ứng viên: jumper khác, ferrite hay đường song song cũng có thể
 cho 0 Ω, và chân BIN/BIP của MAX30001 (WLP) nằm dưới thân chip nên không chạm que được. Không
 thấy ứng viên thì ghi "chưa xác định được nhánh BIN/BIP", không kết luận v2 đã bỏ nhánh này.
-Bước 4 phần breakout chỉ làm khi có schematic hoặc BOM v2 (đã đề nghị ProtoCentral gửi), hoặc
-khi kết quả đo được người duyệt xác nhận.
+Đo thông mạch ở bước 1 chỉ cho **ứng viên**: một pad nối sleeve chưa chứng minh pad kia nối
+VCM; hai pad nối tip/ring chưa chứng minh linh kiện đó dẫn vào BIN/BIP. Các nhận định "nhiều
+khả năng" ở trên (điện trở `4992`, R1) cũng chỉ dựa vào hình dáng và mã in.
+
+**Điều kiện để làm bước 4 phần breakout** (sửa 2026-11-14): có sơ đồ net của bo v2 cho từng linh
+kiện sẽ thay hay gỡ, với bằng chứng ở **cả hai đầu**: schematic v2 (danh sách linh kiện hay BOM
+riêng là chưa đủ, vì không cho biết net), hoặc đường mạch nhìn thấy được trên bo, có ảnh hai mặt
+ghi vào báo cáo, nối từ pad của linh kiện tới chân hay linh kiện đã biết net (đã đề nghị
+ProtoCentral gửi schematic v2). Sơ đồ net phải chỉ rõ đường bảo vệ đầu vào ECG (điện trở nối tiếp)
+nằm ở đâu để không đụng vào. Người duyệt ký xác nhận sơ đồ net trước khi hàn. Không có thì không
+sửa breakout và không đo trên người với breakout này.
 
 ## 2. Bo Waveshare đứng riêng (chỉ cắm USB)
 
@@ -123,8 +133,8 @@ khi kết quả đo được người duyệt xác nhận.
 
 | Module | Việc | Đạt khi |
 | --- | --- | --- |
-| Breakout MAX30001 | Thay R3 bằng 220 kΩ ±1 %, cỡ 0805 (datasheet yêu cầu ≥ 200 kΩ, A.2). Bo v2: chỉ làm khi đã xác định được điện trở sleeve → VCM (mục 1, ghi chú v2) | Đo R3 trước khi hàn lên bo: 220 kΩ ±1 %. Sau khi hàn, sleeve → điện trở mới khoảng 220 kΩ |
-| Breakout MAX30001 | Gỡ R7, R8 (0 Ω, cỡ 0402): ngắt jack khỏi BIP/BIN của BioZ; đường ECG đi qua điện trở nối tiếp đầu vào (v1.0: R4, R5 51 kΩ; v2: hai điện trở `4992`) vẫn giữ nguyên. Bo v2: chỉ làm khi đã xác định được hai linh kiện này (mục 1, ghi chú v2) | Pad R7, R8 hở mạch; tip và ring vẫn thông tới điện trở nối tiếp đầu vào |
+| Breakout MAX30001 | Thay R3 bằng 220 kΩ ±1 %, cỡ 0805 (datasheet yêu cầu ≥ 200 kΩ, A.2). Bo v2: chỉ làm khi sơ đồ net v2 đã được duyệt cho điện trở sleeve → VCM, có bằng chứng cả hai đầu (mục 1, ghi chú v2) | Đo R3 trước khi hàn lên bo: 220 kΩ ±1 %. Sau khi hàn, sleeve → điện trở mới khoảng 220 kΩ; tip và ring vẫn thông tới điện trở nối tiếp đầu vào như trước khi sửa; ảnh trước và sau ghi vào báo cáo |
+| Breakout MAX30001 | Gỡ R7, R8 (0 Ω, cỡ 0402): ngắt jack khỏi BIP/BIN của BioZ; đường ECG đi qua điện trở nối tiếp đầu vào (v1.0: R4, R5 51 kΩ; v2: theo sơ đồ net v2, ứng viên là hai điện trở `4992`) vẫn giữ nguyên. Bo v2: chỉ làm khi sơ đồ net v2 đã được duyệt cho hai linh kiện này và cho điện trở nối tiếp, có bằng chứng cả hai đầu (mục 1, ghi chú v2) | Pad R7, R8 hở mạch; tip và ring vẫn thông tới điện trở nối tiếp đầu vào, giá trị đo như trước khi gỡ; ảnh trước và sau ghi vào báo cáo |
 | Breakout MAX30001 | Hàn header SV1 10 chân (có trong kit) từ mặt dưới: thân nhựa header ở mặt dưới, chân dài chĩa xuống, mặt linh kiện và jack 3,5 mm quay lên (thêm 2026-10-27) | Chân thẳng, không cầu thiếc. Đặt breakout lên bản in 1:1 của bo đế: chân GND ở đầu hàng phía jack trùng J1.1, lỗ vít trùng lỗ NPTH (23,37; 2,97). Lỗ vít không trùng nghĩa là breakout đang bị lật; một trong hai cách lật làm đảo thứ tự chân (VCC rơi vào lỗ MOSI) |
 | SparkFun MAX30101 | Cắt JP1 để tắt LED nguồn đỏ (LED cùng mặt với cảm biến, A.3) | Khi cấp nguồn, LED nguồn không sáng |
 | SparkFun BMI270 | Cắt jumper `I2C` và `ADR` để chạy SPI (A.3) | Hai jumper hở mạch |
@@ -256,7 +266,7 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
      cổ tay;
    - so với quy tắc nghiệm thu V1–V4 của
      [leakage_thermal_test_plan_v1.md](leakage_thermal_test_plan_v1.md) mục 3 (đề xuất
-     2026-11-07, chờ duyệt). Quy tắc này thay dải 4,5–5,0 V dùng chung cho cả ba LED, vì
+     2026-11-07, duyệt 2026-11-14). Quy tắc này thay dải 4,5–5,0 V dùng chung cho cả ba LED, vì
      bo SparkFun danh định 5,1 V nên dải cũ luôn trượt.
 4. Bus I²C PPG (`I2C_NUM_0`; GPIO8 SDA, GPIO9 SCL, 400 kHz):
    - quét bus chỉ thấy địa chỉ 7 bit `0x57`;
@@ -354,18 +364,19 @@ rộng xung đã chốt truyền qua `PLATFORMIO_BUILD_FLAGS`.
 
 ## 10. Đo dòng rò trước khi dùng trên người
 
-Đề xuất của nhóm 2026-10-29, chờ thầy duyệt. Phương pháp, giới hạn và biên bản theo
+Đề xuất 2026-10-29; phương pháp duyệt 2026-11-14 cùng kế hoạch đo dòng rò ở dưới, giá trị
+giới hạn chờ đối chiếu IEC 60601-1. Phương pháp, giới hạn và biên bản theo
 [session_safety_stopping_v0.1.md](../../docs/ethics/session_safety_stopping_v0.1.md)
 mục 9 (số mục theo bản viết lại 2026-10-31). Cách đo chi tiết, giới hạn đề xuất và quy tắc
 đạt: [leakage_thermal_test_plan_v1.md](leakage_thermal_test_plan_v1.md) (đề xuất 2026-11-07,
-chờ duyệt). Checklist cả quá trình: [v1_bringup_checklist.md](v1_bringup_checklist.md).
+duyệt 2026-11-14; giá trị giới hạn chờ đối chiếu IEC). Checklist cả quá trình: [v1_bringup_checklist.md](v1_bringup_checklist.md).
 
 - Dụng cụ: ưu tiên mượn máy phân tích an toàn điện y tế; không mượn được thì dùng
   mạch đo MD theo IEC 60601-1 và đồng hồ vạn năng.
 - Đo trên cấu hình dùng thật: PCB V1 (bo đế, cáp, bo cổ tay) đã lắp đủ, bo Waveshare,
   một cáp USB-C, laptop chạy pin, rút sạc.
 - Loại bộ phận ứng dụng dự kiến là BF (điện cực ECG dán da), chờ xác nhận.
-- Thử nhiệt (đề xuất 2026-10-31, chờ thầy): chạy liên tục 120 phút với mã LED ở trần
+- Thử nhiệt (đề xuất 2026-10-31, duyệt 2026-11-14 cùng kế hoạch đo dòng rò): chạy liên tục 120 phút với mã LED ở trần
   `0x7F`, ở nhiệt độ phòng đo; đo nhiệt độ bề mặt bo cổ tay ở mặt tiếp xúc da. Giới hạn trích
   từ IEC 60601-1 khi viết biên bản.
 - Chưa có biên bản đạt thì không gắn điện cực lên người.

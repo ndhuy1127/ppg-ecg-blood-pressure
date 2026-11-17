@@ -1,18 +1,18 @@
 {
   "version": "rq1-analysis-v1",
-  "status": "PROPOSED_PENDING_REVIEW",
-  "note": "Analysis of SAP v1 (docs/protocol/sap_v1.md, decided 2026-11-12) on a per-cuff feature table (docs/data_convention.md section 4.6). Every key cites its SAP section. Feature columns, PAT pairing and window are locked on the pilot (SAP 4); the column names here are those of software/device/features.py. Proposed 2026-11-13, pending review; the bootstrap seed and delta are fixed in the SAP locking commit and after the pilot. The SAP locking commit sets status to LOCKED; scripts/run_rq1_analysis.py refuses non-SYNTHETIC data under any other status (added 2026-11-13, pending review).",
+  "status": "APPROVED_NOT_LOCKED",
+  "note": "Analysis of SAP v1 (docs/protocol/sap_v1.md, decided 2026-11-12) on a per-cuff feature table (docs/data_convention.md section 4.6). Every key cites its SAP section. Feature columns, PAT pairing and window are locked on the pilot (SAP 4); the column names here are those of software/device/features.py. Proposed 2026-11-13; revised after discussion and approved 2026-11-14 (docs/protocol/device_session_pipeline.md section 4.3); the bootstrap seed and delta are fixed in the SAP locking commit and after the pilot. The SAP locking commit sets status to LOCKED; scripts/run_rq1_analysis.py refuses non-SYNTHETIC data under any other status (added 2026-11-13, approved 2026-11-14). Until then the status is APPROVED_NOT_LOCKED.",
   "ridge": {"alpha": 1.0, "sap": "section 4: Ridge, alpha = 1 fixed, no intercept, columns divided by their SD over the training cuffs, weight 1 / cuffs of the subject"},
   "models": {
     "ppg": {"features": ["ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm"], "sap": "section 4: PPG-only (rise time, width at 50 %, amplitude, HR from PPG)"},
     "ppg_pat": {"features": ["ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm", "pat_ms"], "sap": "section 4: PPG + delta PAT"},
     "pat_only": {"features": ["pat_inv_sq"], "sap": "section 4: PAT-only, delta(1/PAT^2); secondary endpoint 4"},
-    "ablation_ecg": {"features": ["ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm", "pat_ms", "ecg_hr_bpm", "ecg_rmssd_ms"], "sap": "section 3 endpoint 4: PPG + PAT + HR/HRV from ECG; HRV as RMSSD is a proposal (SAP does not name the HRV index)"},
+    "ablation_ecg": {"features": ["ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm", "pat_ms", "ecg_hr_bpm", "ecg_rmssd_ms"], "sap": "section 3 endpoint 4: PPG + PAT + HR/HRV from ECG; HRV as RMSSD of the window's RR intervals (SAP does not name the HRV index; approved 2026-11-14 as a rough descriptive estimate, no ectopic-beat correction)"},
     "phase_ppg": {"features": ["ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm"], "phase_indicators": true, "sap": "section 3 endpoint 10 and section 4: M1, M2, session >= 2 indicators"},
     "phase_ppg_pat": {"features": ["ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm", "pat_ms"], "phase_indicators": true, "sap": "section 3 endpoint 10"}
   },
   "comparison": {"full": "ppg_pat", "base": "ppg", "with_phase": ["phase_ppg_pat", "phase_ppg"], "sap": "section 3: d = MAE_s(PPG+PAT) - MAE_s(PPG-only), d0 against zero-change, dP against the phase mean"},
-  "bootstrap": {"draws": 10000, "seed": 20261113, "sap": "section 5: 10 000 subject draws; the seed is a proposal until the SAP locking commit"},
+  "bootstrap": {"draws": 10000, "seed": 20261113, "sap": "section 5: 10 000 subject draws; the seed (approved 2026-11-14) is written again in the SAP locking commit"},
   "ci_method": "t_envelope",
   "ci_method_sap": "section 5: envelope of bootstrap-t and Student t; sensitivity CIs percentile, BCa, bootstrap-t, Student t",
   "holm_sap": "section 6 option A: 97.5 % for both outcomes, then 95 % for the other when exactly one passes",

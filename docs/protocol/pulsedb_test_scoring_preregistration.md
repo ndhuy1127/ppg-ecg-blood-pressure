@@ -48,8 +48,9 @@ lần** trên mỗi tập:
   được ghép với model cùng bảng. Mặt nạ HR của test (và CalFree) tính bằng đúng quy tắc
   ECG của định nghĩa, trước khi đọc nhãn test;
 - B4, chỉ khi lệnh `gate` cho `B4_ALLOWED` và B4 đã khóa
-  ([Tuần 5](week05_fiducials_pat_validity.md) mục 9);
-- B5 (thêm 2026-11-07, đề xuất, chờ duyệt cùng [định nghĩa B5](b5_pulsedb_definition.md)),
+  ([Tuần 5](week05_fiducials_pat_validity.md) mục 9). Cập nhật 2026-11-16: đánh dấu tay
+  PulseDB đã dừng trước khi chạy `gate`, nên không có B4 để chấm trên test (mục 9.7);
+- B5 (thêm 2026-11-07; duyệt 2026-11-11 cùng [định nghĩa B5](b5_pulsedb_definition.md)),
   chỉ khi định nghĩa B5 được duyệt và đã chạy trên val. Chấm đúng hai file `model_sbp.pt`,
   `model_dbp.pt` của lần chạy val đó, có SHA-256 trong report, không học lại. Chuẩn hóa đầu
   vào và nhãn dùng đúng giá trị đã ghi trong report.

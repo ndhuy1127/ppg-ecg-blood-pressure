@@ -169,13 +169,13 @@ def test_held_out_subject_never_enters_its_fold(monkeypatch):
 def test_held_out_labels_do_not_change_its_predictions():
     rows = table(7, n=6, sbp_pat=1.0)
     prep = ra.prepare(rows, FAST)
-    preds, _ = ra._fold_predictions(prep, FAST)
+    preds, _, _ = ra._fold_predictions(prep, FAST)
     changed = copy.deepcopy(rows)
     for r in changed:
         if r["subject_id"] == "SYN_00" and r["session_id"] != "S001":
             r["sbp_mmhg"] += 30
     prep2 = ra.prepare(changed, FAST)
-    preds2, _ = ra._fold_predictions(prep2, FAST)
+    preds2, _, _ = ra._fold_predictions(prep2, FAST)
     for model in ("ppg", "ppg_pat", "phase_mean", "constant", "phase_ppg_pat"):
         a = [preds[("SBP", model)][id(c)] for c in prep["cuffs"]
              if c["subject"] == "SYN_00" and c["in_main"]]
@@ -252,7 +252,9 @@ def test_device_feature_table_has_every_model_column():
 
 
 def _real(rows):
-    return [{**r, "source_type": "DEVICE", "led_readjusted": 0, "pilot": 0} for r in rows]
+    return [{**r, "source_type": "DEVICE", "led_readjusted": 0, "pilot": 0,
+             "session_start_utc": f"2026-12-{int(r['session_id'][1:]):02d}T08:00:00+00:00"}
+            for r in rows]
 
 
 def _write(path, rows):
@@ -466,8 +468,11 @@ def _local_imports(start, leaves=("scripts/run_b2_pulsedb.py",)):
             for mod in mods:
                 if mod.split(".")[0] not in ("software", "scripts"):
                     continue
+                parts = mod.split(".")
+                # Importing a.b.c also runs a/__init__.py and a/b/__init__.py.
+                parents = ["/".join(parts[:i]) + "/__init__.py" for i in range(1, len(parts))]
                 for candidate in (mod.replace(".", "/") + ".py",
-                                  mod.replace(".", "/") + "/__init__.py"):
+                                  mod.replace(".", "/") + "/__init__.py", *parents):
                     if (ROOT / candidate).is_file():
                         todo.append(candidate)
     return seen
@@ -479,6 +484,9 @@ def test_lock_covers_every_module_of_the_analysis_and_the_feature_step():
     feature = _local_imports(["scripts/device_session.py"])
     assert feature <= set(device_session.CODE)
     every = _local_imports(["scripts/run_rq1_analysis.py", "scripts/device_session.py"])
+    # The graph includes the parent packages, so dropping one from the lock fails here.
+    assert {"software/__init__.py", "software/evaluation/__init__.py",
+            "software/signal_processing/__init__.py"} <= every
     assert every <= set(run_rq1_analysis.LOCKED)
     assert device_session.CONFIG in run_rq1_analysis.LOCKED
 
@@ -486,17 +494,27 @@ def test_lock_covers_every_module_of_the_analysis_and_the_feature_step():
 def _provenance(path, **override):
     from scripts import device_session
     from software._provenance import text_file_sha256
+    from software.device.session_ingest import sha256_file
 
     prov = {"source_type": "DEVICE", "git_commit": "abc", "git_dirty": False,
             "code_sha256": {c: text_file_sha256(ROOT / c) for c in device_session.CODE},
-            "config_sha256": text_file_sha256(ROOT / device_session.CONFIG), **override}
+            "config_sha256": text_file_sha256(ROOT / device_session.CONFIG),
+            "outputs_sha256": {"cuff_features.csv": sha256_file(path)}, **override}
     (path.parent / "provenance.json").write_text(json.dumps(prov))
+
+
+def _commit_holds_current_files(commit, path):
+    """Stand-in for ``commit_text_sha256``: commit "abc" holds today's files."""
+    from software._provenance import text_file_sha256
+
+    return text_file_sha256(ROOT / path) if commit == "abc" else None
 
 
 def test_feature_provenance_gate(tmp_path, monkeypatch):
     import scripts.run_b2_pulsedb as b2
 
     monkeypatch.setattr(b2, "committed_unchanged", lambda repo, p: True)
+    monkeypatch.setattr(run_rq1_analysis, "commit_text_sha256", _commit_holds_current_files)
     config_path = tmp_path / "config.json"
     config_path.write_text(json.dumps({**FAST, "status": "LOCKED"}))
     cases = {
@@ -505,10 +523,16 @@ def test_feature_provenance_gate(tmp_path, monkeypatch):
         "code": {"code_sha256": {}},
         "config": {"config_sha256": "0" * 64},
         "source": {"source_type": "SYNTHETIC"},
+        # Another table placed next to this provenance, or an edited table.
+        "swapped": {"outputs_sha256": {"cuff_features.csv": "0" * 64}},
+        "unlisted": {"outputs_sha256": {}},
+        # A commit that does not hold the recorded code (or does not exist).
+        "commit": {"git_commit": "not-a-commit"},
     }
     messages = {"none": "no provenance.json", "dirty": "uncommitted workspace",
                 "code": "feature code differs", "config": "feature config differs",
-                "source": "provenance.json says"}
+                "source": "provenance.json says", "swapped": "not the one",
+                "unlisted": "not the one", "commit": "does not hold"}
     for name, override in cases.items():
         folder = tmp_path / name
         folder.mkdir()
@@ -523,7 +547,76 @@ def test_feature_provenance_gate(tmp_path, monkeypatch):
     path = _write(good / "cuff_features.csv", _real(table(8, n=8)))
     _provenance(path)
     report = run_rq1_analysis.run([path], config_path, good / "out")
-    assert report["provenance"]["feature_provenance"][str(path)]["git_dirty"] is False
+    entry = report["provenance"]["feature_provenance"][str(path)]
+    assert entry["git_dirty"] is False and len(entry["provenance_sha256"]) == 64
+
+
+def test_commit_text_sha256_reads_the_committed_file():
+    import subprocess
+
+    from software._provenance import text_sha256
+
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    blob = subprocess.check_output(["git", "show", f"{head}:pyproject.toml"], cwd=ROOT)
+    assert run_rq1_analysis.commit_text_sha256(head, "pyproject.toml") == text_sha256(blob)
+    assert run_rq1_analysis.commit_text_sha256("0" * 40, "pyproject.toml") is None
+    assert run_rq1_analysis.commit_text_sha256("not-a-commit", "pyproject.toml") is None
+    assert run_rq1_analysis.commit_text_sha256(head, "no/such/file.py") is None
+    # A tree id reads the same files but is not a commit: refused.
+    tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=ROOT,
+                                   text=True).strip()
+    assert run_rq1_analysis.commit_text_sha256(tree, "pyproject.toml") is None
+
+
+def test_filtered_endpoint_keeps_labels_features_and_drops_flagged_cuffs(monkeypatch):
+    """Endpoints 5/7 against the main preparation, cuff by cuff: same delta BP and
+    delta features; a flagged cuff leaves both the training and the evaluated set;
+    nothing else moves."""
+    rows = table(9, sbp_pat=2.0)
+    for r in rows:
+        if r["subject_id"] == "SYN_02" and r["event_id"] == "E01":
+            r["flags"] = "motion"  # session 1 (calibration) and sessions 2-3
+    prep = ra.prepare(rows, FAST)
+    snapshot = copy.deepcopy(prep)
+    seen = {}
+    monkeypatch.setattr(ra, "_core", lambda sub, config: seen.setdefault("sub", sub) and {})
+    exclusion = set(FAST["sqi_exclusion_flags"])
+    out = ra._filtered(prep, FAST, lambda c: bool(exclusion & c["flags"]),
+                       sum(c["in_main"] for c in prep["cuffs"]))
+    sub = seen["sub"]
+    assert len(sub["cuffs"]) == len(snapshot["cuffs"])
+    # The main preparation itself is untouched (no in-place edit leaks back).
+    for kept, now in zip(snapshot["cuffs"], prep["cuffs"]):
+        assert np.array_equal(kept["delta_bp"], now["delta_bp"]) and kept["x"] == now["x"]
+        assert (kept["in_main"], kept["trainable"]) == (now["in_main"], now["trainable"])
+    for before, after in zip(snapshot["cuffs"], sub["cuffs"]):
+        assert np.array_equal(before["delta_bp"], after["delta_bp"])
+        assert before["x"] == after["x"]
+        flagged = before["subject"] == "SYN_02" and before["event_id"] == "E01"
+        assert after["trainable"] == (before["trainable"] and not flagged)
+        assert after["in_main"] == (before["in_main"] and not flagged)
+    assert out["rows_dropped"] == 3
+    assert out["dropped_from_training"] == 3 and out["dropped_from_evaluation"] == 2
+    assert out["confirmatory"] is False and out["n_evaluated_subjects"] == 20
+    assert out["below_min_eligible"] is False
+
+
+@pytest.mark.parametrize("lost, below", [(1, False), (2, True)])
+def test_filtered_endpoint_flags_too_few_evaluated_subjects(monkeypatch, lost, below):
+    """16 eligible subjects; losing every evaluated cuff of 1 leaves 15 (the SAP
+    minimum, no flag), of 2 leaves 14 (flagged)."""
+    rows = table(10, n=16, sbp_pat=2.0)
+    gone = {f"SYN_{i:02d}" for i in range(lost)}
+    for r in rows:
+        if r["subject_id"] in gone and r["session_id"] != "S001":
+            r["safety_stop"] = 1
+    prep = ra.prepare(rows, FAST)
+    monkeypatch.setattr(ra, "_core", lambda sub, config: {})
+    out = ra._filtered(prep, FAST, lambda c: c["safety_stop"],
+                       sum(c["in_main"] for c in prep["cuffs"]))
+    assert out["n_evaluated_subjects"] == 16 - lost
+    assert out["below_min_eligible"] is below
+    assert out["subjects_without_evaluated_cuffs"] == sorted(gone)
 
 
 def test_rows_labelled_synthetic_with_device_provenance_are_refused(tmp_path):
@@ -533,3 +626,199 @@ def test_rows_labelled_synthetic_with_device_provenance_are_refused(tmp_path):
     config_path.write_text(json.dumps(FAST))
     with pytest.raises(ValueError, match="provenance.json says 'DEVICE'"):
         run_rq1_analysis.run([path], config_path, tmp_path / "out")
+
+
+def test_session_numbers_must_follow_time():
+    # BP0 comes from session 1, so a misnumbered session would calibrate on a
+    # later visit: refused, on SYNTHETIC rows too when the column is given.
+    rows = _real(table(13, n=4))
+    ra.prepare(rows, FAST)
+    swapped = copy.deepcopy(rows)
+    for r in swapped:
+        if r["subject_id"] == "SYN_02" and r["session_id"] in ("S001", "S002"):
+            r["session_start_utc"] = ("2026-12-05T08:00:00+00:00" if r["session_id"] == "S001"
+                                      else "2026-12-01T08:00:00+00:00")
+    with pytest.raises(ValueError, match="SYN_02.*S002.*must follow time"):
+        ra.prepare(swapped, FAST)
+    same = copy.deepcopy(rows)
+    for r in same:
+        if r["subject_id"] == "SYN_01" and r["session_id"] == "S003":
+            r["session_start_utc"] = "2026-12-02T08:00:00+00:00"
+    with pytest.raises(ValueError, match="SYN_01.*S003"):
+        ra.prepare(same, FAST)
+    # A late recording filed under session 1 (its earliest start still first):
+    # BP0 would use a visit after session 2, so it is refused too.
+    late = copy.deepcopy(rows)
+    for r in late:
+        if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_03", "S001", "E02"):
+            r["session_start_utc"] = "2026-12-02T12:00:00+00:00"
+    with pytest.raises(ValueError, match="SYN_03.*last recording of S001"):
+        ra.prepare(late, FAST)
+    for value, message in (("", "session_start_utc.*required"),
+                           ("2026-12-01T08:00:00", "UTC offset"),
+                           ("yesterday", "ISO 8601")):
+        broken = copy.deepcopy(rows)
+        broken[3]["session_start_utc"] = value
+        with pytest.raises(ValueError, match=message):
+            ra.prepare(broken, FAST)
+    synthetic = table(13, n=4)
+    synthetic[0]["session_start_utc"] = "2026-12-09T08:00:00+00:00"
+    synthetic[5]["session_start_utc"] = "2026-12-01T08:00:00+00:00"  # SYN_00 S002
+    with pytest.raises(ValueError, match="SYN_00"):
+        ra.prepare(synthetic, FAST)
+
+
+def test_led_readjusted_on_session_1_is_refused():
+    rows = table(14, n=4)
+    rows[1]["led_readjusted"] = 1  # SYN_00, S001
+    with pytest.raises(ValueError, match=r"SYN_00\|S001.*sessions >= 2"):
+        ra.prepare(rows, FAST)
+
+
+def test_secondary_model_contrasts_use_the_same_cuffs():
+    rows = table(15, n=8, sbp_pat=1.0)
+    # No HRV on two main-set cuffs: the ablation has no prediction there.
+    holes = {("SYN_03", "S002", "E03"), ("SYN_05", "S003", "E04")}
+    for r in rows:
+        if (r["subject_id"], r["session_id"], r["event_id"]) in holes:
+            r["ecg_rmssd_ms"] = ""
+    prep = ra.prepare(rows, FAST)
+    preds, _, _ = ra._fold_predictions(prep, FAST)
+    report = ra._secondary(rows, prep, FAST, None)
+    main_set = sum(c["in_main"] for c in prep["cuffs"])
+    for ti, target in enumerate(ra.TARGETS):
+        entry = report[target]["model_ablation_ecg"]
+        assert entry["main_set_cuffs"] == main_set
+        assert entry["paired_cuffs"] == main_set - len(holes)
+        by = {}
+        for c in prep["cuffs"]:
+            a = preds[(target, "ablation_ecg")].get(id(c), np.nan)
+            if c["in_main"] and np.isfinite(a):
+                b = preds[(target, "ppg")][id(c)]
+                truth = c["delta_bp"][ti]
+                by.setdefault(c["subject"], []).append(abs(a - truth) - abs(b - truth))
+        # The per-subject difference is over the shared cuffs only.
+        assert entry["mean_minus_ppg"] == pytest.approx(
+            np.mean([np.mean(v) for v in by.values()]))
+        # Endpoint 10 reports its own pairing; both phase models use the main
+        # features, so every main-set cuff is shared.
+        ten = report[target]["10_pat_given_phase"]
+        assert ten["paired_cuffs"] == ten["main_set_cuffs"] == main_set
+        assert ten["paired_subjects"] == len(prep["eligible"])
+
+
+def test_counts_split_ecg_loss_and_calibration():
+    rows = table(16, n=6, sbp_pat=1.0)
+    marks = {("SYN_01", "S002", "E02"): "absent", ("SYN_01", "S002", "E03"): "unusable",
+             ("SYN_02", "S003", "E04"): "pat", ("SYN_04", "S001", "E01"): "cal"}
+    for r in rows:
+        mark = marks.get((r["subject_id"], r["session_id"], r["event_id"]))
+        if mark in ("absent", "unusable"):
+            r["ecg_hr_bpm"], r["ecg_rmssd_ms"], r["pat_ms"] = "", "", ""
+            r["flags"] = "ecg:absent" if mark == "absent" else "ecg:too_few_peaks"
+        elif mark == "pat":
+            r["pat_ms"] = ""
+        elif mark == "cal":
+            r["ppg_amplitude"] = ""
+    counts = ra._counts(ra.prepare(rows, FAST))
+    assert counts["ecg_pat_by_subject"]["SYN_01"] == {
+        "ecg_absent": 1, "ecg_unusable": 1, "pat_failed": 0, "pat_available": 6}
+    assert counts["ecg_pat_by_subject"]["SYN_02"]["pat_failed"] == 1
+    assert counts["ecg_pat_by_phase"]["M0"]["ecg_absent"] == 1
+    assert counts["ecg_pat_by_phase"]["M1"]["ecg_unusable"] == 1
+    assert counts["ecg_pat_by_phase"]["M2"]["pat_failed"] == 1
+    cal = counts["calibration_counts"]["SYN_04"]
+    assert cal["bp0"] == 2 and cal["ppg_amplitude"] == 1 and cal["pat_ms"] == 2
+
+
+def test_committed_unchanged_sees_through_assume_unchanged(tmp_path):
+    import subprocess
+
+    from scripts.run_b2_pulsedb import committed_unchanged
+
+    def git(*args):
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+                       cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q")
+    path = tmp_path / "code.py"
+    path.write_text("ALPHA = 1\n", encoding="utf-8")
+    git("add", "code.py")
+    git("commit", "-q", "-m", "x")
+    assert committed_unchanged(tmp_path, path)
+    git("update-index", "--assume-unchanged", "code.py")
+    path.write_text("ALPHA = 37\n", encoding="utf-8")
+    assert not committed_unchanged(tmp_path, path)
+
+
+def test_a_secondary_model_that_cannot_be_fitted_does_not_stop_the_main_result():
+    # Only SYN_00 keeps its M1 cuffs: in the fold that holds SYN_00 out, the M1
+    # indicator of the endpoint 10 models is 0 on every training cuff, so they
+    # cannot be fitted there. Before 2026-11-15 this stopped the whole analysis.
+    rows = table(1, n=16)
+    for r in rows:
+        if r["phase"] == "M1" and r["subject_id"] != "SYN_00":
+            r["status"], r["sbp_mmhg"], r["dbp_mmhg"] = "no_result", "", ""
+    report = ra.analyze(rows, FAST)
+    failures = report["main"]["model_fit_failures"]
+    assert set(failures) == {f"{t}|{m}" for t in ra.TARGETS
+                             for m in ("phase_ppg", "phase_ppg_pat")}
+    assert all(f["held_out"] == "SYN_00" for v in failures.values() for f in v)
+    for t in ra.TARGETS:
+        assert "not_computed" in report["secondary"][t]["10_pat_given_phase"]
+        assert report["secondary"][t]["model_phase_ppg"]["fit_failures"]
+    # The main result is that of the same analysis without the endpoint 10 models.
+    lean = copy.deepcopy(FAST)
+    for m in ("phase_ppg", "phase_ppg_pat"):
+        del lean["models"][m]
+    del lean["comparison"]["with_phase"]
+    other = ra.analyze(rows, lean)
+    assert other["main"]["model_fit_failures"] == {}
+    for t in ra.TARGETS:
+        assert (report["main"]["targets"][t]["contrasts"]
+                == other["main"]["targets"][t]["contrasts"])
+        assert (report["main"]["targets"][t]["main_conclusion"]
+                == other["main"]["targets"][t]["main_conclusion"])
+
+
+def test_a_main_model_that_cannot_be_fitted_still_stops(monkeypatch):
+    ridge = ra.loso_ridge
+    full = FAST["models"][FAST["comparison"]["full"]]["features"]
+
+    def broken(train, test, features, alpha, target, with_phase=False):
+        if list(features) == full and not with_phase:
+            raise ValueError("A feature is constant over the training cuffs of a fold")
+        return ridge(train, test, features, alpha, target, with_phase)
+
+    monkeypatch.setattr(ra, "loso_ridge", broken)
+    with pytest.raises(ValueError, match="constant"):
+        ra.analyze(table(2, n=6), FAST)
+
+
+def test_cuffs_without_the_locked_led_codes_leave_main_training_and_calibration():
+    # SAP sections 2-4, amended 2026-11-15: a cuff measured without the locked LED
+    # codes (ppg:led_not_locked) leaves the calibration, the main set and the
+    # training set on its own; endpoint 6 takes it back, calibration included.
+    rows = table(11, n=6, sbp_pat=1.0)
+    flagged = {("SYN_01", "S002", "E03"), ("SYN_02", "S001", "E01"),
+               ("SYN_03", "S001", "E01"), ("SYN_03", "S001", "E02")}
+    for r in rows:
+        if (r["subject_id"], r["session_id"], r["event_id"]) in flagged:
+            r["flags"] = "ppg:led_not_locked"
+    prep = ra.prepare(rows, FAST)
+    cuff = {(c["subject"], c["session"], c["event_id"]): c for c in prep["cuffs"]}
+    assert not cuff[("SYN_01", 2, "E03")]["in_main"]
+    assert not cuff[("SYN_01", 2, "E03")]["trainable"]
+    assert all(cuff[("SYN_01", 2, e)]["in_main"] for e in ("E01", "E02", "E04"))
+    # SYN_02 calibrates on its other session-1 M0 cuff only.
+    assert prep["calibration_counts"]["SYN_02"]["bp0"] == 1
+    assert cuff[("SYN_02", 1, "E02")]["delta_bp"] == pytest.approx([0.0, 0.0])
+    assert prep["excluded"] == {"SYN_03": "session1_m0_led_not_locked"}
+    report = ra.analyze(rows, FAST)
+    counts = report["counts"]
+    assert counts["led_not_locked_by_subject"] == {
+        "SYN_00": 0, "SYN_01": 1, "SYN_02": 1, "SYN_03": 2, "SYN_04": 0, "SYN_05": 0}
+    assert counts["skipped_by_phase"]["M1"]["led_not_locked"] == 1
+    assert counts["skipped_by_phase"]["M1"]["valid_not_computable"] == 0
+    # Endpoint 6: SYN_01's cuff and the 8 later cuffs of SYN_03 come back.
+    assert report["secondary"]["6_with_led_readjusted"]["main_cuffs_change"] == 9

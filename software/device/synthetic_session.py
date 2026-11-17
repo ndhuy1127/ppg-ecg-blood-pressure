@@ -26,11 +26,9 @@ from software.data_io.packet_wire import (
     AFE_CONFIG_CHANNEL, AFES, ECG_CHANNEL, EVENT_CHANNEL, WIRE_VERSION_V02, Packet,
     encode_packet,
 )
+from software.device.max30101 import SLOT_SPACING_US
 
 VERSION = "synthetic-device-session-v1"
-# MAX30101 LED_PW code -> spacing between rising edges of consecutive slots, us
-# (Packet Schema V0.1 section 7: MAX30101 p. 22, Table 11).
-SLOT_SPACING_US = {0: 427, 1: 525, 2: 720, 3: 1107}
 PPG_SLOTS = {0xF1: "green", 0xF2: "red", 0xF3: "ir"}  # V1 (schema section 7)
 ECG_SCALE = 30000.0  # ADC codes per unit of the synthetic ECG
 PPG_DC, PPG_AC = 100000.0, 20000.0
@@ -61,6 +59,11 @@ class SessionSpec:
     noise_sd: float = 0.6  # in units of the pulse amplitude, inside noisy spans
     ecg_noise_sd: float = 0.005
     ppg_noise_sd: float = 0.002
+    # Baseline wander (added 2026-11-15): a sine at wander_hz plus one at wander_hz / 5,
+    # each of this amplitude, in units of the R peak (ECG) and of the pulse (PPG).
+    ecg_wander: float = 0.0
+    ppg_wander: float = 0.0
+    wander_hz: float = 0.25
     events: tuple = ()  # ((code, time_s), ...); time from the session start
     drop_packets: tuple = ()  # (("0xF1", seq), ...): lost on USB
     session_id: int = 1
@@ -79,12 +82,20 @@ def beat_times(spec):
     return np.arange(0.5, spec.duration_s - 0.5, rr)
 
 
+def _wander(t, amplitude, hz):
+    """Slow baseline: sines at ``hz`` and ``hz / 5`` (respiration-like and drift)."""
+    if not amplitude:
+        return np.zeros_like(t)
+    return amplitude * (np.sin(2 * np.pi * hz * t) + np.sin(2 * np.pi * hz / 5 * t + 1.0))
+
+
 def _ecg(t, beats, rng, spec):
     values = np.zeros_like(t)
     for r in beats:
         near = np.abs(t - r) < 0.05
         values[near] += np.exp(-0.5 * ((t[near] - r) / 0.008) ** 2)
     values += rng.normal(0, spec.ecg_noise_sd, t.shape)
+    values += _wander(t, spec.ecg_wander, spec.wander_hz)
     codes = np.clip(np.round(values * ECG_SCALE), -(1 << 17), (1 << 17) - 1).astype(int)
     return (codes & 0x3FFFF) << 6  # MAX30001 word: 18-bit sample, ETAG 000, PTAG 000
 
@@ -108,6 +119,7 @@ def _ppg(t, feet, rng, spec, gain):
     for start, end in spec.noisy_spans_s:
         noise[(t >= start) & (t < end)] = spec.noise_sd
     values = values + rng.normal(0, 1, t.shape) * noise
+    values += _wander(t, spec.ppg_wander, spec.wander_hz)
     counts = PPG_DC + gain * PPG_AC * values
     return np.clip(np.round(counts), 0, (1 << 18) - 1).astype(int)
 

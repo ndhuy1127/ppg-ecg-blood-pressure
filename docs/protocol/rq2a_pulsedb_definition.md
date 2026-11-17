@@ -8,7 +8,7 @@
 > Trước commit duyệt chưa chạy lần nào trên dữ liệu thật. Sau khi thấy số thì không đổi gì; nếu phải đổi thì
 > tạo version mới và báo cả hai.
 >
-> **Sửa 2026-11-13 (duyệt 2026-11-14), sau rà soát độc lập, trước mọi lần chạy:** nhãn A/B đổi cho khớp
+> **Sửa 2026-11-13 (duyệt 2026-11-14), sau khi thảo luận, trước mọi lần chạy:** nhãn A/B đổi cho khớp
 > [câu hỏi nghiên cứu](../research_questions_v0.1.md) mục 5.B (A = chia ngẫu nhiên theo cửa sổ,
 > B = chia theo người; bản đầu dùng ngược lại); hiệu vẫn là MAE(theo người) − MAE(theo cửa sổ),
 > tức B − A; thêm chỉ số theo mục 5.D (RMSE, ME ± SD, % suy giảm, CI cho từng MAE và cho hiệu

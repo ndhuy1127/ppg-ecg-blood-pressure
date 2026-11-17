@@ -40,7 +40,7 @@ Không giả định hai kênh dùng chung một tần số lấy mẫu hay mộ
 
 Tính lại khi đổi số mẫu mỗi packet hay tốc độ lấy mẫu.
 
-## 4. Đầu ra của ingest phiên thiết bị (`device-session-v1`, đề xuất 2026-11-13, chờ duyệt)
+## 4. Đầu ra của ingest phiên thiết bị (`device-session-v1`, đề xuất 2026-11-13, định dạng duyệt 2026-11-14)
 
 Giao diện giữa ingest, mốc/PAT và phân tích RQ1. Code:
 [session_ingest.py](../software/device/session_ingest.py),
@@ -75,8 +75,12 @@ Giao diện giữa ingest, mốc/PAT và phân tích RQ1. Code:
 - L là null thì thời gian không trừ L, kênh mang cờ `latency_unknown`, và PAT không được tính
   (`pat:upstream_delay_unknown`).
 - `timebase.csv`: `device_session_id, channel, chain_id, n_anchors, a_us, b_us, fs_hz,
-  residual_sd_us, anchor_source, nominal_rate, latency_l_us`. Chuỗi chỉ có một mốc dùng tốc độ
-  danh định (`nominal_rate = True`, cờ `single_anchor_nominal_rate`).
+  residual_sd_us, residual_block_max_us, anchor_source, nominal_rate, latency_l_us`. Chuỗi chỉ có
+  một mốc dùng tốc độ danh định (`nominal_rate = True`, cờ `single_anchor_nominal_rate`).
+  `residual_block_max_us` (thêm 2026-11-15, chờ duyệt) là trị tuyệt đối lớn nhất của trung vị
+  phần dư theo khối 10 s, đúng thống kê của tiêu chí A3 (khối cuối dưới 5 s gộp vào khối trước;
+  trống khi chuỗi dưới 3 mốc); vượt 0,2 ms thì có cờ `timebase_residual_above_a3` (chỉ báo,
+  thời gian mẫu không đổi).
 - `window_samples.csv`: `event_id, channel, name, chain_id, sample_index, t_us, value` cho mọi
   mẫu trong cửa sổ lưu `[t0 − 60 s, t0)` của từng lần cuff.
 - Đơn vị `value`: mã ADC như `samples.csv`. ECG là nguyên word 24 bit của MAX30001; phần tính
@@ -90,7 +94,7 @@ Giao diện giữa ingest, mốc/PAT và phân tích RQ1. Code:
 
 ### 4.4. Nhật ký cuff (`cuff_log.csv`, đầu vào) và cửa sổ (`cuffs.json`)
 
-Định dạng nhật ký cuff (chốt 2026-11-13, chờ duyệt; trước đó metadata ghi "chưa chốt"). Một
+Định dạng nhật ký cuff (chốt 2026-11-13, duyệt 2026-11-14; trước đó metadata ghi "chưa chốt"). Một
 dòng mỗi lần bấm cuff, cột đúng thứ tự:
 
 `recording, event_id, phase, device_session_id, t0_event_ordinal, phase_mark_event_ordinal,
@@ -101,7 +105,7 @@ pilot, note`
 - `status`: `valid` (có SBP/DBP), `no_result` (máy xả bình thường nhưng không ra số; lần đo lại
   là một dòng mới), `device_error` (máy lỗi). Chỉ dòng `valid` có SBP/DBP; DBP < SBP.
 - `safety_stop`: 1 nếu lượt có cờ dừng an toàn (SAP mục 10), ngược lại 0.
-- `led_readjusted`, `pilot` (thêm 2026-11-13, chờ duyệt): 0 hoặc 1, **giống nhau trên mọi dòng**
+- `led_readjusted`, `pilot` (thêm 2026-11-13, duyệt 2026-11-14): 0 hoặc 1, **giống nhau trên mọi dòng**
   của một nhật ký (một nhật ký là một buổi của một người); ingest từ chối nếu khác. `led_readjusted`
   = 1 khi buổi đó chỉnh lại mã LED (protocol 6.1, "Buổi sau lệch thang"). `pilot` = 1 khi người
   này làm pilot (SAP mục 1–2). Lý do điền ở nhật ký cuff, không ở metadata phiên của logger:
@@ -130,16 +134,29 @@ sự kiện theo mã, số marker, số lần cuff theo `status`, `issue_counts`
 
 Đầu vào của [run_rq1_analysis.py](../scripts/run_rq1_analysis.py). Một dòng mỗi lần cuff:
 
-`subject_id, session_id, recording, event_id, phase, status, safety_stop, led_readjusted, pilot,
-sbp_mmhg, dbp_mmhg, window_pre_s, ppg_color, ppg_rise_time_ms, ppg_width50_ms, ppg_amplitude, ppg_hr_bpm,
-ecg_hr_bpm, ecg_rmssd_ms, pat_ms, pat_sqi_v2_median_ms, pat_n_valid, flags, source_type`
+`subject_id, session_id, session_start_utc, recording, event_id, phase, status, safety_stop,
+led_readjusted, pilot, sbp_mmhg, dbp_mmhg, window_pre_s, ppg_color, ppg_rise_time_ms,
+ppg_width50_ms, ppg_amplitude, ppg_hr_bpm, ecg_hr_bpm, ecg_rmssd_ms, pat_ms,
+pat_sqi_v2_median_ms, pat_n_valid, flags, source_type`
 
-- Đặc trưng tính trên cửa sổ chính `[t0 − 30 s, t0)` (đề xuất, khóa trên pilot), của màu ghi
-  ở `ppg_color` (đề xuất: xanh, khe 1). Ô trống là không tính được.
+- Đặc trưng tính trên cửa sổ chính `[t0 − 30 s, t0)` (duyệt làm giá trị cho pilot, khóa trên
+  pilot), của màu ghi ở `ppg_color` (xanh, khe 1, duyệt 2026-11-14); màu này dùng cho mọi đặc
+  trưng PPG và PAT của dòng. Ô trống là không tính được.
+- `session_start_utc` (thêm và duyệt 2026-11-14): `pc_start_time_utc` trong manifest của logger,
+  ISO 8601 có múi giờ. Phân tích RQ1 bắt buộc cột này trên dòng không phải SYNTHETIC và dừng khi
+  một bản ghi của phiên sau bắt đầu trước bản ghi muộn nhất của phiên trước.
+- Cửa sổ không có mẫu ECG nào có cờ `ecg:absent` (thêm 2026-11-14); đặc trưng PPG vẫn được tính,
+  PAT và đặc trưng ECG để trống.
+- Kênh PPG phủ quá ít cửa sổ để tìm chân sóng (dưới 0,7 s) hay có thời gian không tăng thật sự
+  thì có cờ `pat:no_foot_span` và PAT để trống (thêm 2026-11-15); buổi vẫn chạy tiếp.
+- `ppg:led_not_locked` (sửa 2026-11-15, chờ duyệt): máy không chạy với mã LED đã khóa trong cửa
+  sổ, hay không xác minh được điều đó; trạng thái chi tiết (`led_lock_status`) ghi ở
+  `cuff_features.json` ([SQI v1](protocol/sqi_specification_v1.md) mục 3.3). Phân tích RQ1 bỏ
+  lần cuff mang cờ này khỏi hiệu chuẩn, tập chính và tập học ([SAP v1](protocol/sap_v1.md) mục 2).
 - `pat_ms` là trung vị PAT hợp lệ của `pat-validity-v1`; `pat_sqi_v2_median_ms` là trung vị
   của cách ghép `features-sqi-v2`, giữ để so.
 - `flags`: cờ SQI v1 (mục 3.1, 3.3) và cờ cửa sổ, nối bằng `;`.
-- `led_readjusted`, `pilot` (0/1) chép từ nhật ký cuff (mục 4.4; thêm 2026-11-13, chờ duyệt).
+- `led_readjusted`, `pilot` (0/1) chép từ nhật ký cuff (mục 4.4; thêm 2026-11-13, duyệt 2026-11-14).
   Phân tích RQ1 bắt buộc hai cột này và `safety_stop` trên mọi dòng không phải SYNTHETIC; thiếu
   hay sai giá trị thì dừng, không mặc định 0. `led_readjusted` loại cả buổi đó (phiên ≥ 2) khỏi tập
   chính và tập học; `pilot` loại người đó (SAP mục 1–2).

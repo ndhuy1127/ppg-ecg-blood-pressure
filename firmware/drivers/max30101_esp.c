@@ -11,12 +11,12 @@
 #include "esp_attr.h"
 
 #define PPG_I2C_PORT I2C_NUM_0
-#define PPG_I2C_TIMEOUT_MS 20
 #define PPG_I2C_MAX_WRITE 8 /* register + the longest block written (4 LED bytes) */
 
 static i2c_master_bus_handle_t s_bus;
 static i2c_master_dev_handle_t s_dev;
 static TaskHandle_t volatile s_reader; /* read by the ISR */
+static uint32_t s_clock_hz;            /* SCL rate, for the transfer timeouts */
 
 static int bus_write(void *ctx, uint8_t reg, const uint8_t *data, size_t n)
 {
@@ -29,16 +29,19 @@ static int bus_write(void *ctx, uint8_t reg, const uint8_t *data, size_t n)
     for (size_t i = 0; i < n; i++) {
         buf[i + 1] = data[i];
     }
-    return i2c_master_transmit(s_dev, buf, n + 1, PPG_I2C_TIMEOUT_MS) == ESP_OK ? 0 : -1;
+    /* Device address, register, then n bytes. */
+    const int timeout = (int)max30101_i2c_timeout_ms(n + 2, s_clock_hz);
+    return i2c_master_transmit(s_dev, buf, n + 1, timeout) == ESP_OK ? 0 : -1;
 }
 
 static int bus_read(void *ctx, uint8_t reg, uint8_t *data, size_t n)
 {
     (void)ctx;
-    /* Register address, repeated start, then n bytes (datasheet p. 17). */
-    return i2c_master_transmit_receive(s_dev, &reg, 1, data, n, PPG_I2C_TIMEOUT_MS) == ESP_OK
-               ? 0
-               : -1;
+    /* Register address, repeated start, then n bytes (datasheet p. 17): two
+     * device address bytes, the register and the n data bytes on the bus. The
+     * timeout grows with n, so a full FIFO read also passes at 100 kHz. */
+    const int timeout = (int)max30101_i2c_timeout_ms(n + 3, s_clock_hz);
+    return i2c_master_transmit_receive(s_dev, &reg, 1, data, n, timeout) == ESP_OK ? 0 : -1;
 }
 
 static void delay_ms(void *ctx, uint32_t ms)
@@ -69,6 +72,7 @@ void max30101_esp_stop(void)
 esp_err_t max30101_esp_init(max30101_bus_t *bus, uint32_t clock_hz, TaskHandle_t reader)
 {
     s_reader = reader;
+    s_clock_hz = clock_hz;
     const i2c_master_bus_config_t bus_cfg = {
         .i2c_port = PPG_I2C_PORT,
         .sda_io_num = BOARD_PPG_SDA_GPIO,

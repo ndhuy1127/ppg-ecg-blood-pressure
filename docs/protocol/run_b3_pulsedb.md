@@ -88,6 +88,11 @@ chứng B3 + HR/SQI (không có PAT), trên cùng các dòng val, để biết p
 đến từ PAT hay không. PAT trên PulseDB chỉ là đặc trưng tương đối (bộ lọc của
 PulseDB chưa rõ là zero-phase hay causal).
 
+**Cập nhật 2026-11-16:** đánh dấu tay PulseDB đã dừng trước khi chạy `compare` hay `gate`,
+nên **không xây B4 trên PulseDB** (lý do ở
+[tài liệu mốc Tuần 5](week05_fiducials_pat_validity.md) mục 9.7, "Dừng đánh dấu tay
+PulseDB"). B3 không đổi.
+
 ## B3
 
 [xgboost_baseline.py](../../software/models/xgboost_baseline.py): hai

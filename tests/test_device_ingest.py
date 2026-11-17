@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -154,13 +155,85 @@ def test_script_writes_outputs_and_refuses_overwrite_and_raw(lossy, tmp_path):
         header = handle.readline().strip().split(",")
     assert header == list(device_session.FEATURE_COLUMNS)
     assert rows[0]["pilot"] == 1 and rows[0]["led_readjusted"] == 0
+    # The recording start travels too, for the RQ1 session-order check.
+    manifest = json.loads((Path(directory) / "session_manifest.json").read_text(
+        encoding="utf-8"))
+    assert rows[0]["session_start_utc"] == manifest["pc_start_time_utc"]
     for name in ("session_summary.json", "timebase.csv", "events.csv", "cuffs.json",
                  "window_samples.csv", "cuff_features.csv", "cuff_features.json",
                  "provenance.json"):
         assert (out / name).is_file()
     assert len(rows) == 1 and rows[0]["source_type"] == "SYNTHETIC"
+    # The provenance names the table it describes, for the RQ1 gate.
+    prov = json.loads((out / "provenance.json").read_text(encoding="utf-8"))
+    assert prov["outputs_sha256"]["cuff_features.csv"] == si.sha256_file(
+        out / "cuff_features.csv")
+    assert set(device_session.CODE) <= set(prov["code_sha256"])
     with pytest.raises(ValueError, match="exists"):
         device_session.run(directory, log, DEVICE_CONFIG, out)
     with pytest.raises(ValueError, match="data/raw"):
         device_session.run(directory, log, DEVICE_CONFIG, tmp_path / "raw" / "x",
                            raw_root=tmp_path / "raw")
+
+
+def _ecg_packets(knee_ppm, jitter_us=200, seed=1):
+    """30 s of 16-sample ECG packets at 512 sps whose anchors follow one line, then
+    from 15 s a rate ``knee_ppm`` faster (a temperature step, say)."""
+    rng = np.random.default_rng(seed)
+    out = []
+    for n in range(960):
+        t = (16 * n + 15) * 1e6 / 512
+        extra = knee_ppm * 1e-6 * max(0.0, t - 15e6)
+        out.append({"disposition": "accepted", "channel_id": "0xE1", "status": 0,
+                    "sample_index_ext": 16 * n, "sample_count": 16,
+                    "t_anchor_us": int(round(1_000_000 + t + extra
+                                             + rng.uniform(0, jitter_us)))})
+    return out
+
+
+def test_timebase_reports_the_a3_statistic():
+    # A3: median residual of each 10 s block within +/- 0.2 ms (added 2026-11-15).
+    # Anchor jitter alone leaves the block medians near 0; a 120 ppm rate step in
+    # the middle leaves about 0.3 ms, which one straight line cannot follow.
+    straight = si.fit_timebase(_ecg_packets(0), 512.0)
+    knee = si.fit_timebase(_ecg_packets(120), 512.0)
+    assert straight["residual_block_max_us"] < 20
+    assert knee["residual_block_max_us"] > si.A3_LIMIT_US
+    assert si.A3_LIMIT_US == 200.0 and si.A3_BLOCK_US == 10_000_000
+
+
+def test_a3_last_short_block_joins_the_one_before():
+    # One late anchor (+1 ms) just after 30 s would be a block of its own whose
+    # median is its own jitter; a last block under 5 s joins the one before.
+    packets = _ecg_packets(0)
+    t = (16 * 960 + 15) * 1e6 / 512
+    packets.append({"disposition": "accepted", "channel_id": "0xE1", "status": 0,
+                    "sample_index_ext": 16 * 960, "sample_count": 16,
+                    "t_anchor_us": int(round(1_000_000 + t + 1000))})
+    assert si.fit_timebase(packets, 512.0)["residual_block_max_us"] < 20
+    # Two anchors fit any line exactly: the statistic is not assessable.
+    assert si.fit_timebase(packets[:2], 512.0)["residual_block_max_us"] is None
+
+
+def test_lossy_recording_has_no_a3_flag(lossy):
+    _, directory, _ = lossy
+    _, timebase, flags = si.session_series(si.load_recording(directory))
+    assert not [f for f in flags if f.endswith("timebase_residual_above_a3")]
+    assert all(row["residual_block_max_us"] < si.A3_LIMIT_US for row in timebase
+               if row.get("residual_block_max_us") is not None)
+
+
+def test_a3_flag_follows_the_statistic(lossy, monkeypatch):
+    _, directory, _ = lossy
+    fit = si.fit_timebase
+
+    def above(packets, fs_nominal_hz):
+        out = fit(packets, fs_nominal_hz)
+        if out is not None and not out["nominal_rate"]:
+            out = {**out, "residual_block_max_us": si.A3_LIMIT_US + 1}
+        return out
+
+    monkeypatch.setattr(si, "fit_timebase", above)
+    _, _, flags = si.session_series(si.load_recording(directory))
+    flagged = {f.split(":")[0] for f in flags if f.endswith(":timebase_residual_above_a3")}
+    assert flagged == {"0xE1", "0xF1", "0xF2", "0xF3"}

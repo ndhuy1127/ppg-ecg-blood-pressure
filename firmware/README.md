@@ -492,6 +492,10 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
       `OVF_COUNTER` (V0.2 mục 7.6, sửa 2026-10-25);
     - `ALC_OVF` → bit 6, giữ tới packet kế tiếp được gửi;
     - lỗi I²C bất kỳ → không gửi gì, lần sau có bit 3 và bit 5;
+    - timeout của mỗi lượt I²C tăng theo số byte và tốc độ bus (`max30101_i2c_timeout_ms`:
+      gấp đôi thời gian truyền, 9 chu kỳ SCL mỗi byte, cộng 10 ms). Sửa 2026-11-15: trước đó
+      cố định 20 ms, trong khi đọc đầy FIFO (291 byte) mất khoảng 26 ms ở 100 kHz, nên đường
+      lùi 100 kHz của bring-up sẽ báo lỗi ở mọi lượt đọc dài; ở 400 kHz timeout là 24 ms;
     - cấu hình lại chip (`max30101_start`, gồm `RESET`) khi: `PWR_RDY` giữa chừng (sụt
       nguồn, chip đã tự reset); đọc `Status 1` lỗi (lượt đọc hỏng có thể đã xóa
       `PWR_RDY`); đọc `FIFO_DATA` lỗi (chip đã lấy ra một phần mẫu; thêm bit 0 nếu
@@ -520,7 +524,7 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
     Env toàn nguồn giả gửi 25 °C cộng răng cưa 1/16 °C (chuyển đổi giả 29 ms) qua cùng
     máy trạng thái; giá trị đó là giả (`0xD2` nguồn 0), nhưng `source_type` của phiên
     vẫn là `DEVICE` vì byte đến từ MCU thật (Packet Schema V0.2 mục 11.1, sửa
-    2026-11-13, chờ duyệt).
+    2026-11-13, duyệt 2026-11-14).
 - **Test** [tests/test_firmware_die_temp.py](../tests/test_firmware_die_temp.py):
   `app/die_temp.c` trên máy tính (lưới nhịp, đo trễ, quá hạn, lỗi, reset chip).
 - **Test** [tests/test_firmware_max30101.py](../tests/test_firmware_max30101.py):
