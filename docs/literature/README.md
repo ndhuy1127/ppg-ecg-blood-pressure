@@ -17,5 +17,5 @@ mức đã đọc (toàn văn hay abstract).
   32 truy vấn, 1.085 bản ghi sau loại trùng), 42 nguồn N1–N42 so với thiết kế RQ1, kiểm
   kê các bài dùng Aurora-BP, mức độ mới trong phạm vi đã tra, các đoạn của ma trận và RQ
   phải sửa theo lần tra (đã sửa ngày 2026-10-30), và danh sách bài cần lấy toàn văn (N6
-  đã đọc toàn văn ngày 2026-10-30 từ bản PDF nhóm tải; S4 chỉ dùng abstract theo quyết định ngày
-  2026-10-29).
+  đã đọc toàn văn ngày 2026-10-30 từ bản PDF nhóm tải; S4 đọc toàn văn cùng ngày từ bản miễn phí
+  trên trang Microsoft Research, kết quả ở mục 3.3).

@@ -159,9 +159,9 @@ def run(config_path, output, figure):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=ROOT / "configs/data/week04_huy.json")
-    parser.add_argument("--output", type=Path, default=ROOT / "runs/demo_week04_huy/fixture_checks.json")
+    parser.add_argument("--config", type=Path, default=ROOT / "configs/data/week04_features_sqi.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "runs/demo_week04/fixture_checks.json")
     parser.add_argument("--figure", type=Path,
-                        default=ROOT / "runs/demo_week04_huy/week04_synthetic_fiducials.svg")
+                        default=ROOT / "runs/demo_week04/week04_synthetic_fiducials.svg")
     args = parser.parse_args()
     run(args.config, args.output, args.figure)

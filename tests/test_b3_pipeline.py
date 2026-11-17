@@ -1,4 +1,4 @@
-"""SYNTHETIC checks for Linh's B0/B3 pipeline: features, leakage, train-only fit."""
+"""SYNTHETIC checks for the B0/B3 pipeline: features, leakage, train-only fit."""
 
 import dataclasses
 import hashlib

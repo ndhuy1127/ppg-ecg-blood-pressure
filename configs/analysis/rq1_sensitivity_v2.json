@@ -1,0 +1,233 @@
+{
+  "schema_version": "rq1-sensitivity-v2",
+  "status": "PROPOSED_PENDING_REVIEW",
+  "note": "Every number below is an assumption with no human data behind it, to be replaced by pilot values (SAP v1 section 9). Sources where any: S4 Fig. 3 (median |dSBP| between sessions about 3 mmHg at 21-30 years, read from the figure); Adler 2019 (slow breathing, SBP -3.2 mmHg). The model parameters are invented scenarios, not estimates. The 'strong' model scenario and the P2 grid (added after review the same day) show how much the link between the M2 response and the chance of a main conclusion depends on the assumed model. v2 (2026-11-10): same assumptions as v1; adds the CI methods compared (percentile, BCa, bootstrap-t, Student t and the envelope of the last two), the primary CI method of the tables, and a method check on mean-zero d_s of several shapes, because the v1 null scenarios showed the percentile CI lying below 0 in about 3.7 % of studies against a nominal 2.5 %. Each design splits its simulated studies into draw_blocks blocks with separate subject draws (v1 shared one set over all studies of a design).",
+  "seed": 20261107,
+  "replicates": 2000,
+  "bootstrap_draws": 1000,
+  "draw_blocks": 10,
+  "levels": [
+    0.95,
+    0.975
+  ],
+  "ci_methods": [
+    "percentile",
+    "bca",
+    "bootstrap_t",
+    "student_t",
+    "t_envelope"
+  ],
+  "primary_ci_method": "t_envelope",
+  "ci_check": {
+    "subjects": [
+      15,
+      25,
+      35
+    ],
+    "distributions": [
+      "normal",
+      "t3",
+      "skew_right",
+      "skew_left",
+      "outlier_10pct"
+    ],
+    "replicates": 10000,
+    "convergence": {
+      "distribution": "normal",
+      "subjects": 15,
+      "draws": [
+        1000,
+        4000
+      ]
+    }
+  },
+  "visit_budgets": [
+    50,
+    60,
+    75
+  ],
+  "subject_grid": [
+    15,
+    20,
+    25,
+    30,
+    35
+  ],
+  "targets": {
+    "SBP": {
+      "sigma_cuff": 3.0,
+      "tau_day": 2.5,
+      "m1_mean": -3.0,
+      "m1_sd": 3.0,
+      "deltas": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "m2": {
+        "narrow": {
+          "m2_mean": 3.0,
+          "m2_sd": 5.0
+        },
+        "moderate": {
+          "m2_mean": 8.0,
+          "m2_sd": 5.0
+        },
+        "wide": {
+          "m2_mean": 15.0,
+          "m2_sd": 6.0
+        }
+      },
+      "models": {
+        "null": {
+          "ppg": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "ppg_pat": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "benefit": {
+          "ppg": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "ppg_pat": {
+            "b": 0.6,
+            "sigma_u": 3.0,
+            "sigma_v": 3.5
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "strong": {
+          "ppg": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "ppg_pat": {
+            "b": 0.8,
+            "sigma_u": 2.5,
+            "sigma_v": 3.0
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        }
+      }
+    },
+    "DBP": {
+      "sigma_cuff": 2.5,
+      "tau_day": 2.0,
+      "m1_mean": -1.5,
+      "m1_sd": 2.0,
+      "deltas": [
+        1.0,
+        1.5,
+        2.0
+      ],
+      "m2": {
+        "narrow": {
+          "m2_mean": 2.0,
+          "m2_sd": 4.0
+        },
+        "moderate": {
+          "m2_mean": 5.0,
+          "m2_sd": 4.0
+        },
+        "wide": {
+          "m2_mean": 9.0,
+          "m2_sd": 4.0
+        }
+      },
+      "models": {
+        "null": {
+          "ppg": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "ppg_pat": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "benefit": {
+          "ppg": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "ppg_pat": {
+            "b": 0.45,
+            "sigma_u": 2.0,
+            "sigma_v": 2.7
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "strong": {
+          "ppg": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "ppg_pat": {
+            "b": 0.7,
+            "sigma_u": 1.7,
+            "sigma_v": 2.3
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        }
+      }
+    }
+  },
+  "p2_grid": {
+    "designs": [
+      [
+        25,
+        2
+      ],
+      [
+        20,
+        3
+      ]
+    ],
+    "models": [
+      "benefit",
+      "strong"
+    ],
+    "SBP": {
+      "m2_means": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        15
+      ],
+      "m2_sd": 5.0
+    },
+    "DBP": {
+      "m2_means": [
+        2,
+        3,
+        5,
+        7,
+        9
+      ],
+      "m2_sd": 4.0
+    }
+  }
+}

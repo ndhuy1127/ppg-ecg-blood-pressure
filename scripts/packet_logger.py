@@ -8,6 +8,15 @@ compares the result hashes with a session manifest. record --port reads a serial
 port (pyserial) until --duration-s elapses or Ctrl+C (docs/protocol/packet_logger.md).
 record --commands also sends commands to the device from the recording's
 command_inbox.jsonl (scripts/device_command.py; Packet Schema V0.2 section 13).
+While recording, the operator sees each command outcome, the MAX30101 LED codes
+against the locked ones, and with --dc-every-s the PPG DC level of protocol 6.1
+(software/data_io/live_monitor.py).
+
+Memory (2026-11-07): record keeps no packet while capturing; the receive-time
+files are written as they come; at the end raw.bin is decoded once from disk,
+DATA kept as bytes, and the outputs are written line by line. RAM then grows
+with the number of packets (header and DATA bytes), not with text or Python
+ints per sample.
 
 Participant data (metadata subject_id SUB###) is recorded only as
 data/raw/<subject_id>/<session_id>/<recording>/ and needs --subject-id and
@@ -21,10 +30,13 @@ import json
 import os
 import platform
 import re
+import struct
 import subprocess
 import sys
 import time
+from array import array
 from bisect import bisect_right
+from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,9 +44,15 @@ CODE_FILES = (
     "scripts/packet_logger.py", "software/data_io/packet_wire.py",
     "software/data_io/packet_receiver.py", "software/_provenance.py",
     "software/data_io/command_wire.py", "software/data_io/command_desk.py",
+    "software/data_io/live_monitor.py",
 )
 COMMAND_FILES = ("command_inbox.jsonl", "commands_sent.jsonl")
 DECODE_OUTPUTS = ("decode.json", "packets.csv", "samples.csv")
+RX_CHUNKS_COLUMNS = ("chunk", "stream_offset", "bytes", "t_rx_monotonic_ns")
+T_RX_COLUMNS = ("stream_offset", "session_id", "channel_id", "seq", "chunk",
+                "t_rx_monotonic_ns")
+HASH_READ_BYTES = 1 << 20
+CSV_LINES_PER_WRITE = 4096
 # One path component under data/raw/<subject_id>/<session_id>/.
 RECORDING_NAME = re.compile(r"[0-9A-Za-z][0-9A-Za-z_.-]*")
 
@@ -78,19 +96,119 @@ def _inputs(config_path, metadata_path):
     return config, metadata, hashes, config_bytes, metadata_bytes
 
 
-def _decode_outputs(payload, config, metadata):
-    from software.data_io.packet_receiver import analyze_stream, render_outputs
-    from software.data_io.packet_wire import decode_bytes
+class _DecodeDigest:
+    """SHA-256 of what a decode found: packet boundaries, then the decoder log.
 
-    packets, decoder = decode_bytes(payload, config["read_chunk_bytes"],
-                                    config["wire_versions"])
+    The live chunked decode and the offline decode of raw.bin must give the
+    same digest: raw.bin holds the same bytes (checked by its hash), so equal
+    boundaries mean equal packets."""
+
+    def __init__(self):
+        self.sha256 = hashlib.sha256()
+
+    def add(self, items):
+        for item in items:
+            self.sha256.update(struct.pack("<QI", item.offset, item.size))
+
+    def finish(self, decoder):
+        log = {"bytes": decoder.bytes_seen, "skipped": decoder.skipped,
+               "errors": [(e.offset, e.code) for e in decoder.errors],
+               "rejected": [(e.offset, e.code) for e in decoder.rejected_candidates]}
+        self.sha256.update(json.dumps(log, sort_keys=True).encode("utf-8"))
+        return self.sha256.hexdigest()
+
+
+def _decode_file(raw_path, config):
+    """Decode a raw file read in ``read_chunk_bytes`` pieces.
+
+    Returns ``(packets, decoder, digest, sha256, bytes)``; DATA stays bytes
+    (``DataWords``), so no Python int per sample is made."""
+    from software.data_io.packet_wire import StreamDecoder
+
+    decoder, digest = StreamDecoder(config["wire_versions"]), _DecodeDigest()
+    packets, sha256, size = [], hashlib.sha256(), 0
+    with open(raw_path, "rb") as handle:
+        while True:
+            chunk = handle.read(config["read_chunk_bytes"])
+            if not chunk:
+                break
+            sha256.update(chunk)
+            size += len(chunk)
+            new = decoder.feed(chunk)
+            digest.add(new)
+            packets += new
+    tail = decoder.finish()
+    digest.add(tail)
+    packets += tail
+    return packets, decoder, digest.finish(decoder), sha256.hexdigest(), size
+
+
+def _file_sha256(path):
+    sha256 = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(HASH_READ_BYTES), b""):
+            sha256.update(block)
+    return sha256.hexdigest()
+
+
+def _write_decode(packets, decoder, config, metadata, output):
+    """Analyse and write decode.json, packets.csv, samples.csv line by line into
+    ``output`` (exclusive create); returns ``(result, {name: sha256})``."""
+    from software.data_io.packet_receiver import analyze_stream, write_outputs
+
     result, rows, samples = analyze_stream(packets, decoder, config, metadata)
-    return render_outputs(result, rows, samples), result
+    hashes = write_outputs(result, rows, samples, lambda name: (output / name).open("xb"))
+    return result, hashes
 
 
 def _write(directory, name, payload):
     with (directory / name).open("xb") as handle:
         handle.write(payload)
+
+
+class _CsvOut:
+    """A new CSV file (exclusive create) written row by row, with its SHA-256.
+    The bytes are header and rows, each line ending in ``\n``. A context
+    manager: the file is closed on the way out even if the last write fails."""
+
+    def __init__(self, path, columns):
+        self.handle, self.sha256, self.lines = path.open("xb"), hashlib.sha256(), []
+        try:
+            self._put((",".join(columns) + "\n").encode("utf-8"))
+        except BaseException:
+            self.handle.close()
+            raise
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+        return False
+
+    def _put(self, payload):
+        self.sha256.update(payload)
+        self.handle.write(payload)
+
+    def row(self, values):
+        self.lines.append(",".join(str(value) for value in values))
+        if len(self.lines) >= CSV_LINES_PER_WRITE:
+            self.flush()
+
+    def flush(self):
+        if self.lines:
+            lines, self.lines = self.lines, []
+            self._put(("\n".join(lines) + "\n").encode("utf-8"))
+
+    def close(self):
+        if not self.handle.closed:
+            try:
+                self.flush()
+            finally:
+                self.handle.close()
+
+    def hexdigest(self):
+        return self.sha256.hexdigest()
 
 
 def _resolved(path):
@@ -136,9 +254,16 @@ def check_location(output, metadata, repo, raw_root=None, subject_id=None,
             raise ValueError(f"Participant data ({subject}) is never written to runs/; "
                              f"record into data/raw/{subject}/{session}/<recording>")
         # raw_root itself may be a link (an encrypted drive, say), but a subject or
-        # session directory that is a link out of it is refused.
+        # session directory that is a link out of it, or to another subject or
+        # session inside it, is refused (review of 2026-11-07): resolved, the
+        # path must still be <raw_root>/<subject>/<session>/<recording>.
+        root, target = _resolved(raw_root), _resolved(output)
+        parts = (Path(target).relative_to(root).parts if _contains(root, target)
+                 else ())
+        expected = tuple(os.path.normcase(part) for part in (subject, session,
+                                                              output.name))
         if (_resolved(output.parent) != _resolved(raw_root / subject / session)
-                or not _contains(_resolved(raw_root), _resolved(output))
+                or parts != expected
                 or not RECORDING_NAME.fullmatch(output.name)):
             raise ValueError(f"Participant data ({subject}) goes only to "
                              f"{raw_root / subject / session}/<recording>; refusing "
@@ -146,11 +271,6 @@ def check_location(output, metadata, repo, raw_root=None, subject_id=None,
     elif _inside(output, raw_root):
         raise ValueError(f"{raw_root} holds participant recordings only; bring-up and "
                          "SYNTHETIC recordings go elsewhere (runs/packet_logger/)")
-
-
-def _csv(header, rows):
-    lines = [",".join(header)] + [",".join(str(value) for value in row) for row in rows]
-    return ("\n".join(lines) + "\n").encode("utf-8")
 
 
 class SerialSource:
@@ -227,7 +347,7 @@ def _lock_reminder(session_id, lock, output):
 
 def record(source, output, config_path, metadata_path, repo, source_name,
            commands=False, clock=time.monotonic, subject_id=None, session_id=None,
-           raw_root=None, notify=None):
+           raw_root=None, notify=None, dc_every_s=None, dc_window_s=10.0):
     """Log ``source`` until ``read`` returns b"" (end of session).
 
     ``source`` is any object with ``read(n) -> bytes``: an open file, or a
@@ -237,14 +357,20 @@ def record(source, output, config_path, metadata_path, repo, source_name,
     ``CommandDesk`` after every read, bytes or not (``on_idle``).
 
     ``output`` must fit the metadata (``check_location``; ``raw_root`` defaults to
-    ``<repo>/data/raw``). DEVICE recordings need metadata v1. With ``commands``,
-    ``notify(text)`` gets the recording directory at the start and, when the
-    metadata has ``ppg_led_lock``, a reminder to send the locked codes at each
-    new SESSION_ID (an MCU restart boots with default codes).
+    ``<repo>/data/raw``). DEVICE recordings need metadata v1. With ``notify``,
+    ``notify(text)`` gets the operator lines of ``LiveMonitor`` (MAX30101 LED
+    codes against ``ppg_led_lock``, and every ``dc_every_s`` seconds the PPG DC
+    level over the last ``dc_window_s`` seconds) and of the ``CommandDesk``
+    (command outcomes); with ``commands`` too, the recording directory at the
+    start and, when the metadata has ``ppg_led_lock``, a reminder to send the
+    locked codes at each new SESSION_ID (an MCU restart boots with default codes).
+
+    No packet is kept while capturing. At the end raw.bin is decoded again from
+    disk; its packet boundaries and decoder log must equal the live decode.
     """
+    from software.data_io.live_monitor import LiveMonitor
     from software.data_io.packet_receiver import (
-        LOGGER_VERSION, METADATA_VERSION, analyze_stream, render_outputs,
-        study_metadata,
+        LOGGER_VERSION, METADATA_VERSION, study_metadata,
     )
     from software.data_io.packet_wire import StreamDecoder
 
@@ -260,6 +386,16 @@ def record(source, output, config_path, metadata_path, repo, source_name,
                          "(subject_id stated, or null with a reason for bring-up)")
     check_location(output, metadata, repo, raw_root, subject_id, session_id)
     study = study_metadata(metadata)
+    lock = study["ppg_led_lock"]
+    monitor = None
+    if notify is not None:
+        remind = None
+        if commands and lock is not None:
+            def remind(device_session):
+                return _lock_reminder(device_session, lock, output)
+        monitor = LiveMonitor(notify, clock, lock, remind, dc_every_s, dc_window_s)
+    elif dc_every_s is not None:
+        raise ValueError("dc_every_s needs notify (somewhere to show the DC level)")
     output.mkdir(parents=True, exist_ok=False)
     # Input copies go first, so an interrupted capture still says what it was
     # recorded with. The manifest is still written last.
@@ -267,82 +403,93 @@ def record(source, output, config_path, metadata_path, repo, source_name,
               "session_metadata.json": metadata_bytes}
     for name, payload in inputs.items():
         _write(output, name, payload)
-    desk = journal = None
-    if commands:
-        from software.data_io.command_desk import CommandDesk
-
-        if not hasattr(source, "write"):
-            raise ValueError("Commands need a source that can be written to")
-        (output / COMMAND_FILES[0]).open("xb").close()
-        journal = (output / COMMAND_FILES[1]).open("x", encoding="utf-8", newline="\n")
-        desk = CommandDesk(output / COMMAND_FILES[0], journal, source.write, clock)
-        if hasattr(source, "on_idle"):
-            source.on_idle = desk.service
-    remind = commands and notify is not None
-    if remind:
-        notify(f"Recording to {output}; commands: python scripts/device_command.py "
-               f"--recording {output} ...")
-    seen_sessions = set()
+    if commands and not hasattr(source, "write"):
+        raise ValueError("Commands need a source that can be written to")
     started = datetime.now(timezone.utc).isoformat()
     origin = time.monotonic_ns()
-    decoder, packets, chunks = StreamDecoder(config["wire_versions"]), [], []
-    try:
-        with (output / "raw.bin").open("xb") as raw:
-            while True:
-                chunk = source.read(config["read_chunk_bytes"])
-                if not isinstance(chunk, bytes):
-                    raise ValueError("Byte source must return bytes")
-                if not chunk:
-                    break
-                received = time.monotonic_ns() - origin
-                raw.write(chunk)
-                chunks.append((len(chunks), decoder.bytes_seen, len(chunk), received))
-                new = decoder.feed(chunk)
-                packets += new
-                if remind and study["ppg_led_lock"] is not None:
-                    for item in new:
-                        if item.packet.session_id not in seen_sessions:
-                            seen_sessions.add(item.packet.session_id)
-                            notify(_lock_reminder(item.packet.session_id,
-                                                  study["ppg_led_lock"], output))
-                if desk is not None:
-                    desk.observe([item.packet for item in new])
-                    desk.service()
-            raw.flush()
-            os.fsync(raw.fileno())
-    finally:
-        if desk is not None:
-            desk.close()
-            journal.close()
-    packets += decoder.finish()
-    ended = datetime.now(timezone.utc).isoformat()
-    result, rows, samples = analyze_stream(packets, decoder, config, metadata)
-    outputs = render_outputs(result, rows, samples)
-    raw_bytes = (output / "raw.bin").read_bytes()
-    # Offline replay of the stored raw must equal the live chunked decode.
-    if _decode_outputs(raw_bytes, config, metadata)[0] != outputs:
-        raise ValueError("Offline decode of raw.bin differs from the live decode")
+    decoder, digest = StreamDecoder(config["wire_versions"]), _DecodeDigest()
+    raw_sha256, raw_size = hashlib.sha256(), 0
+    # Stream offset and receive time of every read, to time each packet by the
+    # read that held its last byte (bisect), as compact arrays.
+    starts, times = array("q"), array("q")
+    # Every file of the capture is registered as soon as it is open, so that each
+    # is closed (journal after the desk's last lines) whatever fails.
+    with ExitStack() as stack:
+        rx = stack.enter_context(_CsvOut(output / "rx_chunks.csv", RX_CHUNKS_COLUMNS))
+        t_rx = stack.enter_context(_CsvOut(output / "t_rx_packets.csv", T_RX_COLUMNS))
+        desk = None
+        if commands:
+            from software.data_io.command_desk import CommandDesk
 
-    starts = [chunk[1] for chunk in chunks]
-    t_rx = []
-    for item in packets:
-        index = bisect_right(starts, item.offset + item.size - 1) - 1
-        packet = item.packet
-        t_rx.append((item.offset, packet.session_id, f"0x{packet.channel_id:02X}",
-                     packet.seq, index, chunks[index][3]))
-    files = {
-        **outputs,
-        **({name: (output / name).read_bytes() for name in COMMAND_FILES}
-           if commands else {}),
-        "rx_chunks.csv": _csv(("chunk", "stream_offset", "bytes", "t_rx_monotonic_ns"),
-                              chunks),
-        "t_rx_packets.csv": _csv(("stream_offset", "session_id", "channel_id", "seq",
-                                  "chunk", "t_rx_monotonic_ns"), t_rx),
-    }
-    for name, payload in files.items():
-        if name not in COMMAND_FILES:  # written during the recording
-            _write(output, name, payload)
-    files.update(inputs)
+            (output / COMMAND_FILES[0]).open("xb").close()
+            journal = stack.enter_context(
+                (output / COMMAND_FILES[1]).open("x", encoding="utf-8", newline="\n"))
+            desk = CommandDesk(output / COMMAND_FILES[0], journal, source.write, clock,
+                               notify=notify)
+            stack.callback(desk.close)
+        if hasattr(source, "on_idle") and (desk is not None or monitor is not None):
+            def idle():
+                if desk is not None:
+                    desk.service()
+                if monitor is not None:
+                    monitor.tick()
+            source.on_idle = idle
+        if commands and notify is not None:
+            notify(f"Recording to {output}; commands: python scripts/device_command.py "
+                   f"--recording {output} ...")
+
+        def decoded(items):
+            digest.add(items)
+            for item in items:
+                chunk = bisect_right(starts, item.offset + item.size - 1) - 1
+                packet = item.packet
+                t_rx.row((item.offset, packet.session_id, f"0x{packet.channel_id:02X}",
+                          packet.seq, chunk, times[chunk]))
+            return [item.packet for item in items]
+
+        raw = stack.enter_context((output / "raw.bin").open("xb"))
+        while True:
+            chunk = source.read(config["read_chunk_bytes"])
+            if not isinstance(chunk, bytes):
+                raise ValueError("Byte source must return bytes")
+            if not chunk:
+                break
+            received = time.monotonic_ns() - origin
+            raw.write(chunk)
+            raw_sha256.update(chunk)
+            raw_size += len(chunk)
+            rx.row((len(starts), decoder.bytes_seen, len(chunk), received))
+            starts.append(decoder.bytes_seen)
+            times.append(received)
+            new = decoded(decoder.feed(chunk))
+            if monitor is not None:
+                monitor.observe(new)
+            if desk is not None:
+                desk.observe(new)
+                desk.service()
+            if monitor is not None:
+                monitor.tick()
+        raw.flush()
+        os.fsync(raw.fileno())
+        # Packets that only a final decode can recover (a candidate that never
+        # completed, say) still get their receive time.
+        decoded(decoder.finish())
+    rx_sha256, t_rx_sha256 = rx.hexdigest(), t_rx.hexdigest()
+    if notify is not None:
+        notify(f"Capture ended ({raw_size} bytes); decoding raw.bin from disk, keep this "
+               "window open until 'Recording complete'")
+    live_digest = digest.finish(decoder)
+    ended = datetime.now(timezone.utc).isoformat()
+
+    packets, offline, offline_digest, file_sha256, file_size = _decode_file(
+        output / "raw.bin", config)
+    if (file_sha256, file_size) != (raw_sha256.hexdigest(), raw_size):
+        raise ValueError("raw.bin on disk differs from the bytes received")
+    # Offline replay of the stored raw must equal the live chunked decode.
+    if offline_digest != live_digest:
+        raise ValueError("Offline decode of raw.bin differs from the live decode")
+    result, decode_hashes = _write_decode(packets, offline, config, metadata, output)
+    del packets
 
     # A session that mixes versions appears once per version in the result. The
     # firmware SESSION_ID is device_session_id here (packet-logger-v3); session_id
@@ -359,8 +506,12 @@ def record(source, output, config_path, metadata_path, repo, source_name,
             else "several SESSION_IDs in one raw stream (MCU restart); see "
                  "device_session_ids"
         )
-    outputs_sha256 = {"raw.bin": _sha256(raw_bytes)}
-    outputs_sha256.update({name: _sha256(payload) for name, payload in files.items()})
+    outputs_sha256 = {"raw.bin": file_sha256, **decode_hashes,
+                      "rx_chunks.csv": rx_sha256, "t_rx_packets.csv": t_rx_sha256}
+    if commands:
+        outputs_sha256.update({name: _file_sha256(output / name)
+                               for name in COMMAND_FILES})
+    outputs_sha256.update({name: _sha256(payload) for name, payload in inputs.items()})
     manifest = {
         "packet_schemas": result["packet_schemas"], "logger_version": LOGGER_VERSION,
         "session_metadata_version": metadata["schema_version"],
@@ -383,8 +534,7 @@ def record(source, output, config_path, metadata_path, repo, source_name,
         "null_reasons": dict(sorted(null_reasons.items())),
         "pc_start_time_utc": started, "pc_end_time_utc": ended,
         "pc_time_note": "PC clock, reference only; never a sample time",
-        "raw": {"file": "raw.bin", "bytes": len(raw_bytes),
-                "sha256": outputs_sha256["raw.bin"]},
+        "raw": {"file": "raw.bin", "bytes": file_size, "sha256": file_sha256},
         "decode": result["decode"], "issue_counts": result["issue_counts"],
         "live_equals_offline_decode": True,
         # Section 13: commands sent; the decode above depends on raw.bin only.
@@ -398,6 +548,10 @@ def record(source, output, config_path, metadata_path, repo, source_name,
     _write(output, "session_manifest.json",
            (json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False)
             + "\n").encode("utf-8"))
+    if notify is not None:
+        issues = sum(result["issue_counts"].values())
+        notify(f"Recording complete: {output / 'session_manifest.json'} ({issues} "
+               "issues; read issue_counts)")
     return manifest
 
 
@@ -407,7 +561,8 @@ def replay(raw_path, output, config_path, metadata_path, repo, expect=None,
 
     Reads session metadata v0 or v1 and a manifest of any logger version (only
     its hashes and ``logger_version``). The output is derived data and never goes
-    inside ``raw_root`` (default ``<repo>/data/raw``)."""
+    inside ``raw_root`` (default ``<repo>/data/raw``). The raw file is read in
+    pieces and the outputs are written line by line, as at the end of record."""
     output = Path(output)
     if output.exists():
         raise FileExistsError("Output directory already exists; refusing overwrite")
@@ -415,12 +570,12 @@ def replay(raw_path, output, config_path, metadata_path, repo, expect=None,
     if _inside(output, raw_root):
         raise ValueError(f"Replay output is derived data, never inside {raw_root}")
     config, metadata, input_hashes, _, _ = _inputs(config_path, metadata_path)
-    raw_bytes = Path(raw_path).read_bytes()
-    raw_sha256 = _sha256(raw_bytes)
-    outputs, result = _decode_outputs(raw_bytes, config, metadata)
-    if _sha256(Path(raw_path).read_bytes()) != raw_sha256:
+    packets, decoder, _, raw_sha256, raw_size = _decode_file(raw_path, config)
+    if _file_sha256(raw_path) != raw_sha256:
         raise ValueError("Raw file changed during replay")
-    outputs_sha256 = {name: _sha256(payload) for name, payload in outputs.items()}
+    output.mkdir(parents=True, exist_ok=False)
+    result, outputs_sha256 = _write_decode(packets, decoder, config, metadata, output)
+    del packets
     comparison = None
     if expect is not None:
         manifest = json.loads(Path(expect).read_bytes())
@@ -447,15 +602,12 @@ def replay(raw_path, output, config_path, metadata_path, repo, expect=None,
         # decode outputs carry only the firmware SESSION_ID.
         "session_metadata_version": metadata["schema_version"],
         **study_metadata(metadata),
-        "raw": {"name": Path(raw_path).name, "bytes": len(raw_bytes),
+        "raw": {"name": Path(raw_path).name, "bytes": raw_size,
                 "sha256": raw_sha256},
         "decode": result["decode"], "issue_counts": result["issue_counts"],
         "inputs_sha256": input_hashes, "outputs_sha256": outputs_sha256,
         "expected_manifest": comparison, "provenance": _provenance(repo),
     }
-    output.mkdir(parents=True, exist_ok=False)
-    for name, payload in outputs.items():
-        _write(output, name, payload)
     _write(output, "replay_report.json",
            (json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False)
             + "\n").encode("utf-8"))
@@ -501,6 +653,12 @@ def main():
             command.add_argument("--session-id",
                                  help="Study session code S###; must equal the "
                                       "metadata session_id")
+            command.add_argument("--dc-every-s", type=float,
+                                 help="Show the PPG DC level (%% of ADC full scale, "
+                                      "protocol 6.1) every this many seconds")
+            command.add_argument("--dc-window-s", type=float, default=10.0,
+                                 help="Seconds of samples in each DC mean (default "
+                                      "10, protocol 6.1)")
         else:
             command.add_argument("--raw", type=Path, required=True)
             command.add_argument("--expect", type=Path,
@@ -518,16 +676,26 @@ def main():
         parser.error("--port and --duration-s go together")
     if args.command == "record" and args.commands and args.port is None:
         parser.error("--commands needs --port")
+    if args.command == "record" and (
+        (args.dc_every_s is not None and not args.dc_every_s > 0)
+        or not args.dc_window_s > 0
+    ):
+        parser.error("--dc-every-s and --dc-window-s must be > 0")
     subject = getattr(args, "subject_id", None)
     if args.command == "record" and (subject is None) != (args.session_id is None):
         parser.error("--subject-id and --session-id go together")
     ids = ({"subject_id": subject, "session_id": args.session_id}
            if args.command == "record" else {})
+    live = ({"notify": None, "dc_every_s": args.dc_every_s,
+             "dc_window_s": args.dc_window_s} if args.command == "record" else {})
     if args.output is None:
         args.output = default_output(repo, args.command, stamp, **ids)
 
     def notify(text):
         print(text, file=sys.stderr, flush=True)
+
+    if live:
+        live["notify"] = notify
 
     try:
         if args.command == "record" and args.port is not None:
@@ -536,13 +704,13 @@ def main():
                 source = SerialSource(port, args.duration_s, args.port)
                 summary = record(source, args.output, args.config, args.metadata,
                                  repo, args.port, commands=args.commands,
-                                 notify=notify, **ids)
+                                 **live, **ids)
             finally:
                 port.close()
         elif args.command == "record":
             with args.source_file.open("rb") as source:
                 summary = record(source, args.output, args.config, args.metadata,
-                                 repo, args.source_file.name, **ids)
+                                 repo, args.source_file.name, **live, **ids)
         else:
             summary = replay(args.raw, args.output, args.config, args.metadata,
                              repo, args.expect)

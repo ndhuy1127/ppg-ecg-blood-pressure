@@ -3,8 +3,6 @@
 > **Đã có bản mới:** [v0.2](protocol_outline_v0.2.md) (2026-10-21) thay mục 5–6 theo thiết bị V1-module và thêm nghiệm pháp tạo ΔBP. Bản v0.1 giữ làm lịch sử.
 >
 > **Phiên bản:** v0.1
-> **Người biên soạn:** Nguyễn Đức Huy
-> **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol nghiên cứu
 > **Ngày lập:** 2026-09-22; **cập nhật:** 2026-10-14 (đồng bộ với RQ v0.2, yêu cầu phần cứng V0 và nguồn bổ sung).
 > **Lưu ý:** TUYỆT ĐỐI CHƯA THU THẬP DỮ LIỆU THẬT TRONG TUẦN 1.
 
@@ -216,8 +214,8 @@ $$\mathrm{PAT} = t_{\mathrm{PPG,foot}} - t_{\mathrm{ECG,Rpeak}}$$
 
 > [!IMPORTANT]
 > **Checklist trước khi hoàn thiện protocol v1.0:**
-> 1. [ ] Đức Anh xác nhận vị trí tiếp xúc và vật liệu điện cực ECG (điện cực khô thép không gỉ hay mạ vàng) trên vỏ hộp vòng đeo.
-> 2. [ ] Linh xác nhận cấu trúc gói dữ liệu nhị phân/JSON truyền từ thiết bị vào máy tính có trường lưu `subject_id`, `session_id`, `event_id` và timestamp vi giây.
+> 1. [ ] Xác nhận vị trí tiếp xúc và vật liệu điện cực ECG (điện cực khô thép không gỉ hay mạ vàng) trên vỏ hộp vòng đeo.
+> 2. [ ] Xác nhận cấu trúc gói dữ liệu nhị phân/JSON truyền từ thiết bị vào máy tính có trường lưu `subject_id`, `session_id`, `event_id` và timestamp vi giây.
 > 3. [ ] Thống nhất nhãn hiệu và model máy đo huyết áp bắp tay đối chứng dùng trong phòng thí nghiệm.
 > 4. [ ] Xin ý kiến giảng viên hướng dẫn về quy trình làm việc với hội đồng đạo đức trước khi tuyển tình nguyện viên.
 > 5. [ ] Đối chiếu khác biệt sampling, timestamp lấy mẫu/FIFO/nhận gói, clock và marker cuff với packet schema; ghi commit và quyết định trước khi khóa giao diện.

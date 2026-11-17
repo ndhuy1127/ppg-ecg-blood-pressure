@@ -16,7 +16,7 @@ Tài liệu này hướng dẫn cách chạy kiểm thử pipeline dự đoán h
 
 ## 2. Yêu cầu môi trường
 
-- Python 3.11 trở lên.
+- Python 3.11 (`>=3.11,<3.12`, như `pyproject.toml`).
 - Đã cài đặt các thư viện trong môi trường ảo `.venv`.
 - Đã có dữ liệu PulseDB tại `data/pulsedb_data/VitalDB_AAMI_Cal_Subset.mat`.
 - Đã có Manifest tại `notebooks/pulsedb_manifest_1000.csv`.

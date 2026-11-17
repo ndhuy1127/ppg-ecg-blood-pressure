@@ -56,7 +56,7 @@ Nhóm làm rõ định hướng khoa học chủ đạo:
 ### 5.1. Luồng nhánh Git (Branching Model)
 - **Luồng chuẩn:**
   $$\text{dev/thanh-vien} \longrightarrow \text{Pull Request} \longrightarrow \text{develop} \longrightarrow \text{main (mốc ổn định)}$$
-  - Nhánh làm việc cá nhân: `dev/linh`, `dev/ducanh`, `dev/huy`.
+  - Nhánh làm việc cá nhân: `dev/ngoclinh`, `dev/ducanh`, `dev/huy`.
   - Nhánh tích hợp: `develop`.
   - Nhánh ổn định (chỉ merge khi có mốc nghiệm thu/báo cáo): `main`.
 - **Nguyên tắc:**

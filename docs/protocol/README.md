@@ -10,7 +10,7 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   kiểm tra xung đột, nghiệm pháp tạo ΔBP (M0–M2; M3, M4 bỏ ngày 2026-10-29),
   endpoint RQ1, trục thời gian M2, LOSO
   lồng và tiêu chí pilot. Mục 5.1–5.2 đã xác nhận về phần cứng ngày 2026-10-23; các
-  mục ghi "đề xuất của nhóm" chờ thầy, nghiệm pháp chưa được hội đồng đạo đức duyệt.
+  mục của RQ1 chốt 2026-11-12 trong [SAP v1](sap_v1.md), nghiệm pháp chưa được hội đồng đạo đức duyệt.
 - [Khung protocol nghiên cứu thực nghiệm v0.1](protocol_outline_v0.1.md): bản
   lịch sử; thiết kế đo lặp nhiều phiên, quy trình đo đối chứng bằng cuff, ghép
   cửa sổ tín hiệu và kế hoạch phân tích thống kê.
@@ -22,7 +22,8 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
   giao diện trích đặc trưng, mốc R/foot/PAT và CI bootstrap.
 - [Mốc R/foot thứ hai, PAT hợp lệ và so với đánh dấu tay (Tuần 5)](week05_fiducials_pat_validity.md):
   phương pháp ứng viên, quy tắc PAT/outlier, công cụ đánh dấu tay và kết quả
-  SYNTHETIC; mẫu CSV ở [templates/](templates/manual_fiducials_template.csv).
+  SYNTHETIC; mẫu CSV ở [templates/](templates/manual_fiducials_template.csv). Đánh dấu
+  tay PulseDB dừng ngày 2026-11-16, không có B4 PulseDB (mục 9.7).
 
 ## Hướng dẫn chạy
 
@@ -30,7 +31,25 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Tạo inventory và split PulseDB](run_pulsedb_split.md)
 - [Chạy B0/B3 trên PulseDB split v2](run_b3_pulsedb.md)
 - [Định nghĩa B2 trên PulseDB](b2_pulsedb_definition.md): nhân khẩu học cộng HR,
-  hai bảng so sánh định trước; đề xuất 2026-10-26, chưa duyệt; code có, chưa chạy
+  hai bảng so sánh định trước; v0 duyệt 2026-11-07, dừng đúng chốt kiểm trước khi fit
+  (không có số); v1 (nhân khẩu học theo từng đoạn) duyệt 2026-11-07
+- [Định nghĩa B5 trên PulseDB](b5_pulsedb_definition.md): ResNet-18 1D của bài PulseDB
+  (ECG + PPG), chọn epoch bằng 10 % người train; đề xuất 2026-11-07, duyệt nguyên trạng 2026-11-11
+  bằng commit riêng trước khi chạy val; kết quả trên val ở mục 10
+- [Định nghĩa RQ2a trên PulseDB](rq2a_pulsedb_definition.md): chia ngẫu nhiên theo cửa sổ (A) so với chia
+  theo người (B), cùng tập đánh giá, B3 v1 nguyên trạng, split ghim, chỉ train ∪ val; đề xuất 2026-11-13, duyệt
+  nguyên trạng 2026-11-14 bằng commit riêng trước khi chạy; kết quả ở mục 10
+- [SAP v1 cho RQ1](sap_v1.md): estimand, endpoint, đa kiểm định, δ, mô phỏng độ nhạy, dữ liệu
+  thiếu, baseline không dùng tín hiệu; đề xuất 2026-11-07, mọi mục chốt 2026-11-12, khóa bằng
+  commit trước pilot
+- [Đặc tả SQI v1](sqi_specification_v1.md): cờ chất lượng của một lần đo cuff, vai trò trong
+  phân tích; đề xuất 2026-11-07, cấu trúc chốt 2026-11-12, ngưỡng khóa trên bản ghi G2
+- [Pipeline dữ liệu thiết bị](device_session_pipeline.md): ingest bản ghi logger, mốc và PAT ở
+  ECG 512 / PPG 200 sps, phân tích RQ1 theo SAP v1 bằng một lệnh; đề xuất 2026-11-13, sửa sau
+  khi thảo luận và duyệt 2026-11-14, mới chạy trên SYNTHETIC
+- [Theo dõi thí nghiệm và kiểm tính tất định nhiều seed](experiment_tracking.md):
+  quy ước tên thí nghiệm/artifact, bảng tổng hợp sinh từ `report.json`, B3 nhiều seed
+  (2026-11-07)
 - [Đăng ký trước cách chấm test split và CalFree](pulsedb_test_scoring_preregistration.md):
   chấm mọi model đã khóa đúng một lần (chốt 2026-10-29); chưa có script, chưa chấm
 - [Sinh và replay packet giả lập](packet_simulation.md): `synthetic-packet-v2`

@@ -178,7 +178,7 @@ def test_a_device_info_anchor_off_its_10_s_grid_is_left_out(logger, meta):
 
 
 def test_an_unchecked_last_packet_does_not_hide_a_stop(logger, meta):
-    # Codex round 2, finding 3: ECG stops at 4 s, its last packet with bit 0
+    # Finding 3: ECG stops at 4 s, its last packet with bit 0
     # (anchor not checked). That packet shows ECG alive at some point after the
     # last trusted anchor, not until 21 s: reported, as timing unknown.
     ecg = ecg_packets(0, 4)

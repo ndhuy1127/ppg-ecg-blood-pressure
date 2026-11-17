@@ -115,10 +115,10 @@ oscilloscope qua điện trở shunt ở bring-up.
   6, 8).
 - Dòng khởi động (pre-charge 500 mA của PAM2401, nạp tụ lúc cắm) chưa định lượng, nên
   chưa kết luận được biên an toàn cho cả hệ.
-- Phiên 75 phút không đổi kết luận về dòng: laptop chạy pin cấp liên tục; cần theo dõi
+- Phiên dài (75 phút theo kế hoạch 28 tuần, tối đa 120 phút theo hồ sơ đạo đức) không đổi kết luận về dòng: laptop chạy pin cấp liên tục; cần theo dõi
   pin laptop và nhiệt LDO bo Waveshare, không phải dung lượng pin thiết bị (V1 không có
   pin). Công suất tỏa 0,10–0,19 W chưa đủ để kết luận về nhiệt: bring-up mục 8 chạy cả
-  hệ 75 phút và ghi nhiệt độ LDO.
+  hệ 120 phút (sửa 2026-11-07) và ghi nhiệt độ LDO.
 - Các số trên dùng giá trị điển hình hay giả định nên **không phải giới hạn bảo đảm**.
   Bring-up đọc `bMaxPower` của hub CH334 (mục 2), đo dòng 5 V USB khi LED ở mã mặc định
   và ở 0x7F, và chụp dòng khởi động bằng oscilloscope (mục 8).

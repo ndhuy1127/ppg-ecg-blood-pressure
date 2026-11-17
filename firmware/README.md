@@ -108,7 +108,7 @@ thật mà chạy trên bo Waveshare đứng riêng thì chip đó khởi độn
 | `esp32s3_devkitc_ecg_real` | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_SAMP_CAPTURE=1` | Bring-up mục 7: breakout ECG trên bo đế. Bit 8 tắt (`BOARD_SAMP_VERIFIED` mặc định 0); chỉ thêm `-DBOARD_SAMP_VERIFIED=1` sau khi kiểm xong mục 7 bước 4 |
 | `esp32s3_devkitc_ppg_real` | giả / MAX30101 / giả | `BOARD_PPG_REAL=1` | Bring-up mục 8 bước 4, 6, 10: MAX30101 qua cáp |
 | `esp32s3_devkitc_imu_real` | giả / giả / BMI270 | `BOARD_IMU_REAL=1` | Bring-up mục 8 bước 5: BMI270 qua cáp, dấu trục |
-| `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 75 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO |
+| `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 120 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO |
 | `esp32s3_devkitc_sync10` | MAX30001 / MAX30101 / BMI270 | như `all_real` nhưng `BOARD_SAMP_VERIFIED=1`, thêm `BOARD_STIM=1` | Chỉ phép đo đồng bộ 10 phút, **sau** khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xung đầu tiên khớp mẫu đầu FIFO, và sau khi đã chốt độ rộng xung LED |
 
 **Giá trị đo ở bring-up truyền lúc build, không sửa `platformio.ini`.** Hai giá trị
@@ -137,7 +137,9 @@ Remove-Item Env:PLATFORMIO_BUILD_FLAGS   # để bản build sau không mang c�
   215); test [tests/test_firmware_board.py](../tests/test_firmware_board.py).
 - Cờ truyền bằng biến môi trường không nằm trong commit. Ghi nguyên văn giá trị của
   `PLATFORMIO_BUILD_FLAGS` vào báo cáo cùng commit và ELF SHA-256 (packet `0xD1`); ELF
-  SHA-256 là thứ định danh bản đã nạp. Độ rộng xung còn thấy được trong `SPO2_CONFIG`
+  SHA-256 là thứ định danh bản đã nạp. Trước khi ghi ELF SHA-256, build sạch
+  (`pio run -d firmware -e <env> -t clean` rồi build): build tăng dần không chạy lại CMake
+  nên giữ phiên bản `git describe` cũ trong image (gặp 2026-11-13). Độ rộng xung còn thấy được trong `SPO2_CONFIG`
   của packet `0xD2`; cực tính `SAMP` thì không có trong luồng packet.
 
 ## Hai cổng USB
@@ -319,7 +321,9 @@ khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận c�
   động một dãy mới, tái lập được từ chính luồng dữ liệu.
 - **Test** [tests/test_firmware_stim_plan.py](../tests/test_firmware_stim_plan.py):
   dãy khoảng cách khớp một xorshift32 viết độc lập bằng Python, luôn trong
-  [1 s; 1 s + 1 953 µs), và pha của 600 cạnh phủ đều chu kỳ mẫu ECG. Phần GPIO và
+  [1 s; 1 s + 1 953 µs), và pha của 600 cạnh phủ đều chu kỳ mẫu ECG lẫn chu kỳ mẫu
+  PPG 5 000 µs, kể cả khi tốc độ PPG lệch ± 3 % (độ lệch cộng dồn qua các cạnh;
+  thêm 2026-11-11). Phần GPIO và
   `esp_timer` trong `main.c` chỉ kiểm bằng build.
 
 ## Kiểm tra khi có bo (chưa làm)
@@ -376,7 +380,7 @@ breakout đã cắm vào bo đế.
   không dừng chuyển đổi (tr. 43). Chuyển đổi chạy lại từ cạnh clock kế sau `SYNCH`
   (tr. 46), và lệnh bật lại `SAMP` là một giao dịch SPI có thể bị chen ngang. Nếu
   lỡ cạnh đầu thì mọi mốc lệch cố định một mẫu, và phép kiểm khoảng cách không phát
-  hiện được (Codex review 2026-10-25). Vì vậy **bit 8 tắt** cho tới khi bring-up
+  hiện được (review 2026-10-25). Vì vậy **bit 8 tắt** cho tới khi bring-up
   xác nhận trên chip thật và build với `BOARD_SAMP_VERIFIED=1`:
   - ánh xạ vẫn chạy;
   - log UART0 in khoảng (thời điểm đọc FIFO − cạnh `SAMP` của mẫu cuối packet),
@@ -488,6 +492,10 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
       `OVF_COUNTER` (V0.2 mục 7.6, sửa 2026-10-25);
     - `ALC_OVF` → bit 6, giữ tới packet kế tiếp được gửi;
     - lỗi I²C bất kỳ → không gửi gì, lần sau có bit 3 và bit 5;
+    - timeout của mỗi lượt I²C tăng theo số byte và tốc độ bus (`max30101_i2c_timeout_ms`:
+      gấp đôi thời gian truyền, 9 chu kỳ SCL mỗi byte, cộng 10 ms). Sửa 2026-11-15: trước đó
+      cố định 20 ms, trong khi đọc đầy FIFO (291 byte) mất khoảng 26 ms ở 100 kHz, nên đường
+      lùi 100 kHz của bring-up sẽ báo lỗi ở mọi lượt đọc dài; ở 400 kHz timeout là 24 ms;
     - cấu hình lại chip (`max30101_start`, gồm `RESET`) khi: `PWR_RDY` giữa chừng (sụt
       nguồn, chip đã tự reset); đọc `Status 1` lỗi (lượt đọc hỏng có thể đã xóa
       `PWR_RDY`); đọc `FIFO_DATA` lỗi (chip đã lấy ra một phần mẫu; thêm bit 0 nếu
@@ -514,7 +522,9 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
     giữa lần đọc `Status 1` và lần đọc nhiệt độ (`MAX30101_ERR_MODE`);
   - env `ppg_real` chỉ gửi giá trị đọc từ chip, không bao giờ thay bằng giá trị giả.
     Env toàn nguồn giả gửi 25 °C cộng răng cưa 1/16 °C (chuyển đổi giả 29 ms) qua cùng
-    máy trạng thái; dữ liệu đó là `SYNTHETIC`.
+    máy trạng thái; giá trị đó là giả (`0xD2` nguồn 0), nhưng `source_type` của phiên
+    vẫn là `DEVICE` vì byte đến từ MCU thật (Packet Schema V0.2 mục 11.1, sửa
+    2026-11-13, duyệt 2026-11-14).
 - **Test** [tests/test_firmware_die_temp.py](../tests/test_firmware_die_temp.py):
   `app/die_temp.c` trên máy tính (lưới nhịp, đo trễ, quá hạn, lỗi, reset chip).
 - **Test** [tests/test_firmware_max30101.py](../tests/test_firmware_max30101.py):
@@ -628,7 +638,7 @@ Packet Schema V0.2 mục 12–13.
   không có sự kiện, không tính là sự kiện mất. Gửi lại cùng byte nhận lại kết quả cũ,
   không phát sự kiện thứ hai. Độ trễ PC → thiết bị chưa đo; log UART0 in
   `MARK_EVENT code …`.
-- **Bộ nhớ yêu cầu theo thứ tự nhận (2026-10-29, sau review của Codex):** mỗi quyết định
+- **Bộ nhớ yêu cầu theo thứ tự nhận (2026-10-29, sau review):** mỗi quyết định
   của `cmd_exec_decide` lấy một vé (`ticket`) tăng dần; `cmd_exec_done` không thay yêu
   cầu đã nhớ bằng một yêu cầu nhận sớm hơn. Nhờ vậy một `SET_PPG_LED` xong muộn (PC đã
   ghi nó "không biết" và gửi `MARK_EVENT`) không đẩy `MARK_EVENT` ra khỏi bộ nhớ, và lần

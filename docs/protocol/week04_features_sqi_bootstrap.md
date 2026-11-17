@@ -2,7 +2,7 @@
 
 Version hiện tại: `features-sqi-v1` (đổi quy tắc đếm nhịp không ghép ở biên, mục 3).
 
-Huy, 2026-10-13. Kiểm tra bằng fixture SYNTHETIC.
+2026-10-13. Kiểm tra bằng fixture SYNTHETIC.
 Không phải phương pháp đã khóa trên dữ liệu công khai.
 Không thay protocol, split, calibration hoặc chính sách raw.
 
@@ -11,7 +11,7 @@ Không thay protocol, split, calibration hoặc chính sách raw.
 Mã trong `software/signal_processing/fiducials.py`,
 `software/feature_extraction/week04.py` và
 `software/evaluation/subject_bootstrap.py`.
-Config: `configs/data/week04_huy.json`.
+Config: `configs/data/week04_features_sqi.json`.
 
 `Channel` nhận vector số thực, `fs_hz` riêng từng kênh, `unit`, `clock_id`,
 `start_s` hoặc vector timestamp với đơn vị `s/ms/us`. Timestamp là **thời gian
@@ -171,6 +171,17 @@ bằng trung bình theo người của MAE_s(A) − MAE_s(B), tức đại lư�
 [RQ](../research_questions_v0.1.md) khi A là PPG + PAT và B là PPG-only. Không
 truyền `contrasts` thì output giữ nguyên như trước.
 
+**Các kiểu CI khác cho hiệu MAE theo người (thêm 2026-11-11):**
+`bootstrap_bp(..., contrasts=[(A, B)], contrast_ci_methods=("t_envelope", ...))`
+trả thêm `contrast["ci_methods"][huyết áp]["subject_balanced_mae"][kiểu]`, mỗi kiểu có
+`bounds` và `status`, và `result["contrast_ci_methods"]`. Các kiểu: `percentile`
+(trùng CI ở trên), `bca`, `bootstrap_t`, `student_t` và `t_envelope` (cận rộng hơn ở
+mỗi phía của bootstrap-t và Student t; CI chính đề xuất ở
+[SAP v1](sap_v1.md) mục 5). Mọi kiểu bootstrap dùng đúng các lượt rút của CI ở trên.
+Chỉ áp cho `subject_balanced_mae`, vì đó là trung bình của một giá trị mỗi người. Không
+truyền `contrast_ci_methods` thì output giữ nguyên như trước. Công thức ở
+`software/evaluation/mean_intervals.py`, dùng chung với mô phỏng độ nhạy RQ1.
+
 `evaluate_prediction_table(manifest, inventory, predictions, split='val')`
 gọi validator v2 rồi join theo sample_id, kiểm tra đúng subject/split, số dòng,
 không trùng/mất/thêm ID và cùng tập cho các model. Prediction table có đúng:
@@ -191,7 +202,7 @@ from software.signal_processing.fiducials import SignalConfig
 from software.feature_extraction.week04 import from_pulse_segment, extract_windows
 from software.evaluation.subject_bootstrap import BootstrapConfig, evaluate_prediction_table
 
-config = json.loads(Path("configs/data/week04_huy.json").read_text())
+config = json.loads(Path("configs/data/week04_features_sqi.json").read_text())
 # segment/row/channel metadata do reader + manifest/config upstream bàn giao.
 def features_for_segment(segment, row, ecg_metadata, ppg_metadata):
     window = from_pulse_segment(segment, row, ecg_metadata, ppg_metadata)
@@ -206,11 +217,11 @@ Adapter mặc định chặn PAT tới khi caller cung cấp alignment evidence;
 True chỉ để có feature. Runner fixture không tải/đọc dataset:
 
 ```powershell
-& '.venv/Scripts/python.exe' 'scripts/demo_week04_huy.py'
+& '.venv/Scripts/python.exe' 'scripts/demo_week04.py'
 & '.venv/Scripts/python.exe' -m pytest -q 'tests/test_week04_features.py' 'tests/test_subject_bootstrap.py'
 ```
 
-Runner sinh JSON, CSV fixture và SVG, mặc định trong `runs/demo_week04_huy/`
+Runner sinh JSON, CSV fixture và SVG, mặc định trong `runs/demo_week04/`
 (không vào Git), ghi raw fixture/config/code/figure/table SHA256, seed, commit và
 dirty. Đường dẫn `--output`, `--figure` có thể đổi; CSV nằm cạnh JSON. Như các
 runner khác trong `scripts/`, runner **từ chối ghi đè** (sửa 2026-10-25: trước đó

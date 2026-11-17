@@ -1,4 +1,4 @@
-"""Label-blind ECG/PPG summary statistics: Linh's first B3 feature set.
+"""Label-blind ECG/PPG summary statistics: the first B3 feature set.
 
 Inputs are only the ECG and PPG vectors of one segment. ABP, SBP/DBP, subject
 IDs and hashes are never passed in, so they cannot become predictors. Values

@@ -19,10 +19,10 @@
 > nguyên, trừ các thay đổi dưới đây. V0.1 vẫn là bản khóa cho dữ liệu đã ghi và
 > cho firmware chưa nâng cấp.
 >
-> Quyết định của Huy ngày 2026-10-24: `VERSION = 0x02` cho phiên mới; thêm gia tốc
+> Đã duyệt ngày 2026-10-24: `VERSION = 0x02` cho phiên mới; thêm gia tốc
 > **và** con quay của BMI270; gửi hết phần FIFO tồn đọng (bit 7); thêm packet thông
 > tin thiết bị để buổi đo trên người chỉ cần một cáp USB. Thiết kế chi tiết đã qua
-> hai vòng phản biện của Codex (thiết kế IMU, rồi spec đầy đủ).
+> hai vòng thảo luận (thiết kế IMU, rồi spec đầy đủ); chờ duyệt.
 >
 > Datasheet BMI270: BST-BMI270-DS000 (Bosch Sensortec). Các chi tiết thanh ghi và
 > thứ tự frame FIFO ghi "theo datasheet §…" phải được đối chiếu lại khi viết
@@ -223,10 +223,10 @@ bắt đầu giữa phiên vẫn nhận được trong vòng 10 s.
 
 ## 7. Mốc xung `SAMP` cho ECG, bit 8 (sửa đổi 2026-10-24)
 
-Quyết định của Huy ngày 2026-10-24: bật xung `SAMP` của MAX30001 **luôn** và dùng làm
+Đã duyệt ngày 2026-10-24: bật xung `SAMP` của MAX30001 **luôn** và dùng làm
 mốc thời gian ECG; chốt thời điểm cạnh bằng MCPWM capture của ESP32-S3; sửa V0.2 (chưa
 có firmware V0.2 chạy, chưa có dữ liệu V0.2) thay vì nâng version; không thêm kênh
-ghi mọi cạnh xung. PPG đọc theo mục 7.6. Thiết kế đã qua một vòng phản biện của Codex;
+ghi mọi cạnh xung. PPG đọc theo mục 7.6. Thiết kế đã qua một vòng thảo luận (chờ duyệt);
 mọi chi tiết thanh ghi phải đối chiếu lại datasheet MAX30001 khi viết driver và kiểm
 trên chip thật ở bring-up.
 
@@ -417,7 +417,7 @@ trên chip thật ở bring-up.
 
 ## 9. Kế hoạch triển khai và test
 
-Mỗi bước là một commit riêng, có test, và qua Codex review diff trước khi sang bước
+Mỗi bước là một commit riêng, có test, và qua review diff trước khi sang bước
 sau.
 
 1. **Codec, receiver, simulator:**
@@ -509,12 +509,12 @@ sau.
 
 ## 11. Kênh nhiệt độ `0xB1` (sửa đổi 2026-10-25)
 
-Quyết định của Huy ngày 2026-10-25: đọc nhiệt độ trong chip MAX30101 mỗi 1 s, gửi qua
+Đã duyệt ngày 2026-10-25: đọc nhiệt độ trong chip MAX30101 mỗi 1 s, gửi qua
 một kênh mới của V0.2, **mỗi packet một giá trị**. `VERSION` vẫn là `0x02`; dữ liệu
 V0.2 đã ghi không có `0xB1` vẫn hợp lệ. Đây là nhiệt độ của chip, không phải nhiệt độ
 da: chỉ dùng làm xu hướng (độ chính xác ±1 °C ở 25 °C, phân giải 0,0625 °C, thời gian
-chuyển đổi 29 ms; MAX30101 tr. 4, 23). Chi tiết dưới đây đã qua hai vòng phản biện
-của Codex cùng ngày (thiết kế, rồi code).
+chuyển đổi 29 ms; MAX30101 tr. 4, 23). Chi tiết dưới đây đã qua hai vòng thảo luận
+cùng ngày (thiết kế, rồi code); chờ duyệt.
 
 | Trường | Giá trị |
 | --- | --- |
@@ -563,8 +563,19 @@ của Codex cùng ngày (thiết kế, rồi code).
 - Nguồn gốc dữ liệu: env có chip thật (`BOARD_PPG_REAL=1`) chỉ gửi nhiệt độ đọc từ
   chip, **không bao giờ** thay bằng giá trị giả khi chip lỗi. Env toàn nguồn giả gửi
   `0xB1` với giá trị giả theo công thức trong code, qua cùng máy trạng thái, để
-  logger thử đường đi của kênh trước khi có bo; phiên đó có `source_type` là
-  `SYNTHETIC`. Env trộn nguồn thật và giả ghi nguồn của từng kênh trong `afe_config`.
+  logger thử đường đi của kênh trước khi có bo. Env trộn nguồn thật và giả ghi nguồn của
+  từng kênh trong `afe_config`.
+- `source_type` của phiên (sửa 2026-11-13, duyệt 2026-11-14; bản trước ghi phiên của env toàn
+  nguồn giả là `SYNTHETIC`): `source_type` cho biết **luồng byte đến từ đâu**. Luồng đọc
+  từ MCU thật qua USB là `DEVICE`, kể cả khi mọi kênh là nguồn giả của firmware.
+  `SYNTHETIC` chỉ dành cho luồng do PC sinh (`scripts/simulate_packets.py`, có mục
+  `simulation` trong metadata). Kênh nào là giá trị giả thì do `0xD2` byte `[2]` = 0 cho
+  biết (mục 12), logger báo `afe_fake_source`, và `sensor` của kênh trong metadata ghi
+  "nguồn giả". Lý do: các phép kiểm chỉ chạy với `DEVICE` (`device_info_missing`,
+  `afe_config_missing`, `afe_fake_source`, `record` từ chối metadata v0) là chính thứ
+  bring-up cần thử trên bo; `simulation` chỉ hợp lệ với `SYNTHETIC` mà luồng của firmware
+  không có cấu hình mô phỏng của PC. Hệ quả: một bản ghi `DEVICE` chưa chắc là dữ liệu
+  sinh lý; phải xem `afe_fake_source` trước khi dùng.
 - Tải thêm 1 packet/s, 46 B/s (mục 10: 13,9 kB/s với PPG N = 8).
 
 ### 11.2. Logger, metadata, simulator
@@ -612,7 +623,7 @@ của Codex cùng ngày (thiết kế, rồi code).
 
 ## 12. Packet cấu hình AFE `0xD2` (sửa đổi 2026-10-25)
 
-Quyết định ngày 2026-10-25 (thiết kế đã qua phản biện của Codex): cấu
+Quyết định ngày 2026-10-25 (thiết kế chốt sau khi thảo luận): cấu
 hình thật của từng AFE đi **trong** luồng raw, như thông tin thiết bị `0xD1`, để biết
 chip đã chạy với thanh ghi nào và nguồn của từng kênh (chip thật hay nguồn giả) khi một
 bản build trộn hai loại. Metadata mục 8 do người vận hành viết vẫn giữ nguyên; logger
@@ -692,7 +703,7 @@ thái ấy được gửi lại kèm bit 1). Số thứ tự trạng thái là 6
 
 ## 13. Lệnh từ PC và packet xác nhận `0xD3` (sửa đổi 2026-10-25)
 
-Quyết định ngày 2026-10-25 (thiết kế đã qua phản biện của Codex): PC gửi
+Quyết định ngày 2026-10-25 (thiết kế chốt sau khi thảo luận): PC gửi
 lệnh xuống qua chính cổng USB Serial/JTAG của luồng packet. Mục đích trước hết là hiệu
 chuẩn dòng LED PPG theo người (protocol v0.2 mục 6.1): buổi đầu chỉnh rồi khóa, các
 buổi sau PC gửi lại đúng các mã đã khóa ngay đầu phiên. Firmware không lưu dòng LED qua

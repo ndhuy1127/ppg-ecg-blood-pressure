@@ -2,15 +2,20 @@
 
 Ngoài `bp_metrics.py` (dưới đây) và `subject_bootstrap.py`, thư mục có
 [fiducial_agreement.py](fiducial_agreement.py) (Tuần 5): so mốc R/foot tự động với
-đánh dấu tay, chỉ train/val. Mô tả đầu vào/đầu ra ở
+đánh dấu tay; chỉ nhận bản ghi train/val, mốc tay trên dữ liệu thật chỉ ở train. Mô tả đầu vào/đầu ra ở
 [week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
 mục 4.
+
+[run_registry.py](run_registry.py) (Tuần 6, 2026-11-07): đọc `report.json` của runner
+B2/B3 thành dòng truy vết được và so độ lệch giữa các seed; dùng bởi
+`scripts/collect_runs.py` và `scripts/run_b3_multiseed.py`
+([experiment_tracking.md](../../docs/protocol/experiment_tracking.md)).
 
 [fiducial_gate.py](fiducial_gate.py) (Tuần 5): cổng nghiệm thu mốc đăng ký trước.
 `gate` chấm mọi phương án trên nhóm chọn, giữ phương án đạt mọi ngưỡng có MAE trung
 bình theo người thấp nhất, rồi chỉ chấm phương án đó một lần trên nhóm xác nhận;
 `repeatability` so hai lượt đánh dấu của cùng người cách nhau ít nhất `min_days`.
-Ngưỡng nằm trong khối `acceptance` của `configs/data/week05_huy.json`; mô tả ở
+Ngưỡng nằm trong khối `acceptance` của `configs/data/week05_fiducials.json`; mô tả ở
 [week05_fiducials_pat_validity.md](../../docs/protocol/week05_fiducials_pat_validity.md),
 mục 9.
 

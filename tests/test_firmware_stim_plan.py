@@ -3,8 +3,11 @@
 Answers come from hardware/test_reports/sync_10min_test_plan.md sections 3-4: a
 rising edge every 1 s plus a uniform offset in [0, 1953) us, seeded with the
 SESSION_ID, so that 600 edges (10 minutes) cover one ECG sample period
-(1953.125 us at 512 sps) evenly. The expected numbers come from an independent
-Python xorshift32. SYNTHETIC only. Without a host C compiler the test is skipped.
+(1953.125 us at 512 sps) evenly. Section 5 (2026-11-11): because the offsets add
+up from edge to edge, the same 600 edges also cover the PPG sample period
+(5000 us at 200 sps per slot), even with the PPG rate off by 3 %. The expected
+numbers come from an independent Python xorshift32. SYNTHETIC only. Without a
+host C compiler the test is skipped.
 """
 
 import os
@@ -17,6 +20,7 @@ from tests.test_firmware_c_encoder import _compiler
 
 ROOT = Path(__file__).resolve().parents[1]
 ECG_PERIOD_US = 10 ** 9 / 512_000  # 1953.125
+PPG_PERIOD_US = 10 ** 6 / 200  # 5000, one slot at 200 sps
 
 HARNESS = r"""
 #include <stdio.h>
@@ -101,3 +105,19 @@ def test_ten_minutes_of_edges_cover_the_ecg_sample_phase(run, seed):
     for p in phases:
         bins[int(p * 16)] += 1
     assert min(bins) >= 15 and max(bins) <= 65, bins
+
+
+@pytest.mark.parametrize("seed", [0x5EED1234, 0x0BADF00D, 7])
+@pytest.mark.parametrize("rate_error", [0.0, 0.03, -0.03])
+def test_ten_minutes_of_edges_cover_the_ppg_sample_phase(run, seed, rate_error):
+    # Section 5 and criterion A9 (section 9): every one of 10 phase bins of the PPG
+    # sample period holds at least 5 % of the edges (30 of 600; 60 on average).
+    # Each offset is shorter than 5000 us, but the edge times are cumulative, so
+    # the phase walks around the PPG period many times. The PPG rate may differ
+    # from nominal by up to 3 % (interface_power_sampling_v0.md section 6).
+    period = PPG_PERIOD_US * (1 + rate_error)
+    t, bins = 0, [0] * 10
+    for v in run(seed, 600):
+        t += v
+        bins[int((t % period) / period * 10)] += 1
+    assert min(bins) >= 30, bins

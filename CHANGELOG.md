@@ -1,10 +1,90 @@
 # Changelog
 
-Ghi các thay đổi đã merge vào `develop`, nhóm theo tuần của lộ trình. Nguồn: lịch
-sử Git (PR #1–#25 và ba commit đẩy thẳng ngày 2026-10-28) và báo cáo tuần trong
-`reports/weekly/`. Ngày là ngày merge PR, hoặc ngày commit với commit không qua PR.
+Ghi các thay đổi đã vào `develop`, nhóm theo tuần của lộ trình; commit chỉ mới có trên
+`dev/huy` được ghi rõ. Nguồn: lịch sử Git (PR #1–#25, ba commit đẩy thẳng ngày 2026-10-28,
+từ Tuần 7 là commit trực tiếp) và báo cáo tuần trong `reports/weekly/`. Ngày là ngày merge
+PR, hoặc ngày commit với commit không qua PR.
 Changelog không ghi kết quả hiệu năng; test và demo trên dữ liệu SYNTHETIC chỉ
 kiểm tra code. Ngày tính theo giờ Việt Nam (UTC+7).
+
+## Tuần 8 (commit trực tiếp, 2026-11-13 → 2026-11-14)
+
+Chi tiết: [báo cáo Tuần 8](reports/weekly/week_08/README.md).
+
+- `0df0ba6` (2026-11-13): kế hoạch Tuần 8.
+- `8eb833a` (2026-11-13): chuẩn bị bring-up (checklist, mẫu báo cáo, metadata env khung),
+  đo RAM logger trên laptop dùng cho buổi đo, quy tắc `source_type` (DEVICE khi byte đến từ
+  MCU thật, SYNTHETIC chỉ cho luồng sinh trên PC).
+- `4630bc1` (2026-11-13): pipeline dữ liệu thiết bị (`scripts/device_session.py`,
+  `software/device/`, `device-session-v1`), mốc và PAT ở ECG 512 sps, PPG 200 sps ba khe,
+  bộ sinh dạng sóng SYNTHETIC có PAT biết trước; phân tích RQ1 trên SYNTHETIC
+  (`scripts/run_rq1_analysis.py`, `software/evaluation/rq1_analysis.py`).
+- `b5a2f00`, `6f6372b`, `a08eaea` (2026-11-13 → 2026-11-14): RQ2a trên PulseDB
+  (`software/pulsedb/rq2a.py`, `scripts/run_rq2a_pulsedb.py`); định nghĩa duyệt nguyên trạng
+  bằng commit riêng rồi mới chạy trên train ∪ val; kết quả ở
+  `reports/weekly/week_08/pulsedb_rq2a_v0/`.
+- `2dcf770` (2026-11-14): ghi nhận breakout MAX30001 nhận về là bản v2 03/24, cách xác định
+  R3, R7, R8 trước khi sửa.
+- `75aa449`, `a163e33` (2026-11-14): endpoint 5 và 7 giữ hiệu chuẩn của phân tích chính; cổng
+  khóa cho dữ liệu thật khóa cả code bước tính đặc trưng, kiểm `provenance.json` của từng bảng
+  đặc trưng.
+- `e9af9a6` (2026-11-14): bước RAM trước buổi đo vào protocol 5.1.
+- `9c078bb` (2026-11-14): báo cáo Tuần 8.
+- Chỉ mới có trên `dev/huy`, chưa vào `develop`:
+  - `bc58308` (2026-11-14): duyệt tiêu chí phần cứng (checklist bring-up, kế hoạch dòng
+    rò/nhiệt/VLED, tiêu chí A1–A9, phần hiển thị DC) và các mục tự chốt của tuần 8;
+  - `c62c901` (2026-11-14): ràng buộc `provenance.json` với bảng đặc trưng, khóa package cha,
+    kiểm commit có thật;
+  - commit ngày 2026-11-16 (một commit, sửa sau rà soát toàn dự án): khóa LED theo cửa sổ
+    cuff và cờ `ppg:led_not_locked`, cờ thời gian theo tiêu chí A3, lọc zero-phase, endpoint
+    10 của RQ1, timeout I²C của MAX30101 theo kích thước giao dịch; nhãn duyệt, số lần đo
+    đồng bộ và liên kết trong tài liệu; dừng đánh dấu tay PulseDB ở 69/80 đoạn, không làm B4
+    PulseDB ([tài liệu mốc Tuần 5](docs/protocol/week05_fiducials_pat_validity.md) mục 9.7).
+
+## Tuần 7 (commit trực tiếp, 2026-11-07 → 2026-11-12)
+
+Chi tiết: [báo cáo Tuần 7](reports/weekly/week_07/README.md).
+
+- `a7e0ea1`, `c18e1d1` (2026-11-07 → 2026-11-08): kế hoạch Tuần 7, cập nhật phân công.
+- `e96308d` (2026-11-10): logger ghi theo dòng (vẫn `packet-logger-v3`), `live_monitor`
+  cảnh báo kết quả lệnh và mức DC của PPG, giới hạn trễ `MARK_EVENT`.
+- `3761b1b`, `76c8f0f` (2026-11-10 → 2026-11-11): B5 (ResNet-18 1D, ECG + PPG;
+  `scripts/run_b5_pulsedb.py`, PyTorch tùy chọn trong `requirements-dl.txt`); review rò rỉ và
+  sửa trọng số của phần học.
+- `38f23fe`, `7ed59a8` (2026-11-11): duyệt định nghĩa B5 nguyên trạng bằng commit riêng rồi
+  chạy trên val.
+- `f85d4d5`, `a8f21a8`, `e0e6912` (2026-11-10 → 2026-11-11): SAP v1, SQI v1, mô phỏng độ nhạy
+  RQ1 (`scripts/simulate_rq1_sensitivity.py`), năm kiểu CI cho hiệu MAE theo người
+  (`software/evaluation/mean_intervals.py`).
+- `ac1c051`, `edbe46d` (2026-11-11 → 2026-11-12): mô phỏng Holm chung SBP–DBP và Ridge trong
+  LOSO (`scripts/simulate_rq1_holm_loso.py`), thêm baseline theo pha.
+- `e027ca5`, `c5c87b3` (2026-11-12): chốt các mục SAP v1 (chưa khóa), sửa protocol 6.5 và
+  kịch bản bài báo.
+- `c8ebb03`, `eafec93` (2026-11-10 → 2026-11-11): checklist bring-up, kế hoạch dòng rò, thử
+  nhiệt, VLED, tiêu chí đo đồng bộ A1–A9 và test độ phủ pha PPG của kích thích.
+- `9887b26` → `6aa76bf` (2026-11-10): rà soát tài liệu, bỏ tên người trong tài liệu kỹ thuật,
+  đổi tên config và demo tuần 4–5, sửa câu chữ vượt quá bằng chứng.
+- `480b968`, `30310c7` (2026-11-11): báo cáo Tuần 7.
+
+## Tuần 6 (commit trực tiếp, 2026-10-29 → 2026-11-07)
+
+Chi tiết: [báo cáo Tuần 6](reports/weekly/week_06/README.md).
+
+- `e7336ea`, `6511926` (2026-10-29): lệnh `MARK_EVENT`, `packet-logger-v3` với
+  metadata phiên v1, env `esp32s3_devkitc_all_real`; chọn mốc tay Tuần 5 chỉ trên train.
+- `8e32b06` → `862ade6` (2026-10-29 → 2026-10-30, đẩy lên `develop`/`main`): protocol
+  v0.3, hồ sơ đạo đức, RQ v0.4, tổng quan tài liệu 2026-10-29, đăng ký trước cách chấm
+  test; bỏ M3, M4.
+- `7234430` → `a946373` (2026-10-30 → 2026-10-31): trần tuyển 35, toàn văn S4, đề xuất
+  cho buổi gặp thầy Tuần 7, hồ sơ đạo đức viết lại sau rà soát cuối.
+- `c1c4b48` (2026-11-07): sửa lỗi tài liệu sau review Tuần 6 (cấp cứu, BP cao, quyền
+  xóa, người đạt chuẩn, N6, bring-up 120 phút, trạng thái đơn hàng).
+- `19fc432`, `1c708df`, `450302b`, `a215f07` (2026-11-07): B2 khóa cả mã trước khi chạy;
+  v0 duyệt rồi dừng đúng chốt kiểm trước khi fit; v1 (nhân khẩu học theo từng đoạn) duyệt
+  và chạy trên val.
+- `69089de` (2026-11-07): theo dõi thí nghiệm (`run_registry`, `collect_runs.py`) và B3
+  nhiều seed (`run_b3_multiseed.py`).
+- Báo cáo Tuần 6 và kế hoạch Tuần 7.
 
 ## Tuần 5 (PR #25 và commit trực tiếp, 2026-10-26 → 2026-10-28)
 
@@ -65,9 +145,9 @@ kiểm tra code. Ngày tính theo giờ Việt Nam (UTC+7).
 - #20 (2026-10-11): kế hoạch Tuần 4 (`docs/plans/WEEK_04.md`).
 - #21 (2026-10-15): fiducial ECG/PPG và ghép PAT
   (`software/signal_processing/fiducials.py`); đặc trưng và SQI `features-sqi-v0`
-  (`software/feature_extraction/week04.py`, `configs/data/week04_huy.json`);
+  (`software/feature_extraction/week04.py`, `configs/data/week04_features_sqi.json`);
   bootstrap theo người (`software/evaluation/subject_bootstrap.py`); demo
-  SYNTHETIC `scripts/demo_week04_huy.py` và test; tổng quan y văn bổ sung, RQ
+  SYNTHETIC `scripts/demo_week04.py` và test; tổng quan y văn bổ sung, RQ
   v0.2, cập nhật protocol; báo cáo Tuần 4.
 - #22 (2026-10-17): bản đầu pipeline huấn luyện PulseDB (`software/pulsedb/`
   `train.py`, `evaluate.py`, `features.py`, `pipeline.py`), notebook và

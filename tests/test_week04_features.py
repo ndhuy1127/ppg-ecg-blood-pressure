@@ -5,7 +5,7 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from scripts.demo_week04_huy import fixture, fixture_provenance, run
+from scripts.demo_week04 import fixture, fixture_provenance, run
 from software.feature_extraction.week04 import extract_window, from_pulse_segment
 from software.signal_processing.fiducials import Channel, SignalConfig, pair_pat
 
@@ -214,7 +214,7 @@ def test_explicit_polarity_and_provenance_errors():
 
 def test_demo_saves_synthetic_outputs(tmp_path):
     from pathlib import Path
-    config = Path(__file__).resolve().parents[1] / "configs/data/week04_huy.json"
+    config = Path(__file__).resolve().parents[1] / "configs/data/week04_features_sqi.json"
     report = run(config, tmp_path / "report.json", tmp_path / "figure.svg")
     assert report["source_type"] == "SYNTHETIC"
     assert report["summary"]["input_segments"] == 5

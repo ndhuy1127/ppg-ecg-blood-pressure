@@ -2,7 +2,7 @@
 
 from importlib.metadata import version
 
-from scripts.check_environment import pin_problems, python_problems
+from scripts.check_environment import optional_problems, pin_problems, python_problems
 
 
 def test_python_spec_accepts_only_the_pinned_minor():
@@ -20,4 +20,14 @@ def test_pin_comparison_reports_missing_unpinned_and_different_versions():
         f"pytest=={installed} differs from pin 0.0.1",
         "not-a-real-package-xyz is not installed (pin 1.0)",
         "Unpinned requirement: numpy",
+    ]
+
+
+def test_optional_pins_allow_a_missing_package_and_a_local_build_label():
+    installed = version("pytest")
+    text = ("--extra-index-url https://example.invalid/whl\n"
+            f"pytest=={installed}\nnot-a-real-package-xyz==1.0\npytest==0.0.1\nnumpy\n")
+    assert optional_problems(text) == [
+        f"pytest=={installed} differs from optional pin 0.0.1",
+        "Unpinned optional requirement: numpy",
     ]

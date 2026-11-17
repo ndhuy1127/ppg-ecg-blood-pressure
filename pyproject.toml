@@ -26,6 +26,10 @@ dev = [
     "pytest==8.0.2",
     "ruff==0.3.0",
 ]
+# B5 only (requirements-dl.txt; added 2026-11-07, pending team review).
+dl = [
+    "torch==2.6.0",
+]
 
 [tool.setuptools.packages.find]
 # Only the importable package; data, docs, hardware and scripts are not packaged.

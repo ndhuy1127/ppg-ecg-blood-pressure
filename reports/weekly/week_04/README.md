@@ -78,9 +78,9 @@ tiên và hoàn thiện thiết kế mạch:
 | 6 | Mốc R/foot, ghép PAT | Huy | [fiducials.py](../../../software/signal_processing/fiducials.py) |
 | 7 | Đặc trưng/SQI | Huy | [week04.py](../../../software/feature_extraction/week04.py) |
 | 8 | Bootstrap, đánh giá bảng dự đoán | Huy | [subject_bootstrap.py](../../../software/evaluation/subject_bootstrap.py) |
-| 9 | Config ngưỡng và bootstrap | Huy | [week04_huy.json](../../../configs/data/week04_huy.json) |
+| 9 | Config ngưỡng và bootstrap | Huy | [week04_features_sqi.json](../../../configs/data/week04_features_sqi.json) |
 | 10 | Định nghĩa, API, ví dụ | Huy | [week04_features_sqi_bootstrap.md](../../../docs/protocol/week04_features_sqi_bootstrap.md) |
-| 11 | Runner fixture | Huy | [demo_week04_huy.py](../../../scripts/demo_week04_huy.py) |
+| 11 | Runner fixture | Huy | [demo_week04.py](../../../scripts/demo_week04.py) |
 | 12 | Test Tuần 4 | Huy | [test_week04_features.py](../../../tests/test_week04_features.py), [test_subject_bootstrap.py](../../../tests/test_subject_bootstrap.py) |
 | 13 | Kết quả fixture | Huy | [fixture_checks.json](fixture_checks.json), [fixture_features.csv](fixture_features.csv), [verification.txt](verification.txt) |
 | 14 | Hình R/foot/PAT fixture | Huy | [week04_synthetic_fiducials.svg](../../figures/week04_synthetic_fiducials.svg) |

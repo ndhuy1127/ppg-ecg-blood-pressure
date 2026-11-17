@@ -39,7 +39,8 @@ def _git(repo, *args):
 
 def committed_unchanged(repo, path) -> bool:
     """Whether ``path`` itself lies in ``repo``, is tracked by Git and equals HEAD
-    (no staged or unstaged change).
+    (no staged or unstaged change), and its bytes, through Git's clean filters,
+    hash to the blob of HEAD (so index flags cannot hide a change).
 
     Symlinks are refused, in the file and in every directory below ``repo``:
     resolving one would check its target, not the path the approval names.
@@ -65,7 +66,13 @@ def committed_unchanged(repo, path) -> bool:
             return False
         if done.returncode != 0:
             return False
-    return True
+    # Content check (added 2026-11-14): `git diff` trusts the index, so a file
+    # marked assume-unchanged or skip-worktree can differ from HEAD unseen. Hash
+    # the file as Git would store it (same clean filters) and compare with HEAD.
+    current = _git(repo, "hash-object", "--", name.as_posix())
+    committed = _git(repo, "rev-parse", "--verify", "--quiet",
+                     f"HEAD:./{name.as_posix()}")
+    return bool(current) and current == committed
 
 
 def panel_table(name, panel) -> str:
@@ -116,11 +123,15 @@ def run(raw_path, split_dir, config_path, output, repo):
     if config["status"] != APPROVED:
         raise ValueError(f"B2 definition not approved yet (config status "
                          f"{config['status']}); no B2 number may be computed")
+    # The code that computes HR, fits and scores is locked too (2026-11-07): a
+    # result must be reproducible from the commit recorded in the report.
     committed = {"config": committed_unchanged(repo, config_path),
-                 "definition": committed_unchanged(repo, Path(repo) / DEFINITION)}
+                 "definition": committed_unchanged(repo, Path(repo) / DEFINITION),
+                 "code": all(committed_unchanged(repo, Path(repo) / name)
+                             for name in CODE_FILES)}
     if not all(committed.values()):
-        raise ValueError("The approved config and the B2 definition must be committed "
-                         f"and unchanged before a run (Git: {committed})")
+        raise ValueError("The approved config, the B2 definition and the code must be "
+                         f"committed and unchanged before a run (Git: {committed})")
     payloads, split_report, raw_sha256, inventory, manifest, pool_decision = (
         load_split(raw_path, split_dir))
     found = {"raw": raw_sha256, "inventory": split_report["inventory_sha256"],
@@ -159,6 +170,8 @@ def run(raw_path, split_dir, config_path, output, repo):
                     "sha256_of_sorted_sample_ids": hashlib.sha256(mask).hexdigest(),
                     "file": "hr_mask.csv"},
         "hr_coverage": result["hr_coverage"],
+        # v1: subjects whose segments carry more than one set of demographics.
+        "demographics_variation": result["demographics_variation"],
         "feature_names": result["feature_names"],
         "panels": {name: {"counts": panel["counts"], "b0_constant": panel["b0_constant"],
                           "evaluation": panel["evaluation"]}
@@ -215,7 +228,7 @@ def main():
     parser.add_argument("--split-dir", type=Path, required=True,
                         help="Directory written by scripts/build_pulsedb_split.py")
     parser.add_argument("--config", type=Path,
-                        default=repo / "configs/models/b2_pulsedb_v0.json")
+                        default=repo / "configs/models/b2_pulsedb_v1.json")
     parser.add_argument("--output", type=Path, help="New directory; default runs/")
     args = parser.parse_args()
     output = args.output or (repo / "runs" / "b2_pulsedb"

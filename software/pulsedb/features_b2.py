@@ -1,7 +1,7 @@
 """B2 features on PulseDB: demographics plus an ECG peak-rate HR.
 
-Definition: docs/protocol/b2_pulsedb_definition.md (proposed 2026-10-26, pending
-Huy's approval). Inputs are the demographic fields and the ECG vector of one
+Definition: docs/protocol/b2_pulsedb_definition.md (proposed 2026-10-26, approved
+before the val run). Inputs are the demographic fields and the ECG vector of one
 segment; ABP, SBP/DBP, subject IDs and hashes are never passed in. The HR is an
 unvalidated ECG peak-rate estimate: the R detector has not passed the Week 5
 gate, and a plausible value does not prove a correct one.
@@ -63,8 +63,25 @@ def hr_bpm(ecg, fs_hz=ECG_FS_HZ):
 
 
 def check_constant_by_subject(subject_ids, rows) -> None:
-    """Demographics must be the same in every segment of a subject."""
+    """Demographics must be the same in every segment of a subject (B2 v0)."""
     seen = {}
     for subject, row in zip(subject_ids, rows):
         if seen.setdefault(subject, row) != row:
             raise ValueError("Demographics differ between segments of one subject")
+
+
+def demographic_variation(subject_ids, rows) -> dict:
+    """B2 v1: segments keep their own demographics; report how many subjects have
+    more than one set of values and the largest within-subject range per field.
+    Counts and ranges only, no subject ID."""
+    by_subject = {}
+    for subject, row in zip(subject_ids, rows):
+        by_subject.setdefault(subject, set()).add(tuple(row))
+    several = [values for values in by_subject.values() if len(values) > 1]
+    ranges = {name: 0.0 for name in DEMOGRAPHIC_NAMES}
+    for values in several:
+        for k, name in enumerate(DEMOGRAPHIC_NAMES):
+            column = [v[k] for v in values]
+            ranges[name] = max(ranges[name], float(max(column) - min(column)))
+    return {"subjects": len(by_subject), "subjects_with_several_values": len(several),
+            "max_within_subject_range": ranges}

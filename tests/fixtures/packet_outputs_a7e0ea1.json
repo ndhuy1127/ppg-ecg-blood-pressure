@@ -1,0 +1,497 @@
+{
+ "derivation": "SHA-256 of decode.json, packets.csv and samples.csv written by the logger at commit a7e0ea1 (packet-logger-v3 before the memory changes of 2026-11-07), computed with that commit's code from decode_bytes, analyze_stream and render_outputs, config configs/hardware/packet_logger.json.",
+ "hashes": {
+  "v01_byte_loss": {
+   "decode.json": "6d6272b472900ebf24ac27395388822950c57b8e82722bd26bd0d4996f740fc7",
+   "packets.csv": "c6336ff7b798367362fcac9030a973a68031c4ed716b8d49104a7a85ef8ac249",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_byte_loss_damaged": {
+   "decode.json": "d906f8c76fbb4613edc68e48fdefc6d22bf828a219ad1b5d3ca93066e7853433",
+   "packets.csv": "814622aeac7a62ba6cfcb28f0ddd849afaa350f8c63f2462b6efedbe3e4648c5",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_crc": {
+   "decode.json": "d222d4efe8762c8748f077eeaf15587583f0b0e30c017f519ba78ae87538f401",
+   "packets.csv": "463d23aca4572a64015ec28b6fbcf4ec7985b8d7c6a4675dac547b203d9fb2ea",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_crc_damaged": {
+   "decode.json": "d222d4efe8762c8748f077eeaf15587583f0b0e30c017f519ba78ae87538f401",
+   "packets.csv": "463d23aca4572a64015ec28b6fbcf4ec7985b8d7c6a4675dac547b203d9fb2ea",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_duplicate": {
+   "decode.json": "9ab6c70dca13230a9d05427507ba5fe4d6d03eaf999d608ef6742070a2674c52",
+   "packets.csv": "f56b678a80371e20c9615c9588b5493c2080657d088673ac204fd725c060c034",
+   "samples.csv": "f508032d58d81b2373bf5181164545552b45c2777a8cb870af8f8c88988e9133"
+  },
+  "v01_duplicate_damaged": {
+   "decode.json": "28741ca51908b9914125720d3c6c7fd5ea787ca3f16de719b723306e398ae61b",
+   "packets.csv": "61bb1aa2ef455968ef37888bb87b4493426709fe7446bd3af500d15d8ee03bf3",
+   "samples.csv": "f508032d58d81b2373bf5181164545552b45c2777a8cb870af8f8c88988e9133"
+  },
+  "v01_index_jump": {
+   "decode.json": "f5e6a11cfcd4e91746bd6c76895041c0ddbbc7d8e024be8285e3248d90b34bfb",
+   "packets.csv": "dc0a5d7c778352bcb3b5efa4b9be8f7f0969c4effcb44fc197188a7bb908d4e5",
+   "samples.csv": "92a988edb4fd8494c5b5a52bd179378614a322b3380f1669948ff2aedb1649f8"
+  },
+  "v01_index_jump_damaged": {
+   "decode.json": "ee402bf62bce448a7257d1bbc83595b229baa53ef6f80a5f2a5c33f6cfb0c08d",
+   "packets.csv": "e8e961d23283f08a99f07e3739787880f1c663026bc2d319319eee6a6b89d731",
+   "samples.csv": "a8fd27a3757f2da51c357f8424f14fac217702b020332dbf16d63c5d7907546b"
+  },
+  "v01_missing": {
+   "decode.json": "2d460764e6f41743e645818cf26339ba9b8b71a4194eba8825edd4be9a703485",
+   "packets.csv": "d671bf18f54c58a895cc0d820b24459690821a08d86ae9deedcc933ba0279907",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_missing_damaged": {
+   "decode.json": "bcb0701ba0bcce524ada92872ec9e2923e7cf6828dbae2952e962e7ce155683e",
+   "packets.csv": "dfdd831dd483cda539c7d81cdf09917c7814ed3d3c72669c2d737353ead216cb",
+   "samples.csv": "1411c9f013ae589361a18933884324849c8794c5a2f27c96244228864d9297e2"
+  },
+  "v01_offset": {
+   "decode.json": "b4b72d7d892c6ee1254275d126fbc35476e60e8ed279e51d0309cf22d6462b23",
+   "packets.csv": "e773c4492e5e910d93e88da739aeaa5258d436f11717f9e9e7f8bf25dbf17c11",
+   "samples.csv": "f508032d58d81b2373bf5181164545552b45c2777a8cb870af8f8c88988e9133"
+  },
+  "v01_offset_damaged": {
+   "decode.json": "d7e6373279e1debb6b1367fe655b664f18645bc39af63c41a9cea139fb1bf352",
+   "packets.csv": "04017f063f13a83e01aa36399e2dbf137ea8b51191aaadcd72c9b474833409f8",
+   "samples.csv": "83a577df5ee15d1bfd0b4f8e0e4a87a34825bfe50a57ce3e0d868a05f9192ba2"
+  },
+  "v01_reanchor": {
+   "decode.json": "8000770d106c910a3ed516fffb17f6258d37ad354d41255385b5d283187de53c",
+   "packets.csv": "cc95b0e5f6a6235f17ff5533df8ce585c8ee5c5fd6e4be7950be201c1adbb3f1",
+   "samples.csv": "a999f6edf3f4fab04b178c4e21c5aeadceea3d24b1b8c25980756306f1e18f3a"
+  },
+  "v01_reanchor_damaged": {
+   "decode.json": "21fee787cf1afe9b14785f481482e3bd559d83c6c4fa2b90bca12c27826e7763",
+   "packets.csv": "f66031a2cb8e7dc31993ffd8abab8047bb9be33cf1edd1dab8d21fa54746a633",
+   "samples.csv": "ea1e91329b5cb9fdcd810166364c63ae9880dd6352ceb6608f6663921a40ffb1"
+  },
+  "v01_reordered": {
+   "decode.json": "93c691bbf99fe1c9c0958e8a06910935350aad9e0498501a0253aa31123cc1c6",
+   "packets.csv": "fb95fc51eebf8b887d3a0c9de430f46b170899c814ea364e346cd95bc2513b50",
+   "samples.csv": "f508032d58d81b2373bf5181164545552b45c2777a8cb870af8f8c88988e9133"
+  },
+  "v01_reordered_damaged": {
+   "decode.json": "b07a50c50a19c59eec5618b8008331e887303dfcabab0788be5393803400bb25",
+   "packets.csv": "5cb5fa1ffd439f94b56eb40927ecb75dda96af5dabe98dbacde4aee555ea35a3",
+   "samples.csv": "f508032d58d81b2373bf5181164545552b45c2777a8cb870af8f8c88988e9133"
+  },
+  "v01_session_restart": {
+   "decode.json": "153ffada71d9cc34da1c0940e85ccfd7295006dcfcca50a378a7d10b11a8016f",
+   "packets.csv": "9fffe7e138400bba802e78f9e52d279c8d7187ad48594a3908a156b70a267e07",
+   "samples.csv": "5a588487bff563a21b9570f7e84dea40933c8736690985a5b26d63be0b72d6e5"
+  },
+  "v01_session_restart_damaged": {
+   "decode.json": "51f381d57bef971418afc96cba9b7c42eecfde93611f456397ed0ce58299a3cb",
+   "packets.csv": "a666d3e3e9592031557f1811b5b1278d8beea3a89ab5726f73272812d769933e",
+   "samples.csv": "21aaf2efebbed9e11593a4f3fd6628758e1e525f7b52482aff265427241425cf"
+  },
+  "v01_timestamp": {
+   "decode.json": "cbfeb8f83cdebf524120f910b8ca666d6bfdb8bf0891991d4a9acd8ffd3c1945",
+   "packets.csv": "24be5dc7503b670b4755bb00a16e486dc1e6e4f4e3ccefbca0bb420d0b1dbbb7",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_timestamp_damaged": {
+   "decode.json": "1616f50c569005e4e3142beb1a8049b86e1673fc7f820b5644164aa9c1cc31d1",
+   "packets.csv": "9f1c4b8b232f86ad99f4ea5a80183072e089776dd1d639978021d92d2b668fab",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_timestamp_first": {
+   "decode.json": "fb0203d99dd0f88341b5823aa6189899f314d3c721b86b506676208d79109ccb",
+   "packets.csv": "0a0d73df6140a4e86f626b7999990d59dc499d0fb3f4576f62866afedba774a0",
+   "samples.csv": "1f6b9f42374d1c53f70a07e62a8f26829cced63790c5c72ed9455ad3a2479430"
+  },
+  "v01_timestamp_first_damaged": {
+   "decode.json": "76447e3487db29a5db16563a653647dce8609982728b124467db87bb2cd1a4ca",
+   "packets.csv": "8a08b8edd333a93cbde2bef20d9a7124edab1c98e5926e76b6335c42fa9b7440",
+   "samples.csv": "13b8a4b874b68169852ef5d91fc2d379432714336838c30603cba5f1463b0d2e"
+  },
+  "v01_valid": {
+   "decode.json": "4379fa96815f04c84cf54ce8b7f82a70dc4d582ee1d4bc2b27578d643026158e",
+   "packets.csv": "3a8aed3cda1662699b605fffb03faf154aa16d339f8f0ede2d3167cebb573c94",
+   "samples.csv": "f508032d58d81b2373bf5181164545552b45c2777a8cb870af8f8c88988e9133"
+  },
+  "v01_valid_damaged": {
+   "decode.json": "35272154be0e052aa4e4ee68652579fa3a9bf2a2d87698c561dbbcbad677d396",
+   "packets.csv": "9635862e0e9b4b40819afb2264e80d2ec0330a1d994d1341c05403b86cb5a1a4",
+   "samples.csv": "7fc88c22973dc30a0802cdf50e50be1003bab295a8ac1670dea2539a541bc1b6"
+  },
+  "v01_version": {
+   "decode.json": "04de60b9ac1b51f7d88f57442bf085ae1161753d2b333be1a4b32ac201e07ce1",
+   "packets.csv": "463d23aca4572a64015ec28b6fbcf4ec7985b8d7c6a4675dac547b203d9fb2ea",
+   "samples.csv": "dc567b121c0de36e6f865dfd1d7b79d63d9852f7bbc5fbea4bb630a4456562f3"
+  },
+  "v01_version_damaged": {
+   "decode.json": "c0053943283bb195fbeae494897f2534c5d83ddc8ce404703ff3de1cbd7302be",
+   "packets.csv": "98f96f2f21f355a969871aea50bfb3756684351128e2b4dea938e7196f996072",
+   "samples.csv": "b46901916dc145a10fb340bf64a0fd632bf3590945b6f4d069194c93fb4e49d7"
+  },
+  "v02_byte_loss": {
+   "decode.json": "ec9420a67ae6ce8778dd25e97b0ca7ade763cc426adce1430ab7eef09bcd855b",
+   "packets.csv": "4fedfc02353543becb8547eacd4eb863a226d32b001b947ff0196be785495016",
+   "samples.csv": "4839b9bd3405fb03a26dd0f0520b0cdb5bf862b4c48556c9fc0e2668515c7cd7"
+  },
+  "v02_byte_loss_damaged": {
+   "decode.json": "9b0eef195a20746ca103ff414bb2503271553dc4af098bd2e4a774058167aec2",
+   "packets.csv": "b143b5feb86bd167a78bea1ffafe6fe00475ab47af78be56c6d27cfbceec586f",
+   "samples.csv": "d5e8048d2ea37a30609f5d3ffbd3c356c51ada7410f7d8d61e98bae7255f06ef"
+  },
+  "v02_crc": {
+   "decode.json": "bb2e2022c7ef0bfa64773d49a60ba7532ed2b2e0fe2261f52ba2ee1962f85683",
+   "packets.csv": "5e2cf1ef0f0d4cad3fafad07f49d783f002215f8a50ee61ff6f6763bd4bb1a7c",
+   "samples.csv": "4839b9bd3405fb03a26dd0f0520b0cdb5bf862b4c48556c9fc0e2668515c7cd7"
+  },
+  "v02_crc_damaged": {
+   "decode.json": "88e1ab20b9e9c9b854dd557ce993940aa6871197b3542f86f91f8ea991fef3fe",
+   "packets.csv": "534063757f31e06bcd608ef13aa053b86e255968acfdcfaf80b82bb781597707",
+   "samples.csv": "0df734820f87ea1c66a57da9a426f0c1e0267af4ae6fbf23ca45aa6c4de20f58"
+  },
+  "v02_device_info_changed": {
+   "decode.json": "4bc7181411af220f7f3507a7ca704dda62cebe9952ee50ccdd9720e65c4b9611",
+   "packets.csv": "0a3f977953c2e43f692d7464562b89bd3b4e59be7f35617d025cf402870e58c3",
+   "samples.csv": "6b91ac44d5e3508bcfc276659d88e5f2b4286f1dd04ec999dfb399ede0926a6b"
+  },
+  "v02_device_info_changed_damaged": {
+   "decode.json": "5911ec7bb77734c00ab598f0ff286bd17f52ac7c6cef2b6097bae61871166a55",
+   "packets.csv": "737083c35bbaef96a55bbfb30d320dd557dc469074313d82dabab4bff8f0242f",
+   "samples.csv": "04a491d80755e910fa4feafbb1ee01bfde08f29e887df7ea999da14e4fd086bb"
+  },
+  "v02_duplicate": {
+   "decode.json": "15f0aa67bf39e1aaedb6750789f939cb883727e2b320792dbb43eb4a235ccc07",
+   "packets.csv": "7d26298f059e17c421c6149ce4c3d14cbd4b6adcc7224ca2bef8efd14fb291fb",
+   "samples.csv": "6b91ac44d5e3508bcfc276659d88e5f2b4286f1dd04ec999dfb399ede0926a6b"
+  },
+  "v02_duplicate_damaged": {
+   "decode.json": "66fc464fe42c2740780c599ccf714ce4a65c6620279b9ce2a5dadd3cc3f228d7",
+   "packets.csv": "5d884a9efb8bb06d79f43c7ddf5c52ef56a5d8283ed7dfa79fa06753f1f99768",
+   "samples.csv": "5955b1a326b07c5d79e9854268276730d114b9413201d27dbd09a634d94e6bb9"
+  },
+  "v02_imu_backlog": {
+   "decode.json": "23b1d4e7434fbad3c2c4a7c871cbad0e3881541f5faaa7f723ec2d87a0c7cf2c",
+   "packets.csv": "bc019d9cce6aabb6a9fc5590c676b0ae540eb8c8d097cab98d111896f9e685b0",
+   "samples.csv": "7d682020b96bc1d4c28906be0e6be7c8cbc022825365a18e469586065c68413a"
+  },
+  "v02_imu_backlog_damaged": {
+   "decode.json": "b56d167d3173e85a79377fc5667ac3e605cc7038440fec646bbb07a5d8686705",
+   "packets.csv": "4d4862f4e6273bcaa084ec1513e0dbc3e53d2a9ac26739bfb4a60d9ca6f49fdc",
+   "samples.csv": "9805755af453cba342e99518777adb49c338f4c5e824d0d8c20c1bdfbe33b456"
+  },
+  "v02_imu_fifo_full": {
+   "decode.json": "dc4c174c10aaa773e969d6a78614f47d847a830c7ece4684567a0cb1ee2374d0",
+   "packets.csv": "b4bc57db4bad6b6e84cf3461f41e0f5f2a927614f0b1206d147fe4121127562d",
+   "samples.csv": "37342132af8586d4cfb0a0d500cb4888f70ef73e0414d32204f74f4dba489064"
+  },
+  "v02_imu_fifo_full_damaged": {
+   "decode.json": "68d727d500cb385e866c04315f787210c7c8990123191ad31cbb53a2eb38b9e1",
+   "packets.csv": "e6af0eae93d9da1f14c531c74a683be212d74c9cff8b086503d864c150589d67",
+   "samples.csv": "4d81e9344be0388692caf6cf992223784bc36925fcc31ba479d1934c96dedbc3"
+  },
+  "v02_index_jump": {
+   "decode.json": "bc595e59c5c91fec0df32c36385d31e7674f91971178805b05842e309dba8ce8",
+   "packets.csv": "ba44bf38d85d229fec1f7c0638e8941d066822d3521e0c2a119cb67dd0393bce",
+   "samples.csv": "4dd796525d15a8bc0a5ebd46c26f2c482be5d685442ea193c06442c85c58d269"
+  },
+  "v02_index_jump_damaged": {
+   "decode.json": "c7e0caeb597f5b45eeb37526b3ab8b4e256835bf93c8af953875449cb1afaea4",
+   "packets.csv": "0d8a4f99e33eee85ba36f2092659ceee698f560bde2732aa01ab4a6647d67bb6",
+   "samples.csv": "2601be8eabaf923dc774d82909e4b4c982b89a859d53df1a2738a5709f52e755"
+  },
+  "v02_missing": {
+   "decode.json": "ce30a36a86bc16abc5766401d4ad2338e56a3ab9e83085bd0e1e90706b085b19",
+   "packets.csv": "a9882403bb756e134bfaa4a0e4c41e8d0c5b894c9368ea49f8dbb280bb7786dc",
+   "samples.csv": "4839b9bd3405fb03a26dd0f0520b0cdb5bf862b4c48556c9fc0e2668515c7cd7"
+  },
+  "v02_missing_damaged": {
+   "decode.json": "13ca41efbcf3a965137a4c4ee6c36246ea961ef7a8c0efd75d131d882b36e0da",
+   "packets.csv": "fcee70c5585f7b72b0a78541ccc3d21590ff2b784f7c8e756af6af280c5ed999",
+   "samples.csv": "e805519f8caa54c47ce62edd4f6010f9d624ba64acc9c8034912de133f352f79"
+  },
+  "v02_mixed_version": {
+   "decode.json": "af2ac4b8a42e34d0b2dcca72a215ec2980d825eea271d9867c11895d9674e6c1",
+   "packets.csv": "da047acce749a82ea9050d3bbf25805b0a05030e97e3c150bb9cf3a9e9728bfd",
+   "samples.csv": "cbdf806e9e52aa3d8cfbbb822959d34160d45aff5abb0291c8a6ba2c9615d1b4"
+  },
+  "v02_mixed_version_damaged": {
+   "decode.json": "ed29f0f48931018f3c333d4f409658a3d7c3f5ca5d489201f05a97cbef0e9616",
+   "packets.csv": "edc46855d010e722c212253227d6bfa87f9750916cc2b7aece9f2b17a199953a",
+   "samples.csv": "e37b2c88061e6b26425888c546d9b126971848d4748f6301749f57ca83f0efdd"
+  },
+  "v02_offset": {
+   "decode.json": "89f8c8c3a4ad123393f1d818297cbc93363095831452eaa98a7f927fdbfd7773",
+   "packets.csv": "0d641791b35aae4821784a5543cdd7bcadaea728fb4ae36da331c7e1b45581ff",
+   "samples.csv": "6b91ac44d5e3508bcfc276659d88e5f2b4286f1dd04ec999dfb399ede0926a6b"
+  },
+  "v02_offset_damaged": {
+   "decode.json": "7e010af73560bcbb6469e37321d3e725b253a07b10ff656fab6918309d2c1a9f",
+   "packets.csv": "36a250594cca361d2221a22695b11df6fa1dba777886ef0fa8bb9e12ff82898d",
+   "samples.csv": "2afaf4476682d64daf97f47baa174f7caa3f3fa1b1597d498b897a3013b23759"
+  },
+  "v02_reanchor": {
+   "decode.json": "46bb2383fa03591b13cf2b60dcf2c0d0f96db3e2a840d20015e0ea186cf29989",
+   "packets.csv": "c346b4202c63185f8c75651eb7129f14bb18fde144962dfb81558d16e4893af8",
+   "samples.csv": "1354b80103d95e82e4ea914dac8d87b0e63db34e981c6a0e8f78dd81e3f3e3e4"
+  },
+  "v02_reanchor_damaged": {
+   "decode.json": "1180c8d718ee36d95e43900a8171cb7559d205391240a0ce8e80c4085f6cbde6",
+   "packets.csv": "e3458eca53e00b9b77ab53fa79481e3befe3fba66eb5e709faa3a0b9d04f2461",
+   "samples.csv": "da62c6cdfe0c3aa937a9b79a7ddaf4b4b271862323fc072c61049e9d39dbd42d"
+  },
+  "v02_reordered": {
+   "decode.json": "8163acf13d26acd3e840320293736c3b81111b630622aa544c4eb66014407fae",
+   "packets.csv": "e8df3c7a057e967b2b97903347937faf4e5bc1de9ef734c20835b428514335a0",
+   "samples.csv": "6b91ac44d5e3508bcfc276659d88e5f2b4286f1dd04ec999dfb399ede0926a6b"
+  },
+  "v02_reordered_damaged": {
+   "decode.json": "bd4485221cf8a4084e99d44d7771af4c50dc7dee3f93f3a2145f78b55ebc70ea",
+   "packets.csv": "4eb5bf329c9d981c260b79a493ebd97d5d977dd51ca3df6942b3b28cbd9adf02",
+   "samples.csv": "29cd37edf6e5774aa3870746669146f9b2ba32bb9aadcd210fea43cad17c1a15"
+  },
+  "v02_samp_remap": {
+   "decode.json": "e2f574ec0592c06a25cb33399bcdcb2e0a9d0787c9538e3a291ca894dd4b45d8",
+   "packets.csv": "9ccdc07532b5b90cb18f6a58fda78237215607d21d8f94f6ded2609febe54350",
+   "samples.csv": "cb07a4537e422587b0b6143e64545290c5770cc4aad8d29b84a910b30411b5dd"
+  },
+  "v02_samp_remap_damaged": {
+   "decode.json": "873deaa2c38b9cce6697b68ce16174b578f98cb947e8b3c7380649df956775c8",
+   "packets.csv": "6a8a2c360f92c4cb493514d96867ecbcabd853d028020ebc17dd383b0b6ebefe",
+   "samples.csv": "3bc489ecb780c4447b375add9f764f42f451bfa78e7e89be68c19fb2d217a0fb"
+  },
+  "v02_samp_shift": {
+   "decode.json": "f32b3920079dda2f7d3c263e7b9c92cb47d13ae23c71f825bc324b4b0e1d2363",
+   "packets.csv": "e7334aa115c466a7b40b89929bca7ccd74be2211ca8404cef557645aa41eddaf",
+   "samples.csv": "88e2a61d45ca370eb4180091ccc7796b519d53f1317d2d5556fc4465593f3802"
+  },
+  "v02_samp_shift_damaged": {
+   "decode.json": "bec6bc430e19e3b26b5faed2bf98077288b61c9652c941ea440f8407e9a97675",
+   "packets.csv": "88b763eba505759918c48991df093f6c8091364c050773459fc9380ea53c7e6d",
+   "samples.csv": "47474a822487591895afdeb31885ba8fb9851be4c73350e843e14e3bb43fb506"
+  },
+  "v02_session_restart": {
+   "decode.json": "7261ecafe085a267928be1bc4ff33bb761eeafc6367d901ea79bf72a840e8b3f",
+   "packets.csv": "a08db55d15ffa9d33fd6c0926c6c0f666e5610784dad7e0e443687a2e7389dbf",
+   "samples.csv": "7dafdcb22b87779c009a41319ca3bba13ef5172690412ddbccb57df5ceaf6551"
+  },
+  "v02_session_restart_damaged": {
+   "decode.json": "2035b0500ea24858f069533380a09a2144e926496434e15d032183f0d8f32849",
+   "packets.csv": "0731aa8d71f3fa691d6217dfc02407495d1d3657abc95d5e1e1154342da02539",
+   "samples.csv": "f57864caaed797d5a0ea5c654ef9deb483e276e492823f57b9ade8f2ee0a2419"
+  },
+  "v02_timestamp": {
+   "decode.json": "9c958929fa0b8e3546b54a3f7f74a8f32b84ee5d22613db6e9419b684b439598",
+   "packets.csv": "fbe8506faba71475e187650dce03540bd9646a7e2446f4e7c34872500eba640c",
+   "samples.csv": "4839b9bd3405fb03a26dd0f0520b0cdb5bf862b4c48556c9fc0e2668515c7cd7"
+  },
+  "v02_timestamp_damaged": {
+   "decode.json": "0f22e76f418452de9f7b36bd9ee0ddbb42ed147426326aebbe898d4fa1792d1f",
+   "packets.csv": "399a1ffde21dfb3eadc956bf1c2465aee9a597d9ce136e542600146cf3278a66",
+   "samples.csv": "d5e8048d2ea37a30609f5d3ffbd3c356c51ada7410f7d8d61e98bae7255f06ef"
+  },
+  "v02_timestamp_first": {
+   "decode.json": "318263edfe24da5d32f8e50c286437d84dd184d4a2fa5807458433e32d78a4db",
+   "packets.csv": "578119b904cc4f442e4c15cbb27aef413053ff7aaeb5bf7485f431be9aadff38",
+   "samples.csv": "e9a306f5b6cb597f33ebf23a24f5b5947c8a4e60b72a7e2475c3d27ceb98a315"
+  },
+  "v02_timestamp_first_damaged": {
+   "decode.json": "989ea2d4b8f9c7421d237f335ec4a211fee2bb5943009f1fc179beee60d9d34d",
+   "packets.csv": "c08deff0c749ccb90d4fd7bfcd5318550ee2565083473d432fcd372e4706f4ad",
+   "samples.csv": "dc6af36929ee0b71ae62eaadf59d2d9a03c3603a4e0b1a701ae27ea30fa9aa2d"
+  },
+  "v02_valid": {
+   "decode.json": "daf68298631813793a7ec5b8cc69bdb7a3ff75e81069829a504e4053a073adc5",
+   "packets.csv": "0a3f977953c2e43f692d7464562b89bd3b4e59be7f35617d025cf402870e58c3",
+   "samples.csv": "6b91ac44d5e3508bcfc276659d88e5f2b4286f1dd04ec999dfb399ede0926a6b"
+  },
+  "v02_valid_damaged": {
+   "decode.json": "647a45fa33a92697de0983705122d92b38cc47025bcf6b8a9af1689aebc25c33",
+   "packets.csv": "990386a4868c80ad2be1247d936a400b51ca1e398ac08d9f0ebcdaa36ed661fd",
+   "samples.csv": "d563bf04ade32bdaaa83ee48f190bcf87d2bdc17558a2352f9cdfff5f9169c93"
+  },
+  "v02_version": {
+   "decode.json": "4460c6be036f1e2c9045902a241f8cb9be80337bcaa5a34b7243c0e940e2b159",
+   "packets.csv": "5e2cf1ef0f0d4cad3fafad07f49d783f002215f8a50ee61ff6f6763bd4bb1a7c",
+   "samples.csv": "4839b9bd3405fb03a26dd0f0520b0cdb5bf862b4c48556c9fc0e2668515c7cd7"
+  },
+  "v02_version_damaged": {
+   "decode.json": "7cc8b7ae53f9b29becbb0fce52cea3d997904c381802f766d1d71df6ca828215",
+   "packets.csv": "a619c9893ae338cbb0a3f72165f6a31693637bf452fdf06b72a626f634e8b753",
+   "samples.csv": "d87573534fdf9a62b87bf0192b22b670dd2504c768abe76783fef2dbd12e5bfe"
+  },
+  "v02temp_byte_loss": {
+   "decode.json": "a1339a16c9c3013f04fb4ca755c82c93034d9b0c09b585523f272b6ac2ca8442",
+   "packets.csv": "927e1ff82f2180f498730dd940e68d0ba47c2d29c87675cbbd4490432a82d8f4",
+   "samples.csv": "4df598346f91a2d84dd105c5353a22303aff5fc698a3774dd765222e4b6681aa"
+  },
+  "v02temp_byte_loss_damaged": {
+   "decode.json": "a824d6df128057020be2fa7cc13d7f84b7d84a70168866c935f5805dcd3139e4",
+   "packets.csv": "e0122d9ca27d2a20427deabdb7117ddac190889ecd96153ec3dfdc91e4164091",
+   "samples.csv": "4df598346f91a2d84dd105c5353a22303aff5fc698a3774dd765222e4b6681aa"
+  },
+  "v02temp_crc": {
+   "decode.json": "38b878e93ea59c467867a7736f1f814c2bf15e0627292848c81e34e514c1adb6",
+   "packets.csv": "ab1da9e6bed8f3f17a009430b9d6c83c657c80a9cdd30a85933a5b4769b1658c",
+   "samples.csv": "4df598346f91a2d84dd105c5353a22303aff5fc698a3774dd765222e4b6681aa"
+  },
+  "v02temp_crc_damaged": {
+   "decode.json": "b26f7545423c093aa1348ecb1f199219fddd7842398037e84de7ca376948a62c",
+   "packets.csv": "c7e07109881d72ecc9c201dcf2f479819676543adf01500ff4792ee6981feca1",
+   "samples.csv": "aaece2d0c3d1ddf588daa49cd6f2a95c3d8b5d1ed2df25e1072556370ad13095"
+  },
+  "v02temp_device_info_changed": {
+   "decode.json": "d104098190b0a1be6d921299e12637c3d31fa5f1f23263c73aa0f2a30ce4d323",
+   "packets.csv": "19d1bbc0ce4563a49a56ee612672edc7bc6835dd1e5001928b9d73f1bf9172fb",
+   "samples.csv": "e1f9d047bd8cbbf3a32b6cf73fd42b327ad0ad1fa7b2a0dbe690ab3ce5a115e6"
+  },
+  "v02temp_device_info_changed_damaged": {
+   "decode.json": "19f79b7d3126ddd94c3de5e56eea1f529f505da3e8b8157fd6df9f8064834386",
+   "packets.csv": "7fed41f84d7d9dea3a6ace081a49defdd741023e1fd964aaa4e19420c4feb67d",
+   "samples.csv": "e015ff947bec6f8d95665d97d0e51099b262d42a54b7683646ad5363059f572b"
+  },
+  "v02temp_duplicate": {
+   "decode.json": "db3b3e665b2515d259a40a66f4bdaf457c025704307739c5be1391d81793dab7",
+   "packets.csv": "98c65fd28fa4c7889d0cf70bc2de0e27e1c80d55d83f5b41da20fa1a4213246d",
+   "samples.csv": "e1f9d047bd8cbbf3a32b6cf73fd42b327ad0ad1fa7b2a0dbe690ab3ce5a115e6"
+  },
+  "v02temp_duplicate_damaged": {
+   "decode.json": "e009caf2da1e3dc0f6b4bdce3e1efe6b6385900ac84cbc3d488827d2fa99faba",
+   "packets.csv": "13feb85d0fa0e06aae58f42fcb1e09fad4e4908f4ce7dd215cb448a5a4367053",
+   "samples.csv": "e1f9d047bd8cbbf3a32b6cf73fd42b327ad0ad1fa7b2a0dbe690ab3ce5a115e6"
+  },
+  "v02temp_index_jump": {
+   "decode.json": "22e1b4ea0a87e0b28ca3089bf95c50b2c838989bd09784d25d3853c8a47941ac",
+   "packets.csv": "8cfcdb55761a38fb57dc8167a6e576a6e8a16a3966de62a506e15792b1ae0315",
+   "samples.csv": "98f7b40e572260b234082fe4eef614b41eb2cf2ad205093512f99569490f696d"
+  },
+  "v02temp_index_jump_damaged": {
+   "decode.json": "fb51b6c2c8c93d5348e5fc5aa0ebfe90638837e724cc9367747968396b2c41ad",
+   "packets.csv": "c06fdefea2a5f24e1fa41b03e0382abf3fd138c13725817e0b3c72be5978a502",
+   "samples.csv": "aa9976edbe8a8db2fd24210a6378dbc4f3322a6bfe6f383d69329670060b5946"
+  },
+  "v02temp_missing": {
+   "decode.json": "8e6c24aa5290bf029db0b3c0edf452d64d110017cc00f8f7aae402b78f7bc9c0",
+   "packets.csv": "3774d281fae78f4256fe6656223ab3e9ebdba2d5db7d288dd09a929d53cba85e",
+   "samples.csv": "4df598346f91a2d84dd105c5353a22303aff5fc698a3774dd765222e4b6681aa"
+  },
+  "v02temp_missing_damaged": {
+   "decode.json": "cf36c96a24a57e590638234e3a69a120ccdc7dcace648f79e69012f48cb960f4",
+   "packets.csv": "c1b398d09724e7e4aceb93721c5aa3e8c95bc2c33034a63d7685ed8f90b6e2ab",
+   "samples.csv": "bc6ac4ff4e4562decb95067f97007fe29ff4e5a099588bb54245a93f2e0c1395"
+  },
+  "v02temp_mixed_version": {
+   "decode.json": "9843d03e5dc0ec71f24baed1940d638423f276df76c2a2a29b43d4e6f5c8355b",
+   "packets.csv": "59d46225733e8353a3437c5d949d34e33d1660cd52cb6e9b42d5f2b3a9223aa4",
+   "samples.csv": "a38724fa8b18071303132c39d3e64532909f601dd86468d732eabc8b0e0f7211"
+  },
+  "v02temp_mixed_version_damaged": {
+   "decode.json": "958656ba0badd1172b91ec58db9761a0deb361eea581d6962d383daa5f029969",
+   "packets.csv": "49560bd4de8a49b6d2cd104cb7526ddf80b25518eda66ef3d32862158ea515a1",
+   "samples.csv": "99639f12270c3182e0c096cf670883d3e1fb4efaa1a8cdfa4fd6aafdc329266c"
+  },
+  "v02temp_offset": {
+   "decode.json": "b321bac1951000d1a0332d64bd1199db425771ce1c38289dcd7ce96b686014ca",
+   "packets.csv": "295928b8c440707a91b176e38a2a95d14b6216e5b2e580c700ce5db1beb6d514",
+   "samples.csv": "e1f9d047bd8cbbf3a32b6cf73fd42b327ad0ad1fa7b2a0dbe690ab3ce5a115e6"
+  },
+  "v02temp_offset_damaged": {
+   "decode.json": "15f58c844db31af90706e39795e8be01b70ea9339cbf3b47467f7d33dc999bb4",
+   "packets.csv": "5e03c95cc33f171ce974c47ca4b76093a3868b6678bfc9f966e4ea2d548ac8e0",
+   "samples.csv": "ed313180003ddde3ea229a63ee71da77b508abc0ce3e8323c604fb03442d9225"
+  },
+  "v02temp_reanchor": {
+   "decode.json": "48cadcb0ce0db10e884ddfb03fd80b865e356f7fa0c14a58a6ecc496bd7b41f2",
+   "packets.csv": "3cb02986f122042a59f6f872a56b3ea415106ad420004a2e8fdfb5761aecf6d6",
+   "samples.csv": "cfb9768731ccd95f4e215d4e2c5b892f92132974edb6ecadb629d07c0d3cd4cb"
+  },
+  "v02temp_reanchor_damaged": {
+   "decode.json": "cf977dfa601d05afb81d092184924840cc3fedd9bced2a3f2fb7affa0d288bd0",
+   "packets.csv": "87e86313c7854d7ddfc38e9a102c5491d3061739040875c998d85288fe1e1473",
+   "samples.csv": "4aa21c22381f9da684e6615d6b7b30510dbb920bb6de1ade954a6c5b43ee1502"
+  },
+  "v02temp_reordered": {
+   "decode.json": "689cbd180cd8f466fe30f905af958a07e1ca1db3a987a4c53d0df6fb116d3b59",
+   "packets.csv": "139afe0d57ee234dbef10cfbc7e2ae96f1b32b2b71ad316b88b96c3ad5e65368",
+   "samples.csv": "e1f9d047bd8cbbf3a32b6cf73fd42b327ad0ad1fa7b2a0dbe690ab3ce5a115e6"
+  },
+  "v02temp_reordered_damaged": {
+   "decode.json": "1bafa15b8a3353760db5669fc2a38f1a2907b628bed35f4379e3170b50b22ea4",
+   "packets.csv": "f9536d8baee44ab92e9a8bb31276b9d310fce1dbd3363762c4328f926e18f0bc",
+   "samples.csv": "e1f9d047bd8cbbf3a32b6cf73fd42b327ad0ad1fa7b2a0dbe690ab3ce5a115e6"
+  },
+  "v02temp_samp_remap": {
+   "decode.json": "89a8f25cf3decca8686d31aefc72a07ea447aeb22921489ea3724623c5019177",
+   "packets.csv": "57a5a75ee192fd7d07f94d25645783cc4220bbfb39b7b2c04fc5b6b93e291a7a",
+   "samples.csv": "7e454bd7db6b0e3e2da1db67c6b892beb8d45060edfb830657da07d3a3e20936"
+  },
+  "v02temp_samp_remap_damaged": {
+   "decode.json": "c09073f4d89eb4e2ff7712eb327750ed6e42e24ad8e847138b20fe533199623d",
+   "packets.csv": "7ae9e557c12cc311ccc7ed66e914dd62d08ad04c46cbff085f63314ee39643d3",
+   "samples.csv": "da1c1c0103e5c2d467de69c850842da64f3d69ebf3da5275ef33a95286fdb145"
+  },
+  "v02temp_samp_shift": {
+   "decode.json": "fd78dca6961a414937e573500785dde9f3d0074c61d9aaf2b69efb8e88580a7d",
+   "packets.csv": "85878352839bdba3d3c54f0401468313053930d63b78d79f7a8f62eeb0cc3f00",
+   "samples.csv": "88ff5303b036fce1d58782904f132676e5b80a58287b5cd92f871c22a6a45248"
+  },
+  "v02temp_samp_shift_damaged": {
+   "decode.json": "c6fb6720fbe1466982aee388db6fa2bbcbf2bc88c09b37a26cd6df9c85586af5",
+   "packets.csv": "0d2e67b5e5160e5f0843bc7b939330f68c6731684aca2f50ecce5f0af5178c1e",
+   "samples.csv": "40397140221d8a0a5dcce61bfea593a35a755ea1b7f958f8697ab55817a372aa"
+  },
+  "v02temp_session_restart": {
+   "decode.json": "f07bec2a23c13bccd695a61282580f178a7681bebb49f8666b97dc152f7788c9",
+   "packets.csv": "77d650438f306cfffa615e6a527b0a4b06eba61d602de228fe844b4edc56a970",
+   "samples.csv": "5e8c2a0d57f07542d870679da6607ab7925cd75d1729ca2fc9b8ab464d68769a"
+  },
+  "v02temp_session_restart_damaged": {
+   "decode.json": "65b3066b59b2c7c5f29e33819fcf61b37f6d3cecd8b698d93a321fc8ac1d0ecc",
+   "packets.csv": "c8c33348fa159544c0a0d78389cb36e4de7d84c9fa5c959a9357cac371b826a9",
+   "samples.csv": "5e8c2a0d57f07542d870679da6607ab7925cd75d1729ca2fc9b8ab464d68769a"
+  },
+  "v02temp_timestamp": {
+   "decode.json": "eb9fce84b0bc720cf8345625033c921bad8740bbde173ea2dc41d67eee576d80",
+   "packets.csv": "df516179f64b7d4819d97811962e0f9b4f0fe67f32263849b62db3b77ab95e03",
+   "samples.csv": "4df598346f91a2d84dd105c5353a22303aff5fc698a3774dd765222e4b6681aa"
+  },
+  "v02temp_timestamp_damaged": {
+   "decode.json": "0b775f152abc3f812aa33ab7b71c951e48b232b784d97c89cf2ce6c234e1a5ee",
+   "packets.csv": "bbaaf7099fee129d74f1980255cf463775b6e1ad077f03e255102a4a37837940",
+   "samples.csv": "4df598346f91a2d84dd105c5353a22303aff5fc698a3774dd765222e4b6681aa"
+  },
+  "v02temp_timestamp_first": {
+   "decode.json": "1668996824c8c87dc82835185263e54db72a7451cea04ba0ab892529f1ad4c50",
+   "packets.csv": "f5c47adf86b4d6d59a13732049cd784c3970b39a6b9bf9801318e567a69fc56f",
+   "samples.csv": "007d77314589da2cd34870cb2e435bd1e1196129676955435375483b759e92ab"
+  },
+  "v02temp_timestamp_first_damaged": {
+   "decode.json": "afd834fd9a3ddbfb118c8693596e5da480fc91e63e3ce74f52b25ec5d0b1d6ba",
+   "packets.csv": "b065f1f00ca15830050a748eb8ba7b495cab696b1bf66866cd796842288d9b5d",
+   "samples.csv": "a511b899568d0af9533ef5db9b0ddf6e7b3a89e79a5925cc885f575654b1a2ad"
+  },
+  "v02temp_valid": {
+   "decode.json": "80c58e6489b3fb37bf69463b61b669b91503aa86937cdad82c5d611c00e989f2",
+   "packets.csv": "19d1bbc0ce4563a49a56ee612672edc7bc6835dd1e5001928b9d73f1bf9172fb",
+   "samples.csv": "e1f9d047bd8cbbf3a32b6cf73fd42b327ad0ad1fa7b2a0dbe690ab3ce5a115e6"
+  },
+  "v02temp_valid_damaged": {
+   "decode.json": "95980319f155c8c9513984f4e0f5e586ef0354b2d4be78514c5a00f2f60fcae1",
+   "packets.csv": "b2516c4473a204074602e7280410596b3ce637b2968d5c8184485805fa15a537",
+   "samples.csv": "8511f54b948b0af8cbae141ddd037def609fb3e1ba3328d41e00addd1d157ef3"
+  },
+  "v02temp_version": {
+   "decode.json": "9d7f6938d0217c8eea085c50c675b3c1df14a04565b19eb6582a909d31f9818b",
+   "packets.csv": "ab1da9e6bed8f3f17a009430b9d6c83c657c80a9cdd30a85933a5b4769b1658c",
+   "samples.csv": "4df598346f91a2d84dd105c5353a22303aff5fc698a3774dd765222e4b6681aa"
+  },
+  "v02temp_version_damaged": {
+   "decode.json": "1d9158d22abb906b26da316836cbc706cfadff343dd3be1d89c0ec697eaa4835",
+   "packets.csv": "0c7dae17c4b277ee74b0ff09c2b06240777ace90986f806162bc50fb605f19a1",
+   "samples.csv": "0b6eec65f4efa07803e5788bf06364e6157626e969a2da0f8c3658e555789ef4"
+  }
+ },
+ "source_type": "SYNTHETIC",
+ "streams": "<tag>_<case>: generate_stream of the simulation config of <tag> (v01: packet_simulation_v3.json, v02: packet_simulation_v3_v02.json, v02temp: packet_simulation_v3_v02_temp.json) for every case it supports, with session_metadata(config, case, '0' * 64). <tag>_<case>_damaged: the same bytes with max(1, len // 3000) single-bit flips at random.Random(len(name)) positions (byte = randrange(len), bit = randrange(8)), name = <tag>_<case>."
+}

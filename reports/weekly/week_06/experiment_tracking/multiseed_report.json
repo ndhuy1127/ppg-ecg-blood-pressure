@@ -1,0 +1,42 @@
+{
+  "schema_version": "b3-multiseed-v1",
+  "status": "DETERMINISTIC",
+  "purpose": "determinism check of B3 over the model seed; not a variance estimate (uncertainty = subject bootstrap CI of each run)",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "base_config_sha256": "d66d299d789207e518fb88a96e39af7fe548ab8e42d2f4df9f2449a6ba94f521",
+  "stochastic_params_in_config": [],
+  "runs": {
+    "42": {
+      "dir": "seed_42",
+      "config_sha256": "d66d299d789207e518fb88a96e39af7fe548ab8e42d2f4df9f2449a6ba94f521",
+      "report_sha256": "d154bbedfa6ec6f79c87187869f1aa556a0caa9e66eb25b62ddddc4069ff6d1d",
+      "predictions_val_sha256": "aad32a7f9195a83385f25574febea8457b0690ad34f38deb4d36c2383171a715"
+    },
+    "43": {
+      "dir": "seed_43",
+      "config_sha256": "523e38013c44c298d7257d8deed2f9895205ee37a6d5b10c0a707a055ababd5c",
+      "report_sha256": "74c564a81ee39adc2cd0ce925cc84c0223fcdefa4c8381c827c83f29f151630d",
+      "predictions_val_sha256": "aad32a7f9195a83385f25574febea8457b0690ad34f38deb4d36c2383171a715"
+    },
+    "44": {
+      "dir": "seed_44",
+      "config_sha256": "099b430b4ee3e04792b89664128a2b5051067f136a30dd6e010be304df4cb74d",
+      "report_sha256": "72d8674de59c517ed35782e82ea241abdea1bed874c9062453df583d9aee59de",
+      "predictions_val_sha256": "aad32a7f9195a83385f25574febea8457b0690ad34f38deb4d36c2383171a715"
+    }
+  },
+  "evaluation_split": "val",
+  "code_provenance": {
+    "git_commit": "1c708df2b680f27c897b65e043d5d784af40157e",
+    "workspace_has_changes": false
+  },
+  "outputs_sha256": {
+    "seed_spread.csv": "062025b06cd2a47dfd6dea82aa7644e3777c98b5027aa336e2461024d72dd513",
+    "multiseed_table.md": "c273a4851b658933bd03837b86169dc3d5cae032b8974245edd6248028afcaf7"
+  },
+  "run_time_utc": "2026-11-07T06:35:24.159108+00:00"
+}

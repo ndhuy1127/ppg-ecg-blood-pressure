@@ -7,7 +7,9 @@ attempts, then outcome unknown; a new SESSION_ID cancels; the inbox keeps a
 partial line until its newline and rejects bad lines. Amendment 2026-10-29:
 SET_PPG_LED is unknown only 2.5 s after its first send, an answer after
 "unknown" is journaled as late_ack, MARK_EVENT, and the PC refuses LED codes
-above 0x7F unless the bring-up flag is given.
+above 0x7F unless the bring-up flag is given. 2026-11-07: a MARK_EVENT is sent
+only while at most 1 s old (else expired, or unknown after a send), and every
+outcome is also a line for the operator (notify).
 """
 
 import io
@@ -193,9 +195,10 @@ class FakeDevice:
     says (LED code above 0x7F: result 8; MARK_EVENT: an event packet with the
     code, then the answer); 0.1 s per read."""
 
-    def __init__(self, recording, reads=40, entries=LED_DEFAULT, filler_code=4):
+    def __init__(self, recording, reads=40, entries=LED_DEFAULT, filler_code=4,
+                 later=()):
         self.recording, self.reads, self.count = recording, reads, 0
-        self.entries, self.filler_code = entries, filler_code
+        self.entries, self.filler_code, self.later = entries, filler_code, later
         self.now = 0.0
         self.out, self.session, self.seq = [], 0x5EED1234, {0xC1: 0, 0xD3: 0}
         self.on_idle = None
@@ -213,6 +216,9 @@ class FakeDevice:
         self.now += 0.1
         if self.count == 3:
             for entry in self.entries:
+                queue_command(self.recording, entry)
+        if self.count == 20:
+            for entry in self.later:
                 queue_command(self.recording, entry)
         if self.count > self.reads:
             return b""
@@ -298,13 +304,162 @@ def test_set_ppg_led_waits_2_5_s_before_unknown(desk):
 
 def test_other_commands_keep_the_1_5_s_window(desk):
     desk.observe([info(7)])
-    append(desk.inbox, '{"cmd": "mark_event", "event": "cuff_end"}\n')
+    append(desk.inbox, '{"cmd": "ping"}\n')
     desk.service()
-    assert parse_frame(desk.sent[0]) == (3, 100, b"\x02")
+    assert parse_frame(desk.sent[0]) == (1, 100, b"")
     step(desk, 1.45)
     assert desk.events()[-1] == "sent" and len(desk.sent) == 3
     step(desk, 0.2)
     assert desk.events()[-1] == "unknown"
+
+
+def test_a_mark_is_resent_only_while_at_most_1_s_old(desk):
+    desk.observe([info(7)])
+    append(desk.inbox, '{"cmd": "mark_event", "event": "cuff_end"}\n')
+    desk.service()
+    assert parse_frame(desk.sent[0]) == (3, 100, b"\x02")
+    step(desk, 0.55)
+    assert len(desk.sent) == 2  # the resend at 0.5 s
+    step(desk, 0.55)
+    # The third send would be past 1 s: not sent, outcome unknown at once.
+    assert len(desk.sent) == 2 and desk.events()[-1] == "unknown"
+    entries = [json.loads(x) for x in desk.journal.getvalue().splitlines()]
+    assert entries[-1]["reason"] == "mark_event_age_limit"
+    # A late answer is still matched.
+    desk.observe([ack_packet(7, 0, 3, 100)])
+    assert desk.events()[-1] == "late_ack"
+
+
+def test_a_mark_behind_a_slow_command_expires_unsent(desk):
+    messages = []
+    desk.notify = messages.append
+    desk.observe([info(7)])
+    append(desk.inbox, '{"cmd": "set_ppg_led", "green": 18, "red": 36, "ir": 36}\n'
+                       '{"cmd": "mark_event", "event": "cuff_end"}\n')
+    desk.service()
+    step(desk, 0.95)
+    assert "expired" not in desk.events()
+    step(desk, 0.1)
+    # Over 1 s old while the LED command waits for its answer: never sent.
+    assert desk.events()[-1] == "expired"
+    assert desk.sent and all(parse_frame(frame)[0] == 2 for frame in desk.sent)
+    entries = [json.loads(x) for x in desk.journal.getvalue().splitlines()]
+    assert entries[-1]["limit_s"] == 1.0 and entries[-1]["waited_s"] > 1.0
+    assert "NOT SENT" in messages[-1] and "mark_event" in messages[-1]
+
+
+def test_a_mark_sent_at_exactly_1_s_is_still_sent(desk):
+    # The limit is "at most 1.0 s old": sends at 0, 0.5 and 1.0 s all go out; with
+    # three sends used, the outcome is the usual unknown (no age reason).
+    desk.observe([info(7)])
+    append(desk.inbox, '{"cmd": "mark_event", "event": "cuff_end"}\n')
+    desk.service()
+    for t in (100.5, 101.0, 101.5):
+        desk.clk.t = t
+        desk.service()
+    assert len(desk.sent) == 3 and desk.events()[-1] == "unknown"
+    entries = [json.loads(x) for x in desk.journal.getvalue().splitlines()]
+    assert "reason" not in entries[-1] and entries[-1]["attempts"] == 3
+
+
+def test_a_slow_operator_line_cannot_push_a_mark_past_its_age(desk):
+    # Review of 2026-11-07: the age was checked on a clock read before the journal
+    # lines and messages of the same service call; each message here takes 0.2 s.
+    def slow(text):
+        desk.clk.t += 0.2
+
+    desk.notify = slow
+    desk.observe([info(7)])
+    append(desk.inbox, '{"cmd": "ping"}\n')
+    desk.service()  # ping sent at 100.0, again at 100.5 and 101.0
+    desk.clk.t = 100.5
+    desk.service()
+    desk.clk.t = 100.6
+    append(desk.inbox, '{"cmd": "mark_event", "event": "cuff_end"}\n')
+    desk.service()
+    for t in (101.0, 101.5):  # at 101.5 the mark is 0.9 s old, then the ping's
+        desk.clk.t = t        # "unknown" line takes it to 1.1 s
+        desk.service()
+    assert desk.events()[-2:] == ["unknown", "expired"]
+    assert all(parse_frame(frame)[0] == 1 for frame in desk.sent)
+
+
+def test_the_age_of_a_mark_starts_when_its_inbox_block_is_read(desk):
+    # Review round 2 (2026-11-07): a bad line before the mark in the same read,
+    # whose message takes 1.1 s, must not make the mark look 1.1 s younger.
+    def slow(text):
+        desk.clk.t += 1.1
+
+    desk.notify = slow
+    desk.observe([info(7)])
+    append(desk.inbox, 'not json\n{"cmd": "mark_event", "event": "cuff_end"}\n')
+    desk.service()
+    assert desk.events() == ["rejected", "queued", "expired"] and desk.sent == []
+
+
+def test_a_short_port_write_is_an_error(tmp_path):
+    inbox = tmp_path / "command_inbox.jsonl"
+    inbox.write_bytes(b'{"cmd": "ping"}\n')
+    journal, messages = io.StringIO(), []
+    d = CommandDesk(inbox, journal, lambda frame: len(frame) - 1, Clock(), first_seq=0,
+                    notify=messages.append)
+    d.observe([info(1)])
+    d.service()
+    sent = [json.loads(x) for x in journal.getvalue().splitlines()][-1]
+    assert sent["event"] == "sent" and sent["error"] == "short write: 8 of 9 bytes"
+    assert messages == ["WARNING: command line 1 (ping): port write failed: short "
+                        "write: 8 of 9 bytes"]
+
+
+def test_an_inbox_that_disappears_stops_commands_not_the_recording(desk):
+    messages = []
+    desk.notify = messages.append
+    desk.observe([info(7)])
+    desk.inbox.unlink()
+    desk.service()
+    desk.service()
+    desk.close()
+    assert desk.events() == ["inbox_unreadable"]
+    assert messages[0].startswith("WARNING: command inbox cannot be read")
+
+
+def test_a_mark_before_any_packet_expires(desk):
+    append(desk.inbox, '{"cmd": "mark_event", "event": "operator"}\n'
+                       '{"cmd": "ping"}\n')
+    desk.service()
+    step(desk, 1.1)
+    assert desk.events() == ["queued", "queued", "expired"] and desk.sent == []
+    desk.observe([info(7)])
+    desk.service()  # the ping has no age limit
+    assert desk.events()[-1] == "sent" and parse_frame(desk.sent[0])[0] == 1
+
+
+def test_operator_lines_for_every_outcome(desk):
+    messages = []
+    desk.notify = messages.append
+    desk.observe([info(7)])
+    append(desk.inbox, '{"cmd": "set_ppg_led", "green": 18, "red": 36, "ir": 36}\n'
+                       '{"cmd": "ping"}\nnot json\n')
+    desk.service()
+    assert messages == ["WARNING: inbox line 3 rejected: Expecting value: line 1 "
+                        "column 1 (char 0)"]
+    desk.observe([ack_packet(7, 0, 2, 100, result=4)])  # busy
+    assert messages[-1] == ("WARNING: command line 1 (set_ppg_led): device answered "
+                            "busy")
+    step(desk, 0.55)
+    desk.observe([ack_packet(7, 1, 1, 101)])
+    assert messages[-1] == "command line 2 (ping): device answered ok"
+    append(desk.inbox, '{"cmd": "set_ppg_led", "green": 20, "red": 36, "ir": 36}\n')
+    step(desk, 0.55)
+    desk.observe([ack_packet(7, 2, 2, 102, gen=3)])
+    assert messages[-1] == ("command line 4 (set_ppg_led): device answered ok, LED "
+                            "generation 3")
+    append(desk.inbox, '{"cmd": "ping"}\n')
+    step(desk, 2.2)
+    assert messages[-1].startswith("WARNING: command line 5 (ping): outcome unknown, "
+                                   "no answer after 3 sends")
+    # Queued steps and normal sends make no line.
+    assert len(messages) == 5
 
 
 def test_an_answer_after_unknown_is_a_late_ack(desk):
@@ -368,14 +523,20 @@ def test_record_mark_event_and_over_limit_logger_integration(tmp_path):
     out = tmp_path / "rec"
     entries = ({"cmd": "mark_event", "event": "cuff_end"},
                {"cmd": "set_ppg_led", "green": 18, "red": 200, "ir": 36,
-                "allow_over_firmware_limit": True},
-               {"cmd": "mark_event", "event": "operator"})
-    device = FakeDevice(out, entries=entries, filler_code=1)
+                "allow_over_firmware_limit": True})
+    # The second mark comes later: queued with the others it would wait over 1 s
+    # behind them and expire (test_record_a_late_mark_expires).
+    device = FakeDevice(out, entries=entries, filler_code=1,
+                        later=({"cmd": "mark_event", "event": "operator"},))
+    messages = []
     record(device, out, LOGGER_CONFIG, meta_path, ROOT, "fake", commands=True,
-           clock=lambda: device.now)
+           clock=lambda: device.now, notify=messages.append)
     journal = [json.loads(x) for x in
                (out / "commands_sent.jsonl").read_text(encoding="utf-8").splitlines()]
-    assert [e["event"] for e in journal] == ["queued"] * 3 + ["sent", "acked"] * 3
+    assert [e["event"] for e in journal] == (["queued"] * 2 + ["sent", "acked"] * 2
+                                             + ["queued", "sent", "acked"])
+    assert ("WARNING: command line 2 (set_ppg_led): device answered out_of_range"
+            in messages)
     assert journal[1]["command"]["allow_over_firmware_limit"] is True
     sent = [bytes.fromhex(e["bytes_hex"]) for e in journal if e["event"] == "sent"]
     assert [parse_frame(f)[2][-3:] for f in sent] == [b"\x02", bytes([18, 200, 36]),
@@ -391,3 +552,23 @@ def test_record_mark_event_and_over_limit_logger_integration(tmp_path):
     assert counts.get("command_failed") == 1
     assert not {"command_ack_invalid", "unknown_event_code",
                 "events_lost_before_send", "event_ordinal_inconsistent"} & set(counts)
+
+
+def test_record_a_late_mark_expires(tmp_path):
+    sim = json.loads(SIM_V02.read_bytes())
+    meta = session_metadata(sim, "valid", "0" * 64)
+    meta_path = tmp_path / "meta.json"
+    meta_path.write_text(json.dumps(meta), encoding="utf-8")
+    out = tmp_path / "rec"
+    entries = (*LED_DEFAULT, {"cmd": "mark_event", "event": "cuff_end"})
+    device = FakeDevice(out, entries=entries, filler_code=1)
+    messages = []
+    record(device, out, LOGGER_CONFIG, meta_path, ROOT, "fake", commands=True,
+           clock=lambda: device.now, notify=messages.append)
+    journal = [json.loads(x) for x in
+               (out / "commands_sent.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [e["event"] for e in journal] == ["queued"] * 3 + ["sent", "acked"] * 2 + [
+        "expired"]
+    assert any("NOT SENT" in text for text in messages)
+    decode = json.loads((out / "decode.json").read_bytes())
+    assert 2 not in {e["data"][0] for e in decode["sessions"][0]["events"]}

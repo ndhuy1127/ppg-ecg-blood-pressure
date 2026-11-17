@@ -16,6 +16,20 @@ refused. Every step goes to the journal (``commands_sent.jsonl``) with the PC
 time (``pc_monotonic_s``), never a device time. The raw stream and its decode
 do not depend on any of this. Clock and port write are passed in, so the logic
 runs without a device.
+
+MARK_EVENT (proposed 2026-11-07, pending team review): the device times the
+event when the command arrives, so a mark is (re)sent only while it is at most
+``MARK_EVENT_MAX_AGE_S`` old, counted from when the record loop read it from
+the inbox and checked on a fresh clock reading right before each port write.
+One that cannot be sent in time (another command still outstanding, no
+SESSION_ID yet) is journaled ``expired`` and never sent; one sent but not
+answered whose next send would come too late is ``unknown`` with reason
+``mark_event_age_limit``. A port write that takes fewer bytes than the frame is
+an error in the journal (``short write``). An inbox that can no longer be read
+(deleted, say) is journaled ``inbox_unreadable`` and no longer read; the
+recording goes on. With ``notify`` set, each outcome (answered, unknown, late,
+rejected, expired, cancelled, not sent, a failed port write, an inbox problem)
+is also written as one line for the operator.
 """
 
 import json
@@ -32,12 +46,16 @@ ATTEMPTS = 3
 # 2 s after it came (then it is withdrawn with BUSY), plus margin.
 ACK_WAIT_S = {COMMANDS["set_ppg_led"]: 2.5}
 MAX_LINE = 1024
+MARK_EVENT_MAX_AGE_S = 1.0
+NAMES = {cmd_id: name for name, cmd_id in COMMANDS.items()}
 
 
 class CommandDesk:
-    def __init__(self, inbox_path, journal, write, clock, first_seq=None):
+    def __init__(self, inbox_path, journal, write, clock, first_seq=None,
+                 notify=None):
         self.inbox_path, self.journal, self.write, self.clock = (
             inbox_path, journal, write, clock)
+        self.notify = notify
         self.seq = secrets.randbelow(1 << 16) if first_seq is None else first_seq
         self.issued = 0
         self.offset, self.partial, self.lines = 0, b"", 0
@@ -51,6 +69,10 @@ class CommandDesk:
         entry = {"event": event, "pc_monotonic_s": round(self.clock(), 6), **fields}
         self.journal.write(json.dumps(entry, sort_keys=True) + "\n")
         self.journal.flush()
+        if self.notify is not None:
+            text = _operator_text(event, fields)
+            if text is not None:
+                self.notify(text)
 
     def observe(self, packets):
         """Decoded packets of the last chunk, in stream order."""
@@ -67,36 +89,46 @@ class CommandDesk:
             if p is not None and ack["cmd_id"] == p["cmd_id"] and (
                 key == (p["session"], p["cmd_seq"])
             ):
-                self._log("acked", line=p["line"], cmd_seq=p["cmd_seq"],
-                          result=ack["result"], generation=ack["generation"],
-                          ack_seq=packet.seq)
+                self._log("acked", line=p["line"], cmd=NAMES[p["cmd_id"]],
+                          cmd_seq=p["cmd_seq"], result=ack["result"],
+                          generation=ack["generation"], ack_seq=packet.seq)
                 self.pending = None
             elif key in self.unknown and self.unknown[key]["cmd_id"] == ack["cmd_id"]:
                 late = self.unknown.pop(key)
-                self._log("late_ack", line=late["line"], cmd_seq=late["cmd_seq"],
-                          result=ack["result"], generation=ack["generation"],
+                self._log("late_ack", line=late["line"], cmd=NAMES[late["cmd_id"]],
+                          cmd_seq=late["cmd_seq"], result=ack["result"],
+                          generation=ack["generation"],
                           ack_seq=packet.seq,
                           after_first_send_s=round(self.clock() - late["first_sent"], 6))
 
     def _cancel_on_new_session(self, new_session):
         if self.pending is not None:
             p = self.pending
-            self._log("session_changed", line=p["line"], cmd_seq=p["cmd_seq"],
-                      old_session=p["session"], new_session=new_session)
+            self._log("session_changed", line=p["line"], cmd=NAMES[p["cmd_id"]],
+                      cmd_seq=p["cmd_seq"], old_session=p["session"],
+                      new_session=new_session)
             self.pending = None
 
     def _read_inbox(self):
         if not self.inbox_open:
             return
-        with open(self.inbox_path, "rb") as inbox:
-            inbox.seek(0, 2)
-            size = inbox.tell()
-            if size < self.offset:
-                self._log("inbox_truncated", size=size, offset=self.offset)
-                self.inbox_open = False
-                return
-            inbox.seek(self.offset)
-            data = inbox.read()
+        try:
+            with open(self.inbox_path, "rb") as inbox:
+                inbox.seek(0, 2)
+                size = inbox.tell()
+                if size < self.offset:
+                    self._log("inbox_truncated", size=size, offset=self.offset)
+                    self.inbox_open = False
+                    return
+                inbox.seek(self.offset)
+                data = inbox.read()
+            # The age of a mark starts here, for every line of this read: journal
+            # lines and messages about earlier lines must not make it look younger.
+            read_at = self.clock()
+        except OSError as exc:  # never stops the recording
+            self._log("inbox_unreadable", error=f"{type(exc).__name__}: {exc}")
+            self.inbox_open = False
+            return
         self.offset += len(data)
         data = self.partial + data
         *complete, rest = data.split(b"\n")
@@ -111,7 +143,7 @@ class CommandDesk:
             except (ValueError, UnicodeDecodeError) as error:
                 self._log("rejected", line=self.lines, error=str(error))
                 continue
-            self.queue.append((self.lines, entry))
+            self.queue.append((self.lines, entry, read_at))
             self._log("queued", line=self.lines, command=entry)
         if self.skipping or len(rest) > MAX_LINE:
             # Dropped through its newline; it is rejected (and counted) there.
@@ -119,20 +151,52 @@ class CommandDesk:
         self.partial = rest
 
     def _send(self):
+        """Send the pending command (again). A mark past its age is not sent:
+        the clock is read here, right before the write, since journal lines and
+        operator messages before it take time too."""
         p = self.pending
+        now = self.clock()
+        if self._too_old(p["cmd_id"], p["queued_at"], now):
+            if p["attempt"] == 0:
+                self._log("expired", line=p["line"], cmd=NAMES[p["cmd_id"]],
+                          waited_s=round(now - p["queued_at"], 6),
+                          limit_s=MARK_EVENT_MAX_AGE_S)
+            else:
+                self._log("unknown", line=p["line"], cmd=NAMES[p["cmd_id"]],
+                          cmd_seq=p["cmd_seq"], attempts=p["attempt"],
+                          reason="mark_event_age_limit")
+                self.unknown[(p["session"], p["cmd_seq"])] = p
+            self.pending = None
+            return
         p["attempt"] += 1
-        p["sent_at"] = self.clock()
+        p["sent_at"] = now
         if p["attempt"] == 1:
             p["first_sent"] = p["sent_at"]
         self.next_send = p["sent_at"] + RETRY_S
         try:
             written = self.write(p["frame"])
-            error = None
+            error = None if written == len(p["frame"]) else (
+                f"short write: {written} of {len(p['frame'])} bytes")
         except Exception as exc:  # serial write timeout or a closed port
             written, error = 0, f"{type(exc).__name__}: {exc}"
-        self._log("sent", line=p["line"], cmd_seq=p["cmd_seq"], session=p["session"],
-                  attempt=p["attempt"], bytes_hex=p["frame"].hex(),
-                  written=written, error=error)
+        self._log("sent", line=p["line"], cmd=NAMES[p["cmd_id"]], cmd_seq=p["cmd_seq"],
+                  session=p["session"], attempt=p["attempt"],
+                  bytes_hex=p["frame"].hex(), written=written, error=error)
+
+    def _too_old(self, cmd_id, queued_at, now):
+        return cmd_id == COMMANDS["mark_event"] and now - queued_at > MARK_EVENT_MAX_AGE_S
+
+    def _expire_marks(self, now):
+        """Drop queued marks that can no longer be sent in time."""
+        kept = []
+        for line, entry, queued_at in self.queue:
+            if self._too_old(COMMANDS.get(entry["cmd"]), queued_at, now):
+                self._log("expired", line=line, cmd=entry["cmd"],
+                          waited_s=round(now - queued_at, 6),
+                          limit_s=MARK_EVENT_MAX_AGE_S)
+            else:
+                kept.append((line, entry, queued_at))
+        self.queue = kept
 
     def service(self):
         self._read_inbox()
@@ -140,25 +204,26 @@ class CommandDesk:
         p = self.pending
         if p is not None and now >= self.next_send:
             if p["attempt"] < ATTEMPTS:
-                self._send()
+                self._send()  # or, for a mark too old by then, unknown
             elif now >= p["first_sent"] + ACK_WAIT_S.get(p["cmd_id"], 0.0):
-                self._log("unknown", line=p["line"], cmd_seq=p["cmd_seq"],
-                          attempts=p["attempt"])
+                self._log("unknown", line=p["line"], cmd=NAMES[p["cmd_id"]],
+                          cmd_seq=p["cmd_seq"], attempts=p["attempt"])
                 self.unknown[(p["session"], p["cmd_seq"])] = p
                 self.pending = None
+        self._expire_marks(now)
         while self.pending is None and self.queue and self.issued >= 1 << 16:
-            line, _ = self.queue.pop(0)
+            line, _, _ = self.queue.pop(0)
             self._log("rejected", line=line, error="CMD_SEQ values used up in this "
                                                    "recording")
         if (self.pending is None and self.queue and self.session_id is not None
                 and now >= self.next_send):
-            line, entry = self.queue.pop(0)
+            line, entry, queued_at = self.queue.pop(0)
             cmd_id, params = command_from_json(entry, self.session_id)
             self.issued += 1
             self.seq = (self.seq + 1) & 0xFFFF
             self.pending = {"line": line, "cmd_id": cmd_id, "cmd_seq": self.seq,
                             "session": self.session_id, "attempt": 0, "sent_at": 0.0,
-                            "first_sent": 0.0,
+                            "first_sent": 0.0, "queued_at": queued_at,
                             "frame": encode_command(cmd_id, self.seq, params)}
             self._send()
 
@@ -167,9 +232,50 @@ class CommandDesk:
         self._read_inbox()
         if self.pending is not None:
             p = self.pending
-            self._log("unknown", line=p["line"], cmd_seq=p["cmd_seq"],
-                      attempts=p["attempt"], reason="recording ended")
+            self._log("unknown", line=p["line"], cmd=NAMES[p["cmd_id"]],
+                      cmd_seq=p["cmd_seq"], attempts=p["attempt"],
+                      reason="recording ended")
             self.pending = None
-        for line, _ in self.queue:
-            self._log("not_sent", line=line, reason="recording ended")
+        for line, entry, _ in self.queue:
+            self._log("not_sent", line=line, cmd=entry["cmd"], reason="recording ended")
         self.queue = []
+
+
+def _operator_text(event, fields):
+    """One line for the operator about a journal step; None for steps that are
+    not an outcome (queued, a normal send)."""
+    what = f"command line {fields.get('line')} ({fields.get('cmd', 'unparsed')})"
+    if event == "acked":
+        generation = (f", LED generation {fields['generation']}"
+                      if fields["generation"] else "")
+        text = f"{what}: device answered {fields['result']}{generation}"
+        return text if fields["result"] == "ok" else "WARNING: " + text
+    if event == "late_ack":
+        return (f"WARNING: {what}: late answer {fields['result']} "
+                f"{fields['after_first_send_s']:.1f} s after the first send; it was "
+                "already logged unknown")
+    if event == "unknown":
+        reason = fields.get("reason")
+        why = {"mark_event_age_limit": f"no answer within {MARK_EVENT_MAX_AGE_S:g} s, "
+                                       "not sent again (the mark may be missing)",
+               "recording ended": "recording ended before an answer"}.get(
+                   reason, f"no answer after {fields['attempts']} sends")
+        return f"WARNING: {what}: outcome unknown, {why}"
+    if event == "expired":
+        return (f"WARNING: {what}: NOT SENT, waited {fields['waited_s']:.1f} s (limit "
+                f"{fields['limit_s']:g} s); write the time down by hand")
+    if event == "rejected":
+        return f"WARNING: inbox line {fields['line']} rejected: {fields['error']}"
+    if event == "session_changed":
+        return (f"WARNING: {what}: cancelled, SESSION_ID changed (MCU restart); send "
+                "it again if still needed")
+    if event == "not_sent":
+        return f"WARNING: {what}: not sent, {fields['reason']}"
+    if event == "inbox_truncated":
+        return "WARNING: command inbox was truncated; no further commands are read"
+    if event == "inbox_unreadable":
+        return (f"WARNING: command inbox cannot be read ({fields['error']}); no further "
+                "commands are read, the recording goes on")
+    if event == "sent" and fields["error"] is not None:
+        return f"WARNING: {what}: port write failed: {fields['error']}"
+    return None

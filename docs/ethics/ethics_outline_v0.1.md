@@ -1,13 +1,11 @@
 ﻿# Khung Đạo đức Nghiên cứu (Ethics Outline) - Phiên bản v0.1
 
 > **Phiên bản:** v0.1
-> **Người biên soạn:** Nguyễn Đức Huy
-> **Vai trò:** Xử lý tín hiệu, PAT, thống kê, xây dựng protocol và hồ sơ đạo đức
 > **Ngày cập nhật:** 2026-09-22
 > **Lưu ý:** CHƯA PHẢI HỒ SƠ ĐẠO ĐỨC ĐÃ ĐƯỢC PHÊ DUYỆT CHÍNH THỨC.
 
 > [!NOTE]
-> **Cập nhật 2026-10-22 (Huy):** nội dung để nộp nằm trong 5 file bản nháp v0.1:
+> **Cập nhật 2026-10-22:** nội dung để nộp nằm trong 5 file bản nháp v0.1:
 > [phiếu thông tin](participant_information_sheet_v0.1.md),
 > [phiếu đồng thuận](consent_form_v0.1.md),
 > [chọn/loại](eligibility_screening_v0.1.md),
@@ -20,14 +18,14 @@
 > | --- | --- | --- |
 > | 3, bước 1 | "chạm ngón tay vào điện cực ECG" | V1 dùng điện cực dán, không cần chạm chủ động (protocol v0.2 mục 5.1) |
 > | 3, bước 1 | Mỗi phiên khoảng 20–30 phút | Phiếu thông tin: tối đa 120 phút mỗi buổi, tối đa 3 buổi (2026-10-29) |
-> | 3, bước 4 | Rút lui thì xóa vĩnh viễn **toàn bộ** dữ liệu | Người rút lui chọn xóa hay giữ; xóa được nếu yêu cầu trước mốc khóa dữ liệu ở G4 (phiếu thông tin mục 6, kế hoạch quản lý dữ liệu mục 4; 2026-10-29) |
+> | 3, bước 4 | Rút lui thì xóa vĩnh viễn **toàn bộ** dữ liệu | Người rút lui chọn xóa hay giữ; xóa được nếu yêu cầu trước mốc khóa dữ liệu ở G4 (phiếu thông tin mục 9, kế hoạch quản lý dữ liệu mục 6; 2026-10-29, số mục theo bản 2026-10-31) |
 > | 4, đoạn đầu | Tự phân loại "rủi ro tối thiểu (minimal risk)" | Phân loại rủi ro do hội đồng quyết định; câu trong outline chỉ là nhận định ban đầu của nhóm |
 > | 4.1 | Quy tắc pin, cấm nối máy tính | V1: USB tới laptop chạy pin, rút sạc (ghi chú trong 4.1) |
 > | 4.2 | Vỏ in 3D; vật liệu điện cực chưa chốt | V1: bo cổ tay gắn velcro, không có vỏ in 3D; điện cực Ag/AgCl dán là phương án chính |
 > | 4.2 | LED < 15 mW | Chưa có nguồn (ghi chú trong 4.2) |
 > | 4.3 | Nghỉ 2–3 phút giữa hai lần cuff | Phiếu thông tin và protocol: ít nhất 2 phút |
-> | 4.4, ý 4 | Ngưỡng SBP > 180 / DBP > 110 mmHg | Đề xuất ≥ 180/110 dừng buổi, M0 ≥ 140/90 không làm nghiệm pháp; chờ thầy/hội đồng ([quy tắc dừng](session_safety_stopping_v0.1.md) mục 3) |
-> | 5, thời hạn lưu | Tối đa 03 năm sau khi công bố | Theo quy định của trường; không có thì 03 năm kể từ mốc muộn hơn giữa kết thúc đề tài và công bố ([kế hoạch quản lý dữ liệu](data_management_plan_v0.1.md) mục 5) |
+> | 4.4, ý 4 | Ngưỡng SBP > 180 / DBP > 110 mmHg | Đề xuất ≥ 180/110 dừng buổi, M0 ≥ 140/90 không làm nghiệm pháp; chờ thầy/hội đồng ([quy tắc dừng](session_safety_stopping_v0.1.md) mục 6) |
+> | 5, thời hạn lưu | Tối đa 03 năm sau khi công bố | Theo quy định của trường; không có thì 03 năm kể từ mốc muộn hơn giữa kết thúc đề tài và công bố ([kế hoạch quản lý dữ liệu](data_management_plan_v0.1.md) mục 7) |
 
 ---
 

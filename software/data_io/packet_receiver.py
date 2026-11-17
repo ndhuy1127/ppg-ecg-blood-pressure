@@ -1,7 +1,8 @@
 """Receiver checks of Packet Schema V0.1/V0.2 section 12, per session and channel.
 
 Pure code: the input is decoded packets in arrival order plus the decoder log,
-the output is JSON/CSV bytes. Nothing here reads a port or file or prints.
+the output is JSON/CSV bytes, or the same bytes written line by line to files the
+caller opens (``write_outputs``). Nothing here opens a port or file or prints.
 Gaps are marked, never interpolated or bridged; ECG and PPG are never joined
 by sample index and no channel is shifted in time. PC receive time (``t_rx``)
 is not an input: the runner logs it in a separate file and it is never used as
@@ -9,6 +10,8 @@ a sample time. Tolerances are configuration values that have not been
 verified on hardware.
 """
 
+import hashlib
+import io
 import json
 import re
 from bisect import bisect_left, bisect_right
@@ -57,7 +60,7 @@ LED_LOCK_FIELDS = {*LED_COLORS, "outside_dc_range"}
 LED_REGISTERS = {"red": "0x0C", "ir": "0x0D", "green_led3": "0x0E",
                  "green_led4": "0x0F"}
 UINT32 = 1 << 32
-# Provisional rules, pending Duc Anh (docs/protocol/packet_logger.md): a
+# Provisional rules, pending hardware review (docs/protocol/packet_logger.md): a
 # FIRST_SAMPLE_INDEX jump of known length is explained by STATUS bit 0 or 1, a
 # re-anchor of unknown length by bit 5; the bit may be on either packet next to
 # the jump. Event packets (0xC1) skip the anchor check (step 6); their
@@ -152,7 +155,97 @@ LIMITATIONS = [
 
 
 def channel_key(channel_id):
-    return f"0x{channel_id:02X}"
+    return _KEYS.get(channel_id) or f"0x{channel_id:02X}"
+
+
+# One shared string per channel, not one per packet row.
+_KEYS = {channel_id: f"0x{channel_id:02X}" for channel_id in range(256)}
+
+
+class _Row:
+    """One ``packets.csv`` row, read and set like a dict (``row["seq"]``).
+
+    Slots instead of a dict: a dict per packet took about 1 KB, which made the
+    RAM of a long recording grow with its length (review of 2026-11-07)."""
+
+    __slots__ = PACKET_COLUMNS
+
+    def __init__(self, **values):
+        for name in PACKET_COLUMNS:
+            setattr(self, name, values[name])
+
+    def __getitem__(self, name):
+        return getattr(self, name)
+
+    def __setitem__(self, name, value):
+        setattr(self, name, value)
+
+    def get(self, name, default=None):
+        return getattr(self, name, default)
+
+
+class SampleBlocks:
+    """Accepted samples, one block per packet instead of one tuple per sample.
+
+    A block is ``(session_id, version, channel, chain_id, sample_index_ext of the
+    first sample, seq_ext, data)``. Iterating gives the sample rows
+    ``(session_id, channel, chain_id, seq_ext, sample_index_ext, value, version)``
+    in the order the blocks were added; ``ordered()`` gives them in the order of
+    ``samples.csv``.
+    """
+
+    __slots__ = ("blocks", "count")
+
+    def __init__(self):
+        self.blocks, self.count = [], 0
+
+    def add(self, session_id, version, key, chain_id, first_index, seq, data):
+        self.blocks.append((session_id, version, key, chain_id, first_index, seq, data))
+        self.count += len(data)
+
+    def extend(self, other):
+        self.blocks += other.blocks
+        self.count += other.count
+
+    def __len__(self):
+        return self.count
+
+    @staticmethod
+    def _rows(block):
+        session_id, version, key, chain_id, first, seq, data = block
+        for offset, value in enumerate(data):
+            yield (session_id, key, chain_id, seq, first + offset, value, version)
+
+    def __iter__(self):
+        for block in self.blocks:
+            yield from self._rows(block)
+
+    def ordered(self):
+        """Sample rows sorted by (session, version, channel, chain_id, sample index),
+        ties in the order added: the order of ``samples.csv``.
+
+        Within a chain the accepted packets of a channel do not overlap (an
+        overlapping index is quarantined), so sorting the blocks is enough. A
+        group of blocks that does overlap is sorted sample by sample instead.
+        Blocks of one channel are added in SEQ order, so SEQ breaks ties as the
+        order added does.
+        """
+        ordered = sorted(self.blocks, key=lambda block: block[:6])
+        start = 0
+        while start < len(ordered):
+            group = ordered[start][:4]
+            end = start
+            while end < len(ordered) and ordered[end][:4] == group:
+                end += 1
+            blocks = ordered[start:end]
+            if all(a[4] + len(a[6]) <= b[4] for a, b in zip(blocks, blocks[1:])):
+                for block in blocks:
+                    yield from self._rows(block)
+            else:
+                rows = [row for block in sorted(blocks, key=lambda b: b[5])
+                        for row in self._rows(block)]
+                yield from sorted(rows, key=lambda row: row[4])
+            start = end
 
 
 def json_bytes(value):
@@ -355,7 +448,9 @@ def _status_counts(packets, version, channel_id):
 
 
 def analyze_stream(decoded, decoder, config, metadata):
-    """Check decoded packets (arrival order); return result, packet and sample rows."""
+    """Check decoded packets (arrival order); return ``(result, rows, samples)``:
+    the decode.json content, the packets.csv rows (read like dicts) and the
+    accepted samples as ``SampleBlocks``."""
     validate_config(config)
     validate_metadata(metadata)
     issues = []
@@ -389,18 +484,18 @@ def analyze_stream(decoded, decoder, config, metadata):
                                 "max": None},
         )
         seq = packet.seq if state["max"] is None else _unwrap(packet.seq, state["max"])
-        row = {
-            "arrival": arrival, "stream_offset": item.offset,
-            "session_id": packet.session_id, "version": packet.version,
-            "channel_id": channel_key(packet.channel_id), "seq": packet.seq,
-            "seq_ext": seq, "first_sample_index": packet.first_sample_index,
-            "sample_index_ext": None, "chain_id": None,
-            "t_anchor_us": packet.t_anchor_us,
-            "t_first_us": packet.t_first_us,
-            "fs_nominal_mhz": packet.fs_nominal_mhz,
-            "sample_count": len(packet.data), "status": packet.status,
-            "disposition": None,
-        }
+        row = _Row(
+            arrival=arrival, stream_offset=item.offset,
+            session_id=packet.session_id, version=packet.version,
+            channel_id=channel_key(packet.channel_id), seq=packet.seq,
+            seq_ext=seq, first_sample_index=packet.first_sample_index,
+            sample_index_ext=None, chain_id=None,
+            t_anchor_us=packet.t_anchor_us,
+            t_first_us=packet.t_first_us,
+            fs_nominal_mhz=packet.fs_nominal_mhz,
+            sample_count=len(packet.data), status=packet.status,
+            disposition=None,
+        )
         rows.append(row)
         where = {"session_id": packet.session_id,
                  "channel": channel_key(packet.channel_id), "seq": seq}
@@ -420,7 +515,7 @@ def analyze_stream(decoded, decoder, config, metadata):
         state["received"][seq] = item
         state["rows"][seq] = row
 
-    result_sessions, samples = [], []
+    result_sessions, samples = [], SampleBlocks()
     lock = study_metadata(metadata)["ppg_led_lock"]
     first_session = decoded[0].packet.session_id if decoded else None
     for (session_id, version), channels in sessions.items():
@@ -432,7 +527,7 @@ def analyze_stream(decoded, decoder, config, metadata):
             )
             summaries[channel_key(channel_id)] = summary
             events += channel_events
-            samples += channel_samples
+            samples.extend(channel_samples)
             records[channel_id] = info
             if first is not None:
                 firsts[channel_id] = first
@@ -519,7 +614,7 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
         valid = _check_control(channel_id, decode, present, received, rows, where,
                                issue)
         summary["valid_packets"] = len(valid)
-        return summary, [], [], None, valid
+        return summary, [], SampleBlocks(), None, valid
     # V0.2 section 11.2: a 0xB1 header outside its contract is not trusted.
     untrusted = set()
     if channel_id == TEMP_CHANNEL:
@@ -544,11 +639,11 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
     if channel_id == EVENT_CHANNEL:
         events = _check_events(session_id, present, received, rows, where, issue)
         summary["events"] = len(events)
-        return summary, events, [], None, []
+        return summary, events, SampleBlocks(), None, []
     if channel_id == DEVICE_INFO_CHANNEL:
         identities = _check_device_info(present, received, rows, where, issue)
         summary["device_info_valid_packets"] = len(identities)
-        return summary, [], [], None, identities
+        return summary, [], SampleBlocks(), None, identities
 
     if spec is not None and spec["fs_nominal_mhz"] is not None and (
         summary["fs_nominal_mhz"] != [spec["fs_nominal_mhz"]]
@@ -611,7 +706,7 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
             issue("samp_latency_metadata_missing", **where)
     accepted = [seq for seq in present if seq not in quarantine]
     gaps = _gaps(seqs, accepted, received, index, quarantine, conflicts, jumps)
-    samples = []
+    samples = SampleBlocks()
     low, high = DATA_LIMITS[channel_id]
     for seq in present:
         rows[seq]["sample_index_ext"] = index[seq]
@@ -622,8 +717,8 @@ def _check_channel(session_id, version, channel_id, state, config, metadata, iss
         packet = received[seq].packet
         if any(not low <= value < high for value in packet.data):
             issue("data_out_of_range", **where, seq=seq)
-        samples += [(session_id, key, chain_of[seq], seq, index[seq] + i, value,
-                     version) for i, value in enumerate(packet.data)]
+        samples.add(session_id, version, key, chain_of[seq], index[seq], seq,
+                    packet.data)
     timed = [seq for seq in accepted if seq not in untimed]
     summary.update({
         "packets_accepted": len(accepted),
@@ -1325,20 +1420,85 @@ def _channel_offset(session_id, firsts, config, metadata, issue):
     return {"offset_vs_ecg_us": offsets, "reason": None}
 
 
-def _csv(columns, rows):
-    lines = [",".join(columns)]
+OUTPUT_NAMES = ("decode.json", "packets.csv", "samples.csv")
+_LINES_PER_WRITE = 8192
+
+
+def _write_csv(handle, columns, rows):
+    """Header and rows, ``\n`` after each line, UTF-8; None is an empty cell.
+    Written in batches of lines, so the text of a file is never held whole."""
+    handle.write((",".join(columns) + "\n").encode("utf-8"))
+    batch = []
     for row in rows:
-        lines.append(",".join("" if value is None else str(value) for value in row))
-    return ("\n".join(lines) + "\n").encode("utf-8")
+        batch.append(",".join("" if value is None else str(value) for value in row))
+        if len(batch) == _LINES_PER_WRITE:
+            handle.write(("\n".join(batch) + "\n").encode("utf-8"))
+            batch = []
+    if batch:
+        handle.write(("\n".join(batch) + "\n").encode("utf-8"))
+
+
+class _Hashing:
+    """A binary file object that also hashes (SHA-256) what goes through it."""
+
+    def __init__(self, handle):
+        self.handle, self.sha256 = handle, hashlib.sha256()
+
+    def write(self, payload):
+        self.sha256.update(payload)
+        return self.handle.write(payload)
+
+
+def _ordered_samples(samples):
+    if isinstance(samples, SampleBlocks):
+        return samples.ordered()
+    # A plain list of sample rows. (session, version, channel, chain, sample
+    # index): an index may repeat across chains.
+    return sorted(samples, key=lambda s: (s[0], s[6], s[1], s[2], s[4]))
+
+
+def write_outputs(result, rows, samples, open_output):
+    """Write decode.json, packets.csv and samples.csv, line by line.
+
+    ``open_output(name)`` returns a new binary file as a context manager; the
+    caller decides where and how (``open(..., "xb")`` in the logger). Returns
+    ``{name: sha256 hex}``. The bytes are those of ``render_outputs``.
+    """
+    hashes = {}
+    for name in OUTPUT_NAMES:
+        with open_output(name) as handle:
+            out = _Hashing(handle)
+            if name == "decode.json":
+                out.write(json_bytes(result))
+            elif name == "packets.csv":
+                _write_csv(out, PACKET_COLUMNS,
+                           ([row[column] for column in PACKET_COLUMNS] for row in rows))
+            else:
+                _write_csv(out, SAMPLE_COLUMNS, _ordered_samples(samples))
+        hashes[name] = out.sha256.hexdigest()
+    return hashes
+
+
+class _KeptOpen:
+    """Context manager around a BytesIO that leaves it open for ``getvalue``."""
+
+    def __init__(self, buffer):
+        self.buffer = buffer
+
+    def __enter__(self):
+        return self.buffer
+
+    def __exit__(self, *exc):
+        return False
 
 
 def render_outputs(result, rows, samples):
     """Deterministic bytes of decode.json, packets.csv and samples.csv."""
-    # (session, channel, chain, sample index): an index may repeat across chains.
-    ordered = sorted(samples, key=lambda s: (s[0], s[6], s[1], s[2], s[4]))
-    return {
-        "decode.json": json_bytes(result),
-        "packets.csv": _csv(PACKET_COLUMNS,
-                            ([row[name] for name in PACKET_COLUMNS] for row in rows)),
-        "samples.csv": _csv(SAMPLE_COLUMNS, ordered),
-    }
+    buffers = {}
+
+    def open_output(name):
+        buffers[name] = io.BytesIO()
+        return _KeptOpen(buffers[name])
+
+    write_outputs(result, rows, samples, open_output)
+    return {name: buffers[name].getvalue() for name in OUTPUT_NAMES}

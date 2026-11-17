@@ -1,0 +1,16 @@
+{
+  "script_version": "rq1-sensitivity-runner-v1",
+  "source_type": "SIMULATED_ASSUMPTIONS_ONLY",
+  "config_sha256": "0ae5b195a9494a6c070575c746ed4eefe482edd8ed6a40cc2ee2e3ec003a5ba4",
+  "code_sha256_lf": {
+    "scripts/simulate_rq1_sensitivity.py": "445fb940dbfd15f1276fb9f284f7dc849eb0602d5af73fc97af4d4a6c5e4d1ec",
+    "software/evaluation/rq1_sensitivity.py": "fc65018114fb42e6ad1e5db1682352baa64bef1217553f31eef70b88324fd8a4"
+  },
+  "git_commit": "a7e0ea13c62888adefb21f506ccc05b2b3021e19",
+  "workspace_has_changes": true,
+  "outputs_sha256": {
+    "results.json": "df38a4bd181e8534184a4ca2eebbde99c0f17789259b28179cf08d31d2c7b13d",
+    "summary.md": "450ac6ed364a40c0ad7894843935432d6dc4c60e20f1b07596cf24f24271ac0e"
+  },
+  "run_time_utc": "2026-11-07T10:23:11.593026+00:00"
+}

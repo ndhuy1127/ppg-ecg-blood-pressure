@@ -7,6 +7,7 @@ the SYNC search restarts at the next byte: a declared length that has not been
 validated is never used to skip ahead.
 """
 
+import binascii
 import struct
 from dataclasses import dataclass
 
@@ -98,29 +99,62 @@ DECODE_ERRORS = (
 )
 
 
-def _crc_table():
-    table = []
-    for byte in range(256):
-        crc = byte << 8
-        for _ in range(8):
-            crc = ((crc << 1) ^ 0x1021) if crc & 0x8000 else crc << 1
-            crc &= 0xFFFF
-        table.append(crc)
-    return tuple(table)
-
-
-_CRC_TABLE = _crc_table()
-
-
 def crc16_ccitt_false(payload) -> int:
-    """CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, no reflection, xorout 0."""
-    crc = 0xFFFF
-    for byte in payload:
-        crc = ((crc << 8) & 0xFFFF) ^ _CRC_TABLE[(crc >> 8) ^ byte]
-    return crc
+    """CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, no reflection, xorout 0.
+
+    ``binascii.crc_hqx`` is this CRC (non-reflected 0x1021) started from the given
+    value; check value 0x29B1 for b"123456789" (tests/test_packet_streaming.py)."""
+    return binascii.crc_hqx(bytes(payload), 0xFFFF)
 
 
-@dataclass(frozen=True)
+class DataWords:
+    """DATA of a decoded packet: int32 words kept as their 4 little-endian bytes.
+
+    A read-only sequence of int (``len``, iteration, indexing; a slice is a
+    tuple) that equals the tuple of the same values and hashes like it. Kept as
+    bytes so that a long recording costs about 4 bytes per sample in RAM, not a
+    Python int each (2026-11-07).
+    """
+
+    __slots__ = ("_raw",)
+
+    def __init__(self, raw):
+        raw = bytes(raw)
+        if len(raw) % SAMPLE.size:
+            raise ValueError("DATA bytes must be whole int32 words")
+        self._raw = raw
+
+    def __len__(self):
+        return len(self._raw) // SAMPLE.size
+
+    def __iter__(self):
+        return (value for (value,) in SAMPLE.iter_unpack(self._raw))
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return tuple(self)[index]
+        count = len(self)
+        if index < 0:
+            index += count
+        if not 0 <= index < count:
+            raise IndexError("DATA index out of range")
+        return SAMPLE.unpack_from(self._raw, SAMPLE.size * index)[0]
+
+    def __eq__(self, other):
+        if isinstance(other, DataWords):
+            return self._raw == other._raw
+        if isinstance(other, tuple):
+            return tuple(self) == other
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(tuple(self))
+
+    def __repr__(self):
+        return f"DataWords({tuple(self)!r})"
+
+
+@dataclass(frozen=True, slots=True)
 class Packet:
     """Header fields and DATA of one packet; SYNC and CRC16 are implied."""
 
@@ -133,17 +167,17 @@ class Packet:
     t_first_us: int
     fs_nominal_mhz: int
     status: int
-    data: tuple
+    data: tuple  # a DataWords when decoded; equal to the tuple of its values
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DecodedPacket:
     packet: Packet
     offset: int  # Stream offset of the first SYNC byte.
     size: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DecodeError:
     offset: int
     code: str
@@ -306,10 +340,7 @@ class StreamDecoder:
                     problem = None
             if problem is None:
                 first = start + HEADER.size
-                data = tuple(
-                    SAMPLE.unpack_from(buffer, first + SAMPLE.size * i)[0]
-                    for i in range(count)
-                )
+                data = DataWords(buffer[first:first + SAMPLE.size * count])
                 packet = Packet(*fields[1:9], fields[10], data)
                 self._close_run()
                 self._covered = None

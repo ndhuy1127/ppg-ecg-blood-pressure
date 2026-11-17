@@ -1,5 +1,8 @@
 # Đăng ký trước: chấm test split và CalFree trên PulseDB
 
+> **Phiên bản:** v1 (nội dung chốt 2026-10-29; danh sách bảng B2 ở mục 3 bổ sung
+> 2026-11-07, trước khi có số B2 nào; nhãn phiên bản thêm 2026-11-10, không đổi nội dung).
+>
 > **Trạng thái:** chốt 2026-10-29. Phải commit **trước khi chạy B2 trên val** và
 > trước khi xem bất kỳ con số nào của test split hay CalFree. Chưa có script chấm
 > và chưa chấm lần nào. Đổi bất cứ điều gì dưới đây sau khi đã chấm thì phải nâng
@@ -38,9 +41,19 @@ test.
 lần** trên mỗi tập:
 
 - B0 và B3 của `b3-pipeline-v1`;
-- B2a và B2b, nếu định nghĩa B2 được duyệt và đã chạy trên val;
+- B2, nếu định nghĩa B2 được duyệt và đã chạy trên val, theo đúng hai bảng của
+  [định nghĩa B2](b2_pulsedb_definition.md) mục 4 (liệt kê rõ ngày 2026-11-07, trước khi
+  có số B2 nào): bảng `full` gồm B0, B2a, B3 fit trên mọi dòng train qua QC; bảng
+  `hr_available` gồm B0, B2a, B2b, B3 fit lại trên các dòng train có HR. Mỗi model chỉ
+  được ghép với model cùng bảng. Mặt nạ HR của test (và CalFree) tính bằng đúng quy tắc
+  ECG của định nghĩa, trước khi đọc nhãn test;
 - B4, chỉ khi lệnh `gate` cho `B4_ALLOWED` và B4 đã khóa
-  ([Tuần 5](week05_fiducials_pat_validity.md) mục 9).
+  ([Tuần 5](week05_fiducials_pat_validity.md) mục 9). Cập nhật 2026-11-16: đánh dấu tay
+  PulseDB đã dừng trước khi chạy `gate`, nên không có B4 để chấm trên test (mục 9.7);
+- B5 (thêm 2026-11-07; duyệt 2026-11-11 cùng [định nghĩa B5](b5_pulsedb_definition.md)),
+  chỉ khi định nghĩa B5 được duyệt và đã chạy trên val. Chấm đúng hai file `model_sbp.pt`,
+  `model_dbp.pt` của lần chạy val đó, có SHA-256 trong report, không học lại. Chuẩn hóa đầu
+  vào và nhãn dùng đúng giá trị đã ghi trong report.
 
 Không chọn một "model tốt nhất" trên val rồi chỉ chấm model đó. Cách đó vẫn hợp lệ
 nếu test độc lập, nhưng val chỉ có 40 người nên CI rộng và lựa chọn dễ phụ thuộc

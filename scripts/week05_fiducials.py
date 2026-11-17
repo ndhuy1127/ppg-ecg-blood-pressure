@@ -7,7 +7,7 @@ Subcommands (each refuses to overwrite its output and writes provenance):
   export    review segments of a raw PulseDB file + split v2 (train only, by the
             config's review_plan): main/ for marking, repeat/ for a second session
   plot      PNG per record for manual review; detections hidden by default
-  annotate  interactive window: Huy clicks R (ECG axis) and foot (PPG axis)
+  annotate  interactive window: the annotator clicks R (ECG axis) and foot (PPG axis)
   detect    run every candidate R/foot method; CSV with one row per fiducial
   compare   sensitivity/PPV/bias/MAE of each method against manual marks
   repeat    annotator repeatability: second vs first marking of repeat/ segments
@@ -917,7 +917,7 @@ def main(argv=None):
     p.add_argument("--raw", type=Path, required=True)
     p.add_argument("--split-dir", type=Path, required=True)
     p.add_argument("--fs-hz", type=float, required=True)
-    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_fiducials.json")
     p.add_argument("--out", type=Path, required=True)
     p = sub.add_parser("plot")
     p.add_argument("--records", type=Path, required=True)
@@ -933,12 +933,12 @@ def main(argv=None):
                    help="go on with an unfinished --out (see <out>.progress.json)")
     p = sub.add_parser("detect")
     p.add_argument("--records", type=Path, required=True)
-    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_fiducials.json")
     p.add_argument("--out", type=Path, required=True)
     p = sub.add_parser("compare")
     p.add_argument("--annotations", type=Path, required=True)
     p.add_argument("--detections", type=Path, required=True)
-    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_fiducials.json")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--allow-synthetic-truth", action="store_true")
     p.add_argument("--annotations-without-provenance", action="store_true",
@@ -948,12 +948,12 @@ def main(argv=None):
     p.add_argument("--first", type=Path, required=True, help="marks on main/")
     p.add_argument("--second", type=Path, required=True, help="marks on repeat/")
     p.add_argument("--export", type=Path, required=True, help="export.json")
-    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_fiducials.json")
     p.add_argument("--out", type=Path, required=True)
     p = sub.add_parser("gate")
     p.add_argument("--agreement", type=Path, required=True, help="compare output")
     p.add_argument("--export", type=Path, required=True, help="export.json")
-    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_huy.json")
+    p.add_argument("--config", type=Path, default=ROOT / "configs/data/week05_fiducials.json")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--repeatability", type=Path, help="repeat output")
     p.add_argument("--allow-synthetic-truth", action="store_true")

@@ -16,7 +16,7 @@ bản ghi thiết bị của nhóm.
 - Bài báo: Wang W. et al., "PulseDB: A large, cleaned dataset based on MIMIC-III
   and VitalDB for benchmarking cuff-less blood pressure estimation methods",
   Frontiers in Digital Health, 2023, https://doi.org/10.3389/fdgth.2022.1090854.
-- Gói Kaggle **version 4** (cập nhật 2022-12-08). Huy tải ngày 2026-10-25 bằng
+- Gói Kaggle **version 4** (cập nhật 2022-12-08). Tải ngày 2026-10-25 bằng
   Kaggle API (`kaggle` 2.2.5) vào `data/raw/pulsedb/` (ngoài Git); kích thước và
   SHA-256 ở mục 4. Không biết version của bản các notebook Tuần 3–4 đã dùng trên
   Kaggle.
@@ -107,7 +107,7 @@ với CalBased Test), của CalFree Test có 144 người.
   ngày 2026-10-24 (mục dưới) và ghi trong trường `pool_decision` của
   [config split](../configs/data/pulsedb_train400_split.json).
 
-**Quyết định pool (Huy, 2026-10-24; chưa có file raw nào trên máy, chưa đọc nhãn
+**Quyết định pool (2026-10-24; chưa có file raw nào trên máy, chưa đọc nhãn
 hay tín hiệu của subset nào):**
 
 | Subset | Vai trò |
@@ -298,7 +298,7 @@ train/validation, và chỉ gắn cờ. `PulseValidator` đã xuất các cột
 `pulse_pressure`, `dbp_ge_sbp`, `label_nonfinite` và `waveform_duplicate_of` để
 phục vụ việc này.
 
-**Quy tắc QC nhãn (Huy, 2026-10-24; khóa trước khi đọc nhãn của pool Train):**
+**Quy tắc QC nhãn (2026-10-24; khóa trước khi đọc nhãn của pool Train):**
 
 - Chỉ loại nhãn **bất khả về vật lý**: DBP ≥ SBP (hiệu áp ≤ 0). Dòng bị loại khỏi cả
   fit lẫn chấm điểm, ở **mọi split**; inventory và manifest vẫn giữ đủ mọi dòng (luật
@@ -318,7 +318,7 @@ phục vụ việc này.
 ## 10. Chính sách dữ liệu
 
 Không commit toàn bộ PulseDB hoặc file `.mat`. Git chỉ chứa code, tài liệu, test,
-notebook và thông tin checksum/provenance. Ngày 2026-10-24 (Huy) gỡ khỏi Git hai
+notebook và thông tin checksum/provenance. Ngày 2026-10-24 đã gỡ khỏi Git hai
 CSV của pool AAMI Cal: `notebooks/pulsedb_manifest_1000.csv` (nhãn SBP/DBP kèm ID
 người, cả dòng test) và `notebooks/metrics_all_splits.csv` (MAE trên test). Pool này
 không còn dùng cho split mới (mục 5). Lịch sử Git vẫn giữ hai file (commit `1f218eb`

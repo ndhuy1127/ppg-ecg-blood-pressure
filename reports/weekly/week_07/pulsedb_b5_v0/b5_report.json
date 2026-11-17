@@ -1,0 +1,635 @@
+{
+  "schema_version": "b5-pipeline-v0",
+  "mode": "val",
+  "source_type": "PUBLIC_ABP",
+  "scope": "B0/B3/B5 absolute BP on validation",
+  "config": {
+    "schema_version": "b5-pipeline-v0",
+    "status": "APPROVED_NOT_TEST_EVALUATED",
+    "unit": "mmHg",
+    "split_sha256": {
+      "raw": "20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002",
+      "inventory": "17d3a8c2aa7a7d5a304d219aaaabada10a696232d529a1b0e19788f5d1fb7c26",
+      "manifest": "257d9653d6d42de26b77c291de79031b77ad7f3d29c6365d2319940acbe07d36",
+      "config": "437f84f409c73809ceb6d101950d6236c30b359815443bfb4e25f1f9d472fe55"
+    },
+    "fit_split": "train",
+    "evaluation_split": "val",
+    "b3_feature_set": "pulsedb-simple-stats-v0",
+    "label_qc": "exclude_dbp_ge_sbp",
+    "train_weighting": "inverse_subject_rows",
+    "xgboost": {
+      "seed": 42,
+      "params": {
+        "n_estimators": 300,
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "objective": "reg:squarederror",
+        "tree_method": "hist",
+        "n_jobs": 1
+      }
+    },
+    "model": {
+      "architecture": "resnet18-1d",
+      "input_channels": [
+        "ecg",
+        "ppg"
+      ],
+      "samples": 1250,
+      "separate_targets": true
+    },
+    "training": {
+      "seed": 20261107,
+      "inner_val_fraction": 0.1,
+      "optimizer": "adam",
+      "learning_rate": 1e-06,
+      "batch_size": 64,
+      "max_epochs": 100,
+      "patience": 15,
+      "loss": "subject_weighted_mse",
+      "input_scaling": "train_fit_channel_standardization",
+      "target_scaling": "train_fit_standardization",
+      "selection_metric": "inner_val_subject_balanced_mae",
+      "eval_batch_size": 1024
+    },
+    "bootstrap": {
+      "seed": 20261013,
+      "repetitions": 2000,
+      "confidence": 0.95,
+      "min_subjects": 2
+    }
+  },
+  "inputs_sha256": {
+    "config": "2df5ad21475a18a0dce0b9198f938be471d3748523f28fe9f6dc7bbda3eba798",
+    "raw": "20f19685b67a17fff6673743114cb17345a959d02367553ceea3cf560b14d002",
+    "split_inventory": "17d3a8c2aa7a7d5a304d219aaaabada10a696232d529a1b0e19788f5d1fb7c26",
+    "split_manifest": "257d9653d6d42de26b77c291de79031b77ad7f3d29c6365d2319940acbe07d36",
+    "split_config": "437f84f409c73809ceb6d101950d6236c30b359815443bfb4e25f1f9d472fe55",
+    "split_report": "d420bc878e3330ce485f11367afa1dba8109be8d91bffd332cc196bda9991b53"
+  },
+  "split_pool_decision": "Huy 2026-10-24 (docs/pulsedb_provenance.md section 5): pool = VitalDB_Train_Subset, subject subsample of 400 from Subject IDs only (seed 20261024), then train/val/test 0.8/0.1/0.1 by subject (seed 72); VitalDB_CalFree_Test_Subset is the external test; CalBased Test (same subjects as Train) and AAMI Cal/AAMI Test (AAMI Cal already exposed as test) are not used",
+  "approval_committed": {
+    "config": true,
+    "definition": true,
+    "code": true
+  },
+  "b5": {
+    "label_qc": {
+      "rule": "exclude_dbp_ge_sbp",
+      "excluded_rows": {
+        "train": 0,
+        "val": 0,
+        "test": null
+      }
+    },
+    "mode": "val",
+    "device": "cuda",
+    "inner_split": {
+      "fit_subjects": 288,
+      "fit_rows": 103680,
+      "inner_subjects": 32,
+      "inner_rows": 11520
+    },
+    "input_scaling": {
+      "mean": [
+        0.23922779973929523,
+        0.34689518191370744
+      ],
+      "sd": [
+        0.19412754603209345,
+        0.2920905755584479
+      ]
+    },
+    "targets": {
+      "SBP": {
+        "best_epoch": 16,
+        "epochs_run": 31,
+        "best_inner_subject_balanced_mae": 13.419391822554227,
+        "target_scaling": {
+          "centre": 116.2991012874087,
+          "spread": 19.05972452093937
+        },
+        "train_seconds": 1278.551129600004
+      },
+      "DBP": {
+        "best_epoch": 6,
+        "epochs_run": 21,
+        "best_inner_subject_balanced_mae": 8.391610542018,
+        "target_scaling": {
+          "centre": 63.70023914094296,
+          "spread": 12.078245959612062
+        },
+        "train_seconds": 733.92717119999
+      }
+    },
+    "parameters_per_model": 3844865,
+    "val_inference_seconds": 3.864338499988662
+  },
+  "footprint": {
+    "parameters_per_model": 3844865,
+    "models": 2,
+    "state_dict_bytes": {
+      "model_sbp.pt": 15457662,
+      "model_dbp.pt": 15457662
+    },
+    "train_seconds": {
+      "SBP": 1278.551129600004,
+      "DBP": 733.92717119999
+    },
+    "run_seconds": 2501.957271100022,
+    "val_inference_ms_per_segment": 0.2683568402769904
+  },
+  "limitations": [
+    "PUBLIC_ABP labels of anaesthetised surgical patients; not cuff or prototype",
+    "Absolute BP of unseen subjects (calibration-free); not cross-session ΔBP",
+    "Layer details beyond the paper's text follow torchvision ResNet-18 made 1D",
+    "B5 fits on 90 % of the train subjects (10 % choose the epoch); B0/B3 on all",
+    "Batch size, scaling and early stopping are not given in the paper; chosen in the definition before any val number",
+    "GPU and CPU kernels may give slightly different weights; the device is recorded"
+  ],
+  "code_provenance": {
+    "git_commit": "38f23fe52de2f8b01fefd2b67153285a66b2ed4f",
+    "workspace_has_changes": false,
+    "sha256_lf": {
+      "scripts/run_b5_pulsedb.py": "65c16db3986d763496a1e06b31295c53c415213be1bdf23b65f9c54e1ff75e41",
+      "scripts/run_b3_pulsedb.py": "38f851c03a98f01149f3283300d128495aa11229bac3e67107a49f3b779088c9",
+      "scripts/run_b2_pulsedb.py": "a4699960e7b418608ebed5f2d288c737a808f8d2e346f891b5887798febc45a8",
+      "software/pulsedb/pipeline_b5.py": "cdb950c4b8a0c513ca31a54641999e02f23cb2f7db32dc7ddbbf7360b21afd48",
+      "software/pulsedb/pipeline.py": "d0b4741feb4a6dacfe76c506f99fe20f8d1b38d2588278d39e2939e062f827d4",
+      "software/pulsedb/features.py": "6eea4c798e09626ab3da8b5e255512bac7494940a1b954b9cd297e3a63fb1bcc",
+      "software/pulsedb/reader.py": "3cf38c1b2f6a740600f3ac84ea059b8294aa33c777f9ab4dcbf85d51be50ca0f",
+      "software/pulsedb/h5_reader.py": "8376aca874bd188e9fb6c8a46dee63795d68d2dacfba8edf0d6f7bc86a14f620",
+      "software/models/resnet1d.py": "2603c90003603c7fb6b490f424b69cd8b8b7c68b4da81d684f9573c95a96d44c",
+      "software/models/xgboost_baseline.py": "b2621659b8304839b128b6cb633a06b76d308a7bb9196a5a92c36d882c5c7113",
+      "software/models/constant_baselines.py": "a826bb970b0df833f5cd102923bda51aeceb6fe6dde416e7c8235a7ead10b665",
+      "software/evaluation/subject_bootstrap.py": "6604cd2df387fd9f5df22c15b8eb83aeb13d47b7cf5a8a9ecb425a00c6781ff0",
+      "software/evaluation/bp_metrics.py": "54d1f9ac6fa38b045c35dbd1269a9970ce9f015cc7fa1aeadcea5e3f9ab1c6ba",
+      "software/data_io/split_manifest.py": "59d399535549fdd9db1894a1807fb7fc3126668ce90696bfcd7dbc38cf93d85b",
+      "software/_bp_validation.py": "dc375cdbebd239ad866e495ead873110a5b29d0cd2943f16e09974ef423a6d14",
+      "software/_provenance.py": "5cb4bb9b66ec67d45c212a8573e8b5f4d9ada3e325e864c3e2cb458304fc5ccb"
+    }
+  },
+  "environment": {
+    "python": "3.11.9",
+    "device": "cuda",
+    "cuda_device": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "torch_cuda": "12.4",
+    "numpy": "1.26.4",
+    "pandas": "2.2.1",
+    "xgboost": "3.2.0",
+    "h5py": "3.16.0",
+    "torch": "2.6.0+cu124"
+  },
+  "run_time_utc": "2026-11-11T16:11:52.124581+00:00",
+  "evaluation": {
+    "n_rows": 14400,
+    "n_subjects": 40,
+    "seed": 20261013,
+    "repetitions": 2000,
+    "confidence": 0.95,
+    "method": "subject cluster percentile; shared draws across models",
+    "models": {
+      "B0": {
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": 15.106113009779307,
+            "subject_balanced_bias": 4.296688131772622,
+            "sample_weighted_mae": 15.106113009779309,
+            "sample_weighted_bias": 4.296688131772621,
+            "sample_sd": 18.79423270939999
+          },
+          "DBP": {
+            "subject_balanced_mae": 10.404787435699836,
+            "subject_balanced_bias": 2.115254952073054,
+            "sample_weighted_mae": 10.404787435699836,
+            "sample_weighted_bias": 2.115254952073054,
+            "sample_sd": 12.781234076322695
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                13.473206337432481,
+                16.876638017597724
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                0.7874466244462012,
+                7.672420640238099
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                13.473206337432481,
+                16.876638017597724
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                0.7874466244462012,
+                7.672420640238099
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                16.80247576137855,
+                20.547169260323965
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                9.121737376183038,
+                11.795374157687355
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                -0.9236361581415714,
+                5.137018795945264
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                9.121737376183036,
+                11.795374157687355
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                -0.9236361581415712,
+                5.137018795945264
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                11.355285875820657,
+                14.053392373032029
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      },
+      "B3": {
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": 14.582044760649538,
+            "subject_balanced_bias": 3.9640293190711176,
+            "sample_weighted_mae": 14.582044760649536,
+            "sample_weighted_bias": 3.964029319071117,
+            "sample_sd": 18.392425009352024
+          },
+          "DBP": {
+            "subject_balanced_mae": 10.122651811227295,
+            "subject_balanced_bias": 1.440044122588421,
+            "sample_weighted_mae": 10.122651811227295,
+            "sample_weighted_bias": 1.4400441225884215,
+            "sample_sd": 12.489785787234045
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                12.89356899375355,
+                16.485450525311975
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                0.3348911323442264,
+                7.522943277974501
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                12.89356899375355,
+                16.48545052531198
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                0.3348911323442263,
+                7.522943277974501
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                16.353823388159604,
+                20.17968566255648
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                8.941750905210474,
+                11.43696704498068
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                -1.557552070779402,
+                4.3319101596136065
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                8.941750905210476,
+                11.43696704498068
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                -1.5575520707794017,
+                4.3319101596136065
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                11.093936049488722,
+                13.75318418841521
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      },
+      "B5": {
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": 13.237171933042799,
+            "subject_balanced_bias": 3.0891926338692577,
+            "sample_weighted_mae": 13.237171933042802,
+            "sample_weighted_bias": 3.089192633869258,
+            "sample_sd": 16.733315307465432
+          },
+          "DBP": {
+            "subject_balanced_mae": 9.763985065887463,
+            "subject_balanced_bias": 2.0784862298320426,
+            "sample_weighted_mae": 9.763985065887464,
+            "sample_weighted_bias": 2.0784862298320426,
+            "sample_sd": 12.083466423432133
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                11.838580883187063,
+                14.639786324636207
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                0.03581199328589103,
+                6.0461242566251565
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                11.838580883187063,
+                14.639786324636207
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                0.035811993285891276,
+                6.046124256625157
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                15.151637876249229,
+                18.04535012803193
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                8.560179896038829,
+                11.197919766985702
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "subject_balanced_bias": {
+              "bounds": [
+                -0.8342673919585102,
+                4.8569321568831185
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                8.56017989603883,
+                11.1979197669857
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_bias": {
+              "bounds": [
+                -0.83426739195851,
+                4.856932156883119
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_sd": {
+              "bounds": [
+                10.57285712506844,
+                13.596572349023177
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      }
+    },
+    "status": "ok",
+    "contrasts": [
+      {
+        "model": "B5",
+        "reference": "B0",
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": -1.8689410767365082,
+            "sample_weighted_mae": -1.8689410767365064
+          },
+          "DBP": {
+            "subject_balanced_mae": -0.6408023698123735,
+            "sample_weighted_mae": -0.6408023698123717
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                -3.231787214964507,
+                -0.4465209589267902
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                -3.231787214964505,
+                -0.4465209589267903
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                -1.35435872117275,
+                0.14883632747701964
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                -1.3543587211727535,
+                0.14883632747701964
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      },
+      {
+        "model": "B5",
+        "reference": "B3",
+        "point": {
+          "SBP": {
+            "subject_balanced_mae": -1.3448728276067392,
+            "sample_weighted_mae": -1.3448728276067339
+          },
+          "DBP": {
+            "subject_balanced_mae": -0.358666745339832,
+            "sample_weighted_mae": -0.35866674533983023
+          }
+        },
+        "ci": {
+          "SBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                -2.5325129026795437,
+                -0.16390908320336536
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                -2.532512902679542,
+                -0.16390908320336361
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          },
+          "DBP": {
+            "subject_balanced_mae": {
+              "bounds": [
+                -0.9088983354829863,
+                0.18290722862454895
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            },
+            "sample_weighted_mae": {
+              "bounds": [
+                -0.9088983354829879,
+                0.18290722862455072
+              ],
+              "valid_repetitions": 2000,
+              "status": "ok"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "split_counts": {
+    "train": {
+      "subjects": 320,
+      "segments": 115200
+    },
+    "val": {
+      "subjects": 40,
+      "segments": 14400
+    },
+    "test": {
+      "subjects": 40,
+      "segments": 14400
+    }
+  },
+  "outputs_sha256": {
+    "b5_table.md": "f6146adb5b341eb8fff3507bead79f5254cbe85f3953a2d3b8899d27c36a14c5",
+    "history_dbp.csv": "f027267763443c41fb743d75325c4b6f37f5f5046c7d5a1b9b4d62cb66c6e0fc",
+    "history_sbp.csv": "279d1d8d7243e94370bc76dce011eee841d5d94d876c35d7663fc4917f6fd2b7",
+    "model_dbp.pt": "2d8677aa2d4c025fa54baacb1c531155f141e5d62824eacf687405ae45df9a0d",
+    "model_sbp.pt": "f4d310827bceadd33f61c3a059529008ef1e889af2ac2413a217512b842d9117",
+    "predictions_val.csv": "e48b02f5d8c0ffb15cc74bd1bd31ea789fb47729fe48fe31ce6e2e9f295e7e21"
+  }
+}

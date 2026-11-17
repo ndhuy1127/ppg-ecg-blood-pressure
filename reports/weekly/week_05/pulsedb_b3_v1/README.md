@@ -76,7 +76,9 @@ của bài tóm tắt bốn nghiên cứu khác, ở chế độ không hiệu c
 | [12] CNN + RNN, PPG | — / 15,41 | — / 12,38 |
 
 Bài kết luận rằng các mô hình này tổng quát hóa kém sang người chưa thấy. MAE của B3
-ở đây (SBP 14,6, DBP 10,1 trên val, `b3_report.json`) nằm trong khoảng MAE đó; run này
+ở đây (SBP 14,6, DBP 10,1 trên val, `b3_report.json`) nằm trong khoảng MAE đó, nhưng B0
+hằng số (SBP 15,1, DBP 10,4) cũng vậy, nên điều này không nói gì về mô hình (ghi thêm
+2026-11-10); run này
 không tính hệ số tương quan r, nên không so được cột r (sửa 2026-10-25: bản trước ghi
 r 0,24/0,23, không có trong output nào của run). Tuy vậy
 **không so sánh trực tiếp được**: khác dataset, cách chia, nhãn và cách chọn đoạn.
