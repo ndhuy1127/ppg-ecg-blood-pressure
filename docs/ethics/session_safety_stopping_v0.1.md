@@ -62,8 +62,11 @@ Một người đọc, một người kiểm tra; kết quả ghi vào phiếu g
 - [ ] Bo MCU chỉ nối với laptop qua một cáp USB-C; không có nguồn nào khác cấp vào bo đế.
 - [ ] Máy đo huyết áp chỉ nối với người tham gia qua ống hơi và vòng bít, không có dây điện nào nối
       với thiết bị nghiên cứu. [Máy chạy pin trong lúc đo nếu model cho phép.]
-- [ ] Bo cổ tay không có cạnh sắc; đầu nối Qwiic đã được tháo hoặc có giá đỡ để không chạm da; tấm
-      che cửa sổ quang còn nguyên vẹn; cáp dẹt không đứt và được cắm đúng chiều.
+- [ ] Bo cổ tay không có cạnh sắc; giá đỡ cảm biến còn nguyên, che kín đầu nối Qwiic và đèn báo
+      nguồn để không chạm da; tấm che cửa sổ quang còn nguyên vẹn; cáp dẹt không đứt và được cắm
+      đúng chiều.
+- [ ] Cáp điện cực ECG cắm qua đầu chuyển có điện trở giới hạn dòng, đầu chuyển nằm trong hộp khóa
+      và không thể cắm thẳng cáp vào bo; điện trở từng dây đo trước buổi đo nằm trong ngưỡng đã ghi.
 - [ ] Sau 5 phút chạy, bo cổ tay không ấm bất thường khi chạm (kiểm tra nhanh; giới hạn nhiệt độ
       được kiểm bằng phép thử ở mục 9).
 - [ ] Dòng LED của bo cảm biến không vượt trần của nghiên cứu: mã `0x7F` cho mỗi màu, tức khoảng

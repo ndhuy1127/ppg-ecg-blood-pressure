@@ -40,7 +40,7 @@ Ghi riêng giá trị thiết kế/datasheet và giá trị đo.
 | Bo Waveshare | Ký hiệu module | ESP32-S3-WROOM-1-N8R8 | | |
 | Bo Waveshare | Mã khắc LDO 3,3 V | — | | |
 | Bo Waveshare | Nhãn chân so với bảng A.7 | Bảng A.7 | | |
-| Breakout MAX30001 | Revision; R3, R7, R8, SV1 (bo v2: cách xác định ở BU mục 1) | v2, 03/24 (file công khai chỉ có v1.0) | | |
+| Breakout MAX30001 | Revision; đường sleeve, tip, ring (ứng viên R3, R7, R8; chỉ đo, không sửa), SV1 (bo v2: cách xác định ở BU mục 1) | v2, 03/24 (file công khai chỉ có v1.0) | | |
 | Cáp ECG | Số dây; LA/RA/RL ↔ ring/tip/sleeve | 3 dây; LA ring, RA tip, RL sleeve | | |
 | SparkFun MAX30101 | Mã, JP1, hàng chân | SEN-16474 | | |
 | SparkFun BMI270 | Mã, kích thước, jumper | SEN-22397, 1" × 1" | | |
@@ -98,15 +98,16 @@ Kết quả nguyên văn `chip_id` và `espefuse summary` (các trường VDD_SP
 | 3 | GND ở chân 2, 4, 6, 8, 10, 12, 14 | có | | |
 | 3 | J3.1 ↔ pad 6 U1; J3.2 ↔ GND | có | | |
 
-## 6. Sửa module (BU mục 4)
+## 6. Chuẩn bị module, không sửa module (BU mục 4)
 
 | Module | Việc | Chờ đợi | Kết quả | Đạt |
 | --- | --- | --- | --- | --- |
-| Breakout MAX30001 | R3 mới đo trước khi hàn (kΩ) | 220 ±1 % | | |
-| Breakout MAX30001 | Pad R7, R8 | hở mạch | | |
+| Mọi module | Ảnh hai mặt khi nhận; không thay, gỡ, cắt linh kiện hay jumper | đủ ảnh, module còn nguyên | | |
+| Đầu chuyển ECG | Điện trở sleeve, tip, ring đo từ đầu bấm tới phích (kΩ), cả khi uốn cáp | trong ngưỡng ghi trước (A.2) | | |
+| Đầu chuyển ECG | Cách điện giữa các dây; hộp khóa phía giắc breakout | không thông; không cắm thẳng cáp được | | |
 | Breakout MAX30001 | Header SV1; đặt lên bản in 1:1 | GND trùng J1.1, lỗ vít trùng | | |
-| SparkFun MAX30101 | Cắt JP1 | LED nguồn không sáng | | |
-| SparkFun BMI270 | Cắt `I2C`, `ADR` | hở mạch | | |
+| SparkFun MAX30101 | Giá đỡ: chắn 880 nm, che D1 và hai đầu Qwiic | không lọt sáng, không chạm đầu Qwiic từ phía da | | |
+| SparkFun BMI270 | Jumper `I2C`, `ADR`, `PWR` | còn nguyên | | |
 
 ## 7. Hàn và lắp (BU mục 5)
 

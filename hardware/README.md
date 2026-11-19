@@ -15,7 +15,7 @@
 - **mechanical/**: thiết kế cơ khí và ràng buộc kích thước.
 - **test_reports/**: kế hoạch và báo cáo kiểm thử thiết bị:
   - [v1_bringup_procedure.md](test_reports/v1_bringup_procedure.md): trình tự
-    kiểm khi nhận hàng, sửa module, hàn, cấp nguồn và kiểm từng khối của V1-module;
+    kiểm khi nhận hàng, chuẩn bị module (không sửa module), hàn, cấp nguồn và kiểm từng khối của V1-module;
   - [sync_10min_test_plan.md](test_reports/sync_10min_test_plan.md): đo tốc độ
     thực, drift, jitter, độ trễ và lệch ECG–PPG khi thử trên bàn với PCB V1 (không
     người), sau bring-up mục 7–8.

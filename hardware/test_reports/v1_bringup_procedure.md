@@ -17,7 +17,8 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 
 - Đồng hồ vạn năng, oscilloscope ít nhất 2 kênh, thước kẹp, kính lúp.
 - USB tester cắm giữa laptop và cáp USB-C của bo Waveshare để đọc điện áp và dòng.
-- Máy hàn, thiếc, flux, bấc hút thiếc, nhíp, dao rọc giấy (cắt jumper).
+- Máy hàn, thiếc, flux, bấc hút thiếc, nhíp. Không cắt jumper hay gỡ linh kiện trên module
+  (chốt 2026-11-19).
 - Laptop chạy pin, cài PlatformIO theo [firmware/README.md](../../firmware/README.md).
 - Bản in PCB tỉ lệ 1:1 của hai bo (KiCad: Plot hoặc Print, tỉ lệ 1:1).
 
@@ -58,13 +59,11 @@ thấy ứng viên thì ghi "chưa xác định được nhánh BIN/BIP", không
 VCM; hai pad nối tip/ring chưa chứng minh linh kiện đó dẫn vào BIN/BIP. Các nhận định "nhiều
 khả năng" ở trên (điện trở `4992`, R1) cũng chỉ dựa vào hình dáng và mã in.
 
-**Điều kiện để làm bước 4 phần breakout** (sửa 2026-11-14): có sơ đồ net của bo v2 cho từng linh
-kiện sẽ thay hay gỡ, với bằng chứng ở **cả hai đầu**: schematic v2 (danh sách linh kiện hay BOM
-riêng là chưa đủ, vì không cho biết net), hoặc đường mạch nhìn thấy được trên bo, có ảnh hai mặt
-ghi vào báo cáo, nối từ pad của linh kiện tới chân hay linh kiện đã biết net (đã đề nghị
-ProtoCentral gửi schematic v2). Sơ đồ net phải chỉ rõ đường bảo vệ đầu vào ECG (điện trở nối tiếp)
-nằm ở đâu để không đụng vào. Người duyệt ký xác nhận sơ đồ net trước khi hàn. Không có thì không
-sửa breakout và không đo trên người với breakout này.
+**Không sửa breakout (chốt 2026-11-19, `custom_board_proposal.md` A.1, A.2).** Điện trở giới hạn
+dòng nằm trong đầu chuyển ECG, ngoài breakout, nên không cần sơ đồ net v2 để hàn. Đo thông mạch ở
+trên vẫn làm và ghi vào báo cáo, vì phân tích lỗi đơn của đầu chuyển cần biết sleeve, tip, ring
+nối tới đâu trên bo (đã đề nghị ProtoCentral gửi schematic v2). Chưa có đầu chuyển đạt mục 4 thì
+không đo trên người với breakout này.
 
 ## 2. Bo Waveshare đứng riêng (chỉ cắm USB)
 
@@ -129,15 +128,17 @@ sửa breakout và không đo trên người với breakout này.
    chân của J1 (bo cổ tay) tới pad M1/M3 tương ứng; GND ở chân 2, 4, 6, 8, 10, 12, 14
    (thứ tự cáp V1-draft4). J3.1 (`STIM`) tới pad 6 của U1, J3.2 tới GND.
 
-## 4. Sửa module (trước khi lắp)
+## 4. Chuẩn bị module (trước khi lắp; không sửa module, chốt 2026-11-19)
+
+Không thay, gỡ hay cắt linh kiện, jumper nào trên module (`custom_board_proposal.md` A.1). Chụp
+ảnh hai mặt từng module khi nhận để làm mốc. Chỉ hàn header và làm đầu chuyển ECG.
 
 | Module | Việc | Đạt khi |
 | --- | --- | --- |
-| Breakout MAX30001 | Thay R3 bằng 220 kΩ ±1 %, cỡ 0805 (datasheet yêu cầu ≥ 200 kΩ, A.2). Bo v2: chỉ làm khi sơ đồ net v2 đã được duyệt cho điện trở sleeve → VCM, có bằng chứng cả hai đầu (mục 1, ghi chú v2) | Đo R3 trước khi hàn lên bo: 220 kΩ ±1 %. Sau khi hàn, sleeve → điện trở mới khoảng 220 kΩ; tip và ring vẫn thông tới điện trở nối tiếp đầu vào như trước khi sửa; ảnh trước và sau ghi vào báo cáo |
-| Breakout MAX30001 | Gỡ R7, R8 (0 Ω, cỡ 0402): ngắt jack khỏi BIP/BIN của BioZ; đường ECG đi qua điện trở nối tiếp đầu vào (v1.0: R4, R5 51 kΩ; v2: theo sơ đồ net v2, ứng viên là hai điện trở `4992`) vẫn giữ nguyên. Bo v2: chỉ làm khi sơ đồ net v2 đã được duyệt cho hai linh kiện này và cho điện trở nối tiếp, có bằng chứng cả hai đầu (mục 1, ghi chú v2) | Pad R7, R8 hở mạch; tip và ring vẫn thông tới điện trở nối tiếp đầu vào, giá trị đo như trước khi gỡ; ảnh trước và sau ghi vào báo cáo |
+| Đầu chuyển ECG (thay việc thay R3, gỡ R7/R8) | Làm đầu chuyển giắc 3,5 mm có điện trở nối tiếp trên sleeve, tip, ring theo A.2; hộp bọc khóa phía giắc breakout. Giá trị điện trở tip/ring và cách bố trí hai điện trở sleeve còn mở (A.2) | Đo từng dây từ đầu bấm điện cực tới chân tương ứng ở phía phích cắm, trong ngưỡng trên và dưới đã ghi trước, cả khi uốn cáp; không thông giữa các dây; ảnh ghi vào báo cáo. Chưa đạt thì không đo trên người |
 | Breakout MAX30001 | Hàn header SV1 10 chân (có trong kit) từ mặt dưới: thân nhựa header ở mặt dưới, chân dài chĩa xuống, mặt linh kiện và jack 3,5 mm quay lên (thêm 2026-10-27) | Chân thẳng, không cầu thiếc. Đặt breakout lên bản in 1:1 của bo đế: chân GND ở đầu hàng phía jack trùng J1.1, lỗ vít trùng lỗ NPTH (23,37; 2,97). Lỗ vít không trùng nghĩa là breakout đang bị lật; một trong hai cách lật làm đảo thứ tự chân (VCC rơi vào lỗ MOSI) |
-| SparkFun MAX30101 | Cắt JP1 để tắt LED nguồn đỏ (LED cùng mặt với cảm biến, A.3) | Khi cấp nguồn, LED nguồn không sáng |
-| SparkFun BMI270 | Cắt jumper `I2C` và `ADR` để chạy SPI (A.3) | Hai jumper hở mạch |
+| SparkFun MAX30101 | Không cắt JP1, không tháo đầu Qwiic. Làm giá đỡ đen theo A.3 che LED nguồn D1, hai đầu Qwiic và mọi chỗ dẫn điện phía da | Vật liệu giá đỡ chắn được ánh sáng 880 nm (thử bằng chính cảm biến trong hộp tối); khi lắp, D1 không lọt sáng ra ngoài, đầu Qwiic không chạm được từ phía da |
+| SparkFun BMI270 | Không cắt jumper `I2C`, `ADR`, `PWR` (A.3) | Ba jumper còn nguyên như lúc nhận |
 
 ## 5. Hàn và lắp
 
@@ -168,8 +169,9 @@ sửa breakout và không đo trên người với breakout này.
    đồ chân bị gương, chân 3V3 của module rơi vào pad OCS); vít, đai ốc và spacer nylon
    M2 ở ba lỗ, mỗi lỗ hai spacer (tròn Ø ≤ 4,5 mm hoặc lục giác 4 mm giữa hai cạnh, M1
    và M3 mỗi bên một cái). Không dùng spacer lục giác cỡ M3: chạm thân nhựa header
-   ([danh sách mua](../bom/purchase_list_v1_module.md) mục 2). Miếng đệm dán ở góc thứ
-   tư.
+   ([danh sách mua](../bom/purchase_list_v1_module.md) mục 2). Góc thứ tư dùng
+   miếng đệm không keo, kẹp bằng giá đỡ (không dán keo lên module, sửa 2026-11-19). Lắp giá
+   đỡ MAX30101 cùng vít với M1.
 4. Đo lại 3V3–GND: không chập.
 
 ## 6. Bo đế với bo Waveshare (chưa có breakout và bo cổ tay)
@@ -203,7 +205,9 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    dùng để nhận chip (`protocentral_max30001_arduino_library`, `src/protocentral_max30001.cpp`).
 3. Cấu hình theo A.2: 512 sps, gain 20 V/V, `ECG_DLPF` 40,96 Hz, tắt `ECG_DHPF`,
    lead-off DC 10 nA ±400 mV (chốt 2026-10-25), `EN_BIOZ = 0`, **tắt lead
-   bias nội** (cấu hình 3 điện cực, VCM qua R3), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
+   bias nội** (cấu hình 3 điện cực, VCM qua R3 và điện trở sleeve của đầu chuyển),
+   BioZ tắt hẳn: `BMUX_OPENP/N = 1`, `BIOZ_CGMAG = 000` (thêm 2026-11-19; driver chưa ghi hai
+   thanh ghi này), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
    và `EN_INT2`, `EFIT = 15`, `SAMP_IT = 00` (xung `SAMP` mỗi mẫu), `CLR_SAMP = 1`,
    chỉ `SAMP` ra INT2B (chốt 2026-10-24, Packet Schema V0.2 mục 7). Đọc lại từng thanh ghi đã ghi.
 4. Oscilloscope:
@@ -230,7 +234,7 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
 5. Tín hiệu nhân tạo qua cáp ECG (mạch chia áp ở
    [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Bước
    này là mức bắt buộc tối thiểu trước khi thử trên người (chốt 2026-10-29). Nút
-   tham chiếu của mạch chia áp là sleeve (RL → R3 → VCM), không phải GND (chốt
+   tham chiếu của mạch chia áp là sleeve (RL → đầu chuyển → R3 → VCM), không phải GND (chốt
    2026-10-25; cách đấu và mức chờ đợi ở mục 3 của kế hoạch đó). Trước khi nối: vẽ
    sơ đồ đấu nối, đo mức vi sai và mức chung ở đầu vào bằng oscilloscope; mức chung
    phải nằm trong khoảng 0,29–1,39 V.

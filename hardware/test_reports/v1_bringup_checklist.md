@@ -95,7 +95,7 @@
 | 1 | Kiểm khi nhận (chưa hàn, chưa cấp nguồn) | BU mục 1 | [ ] | |
 | 2 | Bo Waveshare đứng riêng: nạp env khung, `record` 10 phút | BU mục 2 | [ ] | |
 | 3 | PCB trần: thông mạch, chập | BU mục 3 | [ ] | |
-| 4 | Sửa module trước khi lắp | BU mục 4 | [ ] | |
+| 4 | Chuẩn bị module (không sửa module; đầu chuyển ECG, giá đỡ MAX30101) | BU mục 4 | [ ] | |
 | 5 | Hàn và lắp | BU mục 5 | [ ] | |
 | 6 | Bo đế với bo Waveshare | BU mục 6 | [ ] | |
 | 7 | MAX30001 trên bo đế, nguồn SAMP | BU mục 7 | [ ] | |

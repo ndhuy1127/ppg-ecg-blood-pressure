@@ -60,6 +60,14 @@
 
 Mỗi phép đo ghi giá trị AC và DC, thang đo và độ bất định của đồng hồ.
 
+**Đầu chuyển ECG (thêm 2026-11-19).** Breakout MAX30001 không sửa: R3 (10 kΩ ở v1.0) và hai
+điện trở 0 Ω nối tip/ring vào BIP/BIN vẫn còn; điện trở giới hạn dòng nằm trong đầu chuyển giắc
+3,5 mm (`custom_board_proposal.md` A.2). Mọi phép đo trên làm với đúng đầu chuyển và cáp dùng cho
+người. Thêm một bảng phân tích lỗi đơn, chưa có trong kế hoạch này: điện áp lỗi lớn nhất có thể
+chạm tới từng điện cực (3,3 V, 5 V), một điện trở của đầu chuyển bị chập, lỗi ở chip AFE; dòng
+qua từng điện cực phải ≤ 50 µA DC. Bảng này quyết định giá trị điện trở tip/ring và phải được
+người có chuyên môn duyệt trước khi đo trên người.
+
 **Giới hạn đề xuất, bộ phận ứng dụng kiểu BF** (IEC 60601-1:2005 + AMD1:2012, Bảng 3 và 4;
 chưa đối chiếu nguyên văn; giá trị chờ đối chiếu và người có chuyên môn duyệt):
 
