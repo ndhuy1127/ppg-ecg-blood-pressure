@@ -39,3 +39,44 @@
 ## Conclusion
 RQ1 analysis executed successfully and generated
 report.json and summary.md.
+
+## End-to-end SYNTHETIC integration
+
+### Pipeline
+Synthetic ECG/PPG -> Packet Logger -> Device Ingest
+-> PAT/PPG Features -> RQ1 Analysis (LOSO)
+
+### Input
+- 3 synthetic subjects
+- 2 sessions per subject
+- 2 cuff events per session
+- Total: 6 sessions, 12 cuff events
+- Source: runs/linh_rq1_e2e_multi_03
+
+### Eligibility
+- Eligible subjects: 3/3
+- Excluded subjects: 0
+- Main-set cuffs: 6
+- No eligibility flags in the final input
+
+### Results
+| Model | SBP MAE | DBP MAE |
+| --- | ---: | ---: |
+| PPG-only | 1.77 | 1.77 |
+| PPG + PAT | 1.76 | 1.76 |
+| PAT-only | 1.51 | 1.51 |
+
+### Statistical limitations
+- Only 3 eligible subjects, below SAP requirement of 15.
+- Confidence intervals are not reliable at this sample size.
+- Some baseline comparison CIs are extremely wide.
+- No scientific performance conclusion is drawn.
+- Synthetic data only; no human measurement validation.
+
+### Verification
+- RQ1 completed without an execution error.
+- report.json and summary.md were generated.
+- End-to-end software integration is operational.
+
+### Output
+runs/linh_rq1_e2e_multi_03/analysis/
