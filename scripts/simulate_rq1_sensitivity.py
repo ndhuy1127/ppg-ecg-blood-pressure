@@ -2,23 +2,26 @@
 
     python scripts/simulate_rq1_sensitivity.py
 
-Reads configs/analysis/rq1_sensitivity_v2.json, writes a new directory
+Reads configs/analysis/rq1_sensitivity_v2.json (or --config, e.g. the v3 config
+of task C1: cuff noise levels, M6, repeated cuffs), writes a new directory
 runs/rq1_sensitivity/<UTC>/ with results.json, ci_check.json, summary.md and
 report.json (config hash, code hash, commit). See
 software/evaluation/rq1_sensitivity.py for the model and docs/protocol/sap_v1.md
 section 9 for how the result is used. The v1 config still runs and gives the v1
-numbers (percentile CI only).
+numbers (percentile CI only). For v3, ci_check.json holds the decision-check rows
+(10 000 bootstrap draws).
 """
 
 import argparse
 import hashlib
 import json
+import math
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-SCRIPT_VERSION = "rq1-sensitivity-runner-v2"
+SCRIPT_VERSION = "rq1-sensitivity-runner-v3"
 EQUAL_BUDGET = ((25, 2), (17, 3), (30, 2), (20, 3), (35, 2), (23, 3))
 READING_DESIGNS = ((25, 2), (20, 3))  # rows of the readings table
 
@@ -94,6 +97,167 @@ def run_ci_check(config):
                          conv["subjects"], spec["replicates"], draws,
                          config["levels"], methods)})
     return rows
+
+
+def rule_delta(sigma, rule):
+    """SAP section 8: max(floor, factor * sigma_rep), rounded up to ``step``."""
+    raw = max(rule["floor"], rule["factor"] * sigma)
+    return float(math.ceil(raw / rule["step"] - 1e-9) * rule["step"])
+
+
+def resting_median(tau, sigma):
+    """Median |reference change| at rest under the model: one evaluation M0 against
+    BP0 (mean of two cuffs) gives SD sqrt(tau^2 + 1.5 sigma^2)."""
+    return 0.67449 * math.sqrt(tau ** 2 + 1.5 * sigma ** 2)
+
+
+def v3_cases(config):
+    """Every v3 row: (key, seed, run_design keyword arguments)."""
+    seed, rule = config["seed"], config["delta_rule"]
+    for t_i, (name, target) in enumerate(config["targets"].items()):
+        fixed = config["fixed_delta"][name]
+        for s_i, sigma in enumerate(config["noise_levels"][name]):
+            spec = {**target, "sigma_cuff": sigma}
+            deltas = sorted({fixed, rule_delta(sigma, rule)})
+            for m_i, m2 in enumerate(target["m2"]):
+                for x_i, (m6_name, m6) in enumerate(config["m6"].items()):
+                    m6_arg = m6 and {**m6[name], "pat_gain": m6["pat_gain"]}
+                    for r_i, (rep_name, rep) in enumerate(config["repeat"].items()):
+                        for e_i, effect in enumerate(target["models"]):
+                            for d_i, (n, k) in enumerate(config["designs"]):
+                                key = {"target": name, "sigma_cuff": sigma,
+                                       "rule_delta": rule_delta(sigma, rule),
+                                       "fixed_delta": fixed, "m2_scenario": m2,
+                                       "m6": m6_name, "repeat": rep_name,
+                                       "effect": effect}
+                                yield key, [seed, t_i, s_i, m_i, x_i, r_i, e_i, d_i], {
+                                    "subjects": n, "sessions": k, "target": spec,
+                                    "models": target["models"][effect],
+                                    "effect": target["m2"][m2], "deltas": deltas,
+                                    "m6": m6_arg, "repeat": rep}
+
+
+def run_v3(config):
+    from software.evaluation.rq1_sensitivity import run_design
+
+    common = {"levels": config["levels"], "methods": [config["primary_ci_method"]],
+              "primary": config["primary_ci_method"],
+              "draw_blocks": config["draw_blocks"], "extras": True}
+    check = config["decision_check"]
+    results, decision = [], []
+    for key, seed, kwargs in v3_cases(config):
+        row = run_design(seed, config["replicates"], config["bootstrap_draws"],
+                         **kwargs, **common)
+        results.append({**key, **row})
+        if ([kwargs["subjects"], kwargs["sessions"]] in check["designs"]
+                and key["m2_scenario"] in check["m2"] and key["m6"] in check["m6"]
+                and key["repeat"] in check["repeat"]
+                and key["effect"] in check["models"]):
+            row = run_design([*seed, 500], config["replicates"],
+                             check["bootstrap_draws"], **kwargs, **common)
+            decision.append({**key, "bootstrap_draws": check["bootstrap_draws"],
+                             **row})
+    return results, decision
+
+
+def _r1(row, config):
+    rule = config["decision_rules"]
+    return (rule["planned_design"] == [row["subjects"], row["sessions"]]
+            and row["sigma_cuff"] == rule["reference_noise"][row["target"]]
+            and row["effect"] == "null")
+
+
+def summary_v3(results, decision, config):
+    level = "0.975"
+    fixed = config["fixed_delta"]
+    rules = config["decision_rules"]
+    mc = 100 * math.sqrt(0.25 / config["replicates"])
+    lines = ["# RQ1 sensitivity simulation v3 (assumptions only, no human data)", "",
+             f"CI method `{config['primary_ci_method']}`, subject level, "
+             f"{config['replicates']} simulated studies per row; Monte Carlo SE of a "
+             f"share at most {mc:.1f} percentage points. Every column uses the "
+             "97.5 % CI (first Holm step) unless stated. SBP and DBP are simulated "
+             "apart. `equiv@δ`: share of studies whose CI lies within ±δ (SAP "
+             "section 7 reading 'equivalent'). `rule δ`: SAP section 8 rule applied to "
+             "the simulated cuff noise. All numbers hold only under the config "
+             "assumptions.", "",
+             f"Decision rules written before this run ({rules['written']}):", ""]
+    lines += [f"- **{k}**: {v}" for k, v in rules.items()
+              if k.startswith("R")] + [""]
+    lines += ["## Cuff noise levels", "",
+              "| Target | σ cuff | rule δ | fixed δ | implied resting median "
+              "\\|ΔBP\\| (S4: about 3 mmHg SBP) |", "| --- | ---: | ---: | ---: | ---: |"]
+    for name, target in config["targets"].items():
+        for sigma in config["noise_levels"][name]:
+            lines.append(f"| {name} | {sigma:g} | "
+                         f"{rule_delta(sigma, config['delta_rule']):g} | "
+                         f"{fixed[name]:g} | "
+                         f"{resting_median(target['tau_day'], sigma):.2f} |")
+    lines += ["", f"## Decision check ({config['decision_check']['bootstrap_draws']} "
+              "bootstrap draws)", "",
+              "| Target | σ cuff | Subjects × sessions | Effect | mean d | CI width "
+              "mean (q90) | equiv@fixed δ | equiv@rule δ | P(main) | R1 |",
+              "| --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |"]
+    for row in decision:
+        block = row["levels"][level]
+        read = block["readings"]
+        eq_fixed = read[str(row["fixed_delta"])]["equivalent"]
+        verdict = ("pass" if eq_fixed >= 0.80 else "**fail**") if _r1(row, config) else ""
+        lines.append(
+            f"| {row['target']} | {row['sigma_cuff']:g} | {row['subjects']} × "
+            f"{row['sessions']} | {row['effect']} | {row['mean_d']:.2f} | "
+            f"{block['ci_width_mean']:.2f} ({block['ci_width_q10_q50_q90'][2]:.2f}) | "
+            f"{eq_fixed:.2f} | {read[str(row['rule_delta'])]['equivalent']:.2f} | "
+            f"{block['p_main_conclusion']:.2f} | {verdict} |")
+    planned = config["decision_rules"]["planned_design"]
+    for name in config["targets"]:
+        rows = [r for r in results if r["target"] == name]
+        lines += ["", f"## {name}, design size (M2 moderate, no M6, no repeat)", "",
+                  "| σ cuff | Subjects × sessions | null: CI width | null: equiv@fixed "
+                  "δ | benefit: P(main) | strong: P(main) |",
+                  "| ---: | --- | ---: | ---: | ---: | ---: |"]
+        base = [r for r in rows if r["m2_scenario"] == "moderate"
+                and r["m6"] == "none" and r["repeat"] == "none"]
+        for sigma in config["noise_levels"][name]:
+            for n, k in config["designs"]:
+                by = {r["effect"]: r for r in base
+                      if r["sigma_cuff"] == sigma and r["subjects"] == n}
+                null = by["null"]["levels"][level]
+                lines.append(
+                    f"| {sigma:g} | {n} × {k} | {null['ci_width_mean']:.2f} | "
+                    f"{null['readings'][str(fixed[name])]['equivalent']:.2f} | "
+                    f"{by['benefit']['levels'][level]['p_main_conclusion']:.2f} | "
+                    f"{by['strong']['levels'][level]['p_main_conclusion']:.2f} |")
+        lines += ["", f"## {name}, options at {planned[0]} × {planned[1]}", "",
+                  "Null rows give precision; benefit/strong rows the chance of the "
+                  "main conclusion. `d core`: mean d over the M0–M2 cuffs only; "
+                  "`d true`: mean d against the latent true change. P6: median M6 "
+                  "change against same-session M0.", "",
+                  "| σ cuff | M2 | M6 | Repeat | null: CI width | null: equiv@fixed δ | "
+                  "null: equiv@rule δ | benefit: P(main) | strong: P(main) | strong: "
+                  "d / d core / d true | P2 | P6 |",
+                  "| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | "
+                  "---: | ---: |"]
+        plan = [r for r in rows if [r["subjects"], r["sessions"]] == planned
+                and r["m2_scenario"] in ("narrow", "moderate")]
+        groups = {}
+        for r in plan:
+            groups.setdefault((r["sigma_cuff"], r["m2_scenario"], r["m6"],
+                               r["repeat"]), {})[r["effect"]] = r
+        for (sigma, m2, m6, rep), by in groups.items():
+            null = by["null"]["levels"][level]
+            strong = by["strong"]
+            p6 = f"{strong['p6_median']:.1f}" if "p6_median" in strong else "—"
+            lines.append(
+                f"| {sigma:g} | {m2} | {m6} | {rep} | {null['ci_width_mean']:.2f} | "
+                f"{null['readings'][str(fixed[name])]['equivalent']:.2f} | "
+                f"{null['readings'][str(by['null']['rule_delta'])]['equivalent']:.2f} | "
+                f"{by['benefit']['levels'][level]['p_main_conclusion']:.2f} | "
+                f"{strong['levels'][level]['p_main_conclusion']:.2f} | "
+                f"{strong['mean_d']:.2f} / {strong.get('mean_d_core', strong['mean_d']):.2f}"
+                f" / {strong.get('mean_d_true', float('nan')):.2f} | "
+                f"{strong['p2_median']:.1f} | {p6} |")
+    return "\n".join(lines)
 
 
 def method_sections(results, check, config):
@@ -250,8 +414,13 @@ def main():
         parser.exit(1, "Output directory already exists; refusing overwrite\n")
     payload = args.config.read_bytes()
     config = json.loads(payload)
-    results = run(config)
-    check = run_ci_check(config)
+    if config["schema_version"] == "rq1-sensitivity-v3":
+        results, check = run_v3(config)
+        text = summary_v3(results, check, config)
+    else:
+        results = run(config)
+        check = run_ci_check(config)
+        text = summary(results, config, check)
     from software._provenance import text_file_sha256, text_sha256
 
     def git(*a):
@@ -263,7 +432,7 @@ def main():
     status = git("status", "--porcelain")
     files = {"results.json": (json.dumps(results, indent=1) + "\n").encode("utf-8"),
              "ci_check.json": (json.dumps(check, indent=1) + "\n").encode("utf-8"),
-             "summary.md": (summary(results, config, check) + "\n").encode("utf-8")}
+             "summary.md": (text + "\n").encode("utf-8")}
     report = {
         "script_version": SCRIPT_VERSION, "source_type": "SIMULATED_ASSUMPTIONS_ONLY",
         "config_sha256": text_sha256(payload),

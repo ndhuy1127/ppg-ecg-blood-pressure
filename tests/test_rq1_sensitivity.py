@@ -175,6 +175,92 @@ def test_runner_summary_has_the_method_and_reading_tables():
     assert "`percentile`" in summary(run(old), old)
 
 
+def test_m6_adds_one_cuff_and_leaves_the_v2_draws_alone():
+    target = CONFIG["targets"]["SBP"]
+    args = (11, 80, 60, 15, 2, target, target["models"]["strong"],
+            target["m2"]["moderate"], target["deltas"], [0.95])
+    assert sim.run_design(*args) == sim.run_design(*args, m6=None)
+    assert sim.session_cuffs() == sim.CUFFS
+    assert sim.session_cuffs({"m6_mean": 10, "m6_sd": 0}) == (*sim.CUFFS, "M6")
+    m6 = sim.run_design(*args, m6={"m6_mean": 20.0, "m6_sd": 6.0})
+    assert m6["eval_cuffs_per_subject"] == 5 and "p6_median" in m6
+    assert "p6_median" not in sim.run_design(*args)
+
+
+def test_p6_tracks_the_m6_response_with_a_noise_free_cuff():
+    rng = np.random.default_rng(12)
+    target = {**CONFIG["targets"]["SBP"], "sigma_cuff": 0.0, "tau_day": 0.0}
+    m6 = {"m6_mean": 18.0, "m6_sd": 0.0}
+    *_, reference = sim.simulate_d(rng, 5, 10, 2, target, target["models"]["null"],
+                                   target["m2"]["moderate"], m6)
+    cuffs = sim.session_cuffs(m6)
+    assert reference.shape == (5, 10, 1, 5)
+    # No day effect and no cuff noise: M0 changes are 0 and M6 is exactly +18.
+    assert np.allclose(reference[..., cuffs.index("M6")], 18.0)
+    assert np.allclose(sim.p2_statistic(reference, cuffs, "M6"), 18.0)
+
+
+def test_repeat_scales_only_the_listed_phases():
+    target = {**CONFIG["targets"]["SBP"], "tau_day": 0.0, "m1_mean": 0.0, "m1_sd": 0.0}
+    args = (20, 4, 2, target, target["models"]["null"],
+            {"m2_mean": 0.0, "m2_sd": 0.0})
+    base = sim.simulate_d(np.random.default_rng(13), *args)[3]
+    # rho = -1: two perfectly opposed errors cancel, so M1 and M2 equal minus BP0 error.
+    rep = sim.simulate_d(np.random.default_rng(13), *args,
+                         repeat={"phases": ["M1", "M2"], "rho": -1.0})[3]
+    m0 = [i for i, c in enumerate(sim.CUFFS) if c == "M0"]
+    assert np.array_equal(rep[..., m0], base[..., m0])
+    # No true change: both averaged phases hold only minus the BP0 error.
+    assert np.allclose(rep[..., sim.CUFFS.index("M2")], rep[..., sim.CUFFS.index("M1")])
+    same = sim.simulate_d(np.random.default_rng(13), *args,
+                          repeat={"phases": ["M1", "M2"], "rho": 1.0})[3]
+    assert np.allclose(same, base)  # rho = 1: averaging does not help
+
+
+def test_no_pat_gain_at_m6_gives_the_ppg_slope_there():
+    target = {**CONFIG["targets"]["SBP"], "sigma_cuff": 0.0}
+    models = {"ppg": {"b": 0.3, "sigma_u": 0.0, "sigma_v": 0.0},
+              "ppg_pat": {"b": 0.8, "sigma_u": 0.0, "sigma_v": 0.0},
+              "rho_u": 0.0, "rho_v": 0.0}
+    args = (np.random.default_rng(14), 3, 6, 2, target, models,
+            {"m2_mean": 0.0, "m2_sd": 0.0})
+    m6 = {"m6_mean": 20.0, "m6_sd": 0.0}
+    gain = sim.simulate_d(*args, m6={**m6, "pat_gain": True}, extras=True)[4]
+    args = (np.random.default_rng(14), *args[1:])
+    flat = sim.simulate_d(*args, m6={**m6, "pat_gain": False}, extras=True)[4]
+    # Same draws; only the M6 cuff differs, and only for PPG+PAT.
+    assert np.allclose(gain["d_core"], flat["d_core"])
+    assert (flat["d_true"] > gain["d_true"]).all()
+    assert gain["mae_ppg"] == flat["mae_ppg"]
+
+
+def test_v3_rules_and_a_small_run():
+    from scripts.simulate_rq1_sensitivity import (resting_median, rule_delta,
+                                                  run_v3, summary_v3)
+
+    rule = {"factor": 0.5, "floor": 1.0, "step": 0.5}
+    assert [rule_delta(s, rule) for s in (1.0, 2.5, 3.0, 4.0, 5.0, 7.0)] == [
+        1.0, 1.5, 1.5, 2.0, 2.5, 3.5]
+    # v2 calibration: tau 2.5 and sigma 3 give a resting median of about 3 mmHg.
+    assert abs(resting_median(2.5, 3.0) - 3.0) < 0.01
+    v3 = json.loads((Path(__file__).resolve().parents[1]
+                     / "configs/analysis/rq1_sensitivity_v3.json").read_bytes())
+    assert v3["targets"] == json.loads((Path(__file__).resolve().parents[1]
+                                        / "configs/analysis/rq1_sensitivity_v2.json"
+                                        ).read_bytes())["targets"]
+    small = {**v3, "replicates": 20, "bootstrap_draws": 30, "designs": [[32, 2]],
+             "noise_levels": {"SBP": [5.0], "DBP": [4.0]},
+             "decision_check": {**v3["decision_check"], "bootstrap_draws": 40}}
+    results, decision = run_v3(small)
+    # 3 M2 x 5 M6 x 2 repeat x 3 models per target; check rows: null and strong.
+    assert len(results) == 2 * 3 * 5 * 2 * 3 and len(decision) == 2 * 2
+    assert all("mean_d_true" in r for r in results)
+    text = summary_v3(results, decision, small)
+    assert "## Decision check (40 bootstrap draws)" in text
+    assert "## SBP, options at 32 × 2" in text
+    assert text.count("| pass |") + text.count("| **fail** |") == 2  # R1: SBP, DBP
+
+
 def test_one_set_of_draws_serves_both_differences():
     rng = np.random.default_rng(3)
     counts = sim.draw_counts(50, 8, rng)

@@ -30,6 +30,9 @@
 >   không dùng tín hiệu (trung bình theo pha, độ lệch hằng số) và endpoint phụ bắt buộc dᴾ (mục
 >   3, 4, 7, 11); thêm hai endpoint phụ (biến chỉ pha, trung vị theo pha; mục 3); mục 9 thêm kết
 >   quả 9 và 10; mục 13 cập nhật.
+> - **Sửa 2026-11-19 (chốt, báo thầy), sau mô phỏng v3 và phản biện độc lập:** mục 9 thêm kết
+>   quả 11 (nhiễu cuff 3–7 mmHg, M6, đo lặp cuff); mục 8 thêm trần δ; mục 13 thêm điểm 11–14
+>   (trần δ, điều kiện để M6 vào endpoint chính, đo lặp cuff, máy cuff).
 
 ## 1. Câu hỏi và nguyên tắc
 
@@ -288,13 +291,16 @@ mục 4.E: "thêm PAT làm giảm sai số so với PPG-only và vượt zero-ch
 - **Quy tắc (chốt 2026-11-12, chưa có nguồn; giá trị tính sau pilot):**
   - σ_rep,X = SD của hiệu hai lần M0 liền nhau trong cùng phiên, chia √2, tính trên mọi phiên
     pilot có hai lần M0 hợp lệ. Đây là SD lặp lại của một lần đo cuff.
-  - δ_X = max(1 mmHg; 0,5 × σ_rep,X), làm tròn lên bước 0,5 mmHg.
+  - δ_X = min(trần_X; max(1 mmHg; 0,5 × σ_rep,X)), làm tròn lên bước 0,5 mmHg, với trần_SBP =
+    2 mmHg và trần_DBP = 1,5 mmHg (trần thêm 2026-11-19 sau mục 9, kết quả 11.6: nhiễu cuff lớn
+    làm δ không trần tăng tới 3,5 mmHg và biến một lợi ích thật thành "tương đương"). Khi trần
+    có hiệu lực, báo cả δ không trần trong bài.
 - **Lý do:** cải thiện MAE nhỏ hơn một nửa sai số lặp lại của chính tham chiếu thì khó tách khỏi
   nhiễu tham chiếu trong ứng dụng; sàn 1 mmHg tránh δ quá nhỏ khi pilot ít phiên.
 - **Trước pilot**, mô phỏng dùng các kịch bản δ_SBP ∈ {1; 2; 3} và δ_DBP ∈ {1; 1,5; 2} mmHg.
 - δ không đổi sau khi chốt, kể cả sau khi thấy dữ liệu chính.
 
-## 9. Mô phỏng độ nhạy (2026-11-07, chạy lại 2026-11-10; chỉ giả định)
+## 9. Mô phỏng độ nhạy (2026-11-07, chạy lại 2026-11-10, v3 2026-11-19; chỉ giả định)
 
 **Cách làm.** Code: `scripts/simulate_rq1_sensitivity.py` và
 `software/evaluation/rq1_sensitivity.py`. Config: `configs/analysis/rq1_sensitivity_v2.json`
@@ -501,6 +507,81 @@ bài báo đã sửa theo):**
   trẻ, và mô phỏng cho thấy không có ngưỡng nào của nó bảo đảm được kết luận chính; độ nhạy đã
   được phản ánh trong độ rộng CI.
 
+**Kết quả 11: nhiễu cuff lớn hơn, M6 và đo lặp cuff (v3, 2026-11-19; chỉ giả định).**
+
+- **Cách làm.** Config `configs/analysis/rq1_sensitivity_v3.json`, cùng code và runner (v3),
+  cùng target và mô hình của v2. Nhiễu cuff SBP 3/5/7 mmHg và DBP 2,5/4/5 mmHg (giả định, chưa
+  có nguồn). Thiết kế 15, 25 và 32 người × 2 phiên.
+- **M6** là một lần cuff thêm vào mỗi phiên đánh giá, với đáp ứng tự đặt:
+  - SBP +10 (SD 6) hoặc +20 (SD 8) mmHg; DBP +7 (SD 5) hoặc +14 (SD 6) mmHg;
+  - mỗi mức có hai biến thể: PAT theo M6 như ở các pha khác, hoặc PAT không thêm gì ở M6.
+- **Đo lặp cuff** là trường hợp tốt nhất: hai cuff ở M1, M2, M6 lấy trung bình, sai số tương
+  quan 0,3, không trôi.
+- Dao động giữa ngày giữ nguyên, nên nhiễu 5 và 7 mmHg cho trung vị \|ΔSBP\| lúc nghỉ 4,5 và
+  6,0 mmHg. Hai mức này vì vậy không khớp với ước lượng khoảng 3 mmHg đọc từ S4 Hình 3; chúng
+  là phép thử độ chịu nhiễu, không phải kịch bản đã hiệu chỉnh.
+- Các dòng quyết định chạy lại với 10 000 lượt rút. Mọi số dưới đây là CI 97,5 % (bước Holm
+  đầu); SBP và DBP mô phỏng riêng. Sai số Monte Carlo của một tỷ lệ tối đa 1,1 điểm %.
+- Luật đọc kết quả (R1–R4) ghi trong config trước khi chạy.
+- Kết quả: [rq1_sensitivity_v3/summary.md](../../reports/weekly/week_09/rq1_sensitivity_v3/summary.md)
+  (SHA-256 `4e3fbc4c…`, kèm `report.json`; chạy trên commit `16e9103` có thay đổi chưa commit).
+
+1. **Độ rộng CI gần như không đổi theo nhiễu cuff.** Với 32 × 2, M2 vừa, mô hình "null":
+   - CI rộng 1,48 / 1,53 / 1,56 mmHg (SBP) và 1,08 / 1,10 / 1,12 mmHg (DBP);
+   - tỷ lệ "tương đương trong δ cố định" (2 / 1,5 mmHg) là 1,00.
+
+   Tiêu chí R1 (≥ 80 %) vì vậy đạt ở mọi mức. Nhưng R1 đạt cả ở 25 × 2, nên nó **không phân biệt
+   được** các thiết kế và không phải điểm nghẽn. Giữ nguyên R1 như đã ghi, không sửa sau khi xem
+   kết quả.
+2. **Nhiễu cuff làm nhỏ hiệu ứng nhìn thấy.** Ở kịch bản "strong", d so với cuff là −1,49 /
+   −1,19 / −0,94 mmHg (SBP), trong khi d so với BP thật vẫn là −1,81 mmHg. P(kết luận chính)
+   theo nhiễu cuff:
+
+   | Đầu ra | Nhiễu thấp | Nhiễu vừa | Nhiễu cao |
+   | --- | --- | --- | --- |
+   | SBP | 0,35 | 0,19 | 0,12 |
+   | DBP | 0,14 | 0,10 | 0,08 |
+
+   Ở nhiễu tham chiếu (5 / 4 mmHg), P(kết luận chính) là 0,19 (SBP) và 0,10 (DBP), dưới mức
+   báo động 0,50 của R2.
+3. **Điểm nghẽn là vượt zero-change, không phải độ rộng CI của d.** Ở 32 × 2, nhiễu 5 mmHg,
+   "strong", không có M6: CI của d nằm dưới 0 ở 82 % nghiên cứu, nhưng CI của d⁰ chỉ ở 21 %.
+   Lý do: với M0–M2, ΔBP nhỏ nên zero-change khó bị vượt.
+4. **Đo lặp cuff giúp ít:** thêm 0–0,11 vào P(kết luận chính), phần lớn ≤ 0,07, dù là trường
+   hợp tốt nhất; mức thêm lớn nhất ở nhiễu 7 mmHg.
+5. **M6 làm P(kết luận chính) tăng mạnh, phần lớn nhờ vượt zero-change dễ hơn.** Ở 32 × 2,
+   nhiễu 5 mmHg, "strong":
+
+   | M6 | PAT theo M6 như các pha khác | PAT không thêm gì ở M6 |
+   | --- | --- | --- |
+   | Không có M6 | 0,19 | — |
+   | +10 mmHg | 0,81 | 0,45 |
+   | +20 mmHg | 1,00 | 0,72 |
+
+   - Khi PAT không thêm gì ở M6, CI của d⁰ dưới 0 tăng từ 21 % lên 93 % (M6 +20), còn CI của d
+     dưới 0 giảm từ 82 % xuống 76 %. Phần tăng đến từ việc zero-change kém ở M6, không đến từ
+     PAT.
+   - d trên M0–M2 không đổi khi thêm M6. Thêm M6 cũng đổi estimand: tỷ trọng M0 đi từ 2/4 xuống
+     2/5.
+   - **Hệ quả:** nếu có M6, kết luận chính dễ đạt hơn mà không chứng minh PAT có ích hơn.
+     Endpoint phụ dᴾ và quy tắc viết bài ở mục 7 càng cần. Báo d trên M0–M2 riêng là điều kiện
+     để dùng M6.
+6. **δ theo quy tắc mục 8 tăng theo nhiễu cuff:** 1,5 / 2,5 / 3,5 mmHg (SBP), 1,5 / 2 / 2,5 mmHg
+   (DBP).
+   - Ở kịch bản "strong", nhiễu 5 mmHg, 32 × 2, tỷ lệ đọc "tương đương trong δ" là 0,87 với δ
+     theo quy tắc (2,5) và 0,45 với δ cố định 2 mmHg; nhiễu 7 mmHg cho 1,00 và 0,68.
+   - Nhiễu cuff lớn làm một lợi ích thật bị đọc thành "tương đương".
+   - Vì vậy quy tắc ở mục 8 có thêm trần 2 / 1,5 mmHg (chốt 2026-11-19, mục 13 điểm 11). Lần chạy
+     v3 không áp trần (R4).
+7. **Giới hạn:**
+   - sai số mô hình không tăng theo nhiễu nhãn huấn luyện, nên đây chỉ là nhiễu ở nhãn đánh giá;
+   - không có người không đáp ứng M6;
+   - M2 và M6 không tương quan;
+   - không áp Holm chung SBP và DBP;
+   - đo lặp không có trôi.
+
+   Mọi số phụ thuộc kịch bản tự đặt.
+
 **Chốt sau pilot (quy tắc, không theo kết quả RQ1):**
 
 1. Chạy lại mô phỏng với các tham số ước lượng từ pilot: SD lặp cuff, dao động giữa ngày, đáp
@@ -586,6 +667,24 @@ tương ứng):
 10. Hai baseline không dùng tín hiệu, endpoint phụ bắt buộc dᴾ (không phải điều kiện của kết luận
     chính) và cách dùng khi viết bài (mục 3, 4, 7; mục 9, kết quả 9).
 
+Đã chốt 2026-11-19 sau mô phỏng v3 (mục 9, kết quả 11), báo thầy:
+
+11. **Trần δ:** δ_SBP ≤ 2 mmHg, δ_DBP ≤ 1,5 mmHg, ghi vào quy tắc ở mục 8. Lý do: nhiễu cuff lớn
+    làm δ không trần tăng tới 3,5 mmHg và biến một lợi ích thật thành "tương đương" (kết quả
+    11.6). Phương án đã cân nhắc: giữ quy tắc không trần (bỏ, vì lý do trên); dùng δ cố định
+    không phụ thuộc pilot (bỏ, vì mất căn cứ từ độ lặp lại của cuff).
+12. **Điều kiện để M6 vào endpoint chính** (nếu M6 có trong hồ sơ và đạt các tiêu chí pilot):
+    - d và d⁰ tính trên các lần cuff M0–M2 được báo riêng, cạnh kết quả chính;
+    - dᴾ (baseline theo pha) vẫn là endpoint phụ bắt buộc;
+    - tỷ trọng các pha trong MAE cố định trước pilot.
+
+    Lý do: kết quả 11.5 cho thấy M6 làm kết luận chính dễ đạt kể cả khi PAT không thêm gì ở M6,
+    vì zero-change kém ở M6.
+13. **Đo lặp cuff (C2) không chọn chỉ vì độ nhạy:** lợi ích chỉ 0–0,11, phần lớn ≤ 0,07 (kết quả
+    11.4). Vẫn có thể chọn nếu cần ước lượng σ_rep tốt hơn cho δ; quyết cùng C2.
+14. **Máy cuff:** ưu tiên model có validation và SD lặp lại nhỏ, vì nhiễu cuff làm giảm khả năng
+    đạt kết luận chính nhiều hơn mọi lựa chọn thiết kế khác ngoài M6 (kết quả 11.2).
+
 Còn lại trước khi khóa (cập nhật 2026-11-12):
 
 - ngưỡng SQI v1, khóa trên bản ghi G2;
@@ -593,7 +692,9 @@ Còn lại trước khi khóa (cập nhật 2026-11-12):
 - sổ lịch đo dự kiến (người, phiên, pha, số lần cuff định đo), trước pilot, để đếm lần đo và
   phiên bị bỏ (mục 4, "Thiếu pha"; mục 10); bảng đặc trưng chỉ có các lần cuff đã bấm (thêm
   2026-11-14);
-- sau pilot, trước thu chính: δ, số người, phân bổ phiên, theo quy tắc ở mục 8 và 9;
+- sau pilot, trước thu chính: δ (có trần, mục 8), số người, phân bổ phiên, theo quy tắc ở mục 8
+  và 9;
+- nếu M6 có trong hồ sơ: tỷ trọng các pha trong MAE, trước pilot (mục 13 điểm 12);
 - thêm 2026-11-15: code Bland–Altman cho đo lặp (mục 11) có test đáp án biết trước, trước lần
   chạy xác nhận;
 - thêm 2026-11-15: kiểm mã LED khóa giống nhau giữa các phiên của cùng một người; hiện mỗi bản

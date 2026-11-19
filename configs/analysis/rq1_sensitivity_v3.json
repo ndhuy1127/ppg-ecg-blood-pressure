@@ -1,0 +1,288 @@
+{
+  "schema_version": "rq1-sensitivity-v3",
+  "status": "PROPOSED_PENDING_REVIEW",
+  "note": "Every number is an assumption with no human data behind it (SAP v1 section 9). v3 (2026-11-19, task C1 of the roadmap) keeps the v2 targets, models, seed and CI method and adds: cuff noise SD sigma_cuff in noise_levels (unsourced; v2 used only the first level); tau_day is held fixed, so the levels above the first are incompatible with the S4 resting median |dSBP| of about 3 mmHg under the two-cuff BP0 of the SAP (summary prints the implied median); an optional M6 cuff per evaluation session with invented subject-level responses (Koba 2004 does not give seated cuff values), tracked either with the same slope b or with no PAT gain at M6; an optional best-case repeat of the M1, M2 and M6 cuffs (two cuffs averaged, error correlation rho, no drift, predictions not averaged). Adding M6 changes the estimand (M0 weight 2/4 -> 2/5); d over M0-M2 is reported apart. Model errors do not change with cuff noise, so only the evaluation labels get noisier. SBP and DBP are simulated apart (no Holm step).",
+  "seed": 20261119,
+  "replicates": 2000,
+  "bootstrap_draws": 1000,
+  "draw_blocks": 10,
+  "levels": [
+    0.95,
+    0.975
+  ],
+  "primary_ci_method": "t_envelope",
+  "designs": [
+    [
+      15,
+      2
+    ],
+    [
+      25,
+      2
+    ],
+    [
+      32,
+      2
+    ]
+  ],
+  "delta_rule": {
+    "factor": 0.5,
+    "floor": 1.0,
+    "step": 0.5
+  },
+  "fixed_delta": {
+    "SBP": 2.0,
+    "DBP": 1.5
+  },
+  "noise_levels": {
+    "SBP": [
+      3.0,
+      5.0,
+      7.0
+    ],
+    "DBP": [
+      2.5,
+      4.0,
+      5.0
+    ]
+  },
+  "m6": {
+    "none": null,
+    "low": {
+      "SBP": {
+        "m6_mean": 10.0,
+        "m6_sd": 6.0
+      },
+      "DBP": {
+        "m6_mean": 7.0,
+        "m6_sd": 5.0
+      },
+      "pat_gain": true
+    },
+    "low_no_pat_gain": {
+      "SBP": {
+        "m6_mean": 10.0,
+        "m6_sd": 6.0
+      },
+      "DBP": {
+        "m6_mean": 7.0,
+        "m6_sd": 5.0
+      },
+      "pat_gain": false
+    },
+    "high": {
+      "SBP": {
+        "m6_mean": 20.0,
+        "m6_sd": 8.0
+      },
+      "DBP": {
+        "m6_mean": 14.0,
+        "m6_sd": 6.0
+      },
+      "pat_gain": true
+    },
+    "high_no_pat_gain": {
+      "SBP": {
+        "m6_mean": 20.0,
+        "m6_sd": 8.0
+      },
+      "DBP": {
+        "m6_mean": 14.0,
+        "m6_sd": 6.0
+      },
+      "pat_gain": false
+    }
+  },
+  "repeat": {
+    "none": null,
+    "plateau_rho_0.3": {
+      "phases": [
+        "M1",
+        "M2",
+        "M6"
+      ],
+      "rho": 0.3
+    }
+  },
+  "decision_check": {
+    "bootstrap_draws": 10000,
+    "designs": [
+      [
+        25,
+        2
+      ],
+      [
+        32,
+        2
+      ]
+    ],
+    "m2": [
+      "moderate"
+    ],
+    "m6": [
+      "none"
+    ],
+    "repeat": [
+      "none"
+    ],
+    "models": [
+      "null",
+      "strong"
+    ]
+  },
+  "decision_rules": {
+    "written": "2026-11-19, before any v3 output was produced",
+    "planned_design": [
+      32,
+      2
+    ],
+    "reference_noise": {
+      "SBP": 5.0,
+      "DBP": 4.0
+    },
+    "R1_precision": "At the planned design, reference noise, M2 moderate, no M6, no repeat, model 'null': the share of studies whose 97.5 % CI of mean d_s lies within +-fixed_delta (reading 'equivalent') is at least 0.80, for SBP and DBP. Checked with the decision_check draws.",
+    "R2_alarm": "Same setting, model 'strong': P(main conclusion) at 97.5 % below 0.50 is an alarm reported to the team, not a pass/fail criterion; it depends on the invented model scenario.",
+    "R3_action": "If R1 fails: report which of repeat, M6 (with and without PAT gain at M6) or both restore R1, with their cost in session time; the choice among them is made by the team (C2, M6 criteria), never because an option makes the main conclusion more likely.",
+    "R4_delta": "Readings are reported at the SAP rule delta for each noise level and at fixed_delta. Whether to cap delta is decided by the team from the R1/R2 tables before the SAP is locked; no cap is applied in this run."
+  },
+  "targets": {
+    "SBP": {
+      "sigma_cuff": 3.0,
+      "tau_day": 2.5,
+      "m1_mean": -3.0,
+      "m1_sd": 3.0,
+      "deltas": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "m2": {
+        "narrow": {
+          "m2_mean": 3.0,
+          "m2_sd": 5.0
+        },
+        "moderate": {
+          "m2_mean": 8.0,
+          "m2_sd": 5.0
+        },
+        "wide": {
+          "m2_mean": 15.0,
+          "m2_sd": 6.0
+        }
+      },
+      "models": {
+        "null": {
+          "ppg": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "ppg_pat": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "benefit": {
+          "ppg": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "ppg_pat": {
+            "b": 0.6,
+            "sigma_u": 3.0,
+            "sigma_v": 3.5
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "strong": {
+          "ppg": {
+            "b": 0.3,
+            "sigma_u": 3.0,
+            "sigma_v": 4.0
+          },
+          "ppg_pat": {
+            "b": 0.8,
+            "sigma_u": 2.5,
+            "sigma_v": 3.0
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        }
+      }
+    },
+    "DBP": {
+      "sigma_cuff": 2.5,
+      "tau_day": 2.0,
+      "m1_mean": -1.5,
+      "m1_sd": 2.0,
+      "deltas": [
+        1.0,
+        1.5,
+        2.0
+      ],
+      "m2": {
+        "narrow": {
+          "m2_mean": 2.0,
+          "m2_sd": 4.0
+        },
+        "moderate": {
+          "m2_mean": 5.0,
+          "m2_sd": 4.0
+        },
+        "wide": {
+          "m2_mean": 9.0,
+          "m2_sd": 4.0
+        }
+      },
+      "models": {
+        "null": {
+          "ppg": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "ppg_pat": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "benefit": {
+          "ppg": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "ppg_pat": {
+            "b": 0.45,
+            "sigma_u": 2.0,
+            "sigma_v": 2.7
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        },
+        "strong": {
+          "ppg": {
+            "b": 0.2,
+            "sigma_u": 2.0,
+            "sigma_v": 3.0
+          },
+          "ppg_pat": {
+            "b": 0.7,
+            "sigma_u": 1.7,
+            "sigma_v": 2.3
+          },
+          "rho_u": 0.8,
+          "rho_v": 0.7
+        }
+      }
+    }
+  }
+}
