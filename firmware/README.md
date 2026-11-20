@@ -326,10 +326,16 @@ khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận c�
   thêm 2026-11-11). Phần GPIO và
   `esp_timer` trong `main.c` chỉ kiểm bằng build.
 
-## Kiểm tra khi có bo (chưa làm)
+## Kiểm tra khi có bo (bước 1–4 và 6 đạt 2026-11-20; bước 5 chờ bo đế)
 
 Đây là phần firmware của
-[trình tự bring-up](../hardware/test_reports/v1_bringup_procedure.md) mục 2.
+[trình tự bring-up](../hardware/test_reports/v1_bringup_procedure.md) mục 2. Kết quả ở
+[báo cáo 2026-11-20](../hardware/test_reports/2026-11-20_v1_bringup.md).
+
+Build sạch (`pio run -d firmware -e <env> -t clean`) trước khi nạp một bản dùng để ghi số
+liệu. Build tăng dần trên `.pio/build` cũ có thể giữ phiên bản ứng dụng cũ trong image: ngày
+2026-11-20 các env tạo lỗi nạp ra `4ee3e6d-dirty` dù commit là `d588222`, và logger báo
+`firmware_metadata_mismatch`.
 
 1. Nạp, mở UART0: thấy `packet self-test passed` và `SESSION_ID`.
 2. Ghi cổng USB native trong 10 phút chạy không tải bằng logger:
@@ -346,7 +352,9 @@ khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận c�
    Bản mặc định: mọi packet ECG có bit 8, logger không báo gì về `SAMP`. Bản
    `esp32s3_devkitc_samp_faults`: mỗi lỗi giả cho khoảng 32 packet ECG không bit 8 rồi
    một lần neo lại (bit 5), không có `timestamp_anomaly` hay
-   `samp_resumed_without_reanchor`. Bản `esp32s3_devkitc_ppg_delay`: mỗi 10 s một
+   `samp_resumed_without_reanchor`. Số packet không bit 8 tăng dần qua các lỗi (đo
+   2026-11-20: 34, 35, 36, …): lỗi giả cách đúng 10 s, bằng `SAMP_REMAP_MIN_GAP_US`, nên mỗi
+   lần khởi động lại ánh xạ trễ thêm khoảng 30 ms so với lần trước. Bản `esp32s3_devkitc_ppg_delay`: mỗi 10 s một
    packet PPG mỗi khe có khoảng 10 mẫu, logger không báo gì.
 5. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 6. Lệnh từ PC (bring-up mục 2 bước 7): ghi với `--commands`, gửi `ping`,

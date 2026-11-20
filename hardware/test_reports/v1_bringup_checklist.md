@@ -14,20 +14,22 @@
 - [ ] **Dây đo:** que móc cho test point TP1–TP4; dây cá sấu nối GND; dây ngắn cho chân C2 của
   bo cổ tay (không có test point).
 - [ ] **Jig nạp:** bo Waveshare nạp qua USB native, không cần jig riêng. Chuẩn bị:
-  - [ ] một cáp USB-C có dữ liệu, đã thử với laptop đo;
+  - [x] một cáp USB-C có dữ liệu, đã thử với laptop đo (2026-11-20; cáp đầu tiên chỉ có dây
+    nguồn, laptop không thấy bo);
   - [ ] nút BOOT/RESET dễ bấm khi đã lắp lên bo đế, hoặc dây nối để bấm từ ngoài;
   - [x] ghi lệnh nạp cho từng env (bảng Firmware dưới; chép vào báo cáo khi nạp).
 - [x] **Firmware:** build sẵn các env `esp32s3_devkitc` (khung), `esp32s3_devkitc_ppg_real`,
   `esp32s3_devkitc_all_real`, `esp32s3_devkitc_sync10`. Ghi commit và ELF SHA-256
   ([firmware/README.md](../../firmware/README.md)). Đã build 2026-11-13 (bảng dưới).
-- [ ] **Logger:**
-  - [ ] chạy thử `record --port` với bo Waveshare đứng riêng ngay khi có;
+- [x] **Logger:**
+  - [x] chạy thử `record --port` với bo Waveshare đứng riêng ngay khi có (2026-11-20);
   - [x] chuẩn bị metadata `packet-session-metadata-v1` cho bring-up, `subject_id` null kèm lý do
     (2026-11-13, mục "Logger không cần thiết bị" dưới);
   - [x] nơi ghi ngoài `data/raw/` ([packet_logger.md](../../docs/protocol/packet_logger.md)):
     `runs/bringup_v1/<YYYY-MM-DD>_<bước>/` (chốt 2026-11-13);
-  - [ ] thử `--dc-every-s 2` và `device_command.py ping` trên bo. Đã thử `--dc-every-s 2` trên
-    luồng giả (dưới); `ping` cần `record --port --commands`, chưa làm được khi chưa có bo.
+  - [x] thử `--dc-every-s 2` và `device_command.py ping` trên bo. Đã thử `--dc-every-s 2` trên
+    luồng giả (dưới); `ping` đạt trên bo 2026-11-20 (BU mục 2 bước 7). `--dc-every-s` trên bo có
+    nghĩa khi PPG chạy chip thật (BU mục 8).
 - [ ] **Bản in:** bản in PCB 1:1 của hai bo. Mạch đo dòng rò MD (AT mục 2) dựng sẵn, đã kiểm
   bằng dòng đã biết.
 - [x] **Mẫu báo cáo:** tạo trước `hardware/test_reports/<ngày>_v1_bringup.md` theo BU mục 11.
@@ -63,8 +65,11 @@
 ### Logger không cần thiết bị (2026-11-13)
 
 - Metadata bring-up: [metadata/v1_bringup_s2_default_env.json](metadata/v1_bringup_s2_default_env.json)
-  (SHA-256 `a2eda2bc2e12cc26ac7343082230d35b9d671531d2f982596ee99773e100a608`). Dùng cho BU mục 2
+  (SHA-256 `4096dbe9b1ac72fe027a9d97a944e1dc1d09aa89ce078bbe6d97d54b9be9cb6d` sau khi sửa
+  2026-11-20 sang commit `d588222`; bản 2026-11-13 ghi `0df0ba6`, SHA-256
+  `a2eda2bc2e12cc26ac7343082230d35b9d671531d2f982596ee99773e100a608`). Dùng cho BU mục 2
   với env `esp32s3_devkitc`. Qua `validate_metadata`. Khi nhận bo: điền `device_id`.
+  `firmware_version` phải bằng phiên bản trong image đã nạp, nên sửa mỗi lần build lại.
 - Chốt 2026-11-13, duyệt 2026-11-14: `source_type` là `DEVICE` vì byte đến từ bo thật, dù env mặc định
   gửi giá trị giả. Kênh ghi rõ "nguồn giả" trong `sensor`. Logger sẽ báo `afe_fake_source`
   với env này; đó là kết quả chờ đợi. Cùng ngày, Packet Schema V0.2 mục 11.1 sửa theo cùng
@@ -92,8 +97,8 @@
 
 | # | Bước | Chi tiết | Đạt | Ghi chú |
 | --- | --- | --- | --- | --- |
-| 1 | Kiểm khi nhận (chưa hàn, chưa cấp nguồn) | BU mục 1 | [ ] | |
-| 2 | Bo Waveshare đứng riêng: nạp env khung, `record` 10 phút | BU mục 2 | [ ] | |
+| 1 | Kiểm khi nhận (chưa hàn, chưa cấp nguồn) | BU mục 1 | [ ] | Một phần 2026-11-20: cáp ECG, breakout MAX30001, ký hiệu module và nhãn chân bo Waveshare; còn mã LDO, số đo thước kẹp, mã MAX30101/BMI270 ([báo cáo](2026-11-20_v1_bringup.md) mục 16) |
+| 2 | Bo Waveshare đứng riêng: nạp env khung, `record` 10 phút | BU mục 2 | [x] | 2026-11-20, bước 1–7 đạt; không làm `bMaxPower` và dòng USB (chưa có USB tester) |
 | 3 | PCB trần: thông mạch, chập | BU mục 3 | [ ] | |
 | 4 | Chuẩn bị module (không sửa module; đầu chuyển ECG, giá đỡ MAX30101) | BU mục 4 | [ ] | |
 | 5 | Hàn và lắp | BU mục 5 | [ ] | |

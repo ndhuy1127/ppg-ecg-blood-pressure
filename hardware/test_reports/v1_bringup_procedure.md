@@ -1,6 +1,7 @@
 # Trình tự bring-up V1-module
 
-> **Chưa thực hiện**: chưa có module và PCB. Áp dụng cho KiCad V1-module (bo đế
+> **Đang thực hiện từ 2026-11-20** (mục 2 đạt; mục 1 một phần;
+> [báo cáo](2026-11-20_v1_bringup.md)). Áp dụng cho KiCad V1-module (bo đế
 > V1-draft5, bo cổ tay V1-draft5, 2026-10-27), pin map chuẩn ở
 > [custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) mục
 > A.7 và [firmware khung](../../firmware/README.md).
@@ -49,6 +50,12 @@ nên không dùng vị trí linh kiện của file v1.0. Đọc từ ảnh bo (c
 - một điện trở 0805 in `0` (0 Ω) cạnh TXB0108, nhiều khả năng là R1 bật chân OE: **không gỡ**;
 - thứ tự nhãn 10 chân như v1.0: `GND, VCC, GND, INT2, INT1, FCLK, CSB, SCK, MOSI, MISO`.
 
+Đo ngày 2026-11-20 ([báo cáo](2026-11-20_v1_bringup.md) mục 3.1): bo có **hai** điện trở
+`01C`, không phải một. Một `01C` có một pad 0 Ω với sleeve, pad kia ≈ 10 kΩ (ứng viên R3). Mỗi
+`4992` có một pad 0 Ω với tip (hoặc ring), pad kia ≈ 50 kΩ. Linh kiện 0402 chưa đo, nhánh
+BIN/BIP chưa xác định. Màn hình đồng hồ hiện `0L` (hở mạch) dễ đọc nhầm thành 0 Ω: kiểm lại
+khi một linh kiện có cả hai pad "0" với một dây.
+
 Cách xác định khi chưa có schematic v2: rút nguồn, cắm cáp ECG đã đo thông mạch (đầu bấm ↔
 tip/ring/sleeve), đồng hồ ở thang Ω (không dùng tiếng bíp), chờ số ổn định và đảo que. Điện trở
 có một pad 0 Ω với sleeve là ứng viên R3. Linh kiện có cả hai pad 0 Ω với tip (hoặc ring) là
@@ -91,6 +98,10 @@ không đo trên người với breakout này.
    VDD3P3_RTC_IO, tức 3,3 V). Ghi nguyên văn kết quả vào báo cáo.
 3. Nạp firmware khung (`pio run -d firmware -t upload --upload-port COMx`). Mở log
    UART0 (115 200 baud): thấy `packet self-test passed`, `SESSION_ID`, ELF SHA-256.
+   Mọi bản nạp dùng để ghi số liệu (bước này, bước 6 và các mục sau) build sạch trước
+   (`pio run -d firmware -e <env> -t clean`), rồi đối chiếu phiên bản ứng dụng trên UART0
+   với commit và với `firmware_version` của metadata (thêm 2026-11-20: build tăng dần đã
+   nạp image cũ, [firmware/README.md](../../firmware/README.md) mục "Kiểm tra khi có bo").
 4. Đo chân 3V3–GND của bo Waveshare: khoảng 3,3 V. Ghi giá trị đo và dòng đọc trên USB
    tester khi firmware khung đang chạy (mốc so sánh cho mục 6–8).
 5. Ghi luồng packet từ cổng USB native 10 phút không tải bằng logger
