@@ -237,6 +237,45 @@ Cách phát hiện cạnh (ngưỡng, nội suy giữa hai mẫu) phải chốt 
 kết quả và giữ nguyên cho mọi lần đo. Độ phân giải thời gian bị giới hạn bởi
 chu kỳ lấy mẫu; ghi rõ trong báo cáo.
 
+**Quy tắc cạnh (chốt 2026-11-21, trước mọi lần đo; chế độ mốc FIFO; qua phản biện độc lập).**
+Cài ở `software/device/sync_analysis.py` (`sync-analysis-v1`, hằng `EDGE`), chạy bằng
+`scripts/analyze_sync.py`. Thời điểm tính từ mốc sự kiện `T_e` (packet mã 3), trên trục `t'`
+(đường thẳng mỗi chuỗi, cộng j · Δ cho khe PPG, **không** trừ L; metadata phải để
+`latency_l_us` rỗng, nếu không công cụ từ chối):
+
+| Bước | Quy tắc |
+| --- | --- |
+| Nền | Trung bình của trung vị [`T_e` − 250 ms, `T_e` − 50 ms) và trung vị [`T_e` + 200 ms, `T_e` + 400 ms); hai phía để bù trôi nền ECG (không có lọc thông cao) |
+| Nhiễu | Độ lệch chuẩn của đoạn trước |
+| Đỉnh | Trung vị của khoảng phẳng, khóa theo kênh: ECG [`T_e` + 45, `T_e` + 75) ms, PPG [`T_e` + 10, `T_e` + 40) ms. Giả định L_ECG khoảng 33–37 ms (trễ bộ lọc 31,6 ms cộng trễ đọc), L_PPG khoảng 0–8 ms; lệch xa hơn thì cạnh rơi ngoài cửa sổ và sự kiện bị loại, không bị đo sai |
+| Thấy được | Biên độ (đỉnh − nền) ≥ max(10 × nhiễu, 20 mã ADC); sàn 20 mã để tín hiệu phẳng (nhiễu 0) không qua |
+| Ngưỡng | Nền + biên độ / 2 |
+| Cạnh lên | Đúng một lần cắt lên, không lần cắt xuống nào, với mẫu sau trong [`T_e` − 20 ms, đầu khoảng phẳng); thời điểm nội suy tuyến tính giữa hai mẫu kề (mẫu trước có thể nằm trước cửa sổ) |
+| Cạnh xuống | Đúng một lần cắt xuống, không lần cắt lên, trong [cuối khoảng phẳng, cuối khoảng phẳng + 60 ms); cùng cách nội suy |
+| Kiểm | Độ rộng (xuống − lên) = 50 ± 10 ms; cả đoạn [`T_e` − 250, `T_e` + 400) ms cùng một chuỗi, chỉ số liên tục; không mẫu nào chạm biên mã (ECG ± 2¹⁷, PPG 0 hay 2¹⁸ − 1) |
+| Kết quả | Tâm = (lên + xuống) / 2; L_c của sự kiện = tâm − (`T_e` + 25 ms). Sự kiện bị loại ghi lý do (`not_detected`, `rise_not_unique`, `fall_not_unique`, `bad_width`, `gap`, `clipped`) |
+
+- L_PPG của sự kiện là trung bình ba khe, chỉ khi cả ba khe đạt; offset của sự kiện =
+  L_ECG − L_PPG, chỉ khi ECG và cả ba khe đạt. Báo thêm phần dư từng khe và hiệu từng cặp khe
+  (kèm CI): một khe hoán vị hay Δ sai lộ ở đây, không lộ ở trung bình.
+- Bỏ các sự kiện trong phút đầu (mục 4 bước 2).
+- **A4** dùng nửa độ rộng **lớn hơn** của hai CI 95 %: bootstrap theo sự kiện và bootstrap theo
+  khối 60 s (sự kiện cùng khối không độc lập); B = 2 000, seed cố định. Thiếu CI theo khối (dưới
+  hai khối) thì A4 "không đánh giá được".
+- A1 cộng packet thiếu của **mọi** kênh trong phiên, kể cả packet sự kiện; A2 và A3 chấm từng
+  chuỗi (chuỗi dưới hai mốc thì "không đánh giá được"). A5 cần 10 lượt khác nhau (theo SHA-256 của
+  raw và `SESSION_ID`), 5 lượt mỗi ngày trong hai ngày UTC, mỗi lượt đạt A1, A4, A9. A6 và A11 chỉ
+  được chấm khi A3 và A9 đạt; A6 dùng sáu khối 20 phút cố định tính từ xung kích thích đầu tiên
+  được phân tích.
+- **A9**: pha của `T_e` trên lưới mẫu của từng kênh, `frac((T_e − a − j·Δ) / b)` với đường
+  thẳng của chuỗi chứa sự kiện; báo thêm L trung bình theo từng ô pha.
+- **A3** không đạt: chưa cài hồi quy theo đoạn 60 s, nên A4–A6 và A11 "không đánh giá được".
+- **Tâm xung vào** dùng độ rộng danh định 50 ms của firmware. Sai số độ rộng thật triệt tiêu
+  trong offset (cùng sự kiện, cả hai kênh) nhưng làm lệch từng L; độ rộng thật đo bằng
+  oscilloscope khi có.
+- Điểm mù đã biết: lệch cố định từ đầu lượt (ví dụ một mẫu ECG) dời L_ECG và offset mà không
+  tiêu chí nào trượt; vì vậy A8 "không đánh giá được" và PAT tuyệt đối không được kiểm (11.1).
+
 **Độ phủ pha của kênh PPG (thêm 2026-11-11, sửa cùng ngày).** Lịch kích thích tính theo thời
 điểm đích, nên độ lệch ngẫu nhiên **cộng dồn**: cạnh thứ n cách cạnh đầu n × 1 s cộng tổng n độ
 lệch. Cả 1 s lẫn tổng các độ lệch đều không phải bội của 5 000 µs, và 1 s là bội đúng của cả
@@ -460,6 +499,13 @@ phải cận trên đã chứng minh.
 ### 11.5. Việc còn mở (phải chốt trước lần đo xác nhận đầu tiên)
 
 - ~~Định nghĩa cụ thể **tải cao** cho A11~~ (chốt 2026-11-21, mục 11.7).
+- ~~Công cụ tính offset từ xung kích thích~~ (xong 2026-11-21): `software/device/sync_analysis.py`,
+  `scripts/analyze_sync.py` (`run` cho một lượt, `a5` cho 10 lượt), quy tắc cạnh ở mục 5. Test
+  SYNTHETIC `tests/test_sync_analysis.py`: L và offset đúng đáp án (sai số dưới 0,1 ms), cả khi ECG
+  có dao động tắt dần của bộ lọc lý tưởng 41 Hz; kích thích khóa pha trượt A9; PPG phẳng không
+  được nhận; bước 1,953 ms giữa chuỗi trượt A10; lệch cố định từ đầu không bị bắt (điểm mù); A11
+  bắt 0,4 ms và cho qua 0,1 ms; thiếu mốc ranh giới thì không đánh giá được. Chưa cài: hồi quy
+  theo đoạn khi A3 trượt.
 - Cách bật kích thích của mục 3 trong chính bản build nghiên cứu, ví dụ bằng lệnh từ PC lúc chạy.
   Nếu chỉ làm được bằng một bản build khác cờ `BOARD_STIM`, ghi ELF SHA-256 của cả hai và nêu là
   giới hạn của phép đo.
@@ -526,7 +572,12 @@ và máy tính bận hơn.
 - **Gán khối:** ranh giới là các sự kiện `0xC1` mã 2 theo thứ tự (13 mốc). Số mốc khác 13 thì
   cả lượt "không đánh giá được", đo lại (một quy tắc duy nhất, không ghép khối khi thiếu mốc). Bỏ các xung kích thích (mã 3) trong **10 s sau mỗi ranh giới**; mỗi
   khối còn khoảng 110 xung.
-- **Tính:** offset ECG–PPG theo cách của A4, riêng cho mỗi loại tải, gộp các khối cùng loại. Đạt
+- **Tính:** offset ECG–PPG theo cách của A4, riêng cho mỗi loại tải, gộp các khối cùng loại.
+  Trục thời gian của một lượt là **một đường thẳng mỗi chuỗi**, nên trễ đọc FIFO đổi theo tải
+  chỉ làm mốc lệch quanh đường thẳng, không dời thời điểm mẫu; một phiên đo thật có đường thẳng
+  riêng, với hệ số chặn theo trễ đọc trung bình của phiên đó. Vì vậy mỗi khối được xét như một
+  phiên riêng: offset của các sự kiện trong khối cộng (phần dư mốc ECG trung bình − phần dư mốc
+  PPG trung bình) của khối (thêm 2026-11-21 khi cài, trước mọi lần đo). Đạt
   khi \|offset tải cao − offset tải thường\| ≤ 0,3 ms (A11). Báo thêm, không phải tiêu chí:
   chênh lệch của 6 cặp khối liền kề (thường, cao), đồ thị offset theo khối (để thấy trôi theo
   nhiệt lẫn với tải), `tx_timeout` và `queue_drop` của từng khối. A9 tính riêng cho từng loại

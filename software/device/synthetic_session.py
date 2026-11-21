@@ -69,6 +69,27 @@ class SessionSpec:
     # ((time_s, step_us), ...): from that sample time on, ECG anchors are shifted
     # by step_us (a mis-timed FIFO read path; A10 test, added 2026-11-21).
     ecg_anchor_steps: tuple = ()
+    ppg_anchor_steps: tuple = ()  # same, for the PPG anchors (all slots)
+    # Sync-test stimulus (added 2026-11-21, sync_10min_test_plan.md sections 3-5):
+    # a square pulse of stim_width_s starting at each time of stim_s (s from the
+    # session start) appears in the ECG stim_ecg_delay_us later and in every PPG
+    # slot stim_ppg_delay_us later, with linear edges of stim_edge_s centred on
+    # the true edges (so the 50 % crossings are exact); an event 0xC1 code 3 is
+    # added at each time. ecg_beats / ppg_beats False leave the physiology out;
+    # declare_latency False writes latency_l_us null, as the sync run needs.
+    stim_s: tuple = ()
+    stim_width_s: float = 0.05
+    stim_edge_s: float = 0.006
+    stim_ecg_delay_us: int = 31555
+    stim_ppg_delay_us: int = 0
+    stim_ecg_amp: float = 0.05
+    stim_ppg_amp: float = 0.5
+    # ECG pulse through an ideal low-pass of this cutoff (Hz) instead of linear
+    # edges: symmetric ringing (Gibbs), 50 % crossings still at the true edges.
+    stim_ecg_lowpass_hz: float = 0.0
+    ecg_beats: bool = True
+    ppg_beats: bool = True
+    declare_latency: bool = True
     session_id: int = 1
     seed: int = 20261113
 
@@ -92,8 +113,33 @@ def _wander(t, amplitude, hz):
     return amplitude * (np.sin(2 * np.pi * hz * t) + np.sin(2 * np.pi * hz / 5 * t + 1.0))
 
 
+def _stim(t, spec, delay_us, amplitude, lowpass_hz=0.0):
+    """The stimulus pulses as seen ``delay_us`` after each start time."""
+    values = np.zeros_like(t)
+    half = spec.stim_edge_s / 2
+    if lowpass_hz:
+        from scipy.special import sici
+
+        def step(x):  # step response of an ideal low-pass, 0.5 at x = 0
+            return 0.5 + sici(2 * np.pi * lowpass_hz * x)[0] / np.pi
+
+        for start in spec.stim_s:
+            on = start + delay_us * 1e-6
+            values += amplitude * (step(t - on) - step(t - on - spec.stim_width_s))
+        return values
+    for start in spec.stim_s:
+        on, off = start + delay_us * 1e-6, start + delay_us * 1e-6 + spec.stim_width_s
+        level = np.clip((t - (on - half)) / spec.stim_edge_s, 0, 1)
+        level = np.minimum(level, np.clip(((off + half) - t) / spec.stim_edge_s, 0, 1))
+        values += amplitude * level
+    return values
+
+
 def _ecg(t, beats, rng, spec):
     values = np.zeros_like(t)
+    if spec.stim_s:
+        values += _stim(t, spec, spec.stim_ecg_delay_us, spec.stim_ecg_amp,
+                        spec.stim_ecg_lowpass_hz)
     for r in beats:
         near = np.abs(t - r) < 0.05
         values[near] += np.exp(-0.5 * ((t[near] - r) / 0.008) ** 2)
@@ -116,6 +162,8 @@ def _pulse(dt):
 
 def _ppg(t, feet, rng, spec, gain):
     values = np.zeros_like(t)
+    if spec.stim_s:
+        values += _stim(t, spec, spec.stim_ppg_delay_us, spec.stim_ppg_amp) / gain
     for foot in feet:
         values += _pulse(t - foot)
     noise = np.full(t.shape, spec.ppg_noise_sd)
@@ -167,11 +215,11 @@ def generate(spec: SessionSpec):
     ``truth`` holds the set R times, foot times and PAT of every beat on the MCU
     clock (us), and the true sample rates."""
     rng = np.random.default_rng(spec.seed)
-    beats = beat_times(spec)
+    beats = beat_times(spec) if spec.ecg_beats else np.array([])
     pats = pat_at(spec, beats)
     feet = beats + pats / 1000
     missed = set(spec.missed_ppg_beats)
-    ppg_feet = np.array([f for i, f in enumerate(feet) if i not in missed])
+    ppg_feet = np.array([f for i, f in enumerate(feet) if i not in missed and spec.ppg_beats])
 
     ecg_fs = spec.ecg_fs_hz * (1 + spec.ecg_clock_ppm * 1e-6)
     ppg_fs = spec.ppg_fs_hz * (1 + spec.ppg_clock_ppm * 1e-6)
@@ -186,9 +234,11 @@ def generate(spec: SessionSpec):
                          spec.ecg_fs_hz, spec, spec.ecg_latency_us,
                          spec.ecg_packet_samples, spec.ecg_anchor_steps)
     rows += _data_packets(rng, tuple(PPG_SLOTS), ppg, t_ppg, spec.ppg_fs_hz, spec,
-                          spec.ppg_latency_us, spec.ppg_packet_samples)
+                          spec.ppg_latency_us, spec.ppg_packet_samples,
+                          spec.ppg_anchor_steps)
     rows.append((spec.start_us - 1, _max30101_state(spec, spec.start_us - 1)))
-    for ordinal, (code, time_s) in enumerate(spec.events):
+    events = sorted([*spec.events, *((3, t) for t in spec.stim_s)], key=lambda e: e[1])
+    for ordinal, (code, time_s) in enumerate(events):
         anchor = int(round(spec.start_us + time_s * 1e6))
         rows.append((anchor, Packet(WIRE_VERSION_V02, EVENT_CHANNEL, spec.session_id,
                                     ordinal, ordinal, anchor, anchor, 0, 0, (code,))))
@@ -203,6 +253,12 @@ def generate(spec: SessionSpec):
         "missed_ppg_beats": sorted(missed),
         "ecg_fs_true_hz": ecg_fs, "ppg_fs_true_hz": ppg_fs,
         "slot_spacing_us": SLOT_SPACING_US[spec.led_pw_code],
+        # Effective latency of each channel on the anchor-fitted time axis: the
+        # stimulus delay plus the anchor latency plus the mean anchor jitter.
+        "stim_l_ecg_us": spec.stim_ecg_delay_us + spec.ecg_latency_us
+        + spec.anchor_jitter_us / 2,
+        "stim_l_ppg_us": spec.stim_ppg_delay_us + spec.ppg_latency_us
+        + spec.anchor_jitter_us / 2,
     }
     return stream, metadata(spec), truth
 
@@ -226,9 +282,14 @@ def metadata(spec):
                              *((f"0x{c:02X}", spec.ppg_fs_hz, spec.ppg_latency_us)
                                for c in PPG_SLOTS)):
         channels[key] = {"sensor": "SYNTHETIC", "fs_nominal_mhz": int(fs * 1000),
-                         "latency_l_us": int(latency + half),
-                         "latency_source": f"SYNTHETIC: {VERSION} parameter",
+                         "latency_l_us": int(latency + half) if spec.declare_latency
+                         else None,
+                         "latency_source": f"SYNTHETIC: {VERSION} parameter"
+                         if spec.declare_latency else None,
                          "unit_conversion": None, "afe_config": None}
+        if not spec.declare_latency:
+            reasons[f"channels.{key}.latency_l_us"] = "sync run: L is what it measures"
+            reasons[f"channels.{key}.latency_source"] = "sync run: L is what it measures"
         reasons[f"channels.{key}.unit_conversion"] = "synthetic integers"
         reasons[f"channels.{key}.afe_config"] = "no AFE in simulation"
     channels["0xC1"] = {"sensor": "SYNTHETIC_EVENT", "fs_nominal_mhz": None,
