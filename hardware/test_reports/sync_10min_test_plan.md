@@ -464,7 +464,20 @@ phải cận trên đã chứng minh.
 - Cách bật kích thích của mục 3 trong chính bản build nghiên cứu, ví dụ bằng lệnh từ PC lúc chạy.
   Nếu chỉ làm được bằng một bản build khác cờ `BOARD_STIM`, ghi ELF SHA-256 của cả hai và nêu là
   giới hạn của phép đo.
-- Cài A10 trong logger và test chèn bước; cài kiểm tốc độ và chế độ FIFO trong firmware.
+- ~~Cài A10 và test chèn bước~~ (xong 2026-11-21): `software/device/ecg_anchor_residual.py`
+  (`ecg-anchor-residual-v1`), chạy bằng `scripts/check_ecg_anchor_residual.py` trên thư mục bản
+  ghi, không sửa logger (`packet-logger-v3` giữ nguyên). Hai điểm kế hoạch chưa ghi, chốt trong
+  module trước mọi lần đo xác nhận: (1) "packet hợp lệ" là một dãy mẫu liên tục có mốc tin cậy;
+  chuỗi mới, đổi nguồn mốc, mẫu bị thiếu, hay một packet có mốc không tin cậy (bit 0, bit 7) đều
+  bắt đầu lại 10 s lịch sử; (2) "10 s" tính theo chỉ số mẫu ở tốc độ danh định, không theo mốc
+  đang kiểm, để một mốc sai không tự quyết định nó có được kiểm hay không. Test
+  `tests/test_ecg_anchor_residual.py`: chuỗi sạch không gắn cờ; bước ± 1,953 ms và ± 0,75 ms bị
+  bắt đúng packet bắt đầu bước, kể cả ngay packet đầu tiên đủ 10 s; bước 0,4 ms lọt (đúng thiết
+  kế); phần dư khớp một phép hồi quy tính lại độc lập khi tốc độ trôi. Hai bản ghi pilot không
+  chấm được packet nào: bản chẩn đoán khởi động lại ánh xạ mỗi 10 s nên không chuỗi nào đủ 10 s
+  liên tục. Phép nghiệm thu A10 vì vậy cần firmware chế độ FIFO (không `SYNCH` định kỳ).
+- Đưa A10 vào `device_session.py` để áp quy tắc 11.4 cho dữ liệu buổi đo; cài kiểm tốc độ và
+  chế độ FIFO trong firmware.
 - Sửa Packet Schema V0.2 mục 7 và metadata (`latency_l_us`, `latency_source` cho mốc FIFO) cho
   khớp.
 - Nếu ProtoCentral trả lời có cách bật `SAMP` trên bo v2
