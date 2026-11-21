@@ -758,6 +758,10 @@ static max30001_bus_t s_ecg_bus;
 static max30001_regs_t s_ecg_regs;
 static int64_t s_ecg_lag_min_us = INT64_MAX, s_ecg_lag_max_us = INT64_MIN;
 static uint32_t s_ecg_status_reads, s_ecg_pllint_reads; /* STATUS reads, with PLLINT */
+/* STATUS reads with DCLOFFINT, and with each LDOFF bit (index = bit, so
+ * 0 NL, 1 NH, 2 PL, 3 PH): UART0 log only, to tell which input and side trip
+ * the lead-off flag (bring-up report 9.2, added 2026-11-22). */
+static uint32_t s_ecg_dcloff_reads, s_ecg_ldoff_reads[4];
 static ecg_rate_t s_ecg_rate; /* FIFO-anchor mode only; ECG task */
 /* Copy for log_stats, published by the ECG task under the lock after each window. */
 static ecg_rate_t s_ecg_rate_pub;
@@ -967,6 +971,10 @@ static void ecg_reader_task(void *arg)
         if (bus_ok) {
             s_ecg_status_reads++;
             s_ecg_pllint_reads += (st & MAX30001_ST_PLLINT) ? 1u : 0u;
+            s_ecg_dcloff_reads += (st & MAX30001_ST_DCLOFFINT) ? 1u : 0u;
+            for (int b = 0; b < 4; b++) {
+                s_ecg_ldoff_reads[b] += (st >> b) & 1u;
+            }
         }
         ecg_read_plan_t plan = ecg_read_plan(&ecg, &f, bus_ok, st, t_read,
                                              ECG_FS_NOMINAL_MHZ,
@@ -1776,6 +1784,10 @@ static void log_stats(void)
     ESP_LOGI(TAG, "ECG STATUS reads after FIFO reads %" PRIu32 ", with PLLINT %" PRIu32,
              s_ecg_status_reads,
              s_ecg_pllint_reads);
+    ESP_LOGI(TAG, "ECG STATUS reads with DCLOFFINT %" PRIu32 "; LDOFF_PH %" PRIu32
+                  ", LDOFF_PL %" PRIu32 ", LDOFF_NH %" PRIu32 ", LDOFF_NL %" PRIu32,
+             s_ecg_dcloff_reads, s_ecg_ldoff_reads[3], s_ecg_ldoff_reads[2],
+             s_ecg_ldoff_reads[1], s_ecg_ldoff_reads[0]);
     if (BOARD_ECG_FIFO_MODE) {
         portENTER_CRITICAL(&s_ecg_rate_mux);
         ecg_rate_t rate = s_ecg_rate_pub;

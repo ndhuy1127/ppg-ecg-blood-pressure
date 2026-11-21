@@ -400,6 +400,9 @@ breakout đã cắm vào bo đế.
   2026-10-23 tới 2026-10-25):
   - 512 sps (`FMSTR 00`); gain 20 V/V; `ECG_DLPF` 40,96 Hz; tắt `ECG_DHPF`;
   - lead-off DC 10 nA, VMID ± 400 mV; fast recovery tự động; tắt lead bias nội;
+    ngưỡng đổi được khi build bằng `-DBOARD_ECG_DCLOFF_VTH=0..3` (±300/400/450/500 mV),
+    chỉ để kiểm ngưỡng trên bàn, mọi bản ghi giữ 1; UART0 in mỗi 10 s số lần đọc STATUS có
+    `DCLOFFINT` và từng bit `LDOFF_PH/PL/NH/NL` (thêm 2026-11-22);
   - BioZ, PACE và bộ dò R của chip đều tắt;
   - INTB = `EINT` (`EFIT = 15`), INT2B = `SAMP` mỗi mẫu, tự xóa; cả hai ra CMOS.
 
