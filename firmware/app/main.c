@@ -31,6 +31,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "ecg_loop.h"
+#include "ecg_rate.h"
 #include "ecg_read.h"
 #include "imu_plan.h"
 #include "max30001.h"
@@ -176,6 +177,15 @@ typedef struct {
  * 5 marks the re-anchor that the next packet continues (V0.2 section 5). */
 #define CARRY_BITS (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_MCU_BUFFER_OVERFLOW                     | PKT_STATUS_INDEX_REANCHORED)
 
+/* In FIFO-anchor mode the ECG rate check marks a fault with bits 3 and 5 on one
+ * packet; if that packet is dropped, bit 3 moves on too, so the cause is not
+ * lost (sync test plan 11.3). Other channels and modes carry CARRY_BITS only. */
+static uint16_t carry_mask(uint8_t channel_id)
+{
+    return CARRY_BITS | ((BOARD_ECG_FIFO_MODE && channel_id == PKT_CH_ECG)
+                             ? PKT_STATUS_AFE_ERROR : 0u);
+}
+
 /* One event (the t0 button, a sync stimulus pulse, or a MARK_EVENT command),
  * with the edges of its source that the queue dropped just before it (always 0
  * for a command: a full queue answers it BUSY instead). */
@@ -225,7 +235,8 @@ static bool enqueue(pkt_t *p)
         return true;
     }
     if (carries) {
-        s_drop_bits[k] = (p->status & CARRY_BITS) | PKT_STATUS_MCU_BUFFER_OVERFLOW;
+        s_drop_bits[k] = (p->status & carry_mask(p->channel_id))
+                         | PKT_STATUS_MCU_BUFFER_OVERFLOW;
     }
     s_stats[k].queue_drop++;
     return false;
@@ -261,7 +272,8 @@ static void tx_task(void *arg)
             }
             s_stats[k].tx_timeout++;
             /* Not for 0xD2 (one channel, three AFEs): its SEQ gap shows the loss. */
-            carry[k] = p.channel_id != PKT_CH_AFE_CONFIG ? p.status & CARRY_BITS : 0u;
+            carry[k] = p.channel_id != PKT_CH_AFE_CONFIG ? p.status & carry_mask(p.channel_id)
+                                                        : 0u;
         }
     }
 }
@@ -732,14 +744,24 @@ static void fake_samp_edge(uint64_t index, int64_t t_us)
 #if BOARD_ECG_PLL_DIAG && BOARD_SAMP_VERIFIED
 #error "BOARD_ECG_PLL_DIAG is a diagnostic build: bit 8 must stay off"
 #endif
+#if BOARD_ECG_FIFO_MODE && (BOARD_SAMP_VERIFIED || BOARD_ECG_PLL_DIAG)
+#error "BOARD_ECG_FIFO_MODE: bit 8 off, not a diagnostic build"
+#endif
 #define ECG_FS_NOMINAL_MHZ 512000u
 #define ECG_POLL_MS 10
 #define ECG_PLL_TIMEOUT_MS 1000
+/* FIFO-anchor mode: rate check window and tolerance (sync test plan 11.3). */
+#define ECG_RATE_WINDOW_US 10000000LL
+#define ECG_RATE_TOL_PPM 1000u
 
 static max30001_bus_t s_ecg_bus;
 static max30001_regs_t s_ecg_regs;
 static int64_t s_ecg_lag_min_us = INT64_MAX, s_ecg_lag_max_us = INT64_MIN;
 static uint32_t s_ecg_status_reads, s_ecg_pllint_reads; /* STATUS reads, with PLLINT */
+static ecg_rate_t s_ecg_rate; /* FIFO-anchor mode only; ECG task */
+/* Copy for log_stats, published by the ECG task under the lock after each window. */
+static ecg_rate_t s_ecg_rate_pub;
+static portMUX_TYPE s_ecg_rate_mux = portMUX_INITIALIZER_UNLOCKED;
 
 static void ecg_mapping_start(void *arg)
 {
@@ -820,6 +842,13 @@ static max30001_err_t ecg_start_chip(uint32_t *info)
         }
         err = ecg_pll_diag(s_ecg_generation == 0) ? MAX30001_OK : MAX30001_ERR_READBACK;
     }
+#elif BOARD_ECG_FIFO_MODE
+    if (err == MAX30001_ERR_PLL) {
+        /* PLLINT never clears on this board; the rate check stands in for it. */
+        ESP_LOGW(TAG, "MAX30001 PLLINT still set after %d ms: going on (FIFO-anchor mode)",
+                 ECG_PLL_TIMEOUT_MS);
+        err = MAX30001_OK;
+    }
 #endif
     return err;
 }
@@ -834,7 +863,8 @@ static bool ecg_start_again(ecg_read_t *ecg)
     uint32_t info = 0;
     max30001_err_t err = ecg_start_chip(&info);
     if (err == MAX30001_OK) {
-        err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
+        err = max30001_restart(&s_ecg_bus, &s_ecg_regs,
+                               BOARD_ECG_FIFO_MODE ? NULL : ecg_mapping_start, NULL);
     }
     if (err != MAX30001_OK) {
         ESP_LOGE(TAG, "MAX30001 start failed (%d), retrying", (int)err);
@@ -886,13 +916,16 @@ static void ecg_reader_task(void *arg)
     if (!BOARD_SAMP_VERIFIED) {
         ESP_LOGW(TAG, "SAMP alignment not verified: ECG bit 8 off (bring-up section 7)");
     }
-    err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
+    err = max30001_restart(&s_ecg_bus, &s_ecg_regs,
+                           BOARD_ECG_FIFO_MODE ? NULL : ecg_mapping_start, NULL);
     if (err != MAX30001_OK) {
         ecg_give_up("SYNCH", (int)err);
     }
     ecg_read_t ecg;
     ecg_read_init(&ecg, false);
     ecg.pllint_no_remap = BOARD_ECG_PLL_DIAG;
+    ecg.pllint_ignore = BOARD_ECG_FIFO_MODE;
+    ecg_rate_init(&s_ecg_rate);
     ecg_loop_t loop;
     ecg_loop_init(&loop, esp_timer_get_time());
     for (;;) {
@@ -912,14 +945,17 @@ static void ecg_reader_task(void *arg)
                 ESP_LOGE(TAG, "MAX30001 %s (%d): starting it again",
                          err != MAX30001_OK ? "check failed" : "silent", (int)err);
                 imu_index_read_failed(&ecg.index);
-                samp_map_error(&s_samp, SAMP_AFE, now);
+                if (!BOARD_ECG_FIFO_MODE) {
+                    samp_map_error(&s_samp, SAMP_AFE, now);
+                }
                 afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_CHIP, false, s_ecg_generation,
                             NULL, 0);
                 ecg_loop_down(&loop, now);
                 continue;
             }
         }
-        bool synch = samp_map_restart_due(&s_samp, esp_timer_get_time());
+        /* FIFO-anchor mode has no SAMP mapping, so no mapping restart (SYNCH). */
+        bool synch = !BOARD_ECG_FIFO_MODE && samp_map_restart_due(&s_samp, esp_timer_get_time());
         if (!ecg_loop_read_due(&loop, now, woke, max30001_esp_intb_low(), synch)) {
             continue; /* no edge, INTB high, samples recent, no SYNCH: wait */
         }
@@ -940,19 +976,20 @@ static void ecg_reader_task(void *arg)
             plan.mapping_error = true;
             plan.cause = SAMP_AFE;
         }
-        if (plan.mapping_error) {
+        if (plan.mapping_error && !BOARD_ECG_FIFO_MODE) {
             samp_map_error(&s_samp, plan.cause, esp_timer_get_time());
         }
         if (plan.send) {
             imu_chunk_t *c = &plan.chunk;
             uint64_t anchor = t_read;
             int64_t deadline = (int64_t)t_read + SAMP_WAIT_PERIODS * period_us;
-            if (s_samp.state != SAMP_ERROR) {
+            if (!BOARD_ECG_FIFO_MODE && s_samp.state != SAMP_ERROR) {
                 samp_edges_wait(c->first_index + c->count - 1u, deadline);
             }
             int64_t edge_us;
-            if (samp_map_packet(&s_samp, c->first_index, c->count, samp_edges_lookup, NULL,
-                                deadline, esp_timer_get_time(), &edge_us) == SAMP_OK) {
+            if (!BOARD_ECG_FIFO_MODE
+                && samp_map_packet(&s_samp, c->first_index, c->count, samp_edges_lookup, NULL,
+                                   deadline, esp_timer_get_time(), &edge_us) == SAMP_OK) {
                 if (!(c->status & PKT_STATUS_AFE_FIFO_OVERFLOW)) {
                     /* Only drains that ended on EOF have a bounded read time. */
                     int64_t lag = (int64_t)t_read - edge_us;
@@ -979,6 +1016,29 @@ static void ecg_reader_task(void *arg)
             }
             enqueue(&p);
             ecg_loop_samples(&loop, (int64_t)t_read);
+            if (BOARD_ECG_FIFO_MODE) {
+                /* Rate check on reliable anchors only: a drain without EOF (bit 0)
+                 * has an unbounded anchor, and a re-anchored index (bit 5) starts a
+                 * new window. A fault marks the next packet with bits 3 and 5. */
+                if (c->status & (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_INDEX_REANCHORED)) {
+                    ecg_rate_reset(&s_ecg_rate);
+                }
+                if (!(c->status & PKT_STATUS_AFE_FIFO_OVERFLOW)
+                    && ecg_rate_packet(&s_ecg_rate, c->first_index + c->count - 1u,
+                                       (int64_t)t_read, ECG_FS_NOMINAL_MHZ, ECG_RATE_TOL_PPM,
+                                       ECG_RATE_WINDOW_US)) {
+                    ESP_LOGE(TAG, "ECG rate off by %.0f ppm over the 10 s window ending at"
+                                  " sample %" PRIu32 " (generation %" PRIu32
+                                  "): bits 3 and 5 on the next packet",
+                             s_ecg_rate.last_ppm, (uint32_t)(c->first_index + c->count - 1u),
+                             s_ecg_generation);
+                    imu_index_read_failed(&ecg.index);
+                    ecg_rate_reset(&s_ecg_rate);
+                }
+                portENTER_CRITICAL(&s_ecg_rate_mux);
+                s_ecg_rate_pub = s_ecg_rate;
+                portEXIT_CRITICAL(&s_ecg_rate_mux);
+            }
         }
         if (synch) {
             /* After the read: SYNCH clears the FIFO, so it held nothing unsent. */
@@ -1696,13 +1756,15 @@ static void log_stats(void)
      * interval of about two periods. */
     static const char *const STATES[] = {"unmapped", "mapped", "error"};
     const uint32_t *r = s_samp.results;
-    ESP_LOGI(TAG, "SAMP %s: packets bit 8 %" PRIu32 ", FIFO-read %" PRIu32 "; errors: "
-                  "missed/overwritten %" PRIu32 ", extra %" PRIu32 ", edge missing %" PRIu32
-                  ", late %" PRIu32 ", index %" PRIu32 ", FIFO overflow %" PRIu32
-                  ", AFE %" PRIu32 "; restarts %" PRIu32,
-             STATES[s_samp.state], s_samp.packets_samp, s_samp.packets_fifo, r[SAMP_LONG],
-             r[SAMP_SHORT], r[SAMP_EDGE_MISSING], r[SAMP_LATE], r[SAMP_INDEX],
-             r[SAMP_OVERFLOW], r[SAMP_AFE], s_samp.remaps);
+    if (!BOARD_ECG_FIFO_MODE) { /* FIFO-anchor mode has no SAMP mapping */
+        ESP_LOGI(TAG, "SAMP %s: packets bit 8 %" PRIu32 ", FIFO-read %" PRIu32 "; errors: "
+                      "missed/overwritten %" PRIu32 ", extra %" PRIu32 ", edge missing %"
+                      PRIu32 ", late %" PRIu32 ", index %" PRIu32 ", FIFO overflow %" PRIu32
+                      ", AFE %" PRIu32 "; restarts %" PRIu32,
+                 STATES[s_samp.state], s_samp.packets_samp, s_samp.packets_fifo,
+                 r[SAMP_LONG], r[SAMP_SHORT], r[SAMP_EDGE_MISSING], r[SAMP_LATE],
+                 r[SAMP_INDEX], r[SAMP_OVERFLOW], r[SAMP_AFE], s_samp.remaps);
+    }
 #if BOARD_ECG_REAL
     if (s_ecg_lag_min_us <= s_ecg_lag_max_us) {
         /* Bring-up check of the SAMP alignment (V0.2 section 7.2): with the right
@@ -1714,6 +1776,13 @@ static void log_stats(void)
     ESP_LOGI(TAG, "ECG STATUS reads after FIFO reads %" PRIu32 ", with PLLINT %" PRIu32,
              s_ecg_status_reads,
              s_ecg_pllint_reads);
+    if (BOARD_ECG_FIFO_MODE) {
+        portENTER_CRITICAL(&s_ecg_rate_mux);
+        ecg_rate_t rate = s_ecg_rate_pub;
+        portEXIT_CRITICAL(&s_ecg_rate_mux);
+        ESP_LOGI(TAG, "ECG rate check: windows %" PRIu32 ", faults %" PRIu32
+                      ", last %+.1f ppm", rate.windows, rate.faults, rate.last_ppm);
+    }
 #endif
     if (BOARD_SAMP_CAPTURE) {
         samp_capture_stats_t c = samp_capture_stats();

@@ -58,6 +58,20 @@ def test_pll_diag_env_is_ecg_real_plus_diag_and_only_there():
             assert "BOARD_ECG_PLL_DIAG" not in env_flags(section.removeprefix("env:"))[1]
 
 
+def test_fifo_envs_differ_from_samp_builds_only_by_the_fifo_mode():
+    _, ecg_fifo = env_flags("esp32s3_devkitc_ecg_fifo")
+    _, all_fifo = env_flags("esp32s3_devkitc_all_real_fifo")
+    _, sync_fifo = env_flags("esp32s3_devkitc_sync_fifo")
+    _, all_real = env_flags("esp32s3_devkitc_all_real")
+    assert ecg_fifo == {"BOARD_ECG_REAL": "1", "BOARD_ECG_FIFO_MODE": "1"}
+    # all_real without the SAMP capture, with the FIFO mode.
+    expected = {k: v for k, v in all_real.items() if k != "BOARD_SAMP_CAPTURE"}
+    assert all_fifo == {**expected, "BOARD_ECG_FIFO_MODE": "1"}
+    assert all_fifo["BOARD_SAMP_VERIFIED"] == "0"
+    assert sync_fifo == {**all_fifo, "BOARD_STIM": "1"}
+    assert not set(FAULT_FLAGS) & set(all_fifo)
+
+
 def test_sync10_env_is_all_real_plus_verified_samp_and_stimulus():
     _, all_real = env_flags("esp32s3_devkitc_all_real")
     _, sync10 = env_flags("esp32s3_devkitc_sync10")
@@ -97,3 +111,26 @@ def test_board_header_refuses_unknown_bring_up_values(compiler, tmp_path, flags,
     assert (build.returncode == 0) == builds, build.stderr
     if not builds:
         assert "must be" in build.stderr
+
+
+@pytest.mark.parametrize("flags,builds", [
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_ECG_FIFO_MODE=1"), True),
+    (("-DBOARD_ECG_FIFO_MODE=1",), False),
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_ECG_FIFO_MODE=1", "-DBOARD_SAMP_CAPTURE=1"), False),
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_ECG_FIFO_MODE=1", "-DBOARD_SAMP_VERIFIED=1"), False),
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_ECG_FIFO_MODE=1", "-DBOARD_SAMP_VERIFIED=0"), True),
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_ECG_FIFO_MODE=1", "-DBOARD_ECG_PLL_DIAG=1"), False),
+])
+def test_board_header_guards_the_fifo_mode(compiler, tmp_path, flags, builds):
+    source = tmp_path / "board.c"
+    source.write_text('#include "board_v1_module.h"\nint fifo = BOARD_ECG_FIFO_MODE;\n',
+                      encoding="utf-8")
+    out = tmp_path / ("board.obj" if os.name == "nt" else "board.o")
+    build = subprocess.run(
+        [*compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-c",
+         "-I", str(ROOT / "firmware/boards"), *flags, str(source), "-o", str(out)],
+        capture_output=True, text=True,
+    )
+    assert (build.returncode == 0) == builds, build.stderr
+    if not builds:
+        assert "BOARD_ECG_FIFO_MODE" in build.stderr

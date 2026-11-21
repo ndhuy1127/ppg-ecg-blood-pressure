@@ -43,6 +43,11 @@ int main(void)
             scanf("%d", &on);
             r.pllint_no_remap = on != 0;
             printf("ok\n");
+        } else if (cmd[0] == 'Q') {
+            int on = 0;
+            scanf("%d", &on);
+            r.pllint_ignore = on != 0;
+            printf("ok\n");
         } else if (cmd[0] == 'R') {
             unsigned samples, eof, empty, overflow, bad, bus_ok, status;
             unsigned long long t;
@@ -157,6 +162,19 @@ def test_pll_diag_keeps_bit3_but_not_the_mapping_error(ecg):
     assert (again["first"], again["error"]) == (0, 0)
     assert again["status"] == BIT4 | BIT3 | BIT5
     over = ecg.read(16, 1_125_000, status=PLLINT | EOVF)
+    assert (over["error"], over["cause"]) == (1, OVERFLOW_CAUSE)
+
+
+def test_fifo_mode_ignores_pllint_but_not_other_flags(ecg):
+    # BOARD_ECG_FIFO_MODE (sync test plan 11.3): PLLINT, always set on this board,
+    # is only counted; lead-off and overflow keep their meaning.
+    ecg("Q 1")
+    ecg.read(16, 1_000_000)
+    stuck = ecg.read(16, 1_031_250, status=PLLINT)
+    assert stuck["status"] == BIT4 and (stuck["error"], stuck["cause"]) == (0, -1)
+    lead = ecg.read(16, 1_062_500, status=PLLINT | DCLOFFINT)
+    assert lead["status"] == BIT4 | BIT2 and lead["error"] == 0
+    over = ecg.read(16, 1_093_750, status=PLLINT | EOVF)
     assert (over["error"], over["cause"]) == (1, OVERFLOW_CAUSE)
 
 

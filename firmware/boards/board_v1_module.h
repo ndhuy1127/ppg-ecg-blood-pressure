@@ -57,6 +57,26 @@
 #if BOARD_SAMP_RISING_EDGE != 0 && BOARD_SAMP_RISING_EDGE != 1
 #error "BOARD_SAMP_RISING_EDGE must be 0 (falling edge) or 1 (rising edge)"
 #endif
+/* FIFO-anchor mode (decided 2026-11-21, sync_10min_test_plan.md section 11): for
+ * a MAX30001 board that gives no SAMP pulses and whose PLLINT never clears. ECG
+ * packets keep the FIFO-read anchor (bit 8 off), no SAMP capture or mapping and
+ * no periodic SYNCH; PLLINT is only counted; a 10 s rate check against
+ * esp_timer replaces it (ecg_rate.c). */
+#ifndef BOARD_ECG_FIFO_MODE
+#define BOARD_ECG_FIFO_MODE 0
+#endif
+#if BOARD_ECG_FIFO_MODE && !BOARD_ECG_REAL
+#error "BOARD_ECG_FIFO_MODE needs BOARD_ECG_REAL"
+#endif
+#if BOARD_ECG_FIFO_MODE && BOARD_SAMP_CAPTURE
+#error "BOARD_ECG_FIFO_MODE has no SAMP capture"
+#endif
+#if defined(BOARD_SAMP_VERIFIED) && BOARD_ECG_FIFO_MODE && BOARD_SAMP_VERIFIED
+#error "BOARD_ECG_FIFO_MODE keeps ECG bit 8 off"
+#endif
+#if defined(BOARD_ECG_PLL_DIAG) && BOARD_ECG_FIFO_MODE && BOARD_ECG_PLL_DIAG
+#error "BOARD_ECG_FIFO_MODE and BOARD_ECG_PLL_DIAG are different builds"
+#endif
 
 /* PPG read (Packet Schema V0.2 section 7.6): 0 wakes the reader on PPG_RDY
  * (an interrupt only wakes it; the FIFO pointers, not a count of interrupts,

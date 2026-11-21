@@ -476,8 +476,15 @@ phải cận trên đã chứng minh.
   kế); phần dư khớp một phép hồi quy tính lại độc lập khi tốc độ trôi. Hai bản ghi pilot không
   chấm được packet nào: bản chẩn đoán khởi động lại ánh xạ mỗi 10 s nên không chuỗi nào đủ 10 s
   liên tục. Phép nghiệm thu A10 vì vậy cần firmware chế độ FIFO (không `SYNCH` định kỳ).
-- Đưa A10 vào `device_session.py` để áp quy tắc 11.4 cho dữ liệu buổi đo; cài kiểm tốc độ và
-  chế độ FIFO trong firmware.
+- ~~Cài kiểm tốc độ và chế độ FIFO trong firmware~~ (xong 2026-11-21): cờ `BOARD_ECG_FIFO_MODE`,
+  `app/ecg_rate.c`, env `esp32s3_devkitc_ecg_fifo` (ECG thật, PPG và IMU giả),
+  `esp32s3_devkitc_all_real_fifo` (bản nghiên cứu) và `esp32s3_devkitc_sync_fifo` (thêm
+  `BOARD_STIM`). Kích thích chưa bật được lúc chạy, nên phép đo đồng bộ dùng bản chỉ khác cờ
+  `BOARD_STIM` (giới hạn đã nêu ở trên). Pilot trên bàn 190 s với `ecg_fifo`
+  (`runs/bringup_v1/2026-11-21_s7_ecg_fifo`): một chuỗi, kiểm tốc độ 19 cửa sổ 0 lỗi, A10 chấm
+  5 763 packet, 0 cờ, phần dư lớn nhất 138 µs, p99 32 µs. Chỉ là pilot, không thay phép đo xác
+  nhận.
+- Đưa A10 vào `device_session.py` để áp quy tắc 11.4 cho dữ liệu buổi đo.
 - Sửa Packet Schema V0.2 mục 7 và metadata (`latency_l_us`, `latency_source` cho mốc FIFO) cho
   khớp.
 - Nếu ProtoCentral trả lời có cách bật `SAMP` trên bo v2
