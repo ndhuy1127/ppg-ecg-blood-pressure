@@ -106,6 +106,7 @@ thật mà chạy trên bo Waveshare đứng riêng thì chip đó khởi độn
 | `esp32s3_devkitc_samp_faults` | giả / giả / giả | `FAKE_SAMP_FAULTS=1` | Bring-up mục 2 bước 6: xung `SAMP` giả mất và thừa |
 | `esp32s3_devkitc_ppg_delay` | giả / giả / giả | `FAKE_PPG_DELAY=1` | Bring-up mục 2 bước 6: PPG đọc trễ, N > 8 |
 | `esp32s3_devkitc_ecg_real` | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_SAMP_CAPTURE=1` | Bring-up mục 7: breakout ECG trên bo đế. Bit 8 tắt (`BOARD_SAMP_VERIFIED` mặc định 0); chỉ thêm `-DBOARD_SAMP_VERIFIED=1` sau khi kiểm xong mục 7 bước 4 |
+| `esp32s3_devkitc_ecg_pll_diag` (thêm 2026-11-21, chỉ chẩn đoán) | MAX30001 / giả / giả | như `ecg_real`, thêm `BOARD_ECG_PLL_DIAG=1` | Breakout v2 `03/24` có `PLLINT` luôn bật (mục "Driver MAX30001"). Chạy tiếp sau timeout PLL, in `STATUS` và `CNFG_GEN`, tắt rồi bật `EN_ECG` một lần, giữ bit 3 khi có `PLLINT` nhưng không khởi động lại ánh xạ `SAMP` chỉ vì `PLLINT`. Bit 8 tắt (`#error` nếu bật cùng `BOARD_SAMP_VERIFIED`). Không dùng cho bản ghi nghiên cứu |
 | `esp32s3_devkitc_ppg_real` | giả / MAX30101 / giả | `BOARD_PPG_REAL=1` | Bring-up mục 8 bước 4, 6, 10: MAX30101 qua cáp |
 | `esp32s3_devkitc_imu_real` | giả / giả / BMI270 | `BOARD_IMU_REAL=1` | Bring-up mục 8 bước 5: BMI270 qua cáp, dấu trục |
 | `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 120 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO |
@@ -364,7 +365,19 @@ liệu. Build tăng dần trên `.pio/build` cũ có thể giữ phiên bản �
    quả 8 (`out_of_range`) cho mã 128, kể cả với PPG giả (kiểm trần đứng trước kiểm
    chip).
 
-## Driver MAX30001 (2026-10-25, chưa chạy trên chip)
+## Driver MAX30001 (2026-10-25; chạy trên chip từ 2026-11-20)
+
+**Kết quả trên breakout v2 `03/24` (2026-11-20/21,
+[báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9).** SPI, `INFO`
+(`0x5210b4`) và đọc lại 8 thanh ghi đạt; `CNFG_GEN` đọc lại `0x081244`. `PLLINT` (`STATUS` D8)
+bật ở mọi lần đọc khi ECG bật, tắt khi `EN_ECG = 0`, nên `max30001_start` báo `ERR_PLL` và bản
+`ecg_real` không có ECG. Khi bỏ qua timeout, chip vẫn lấy mẫu: 512,0015 sps theo `esp_timer`
+(+3 ppm, sáu đoạn 10 s) khi chân 6 để hở; nguồn clock (nhiều khả năng oscillator trên
+breakout) chưa xác nhận bằng đo trực tiếp hay schematic v2. Chưa rõ
+nguyên nhân; chưa có schematic v2 và trang datasheet về `PLLINT`. Chốt 2026-11-21 sau phản
+biện độc lập: bản nghiên cứu giữ `ERR_PLL`; bản `esp32s3_devkitc_ecg_pll_diag` chỉ để chẩn đoán
+và làm tiếp mục 7. Với bản này, ánh xạ `SAMP` vẫn báo `edge missing` ngay sau mỗi lần khởi
+động lại (chưa kiểm cực tính `SAMP` bằng oscilloscope, mục 7 bước 4).
 
 Bật bằng `pio run -d firmware -e esp32s3_devkitc_ecg_real` (`BOARD_ECG_REAL=1`,
 `BOARD_SAMP_CAPTURE=1`); PPG và IMU vẫn là nguồn giả. Dùng ở bring-up mục 7, khi

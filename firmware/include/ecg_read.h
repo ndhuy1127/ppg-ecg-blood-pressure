@@ -29,6 +29,10 @@
 typedef struct {
     imu_index_t index;
     uint16_t pending; /* STATUS bits seen while no packet was sent */
+    /* Diagnostic build only (BOARD_ECG_PLL_DIAG): PLLINT still sets bit 3 but
+     * no longer breaks the SAMP mapping, so a flag stuck at 1 does not force a
+     * SYNCH every 10 s. Set by the caller; ecg_read_init keeps it. */
+    bool pllint_no_remap;
 } ecg_read_t;
 
 typedef struct {

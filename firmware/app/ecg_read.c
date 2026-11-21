@@ -25,7 +25,9 @@ ecg_read_plan_t ecg_read_plan(ecg_read_t *r, const max30001_fifo_t *f, bool bus_
     }
     if (status_reg & MAX30001_ST_PLLINT) {
         r->pending |= PKT_STATUS_AFE_ERROR;
-        plan.mapping_error = true;
+        if (!r->pllint_no_remap) {
+            plan.mapping_error = true;
+        }
     }
     bool overflow = f->overflow || (status_reg & MAX30001_ST_EOVF);
     if (overflow) {

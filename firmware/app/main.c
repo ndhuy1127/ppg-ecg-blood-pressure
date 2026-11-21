@@ -716,6 +716,22 @@ static void fake_samp_edge(uint64_t index, int64_t t_us)
 #ifndef BOARD_SAMP_VERIFIED
 #define BOARD_SAMP_VERIFIED 0
 #endif
+/*
+ * BOARD_ECG_PLL_DIAG=1 (env esp32s3_devkitc_ecg_pll_diag; diagnostic only,
+ * decided 2026-11-21): on the ProtoCentral breakout v2 03/24, PLLINT stays set
+ * although the chip samples at 512 sps (bring-up report 2026-11-20). This build
+ * goes on after the PLL timeout instead of giving up, logs STATUS and CNFG_GEN
+ * raw, turns EN_ECG off and on once to see whether PLLINT clears, keeps bit 3 on
+ * every packet with PLLINT, and does not restart the SAMP mapping for PLLINT
+ * alone, so the per-edge SAMP checks of bring-up section 7 can run. Bit 8 stays
+ * off. Research builds keep the PLL timeout as an error.
+ */
+#ifndef BOARD_ECG_PLL_DIAG
+#define BOARD_ECG_PLL_DIAG 0
+#endif
+#if BOARD_ECG_PLL_DIAG && BOARD_SAMP_VERIFIED
+#error "BOARD_ECG_PLL_DIAG is a diagnostic build: bit 8 must stay off"
+#endif
 #define ECG_FS_NOMINAL_MHZ 512000u
 #define ECG_POLL_MS 10
 #define ECG_PLL_TIMEOUT_MS 1000
@@ -723,6 +739,7 @@ static void fake_samp_edge(uint64_t index, int64_t t_us)
 static max30001_bus_t s_ecg_bus;
 static max30001_regs_t s_ecg_regs;
 static int64_t s_ecg_lag_min_us = INT64_MAX, s_ecg_lag_max_us = INT64_MIN;
+static uint32_t s_ecg_status_reads, s_ecg_pllint_reads; /* STATUS reads, with PLLINT */
 
 static void ecg_mapping_start(void *arg)
 {
@@ -746,6 +763,67 @@ static void ecg_give_up(const char *what, int err)
     }
 }
 
+#if BOARD_ECG_PLL_DIAG
+/* Log STATUS and CNFG_GEN raw; once (first start), turn EN_ECG (CNFG_GEN D19)
+ * off and on and count STATUS reads without PLLINT over the next second. True
+ * when every bus access worked and CNFG_GEN reads back as written. */
+static bool ecg_pll_diag(bool toggle)
+{
+    const uint32_t mask = 0xFEFFFFu; /* bits CNFG_GEN defines (drivers/max30001.c) */
+    uint32_t st = 0, gen = 0;
+    bool ok = max30001_read(&s_ecg_bus, MAX30001_STATUS, &st) == 0;
+    ok = ok && max30001_read(&s_ecg_bus, MAX30001_CNFG_GEN, &gen) == 0;
+    ESP_LOGW(TAG, "PLL diag: STATUS 0x%06" PRIx32 ", CNFG_GEN 0x%06" PRIx32
+                  " (written 0x%06" PRIx32 ")", st, gen, s_ecg_regs.cnfg_gen);
+    if (!toggle || !ok) {
+        return ok;
+    }
+    ok = max30001_write(&s_ecg_bus, MAX30001_CNFG_GEN, s_ecg_regs.cnfg_gen & ~(1u << 19)) == 0;
+    vTaskDelay(pdMS_TO_TICKS(20));
+    uint32_t off1 = 0, off2 = 0;
+    max30001_read(&s_ecg_bus, MAX30001_STATUS, &off1);
+    max30001_read(&s_ecg_bus, MAX30001_STATUS, &off2);
+    /* Always write EN_ECG back on, even if turning it off failed. */
+    ok = (max30001_write(&s_ecg_bus, MAX30001_CNFG_GEN, s_ecg_regs.cnfg_gen) == 0) && ok;
+    unsigned clear = 0, reads = 0;
+    for (int ms = 0; ms < 1000; ms += 5) {
+        uint32_t v = 0;
+        if (max30001_read(&s_ecg_bus, MAX30001_STATUS, &v) == 0) {
+            reads++;
+            clear += (v & MAX30001_ST_PLLINT) ? 0u : 1u;
+        }
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
+    gen = 0;
+    ok = (max30001_read(&s_ecg_bus, MAX30001_CNFG_GEN, &gen) == 0) && ok;
+    ok = ok && (gen & mask) == (s_ecg_regs.cnfg_gen & mask);
+    ESP_LOGW(TAG, "PLL diag: EN_ECG off: STATUS 0x%06" PRIx32 ", 0x%06" PRIx32
+                  "; back on: %u of %u STATUS reads without PLLINT in 1 s; CNFG_GEN 0x%06"
+                  PRIx32 "%s", off1, off2, clear, reads, gen, ok ? "" : " (NOT as written)");
+    return ok;
+}
+#endif
+
+/*
+ * max30001_start. The diagnostic build goes on after a PLL timeout and runs
+ * ecg_pll_diag (toggle at the first start, locked or not); a failed diagnostic
+ * or a CNFG_GEN not back as written counts as a read-back error.
+ */
+static max30001_err_t ecg_start_chip(uint32_t *info)
+{
+    max30001_err_t err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, info);
+#if BOARD_ECG_PLL_DIAG
+    if (err == MAX30001_OK || err == MAX30001_ERR_PLL) {
+        if (err == MAX30001_ERR_PLL) {
+            ESP_LOGW(TAG, "MAX30001 PLL not locked after %d ms: going on (BOARD_ECG_PLL_DIAG)",
+                     ECG_PLL_TIMEOUT_MS);
+        }
+        err = ecg_pll_diag(s_ecg_generation == 0) ? MAX30001_OK : MAX30001_ERR_READBACK;
+    }
+#endif
+    return err;
+}
+
 /*
  * The chip failed its check or went silent: start it again (reset, configure,
  * PLL) and restart the mapping with SYNCH. The index restarts at 0 with bit 5
@@ -754,7 +832,7 @@ static void ecg_give_up(const char *what, int err)
 static bool ecg_start_again(ecg_read_t *ecg)
 {
     uint32_t info = 0;
-    max30001_err_t err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+    max30001_err_t err = ecg_start_chip(&info);
     if (err == MAX30001_OK) {
         err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
     }
@@ -787,7 +865,7 @@ static void ecg_reader_task(void *arg)
         if (i > 0) {
             vTaskDelay(pdMS_TO_TICKS(AFE_START_RETRY_MS));
         }
-        err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+        err = ecg_start_chip(&info);
     }
     ESP_LOGI(TAG, "MAX30001 INFO 0x%06" PRIx32 ", start %d", info, (int)err);
     if (err != MAX30001_OK) {
@@ -814,6 +892,7 @@ static void ecg_reader_task(void *arg)
     }
     ecg_read_t ecg;
     ecg_read_init(&ecg, false);
+    ecg.pllint_no_remap = BOARD_ECG_PLL_DIAG;
     ecg_loop_t loop;
     ecg_loop_init(&loop, esp_timer_get_time());
     for (;;) {
@@ -849,6 +928,10 @@ static void ecg_reader_task(void *arg)
         bool bus_ok = max30001_read_fifo(&s_ecg_bus, &f) == MAX30001_OK;
         uint64_t t_read = esp_timer_get_time(); /* right after the EOF word, if any */
         bus_ok = bus_ok && max30001_read(&s_ecg_bus, MAX30001_STATUS, &st) == 0;
+        if (bus_ok) {
+            s_ecg_status_reads++;
+            s_ecg_pllint_reads += (st & MAX30001_ST_PLLINT) ? 1u : 0u;
+        }
         ecg_read_plan_t plan = ecg_read_plan(&ecg, &f, bus_ok, st, t_read,
                                              ECG_FS_NOMINAL_MHZ,
                                              PKT_STATUS_LATENCY_UNMEASURED);
@@ -1628,6 +1711,9 @@ static void log_stats(void)
                       " us%s", s_ecg_lag_min_us, s_ecg_lag_max_us,
                  BOARD_SAMP_VERIFIED ? "" : " (bit 8 off until verified)");
     }
+    ESP_LOGI(TAG, "ECG STATUS reads after FIFO reads %" PRIu32 ", with PLLINT %" PRIu32,
+             s_ecg_status_reads,
+             s_ecg_pllint_reads);
 #endif
     if (BOARD_SAMP_CAPTURE) {
         samp_capture_stats_t c = samp_capture_stats();

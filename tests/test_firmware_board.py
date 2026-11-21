@@ -47,6 +47,17 @@ def test_all_real_env():
             assert not {"BOARD_SAMP_RISING_EDGE", "BOARD_PPG_LED_PW_US"} & fixed, section
 
 
+def test_pll_diag_env_is_ecg_real_plus_diag_and_only_there():
+    _, ecg_real = env_flags("esp32s3_devkitc_ecg_real")
+    _, diag = env_flags("esp32s3_devkitc_ecg_pll_diag")
+    assert diag == {**ecg_real, "BOARD_ECG_PLL_DIAG": "1"}
+    assert diag.get("BOARD_SAMP_VERIFIED", "0") == "0"
+    ini, _ = env_flags("esp32s3_devkitc")
+    for section in ini.sections():
+        if section.startswith("env:") and section != "env:esp32s3_devkitc_ecg_pll_diag":
+            assert "BOARD_ECG_PLL_DIAG" not in env_flags(section.removeprefix("env:"))[1]
+
+
 def test_sync10_env_is_all_real_plus_verified_samp_and_stimulus():
     _, all_real = env_flags("esp32s3_devkitc_all_real")
     _, sync10 = env_flags("esp32s3_devkitc_sync10")
