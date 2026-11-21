@@ -238,9 +238,10 @@ kết quả và giữ nguyên cho mọi lần đo. Độ phân giải thời gia
 chu kỳ lấy mẫu; ghi rõ trong báo cáo.
 
 **Quy tắc cạnh (chốt 2026-11-21, trước mọi lần đo; chế độ mốc FIFO; qua phản biện độc lập).**
-Cài ở `software/device/sync_analysis.py` (`sync-analysis-v1`, hằng `EDGE`), chạy bằng
+Cài ở `software/device/sync_analysis.py` (`sync-analysis-v2`, hằng `EDGE`), chạy bằng
 `scripts/analyze_sync.py`. Thời điểm tính từ mốc sự kiện `T_e` (packet mã 3), trên trục `t'`
-(đường thẳng mỗi chuỗi, cộng j · Δ cho khe PPG, **không** trừ L; metadata phải để
+(mô hình thời gian của loạt đo, mục 9: đường thẳng hoặc đường gấp khúc 60 s mỗi chuỗi; cộng
+j · Δ cho khe PPG, **không** trừ L; metadata phải để
 `latency_l_us` rỗng, nếu không công cụ từ chối):
 
 | Bước | Quy tắc |
@@ -269,7 +270,11 @@ Cài ở `software/device/sync_analysis.py` (`sync-analysis-v1`, hằng `EDGE`),
   được phân tích.
 - **A9**: pha của `T_e` trên lưới mẫu của từng kênh, `frac((T_e − a − j·Δ) / b)` với đường
   thẳng của chuỗi chứa sự kiện; báo thêm L trung bình theo từng ô pha.
-- **A3** không đạt: chưa cài hồi quy theo đoạn 60 s, nên A4–A6 và A11 "không đánh giá được".
+- **A3** không đạt với đường thẳng: phân tích lại **cả loạt** bằng mô hình theo đoạn (mục 9,
+  "Mô hình theo đoạn"). A3 không đạt với cả hai mô hình thì A4–A6 và A11 "không đánh giá được".
+- **Offset theo từng phút** (từ sự kiện đầu tiên được phân tích) chỉ để báo cáo, không phải tiêu
+  chí: với mốc FIFO, trễ đọc trôi chậm và đồng hồ lấy mẫu trôi cho cùng một dãy mốc; chỉ offset
+  từ xung kích thích cho thấy khác biệt (mục 9).
 - **Tâm xung vào** dùng độ rộng danh định 50 ms của firmware. Sai số độ rộng thật triệt tiêu
   trong offset (cùng sự kiện, cả hai kênh) nhưng làm lệch từng L; độ rộng thật đo bằng
   oscilloscope khi có.
@@ -340,6 +345,40 @@ Cách đọc (với cấu hình không có `SAMP`, dùng tiêu chí và cách đ
 - **A3 không đạt** với một đường thẳng: dùng hồi quy theo đoạn 60 s rồi xét lại A3–A6 với mô
   hình đó. Mô hình nào đạt thì đó là mô hình **bắt buộc** khi dựng thời gian cho dữ liệu buổi
   đo, kể cả buổi 120 phút.
+
+**Mô hình theo đoạn (chốt 2026-11-21, trước mọi lần đo; qua phản biện độc lập).** Cài ở
+`software/device/session_ingest.py` (`fit_timebase(..., model="segmented-60s")`,
+`segment_knots`, `timebase_at`, `timebase_index_at`).
+
+| Mục | Quy tắc |
+|---|---|
+| Dạng | Hàm tuyến tính từng đoạn **liên tục** theo chỉ số mẫu mở rộng `k`, mỗi chuỗi một hàm; bình phương tối thiểu trên cùng các mốc mà đường thẳng dùng. Không dùng các đường thẳng rời nhau: thời điểm mẫu sẽ nhảy ở ranh giới đoạn và một sự kiện gần ranh giới bị tính trên hai trục khác nhau. Chuỗi mới (reset, mất mẫu) vẫn là trục riêng |
+| Nút | Gốc là `k` của mốc đầu tiên trong chuỗi; nút cách nhau round(60 s × tốc độ danh định) mẫu, cộng nút cuối ở `k` của mốc cuối. Đoạn cuối ngắn hơn nửa đoạn (30 s) gộp vào đoạn trước. Nút theo `k`, nên trễ đọc FIFO không dời được nút. Ngoài hai đầu, kéo dài đoạn đầu và đoạn cuối |
+| Điều kiện | Mỗi đoạn có ít nhất 3 mốc và các mốc trải ít nhất nửa đoạn; độ dốc mọi đoạn dương. Vi phạm thì mô hình "không dùng được" cho chuỗi đó (cờ `segmented_fit_invalid`), A3 "không đánh giá được", trục thời gian quay về đường thẳng |
+| A2 | Vẫn dùng đường thẳng của cả chuỗi (tốc độ trung bình) |
+| A3 | Cùng thống kê (trung vị phần dư theo khối 10 s, ± 0,2 ms), phần dư lấy quanh hàm gấp khúc; báo kèm A3 của đường thẳng |
+| A9 | Pha của `T_e` là phần lẻ của chỉ số mẫu tại `T_e` − j · Δ, lấy bằng hàm ngược của trục thời gian |
+| A10 | Không đổi: A10 dùng hồi quy nhân quả 10 s riêng, không dùng trục thời gian chung, nên "xét lại A10" của mục 11.2 cho cùng kết quả |
+
+Quy tắc chọn mô hình (một lần cho **cả loạt** kiểm định, không chọn từng lượt):
+
+- Mọi lượt của loạt kiểm định (10 lượt A5, lượt 120 phút cho A6, lượt A11) phân tích trước bằng
+  đường thẳng. Chỉ khi có ít nhất một lượt có A3 **không đạt** (không tính "không đánh giá
+  được") thì phân tích lại **mọi** lượt của loạt bằng `segmented-60s`, và mọi tiêu chí phải đạt
+  với cùng mô hình đó. Không chọn mô hình theo A4–A6 hay A11. A5 từ chối 10 lượt không cùng một
+  mô hình.
+- Mô hình đạt trở thành mô hình bắt buộc của dữ liệu buổi đo. Tới khi đó `device_session.py`
+  dựng thời gian bằng đường thẳng (`configs/data/device_session_v1.json` hiểu là đường thẳng).
+  Nếu loạt kiểm định chọn mô hình theo đoạn: thêm `device_session_v2.json` ghi rõ mô hình (thiếu
+  hoặc lạ thì từ chối), ghi nút và giá trị tại nút của từng chuỗi vào bảng trục thời gian, cập
+  nhật khóa cấu hình ở `scripts/run_rq1_analysis.py` cùng lúc.
+- **Giới hạn:** với mốc FIFO, trễ đọc trôi chậm và tốc độ lấy mẫu trôi cho cùng một dãy mốc
+  (test SYNTHETIC có cặp như vậy). Hàm gấp khúc theo mốc nên mang theo cả trễ đọc trôi chậm vào
+  thời điểm mẫu, còn đường thẳng lấy trung bình. Chỉ xung kích thích chung thấy được khác biệt:
+  A6 (khối 20 phút) và offset theo từng phút (chỉ báo cáo). Hai sai số ngược chiều trong cùng một
+  khối 20 phút có thể bù nhau trong A6. A3 chọn mô hình trên chính các mốc dùng để chấm nó; một
+  mô hình linh hoạt hơn luôn có thêm cơ hội đạt, nên quy tắc trên chỉ cho chuyển khi đường thẳng
+  trượt.
 - A7 chỉ để báo cáo.
 - **A4, A5, A6 hoặc A8 không đạt:** không tính PAT từ thiết bị cho tới khi tìm ra nguyên nhân,
   sửa, và đo lại đủ bộ. Không nới ngưỡng để cho qua.
@@ -458,7 +497,8 @@ Căn cứ của ngưỡng (đề xuất kỹ thuật, chưa có nguồn):
 được". Không đạt thì không tính PAT từ thiết bị (như mục 9), không nới ngưỡng.
 
 - Các nhánh của mục 9 vẫn áp dụng: A3 không đạt với một đường thẳng thì dùng hồi quy theo đoạn
-  60 s rồi xét lại A3–A6, A10 với mô hình đó; A9 không đạt thì A4–A6 và A11 "không đánh giá được",
+  60 s cho cả loạt rồi xét lại A3–A6, A10 với mô hình đó (định nghĩa và quy tắc chọn ở mục 9,
+  "Mô hình theo đoạn"; A10 không phụ thuộc mô hình); A9 không đạt thì A4–A6 và A11 "không đánh giá được",
   khởi động lại và đo lại.
 - A11: kiểm A9 **riêng cho từng loại tải**, để chênh lệch về pha không thành chênh lệch offset giả.
 - A10 chưa chấm được trong 10 s đầu của mỗi chuỗi (chưa đủ quá khứ). Packet trong khoảng này là
@@ -504,8 +544,13 @@ phải cận trên đã chứng minh.
   SYNTHETIC `tests/test_sync_analysis.py`: L và offset đúng đáp án (sai số dưới 0,1 ms), cả khi ECG
   có dao động tắt dần của bộ lọc lý tưởng 41 Hz; kích thích khóa pha trượt A9; PPG phẳng không
   được nhận; bước 1,953 ms giữa chuỗi trượt A10; lệch cố định từ đầu không bị bắt (điểm mù); A11
-  bắt 0,4 ms và cho qua 0,1 ms; thiếu mốc ranh giới thì không đánh giá được. Chưa cài: hồi quy
-  theo đoạn khi A3 trượt.
+  bắt 0,4 ms và cho qua 0,1 ms; thiếu mốc ranh giới thì không đánh giá được.
+- ~~Hồi quy theo đoạn khi A3 trượt~~ (xong 2026-11-21, `sync-analysis-v2`; mục 9, "Mô hình theo
+  đoạn"). Test SYNTHETIC: đồng hồ ECG trôi 6 ppm mỗi phút trong 240 s làm A3 của đường thẳng
+  trượt, mô hình theo đoạn đạt A3 và cho L, offset đúng đáp án (sai số dưới 0,1 ms); trễ đọc trôi
+  cho cùng dãy mốc thì A3 vẫn đạt nhưng offset theo từng phút trôi hơn 1,5 ms; nút liên tục, gộp
+  đoạn cuối ngắn, từ chối đoạn thưa; A11 với nút lệch khỏi ranh giới khối vẫn bắt 0,4 ms của ECG
+  và của PPG; A5 từ chối loạt trộn mô hình.
 - Cách bật kích thích của mục 3 trong chính bản build nghiên cứu, ví dụ bằng lệnh từ PC lúc chạy.
   Nếu chỉ làm được bằng một bản build khác cờ `BOARD_STIM`, ghi ELF SHA-256 của cả hai và nêu là
   giới hạn của phép đo.
@@ -573,11 +618,17 @@ và máy tính bận hơn.
   cả lượt "không đánh giá được", đo lại (một quy tắc duy nhất, không ghép khối khi thiếu mốc). Bỏ các xung kích thích (mã 3) trong **10 s sau mỗi ranh giới**; mỗi
   khối còn khoảng 110 xung.
 - **Tính:** offset ECG–PPG theo cách của A4, riêng cho mỗi loại tải, gộp các khối cùng loại.
-  Trục thời gian của một lượt là **một đường thẳng mỗi chuỗi**, nên trễ đọc FIFO đổi theo tải
-  chỉ làm mốc lệch quanh đường thẳng, không dời thời điểm mẫu; một phiên đo thật có đường thẳng
-  riêng, với hệ số chặn theo trễ đọc trung bình của phiên đó. Vì vậy mỗi khối được xét như một
-  phiên riêng: offset của các sự kiện trong khối cộng (phần dư mốc ECG trung bình − phần dư mốc
-  PPG trung bình) của khối (thêm 2026-11-21 khi cài, trước mọi lần đo). Đạt
+  Trục thời gian của một lượt khớp trên **cả lượt**, nên trễ đọc FIFO đổi theo tải chỉ làm mốc
+  lệch quanh trục, không dời thời điểm mẫu; một phiên đo thật có trục riêng, theo trễ đọc trung
+  bình của phiên đó. Vì vậy mỗi khối được xét như một phiên riêng: khớp lại trục thời gian (cùng
+  mô hình của loạt, mục 9) **chỉ trên các mốc của khối**, rồi đo lại các xung của khối trên trục
+  đó (sửa 2026-11-21, trước mọi lần đo, sau phản biện độc lập). Cách gần đúng trước đó, offset
+  trên trục của cả lượt cộng (phần dư mốc ECG trung bình − phần dư mốc PPG trung bình) của khối,
+  chỉ dời hệ số chặn; nó vẫn được báo (`residual_corrected`), không phải tiêu chí. Khoảng khớp
+  của khối cũng bỏ 10 s đầu (mốc trong lúc chuyển tải không thuộc loại tải nào, và một phiên đo
+  thật không chứa chỗ chuyển tải); xung chỉ được dùng khi cửa sổ đáp ứng (tới 400 ms sau xung)
+  kết thúc trước mốc ranh giới kế tiếp. A9 của từng loại tải tính trên chính các xung cho offset
+  A11, với pha theo trục khớp lại của khối. Đạt
   khi \|offset tải cao − offset tải thường\| ≤ 0,3 ms (A11). Báo thêm, không phải tiêu chí:
   chênh lệch của 6 cặp khối liền kề (thường, cao), đồ thị offset theo khối (để thấy trôi theo
   nhiệt lẫn với tải), `tx_timeout` và `queue_drop` của từng khối. A9 tính riêng cho từng loại

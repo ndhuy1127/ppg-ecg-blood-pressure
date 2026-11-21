@@ -227,8 +227,8 @@ def test_a3_flag_follows_the_statistic(lossy, monkeypatch):
     _, directory, _ = lossy
     fit = si.fit_timebase
 
-    def above(packets, fs_nominal_hz):
-        out = fit(packets, fs_nominal_hz)
+    def above(packets, fs_nominal_hz, model="line"):
+        out = fit(packets, fs_nominal_hz, model)
         if out is not None and not out["nominal_rate"]:
             out = {**out, "residual_block_max_us": si.A3_LIMIT_US + 1}
         return out

@@ -1,11 +1,14 @@
-"""ECG-PPG offset from the common stimulus (sync-analysis-v1).
+"""ECG-PPG offset from the common stimulus (sync-analysis-v2).
 
 Implements the analysis of hardware/test_reports/sync_10min_test_plan.md sections
 5, 9 and 11 for the FIFO-anchor mode (ECG bit 8 off): per stimulus event (0xC1
 code 3) the response centre on each channel, the effective latency L, the
 ECG-PPG offset and the criteria A1-A4, A6, A7, A9-A11 of one run, and A5 over
 runs. The edge rule is fixed in section 5 of the plan ("Quy tắc cạnh", decided
-2026-11-21 before any measurement) and repeated in ``EDGE``.
+2026-11-21 before any measurement) and repeated in ``EDGE``. v2 (same day, before
+any measurement): a time-axis model per run (line or segmented-60s, plan section
+9), A11 on a time axis refitted to each block, offsets per minute (report only),
+A5 over runs of one model.
 
 Inputs come from ``session_ingest.load_recording`` (a verified logger
 recording). Pure functions: no file access, no printing. SYNTHETIC tests only
@@ -21,7 +24,7 @@ from software.device import ecg_anchor_residual as a10
 from software.device import session_ingest as si
 from software.device.features import ecg_codes
 
-VERSION = "sync-analysis-v1"
+VERSION = "sync-analysis-v2"
 ECG, PPG_SLOTS = "0xE1", ("0xF1", "0xF2", "0xF3")
 STIM_CODE, BOUNDARY_CODE = 3, 2
 WIDTH_US = 50_000  # firmware STIM_WIDTH_US (nominal; checked by oscilloscope)
@@ -166,7 +169,18 @@ def phase_coverage(phases, bins=10):
 
 
 def _phase(t_event, fit, offset_us=0.0):
-    return ((t_event - fit["a_us"] - offset_us) / fit["b_us"]) % 1.0
+    """Phase of ``t_event`` on the sample grid of a chain: the fractional part of
+    the sample index at that time (inverse of the time axis, slot offset
+    removed). A line keeps the v1 expression, so its bins do not move."""
+    if not fit.get("knots_k"):
+        return ((t_event - fit["a_us"] - offset_us) / fit["b_us"]) % 1.0
+    return float(si.timebase_index_at(fit, t_event - offset_us)) % 1.0
+
+
+def _nearest(t_us, t_event):
+    """Index of the sample nearest ``t_event`` among samples with a time (a chain
+    without a reliable anchor has NaN times)."""
+    return int(np.nanargmin(np.abs(t_us - t_event)))
 
 
 def _fit_at(timebase, key, chain_id):
@@ -188,8 +202,12 @@ def _a1(decode, session):
             "passed": missing == 0 and bit0 == 0 and crc == 0}
 
 
-def analyze_run(recording, session_index=0, stabilization_s=STABILIZATION_S):
-    """One sync run of one device session; see the module docstring."""
+def analyze_run(recording, session_index=0, stabilization_s=STABILIZATION_S,
+                timebase_model="line"):
+    """One sync run of one device session; see the module docstring.
+    ``timebase_model`` is chosen for the whole validation series (plan section
+    9): "line", or "segmented-60s" for every run once one run fails A3 with the
+    line; never from A4-A6 or A11."""
     decode = recording["decode"]
     session = decode["sessions"][session_index]
     sid = session["session_id"]
@@ -199,7 +217,7 @@ def analyze_run(recording, session_index=0, stabilization_s=STABILIZATION_S):
     if any(p["channel_id"] == ECG and p["status"] >> 8 & 1 for p in packets):
         raise SyncError("ECG packets carry SAMP anchors (bit 8): this is the FIFO-anchor "
                         "analysis (plan section 11)")
-    series, timebase, _ = si.session_series(recording, session_index)
+    series, timebase, _ = si.session_series(recording, session_index, timebase_model)
     for key in (ECG, *PPG_SLOTS):
         if key not in series:
             raise SyncError(f"No {key} samples in the session")
@@ -228,7 +246,7 @@ def analyze_run(recording, session_index=0, stabilization_s=STABILIZATION_S):
                                "ecg" if key == ECG else "ppg", clip[key])
             row[f"{key}_status"] = r["status"]
             row[f"{key}_latency_us"] = r.get("latency_us")
-            near = int(np.argmin(np.abs(s.t_us - e["t_us"])))
+            near = _nearest(s.t_us, e["t_us"])
             fit = _fit_at(timebase, key, int(s.chain[near]))
             row[f"{key}_phase"] = (None if fit is None else
                                    float(_phase(e["t_us"], fit, s.slot_offset_us or 0.0)))
@@ -240,10 +258,11 @@ def analyze_run(recording, session_index=0, stabilization_s=STABILIZATION_S):
         rows.append(row)
     used = [r for r in rows if r["offset_us"] is not None]
     result = {"method": VERSION, "edge_rule": EDGE, "limits": LIMITS,
-              "session_id": sid, "events_total": len(rows), "events_used": len(used),
+              "timebase_model": timebase_model, "session_id": sid, "events_total": len(rows), "events_used": len(used),
               "rejections": {key: _count(rows, key) for key in (ECG, *PPG_SLOTS)}}
     result["offset"] = offset_summary([r["offset_us"] for r in used],
                                       [r["t_event_us"] for r in used])
+    result["offset_by_minute_us"] = _by_minute(used)
     # Each channel on its own accepted events (A7 jitter); the offset needs all four.
     result["latency"] = {
         key: _mean_sd([r[f"{key}_latency_us"] for r in rows]) for key in (ECG, *PPG_SLOTS)}
@@ -264,17 +283,34 @@ def analyze_run(recording, session_index=0, stabilization_s=STABILIZATION_S):
                                          for key in (ECG, *PPG_SLOTS)}
     result["a1"] = _a1(decode, session)
     result["a2"] = _a2(timebase)
-    result["a3"] = _a3(timebase)
+    result["a3"] = _a3(timebase, timebase_model)
     result["a10"] = a10.check(packets)
     result["a8"] = {"status": "not_evaluable",
                     "reason": "FIFO-read anchors: no independent prediction of L_ECG "
                               "(plan 11.2)",
                     "l_ecg_fifo_us": result["latency"][ECG]["mean_us"]}
     result["a6"] = _a6(used, [e["t_us"] for e in stim])
-    result["a11"] = _a11(events, rows, _anchor_residuals(packets, timebase))
+    values = {key: ecg_values if key == ECG else series[key].value.astype(float)
+              for key in (ECG, *PPG_SLOTS)}
+    result["a11"] = _a11(events, rows, _anchor_residuals(packets, timebase),
+                         _block_refit(packets, series, values, clip, timebase_model))
     result["events"] = rows
     result["verdict"] = _verdict(result)
     return result
+
+
+def _by_minute(used):
+    """Mean offset per 60 s from the first analysed event (report only): with
+    FIFO anchors a slow read-delay drift and a clock drift give the same
+    anchors, and only the stimulus offset shows the difference."""
+    if not used:
+        return []
+    t0 = min(r["t_event_us"] for r in used)
+    cells = {}
+    for r in used:
+        cells.setdefault(int((r["t_event_us"] - t0) // 60e6), []).append(r["offset_us"])
+    return [None if m not in cells else float(np.mean(cells[m]))
+            for m in range(max(cells) + 1)]
 
 
 def _count(rows, key):
@@ -333,14 +369,24 @@ def _a2(timebase):
     return {"chains": out, "passed": _combine(c["passed"] for c in out.values())}
 
 
-def _a3(timebase):
+def _a3(timebase, model="line"):
+    rows = [r for r in timebase if r["channel"] in (ECG, *PPG_SLOTS)]
     values = {f"{r['channel']}:chain{r['chain_id']}": r.get("residual_block_max_us")
-              for r in timebase if r["channel"] in (ECG, *PPG_SLOTS)}
+              for r in rows}
     passed = _combine(None if v is None else v <= LIMITS["a3_us"] for v in values.values())
-    return {"block_max_us": values, "passed": passed,
-            "note": None if passed else
-            "segmented 60 s fit (plan section 9) not implemented: A4-A6, A11 not "
-            "evaluable"}
+    out = {"model": model, "block_max_us": values, "passed": passed, "note": None}
+    if model == "segmented-60s":
+        out["line_block_max_us"] = {f"{r['channel']}:chain{r['chain_id']}":
+                                    r.get("line_residual_block_max_us") for r in rows}
+        out["segment_problems"] = {f"{r['channel']}:chain{r['chain_id']}":
+                                   r.get("segment_problem") for r in rows
+                                   if r.get("segment_problem")}
+    if passed is False and model == "line":
+        out["note"] = ("A3 fails with one line: analyse every run of the validation "
+                       "series again with timebase_model segmented-60s (plan section 9)")
+    elif passed is not True:
+        out["note"] = "A4-A6 and A11 not evaluable"
+    return out
 
 
 def _slope(t, y):
@@ -382,8 +428,8 @@ def _a6(used, stim_times):
 
 
 def _anchor_residuals(packets, timebase):
-    """(anchor time, anchor - fitted line) of the reliable ECG and PPG slot-1
-    packets (the three slots share their anchors), for A11."""
+    """(anchor time, anchor - fitted time axis) of the reliable ECG and PPG
+    slot-1 packets (the three slots share their anchors), for A11."""
     out = {}
     for key in (ECG, PPG_SLOTS[0]):
         points = []
@@ -395,21 +441,66 @@ def _anchor_residuals(packets, timebase):
             if fit is None:
                 continue
             k = p["sample_index_ext"] + p["sample_count"] - 1
-            points.append((p["t_anchor_us"], p["t_anchor_us"] - fit["a_us"] - fit["b_us"] * k))
+            points.append((p["t_anchor_us"], p["t_anchor_us"] - float(si.timebase_at(fit, k))))
         out[key] = np.array(points, float).reshape(-1, 2)
     return out
 
 
-def _a11(events, rows, residuals):
+def _block_refit(packets, series, values, clip, model):
+    """Callable (lo, hi, rows) -> one dict per row with ``offset_us`` (None when an
+    edge fails) and the ``phase`` of each channel, both on a time axis fitted, with
+    ``model``, to the anchors of [lo, hi) only; None when a chain of the block has
+    no valid fit. A11 judges each block as a session of its own (plan 11.7)."""
+    by_chain = {}
+    for p in packets:
+        if (p["channel_id"] in (ECG, *PPG_SLOTS) and p["chain_id"] is not None
+                and p["disposition"] == "accepted"):
+            by_chain.setdefault((p["channel_id"], p["chain_id"]), []).append(p)
+
+    def refit(lo, hi, rows):
+        axes, out = {}, []
+        for r in rows:
+            latency, phase = {}, {}
+            for key in (ECG, *PPG_SLOTS):
+                s = series[key]
+                chain = int(s.chain[_nearest(s.t_us, r["t_event_us"])])
+                if (key, chain) not in axes:
+                    inside = [p for p in by_chain.get((key, chain), [])
+                              if lo <= p["t_anchor_us"] < hi]
+                    fit = si.fit_timebase(inside, s.fs_nominal_hz, model)
+                    if fit is None or fit["nominal_rate"] or fit.get("segment_problem"):
+                        return None
+                    mask = s.chain == chain
+                    order = np.argsort(s.index[mask], kind="stable")
+                    index = s.index[mask][order]
+                    t = si.timebase_at(fit, index) + (s.slot_offset_us or 0.0)
+                    axes[(key, chain)] = (fit, t, values[key][mask][order],
+                                          s.chain[mask][order], index)
+                fit, t, x, ch, ix = axes[(key, chain)]
+                resp = event_response(t, x, ch, ix, r["t_event_us"],
+                                      "ecg" if key == ECG else "ppg", clip[key])
+                latency[key] = resp.get("latency_us") if resp["status"] == "ok" else None
+                phase[key] = _phase(r["t_event_us"], fit, s.slot_offset_us or 0.0)
+            ok = None not in latency.values()
+            out.append({"offset_us": latency[ECG] - float(np.mean(
+                [latency[k] for k in PPG_SLOTS])) if ok else None, "phase": phase})
+        return out
+
+    return refit
+
+
+def _a11(events, rows, residuals, refit):
     """A11 when the run has block boundaries (code 2 events); plan 11.7.
 
-    The time axis of a run is one line per chain, so a read delay that changes
-    with the load only moves the anchors around that line, not the sample times.
-    A study session has its own line, whose intercept follows the mean read
-    delay of that session. Each block is therefore judged as if it were a
-    session of its own: its event offsets are corrected by the block's mean ECG
-    anchor residual minus its mean PPG anchor residual (a later ECG anchor would
-    put the ECG samples later, so L_ECG and the offset grow by the same amount).
+    The time axis of a run is fitted to the whole run, so a read delay that
+    changes with the load only moves the anchors around it, not the sample
+    times. A study session has its own fit, which follows the mean read delay of
+    that session. Each block is therefore judged as a session of its own: the
+    time axis is refitted (same model) to the anchors of the block, and the
+    events of the block are measured again on it (the gate). The earlier
+    approximation, event offsets on the run axis corrected by the block's mean
+    ECG anchor residual minus its mean PPG anchor residual, is reported as
+    ``residual_corrected``; it only shifts the intercept.
     """
     marks = [e["t_us"] for e in events if e["code"] == BOUNDARY_CODE]
     if not marks:
@@ -420,46 +511,50 @@ def _a11(events, rows, residuals):
     if np.any(np.abs(gaps - A11["block_s"]) > A11["spacing_tolerance_s"]):
         return {"status": "not_evaluable", "reason": "boundary spacing off",
                 "spacing_s": gaps.tolist()}
-    groups = {"normal": [], "high": []}
-    adjusted = {"normal": [], "high": []}
+    phases = {"normal": [], "high": []}
+    refitted = {"normal": [], "high": []}
+    corrected = {"normal": [], "high": []}
     per_block = []
     for b in range(A11["boundaries"] - 1):
         lo, hi = marks[b] + A11["guard_s"] * 1e6, marks[b + 1]
         load = "normal" if b % 2 == 0 else "high"
-        inside = [r for r in rows if lo <= r["t_event_us"] < hi and r["offset_us"] is not None]
+        # Every stimulus of the block whose response window ends before the next
+        # mark; the refit decides which edges pass (not the run-axis result).
+        last = hi - EDGE["post_us"][1]
+        inside = [r for r in rows if lo <= r["t_event_us"] < last]
+        on_run = [r for r in inside if r["offset_us"] is not None]
         shift = []
         for key in (ECG, PPG_SLOTS[0]):
             pts = residuals[key]
             sel = pts[(pts[:, 0] >= lo) & (pts[:, 0] < hi), 1] if len(pts) else pts
             shift.append(float(sel.mean()) if len(sel) else None)
-        if inside and None not in shift:
-            correction = shift[0] - shift[1]
-            values = [r["offset_us"] + correction for r in inside]
-        else:
-            correction, values = None, []
-        if values:
-            groups[load] += inside
-        adjusted[load] += values
-        per_block.append({"block": b, "load": load, "n": len(inside),
+        if on_run and None not in shift:
+            corrected[load] += [r["offset_us"] + shift[0] - shift[1] for r in on_run]
+        fresh = [f for f in (refit(lo, hi, inside) or []) if f["offset_us"] is not None]
+        values = [f["offset_us"] for f in fresh]
+        phases[load] += [f["phase"] for f in fresh]
+        refitted[load] += values
+        per_block.append({"block": b, "load": load, "n": len(inside), "n_refit": len(values),
                           "anchor_shift_ecg_us": shift[0], "anchor_shift_ppg_us": shift[1],
                           "offset_us": float(np.mean(values)) if values else None})
-    a9 = {load: {key: phase_coverage([r[f"{key}_phase"] for r in g
-                                      if r[f"{key}_phase"] is not None])
-                 for key in (ECG, *PPG_SLOTS)} for load, g in groups.items()}
+    # A9 per load on the events that give the A11 offsets, with block-fit phases.
+    a9 = {load: {key: phase_coverage([f[key] for f in g]) for key in (ECG, *PPG_SLOTS)}
+          for load, g in phases.items()}
     if any(c["passed"] is not True for load in a9.values() for c in load.values()):
         return {"status": "not_evaluable", "reason": "A9 failed for a load type",
                 "a9": a9, "blocks": per_block}
     if any(b["offset_us"] is None for b in per_block):
-        return {"status": "not_evaluable", "reason": "a block has no corrected offset",
+        return {"status": "not_evaluable", "reason": "a block has no refitted offset",
                 "blocks": per_block}
-    means = {load: float(np.mean(v)) for load, v in adjusted.items()}
+    means = {load: float(np.mean(v)) for load, v in refitted.items()}
     diff = means["high"] - means["normal"]
     pairs = [per_block[i + 1]["offset_us"] - per_block[i]["offset_us"]
-             for i in range(0, len(per_block) - 1, 2)
-             if per_block[i]["offset_us"] is not None
-             and per_block[i + 1]["offset_us"] is not None]
+             for i in range(0, len(per_block) - 1, 2)]
+    side = {load: float(np.mean(v)) if v else None for load, v in corrected.items()}
+    side_diff = (None if None in side.values() else side["high"] - side["normal"])
     return {"status": "evaluated", "offset_us": means, "diff_us": diff,
             "passed": abs(diff) <= LIMITS["a11_diff_us"], "pair_diffs_us": pairs,
+            "residual_corrected": {"offset_us": side, "diff_us": side_diff},
             "blocks": per_block, "a9": a9}
 
 
@@ -499,6 +594,13 @@ def a5(runs, dates, identities=None):
         return {"status": "not_evaluable", "reason": "a run has no UTC start date"}
     if identities is not None and len(set(identities)) != 10:
         return {"status": "not_evaluable", "reason": "the 10 runs are not distinct"}
+    # v1 reports predate the model choice and always used the line.
+    models = {r.get("timebase_model") or ("line" if r.get("method") == "sync-analysis-v1"
+                                          else None) for r in runs}
+    if len(models) != 1 or not models <= set(si.TIMEBASE_MODELS):
+        return {"status": "not_evaluable",
+                "reason": "the runs do not share one time-axis model (plan section 9)",
+                "models": sorted(str(m) for m in models)}
     per_day = {}
     for d in dates:
         per_day[d] = per_day.get(d, 0) + 1
@@ -512,7 +614,8 @@ def a5(runs, dates, identities=None):
                 "runs": bad}
     offsets = [r["offset"]["mean_us"] for r in runs]
     spread = max(offsets) - min(offsets)
-    return {"status": "evaluated", "offsets_us": offsets, "range_us": spread,
+    return {"status": "evaluated", "timebase_model": models.pop(),
+            "offsets_us": offsets, "range_us": spread,
             "passed": spread <= LIMITS["a5_range_us"]}
 
 

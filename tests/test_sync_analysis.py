@@ -1,4 +1,4 @@
-"""Sync-test analysis (sync-analysis-v1) on SYNTHETIC recordings with known answers.
+"""Sync-test analysis (sync-analysis-v2) on SYNTHETIC recordings with known answers.
 
 The generator puts a 50 ms pulse into the ECG ``stim_ecg_delay_us`` after each
 event and into every PPG slot ``stim_ppg_delay_us`` after it; on the
@@ -37,12 +37,14 @@ def stim_times(end_s, seed=1, start_s=2.0, jitter=True):
     return tuple(out)
 
 
-def analyse(tmp_path, spec, name="rec", mutate=None, stabilization_s=5.0):
+def analyse(tmp_path, spec, name="rec", mutate=None, stabilization_s=5.0,
+            model="line"):
     directory, truth = make_recording(tmp_path, spec, name)
     recording = si.load_recording(directory)
     if mutate is not None:
         mutate(recording)
-    return sa.analyze_run(recording, stabilization_s=stabilization_s), truth
+    return sa.analyze_run(recording, stabilization_s=stabilization_s,
+                          timebase_model=model), truth
 
 
 @pytest.fixture(scope="module")
@@ -192,8 +194,8 @@ def test_a11_with_a_missing_boundary_is_not_evaluable(tmp_path, short_blocks):
     assert result["verdict"]["gates"]["a11"] is None
 
 
-def _fake_run(offset, a1=True, a4=True, a9=True):
-    return {"offset": {"mean_us": offset},
+def _fake_run(offset, a1=True, a4=True, a9=True, model="line"):
+    return {"offset": {"mean_us": offset}, "timebase_model": model,
             "verdict": {"gates": {"a1": a1, "a4": a4, "a9": a9}}}
 
 
@@ -212,6 +214,16 @@ def test_a5_needs_ten_distinct_runs_over_two_dates_and_checks_the_range():
     for bad in (dict(a1=False), dict(a4=None), dict(a9=False)):
         bad_runs = runs[:9] + [_fake_run(32_000, **bad)]
         assert sa.a5(bad_runs, dates, ids)["status"] == "not_evaluable"
+    # One model for the whole series (plan section 9): no mixing line and segments.
+    mixed = runs[:9] + [_fake_run(32_000, model="segmented-60s")]
+    assert sa.a5(mixed, dates, ids)["status"] == "not_evaluable"
+    assert sa.a5([_fake_run(32_000, model="spline")] * 10, dates, ids)[
+        "status"] == "not_evaluable"
+    # v1 reports have no model field; they always used the line.
+    old = [{**r, "timebase_model": None, "method": "sync-analysis-v1"} for r in runs]
+    assert sa.a5(old, dates, ids)["timebase_model"] == "line"
+    assert sa.a5(old[:9] + [{**old[9], "method": "x"}], dates, ids)[
+        "status"] == "not_evaluable"
 
 
 def _edge_case(kind="ok"):
@@ -264,3 +276,120 @@ def test_script_writes_json_and_csv_and_refuses_overwrite_and_raw(tmp_path):
     raw.mkdir(parents=True)
     with pytest.raises(ValueError, match="data/raw"):
         analyze_sync.check_output(raw / "x", raw_root=raw)
+
+
+# Time-axis models (plan section 9): one line, or a continuous piecewise-linear
+# function of the sample index with knots every 60 s of nominal samples.
+DRIFT_PPM_PER_MIN = 6.0
+
+
+@pytest.fixture(scope="module")
+def drift(tmp_path_factory):
+    # ECG clock error drifting by 6 ppm per minute: over 240 s the sample times
+    # bend about 2.9 ms away from one line, well within reach of 60 s segments.
+    spec = SessionSpec(duration_s=242, stim_s=stim_times(240), **dict(
+        BASE, ecg_clock_ppm_per_min=DRIFT_PPM_PER_MIN))
+    directory, truth = make_recording(tmp_path_factory.mktemp("drift"), spec)
+    recording = si.load_recording(directory)
+    results = {model: sa.analyze_run(recording, stabilization_s=5.0, timebase_model=model)
+               for model in si.TIMEBASE_MODELS}
+    return {**results, "directory": directory}, truth
+
+
+def test_clock_drift_fails_the_line_and_the_segmented_axis_recovers_l(drift):
+    results, truth = drift
+    line, seg = results["line"], results["segmented-60s"]
+    assert line["a3"]["passed"] is False and "segmented-60s" in line["a3"]["note"]
+    assert line["verdict"]["gates"]["a4"] is None
+    assert seg["timebase_model"] == "segmented-60s" and seg["a3"]["passed"] is True
+    assert seg["a3"]["line_block_max_us"]["0xE1:chain0"] > sa.LIMITS["a3_us"]
+    expected = truth["stim_l_ecg_us"] - truth["stim_l_ppg_us"]
+    assert seg["latency"]["0xE1"]["mean_us"] == pytest.approx(truth["stim_l_ecg_us"],
+                                                               abs=100)
+    assert seg["offset"]["mean_us"] == pytest.approx(expected, abs=100)
+    assert all(abs(m - expected) < 100 for m in seg["offset_by_minute_us"])
+    assert seg["verdict"]["gates"]["a4"] is True
+
+
+def test_read_delay_bend_looks_like_clock_drift_and_only_the_stimulus_shows_it(
+        tmp_path, drift):
+    # Same anchors as the clock drift, but the ECG samples run on time and the
+    # read delay bends: anchors cannot tell them apart (A3 passes on segments),
+    # the segmented axis follows the read delay, and the offset per minute drifts.
+    results, truth = drift
+    spec = SessionSpec(duration_s=242, stim_s=stim_times(240), **dict(
+        BASE, ecg_anchor_bend_us_per_s2=-DRIFT_PPM_PER_MIN / 120))
+    seg, _ = analyse(tmp_path, spec, model="segmented-60s")
+    # The two anchor sequences agree to within integer rounding and the second-
+    # order term of the drift; the jitter draws are the same (same seed).
+    anchors = []
+    for directory in (results["directory"], tmp_path / "rec"):
+        packets = si.load_recording(directory)["packets"]
+        anchors.append(np.array([p["t_anchor_us"] for p in packets
+                                 if p["channel_id"] == "0xE1"], float))
+    assert len(anchors[0]) == len(anchors[1])
+    assert np.max(np.abs(anchors[0] - anchors[1])) <= 2
+    assert seg["a3"]["passed"] is True
+    per_minute = seg["offset_by_minute_us"]
+    drift_minutes = results["segmented-60s"]["offset_by_minute_us"]
+    assert per_minute[0] - per_minute[-1] > 1500
+    assert max(drift_minutes) - min(drift_minutes) < 100
+
+
+def _fake_packets(k_last, every, fs=512.0, latency=2500.0, wobble=None):
+    out = []
+    for k in range(15, k_last + 1, every):
+        t = 1e6 + k * 1e6 / fs + latency + (wobble(k) if wobble else 0.0)
+        out.append({"disposition": "accepted", "channel_id": "0xE1", "status": 0,
+                    "sample_index_ext": k - 15, "sample_count": 16, "t_anchor_us": t})
+    return out
+
+
+def test_segment_knots_merge_a_short_tail_and_the_axis_is_continuous():
+    step = 60 * 512
+    assert si.segment_knots(0, 150 * 512, 512.0).tolist() == [0, step, 2 * step, 150 * 512]
+    assert si.segment_knots(0, 140 * 512, 512.0).tolist() == [0, step, 140 * 512]
+    assert si.segment_knots(0, 50 * 512, 512.0).tolist() == [0, 50 * 512]
+    fit = si.fit_timebase(_fake_packets(512 * 200, 16, wobble=lambda k: 1e-5 * k * k / 512),
+                          512.0, "segmented-60s")
+    assert fit["segment_problem"] is None and len(fit["knots_k"]) == 4
+    for knot in fit["knots_k"][1:-1]:
+        left, right = si.timebase_at(fit, [knot - 1e-6, knot + 1e-6])
+        assert right - left < 0.01  # 2e-6 samples x 1953 us: continuous
+    k = np.array([0.0, 1000.5, 50_000.25, 102_390.0, 110_000.0])
+    assert si.timebase_index_at(fit, si.timebase_at(fit, k)) == pytest.approx(k, abs=1e-6)
+    assert np.all(np.diff(si.timebase_at(fit, np.arange(0, 120_000, 7.0))) > 0)
+
+
+def test_line_phase_keeps_the_v1_expression():
+    # Finding 4: the inverse map reorders the subtraction; on a line the v1 bins
+    # must not move.
+    fit = {"a_us": 8e-8, "b_us": 2**30 / 200001}
+    assert sa._phase(2**30 + 427, fit, 427) == ((2**30 + 427 - 8e-8 - 427) / fit["b_us"]) % 1
+
+
+def test_segmented_fit_refuses_sparse_segments_and_unknown_models():
+    packets = [p for p in _fake_packets(512 * 200, 16)
+               if not 512 * 62 < p["sample_index_ext"] < 512 * 125]
+    fit = si.fit_timebase(packets, 512.0, "segmented-60s")
+    assert fit["segment_problem"] == "segment 1 sparse" and fit["knots_k"] is None
+    assert fit["residual_block_max_us"] is None
+    with pytest.raises(ValueError):
+        si.fit_timebase(packets, 512.0, "spline")
+
+
+@pytest.fixture
+def short_segments(monkeypatch):
+    # Knots every 20 s, so they fall at other places than the 60 s block marks.
+    monkeypatch.setattr(si, "SEGMENT_S", 20.0)
+
+
+@pytest.mark.parametrize("channel, sign", [("ecg", 1.0), ("ppg", -1.0)])
+def test_a11_on_segments_refits_each_block(tmp_path, short_blocks, short_segments,
+                                           channel, sign):
+    result, _ = analyse(tmp_path, _a11_spec(400.0, channel=channel),
+                        model="segmented-60s")
+    a11 = result["a11"]
+    assert a11["status"] == "evaluated"
+    assert a11["diff_us"] == pytest.approx(sign * 400.0, abs=40)
+    assert a11["passed"] is False

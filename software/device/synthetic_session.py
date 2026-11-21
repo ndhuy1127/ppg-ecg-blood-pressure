@@ -92,6 +92,16 @@ class SessionSpec:
     declare_latency: bool = True
     session_id: int = 1
     seed: int = 20261113
+    # Fields added after 2026-11-21 go last, so positional calls keep their meaning.
+    # Linear drift of the clock error (ppm per minute; added 2026-11-21): the
+    # rate at time t is fs (1 + (ppm + per_min t / 60 s) 1e-6), so the sample
+    # times bend away from one line (A3 segmented-fit test).
+    ecg_clock_ppm_per_min: float = 0.0
+    ppg_clock_ppm_per_min: float = 0.0
+    # ECG anchors later by bend t^2 (us, t in s from the start): a read delay that
+    # drifts while the sampling clock does not. With bend = -ecg_clock_ppm_per_min
+    # / 120 the anchors match those of that clock drift (added 2026-11-21).
+    ecg_anchor_bend_us_per_s2: float = 0.0
 
 
 def pat_at(spec, t_s):
@@ -175,20 +185,32 @@ def _ppg(t, feet, rng, spec, gain):
     return np.clip(np.round(counts), 0, (1 << 18) - 1).astype(int)
 
 
+def _sample_times(count, fs_hz, ppm, ppm_per_min):
+    """Times (s) of samples 0..count-1 of a clock whose error is ppm at t = 0 and
+    changes by ppm_per_min per minute: sample n sits where the integrated rate
+    fs (t + 1e-6 (ppm t + ppm_per_min t^2 / 120)) reaches n."""
+    n = np.arange(count, dtype=float)
+    if not ppm_per_min:
+        return n / (fs_hz * (1 + ppm * 1e-6))
+    a, b, c = 1e-6 * ppm_per_min / 120, 1 + 1e-6 * ppm, -n / fs_hz
+    return -2 * c / (b + np.sqrt(b * b - 4 * a * c))  # stable root of a t^2 + b t + c
+
+
 def _anchor(rng, true_last_s, spec, latency_us):
     jitter = rng.uniform(0, spec.anchor_jitter_us) if spec.anchor_jitter_us else 0.0
     return int(round(spec.start_us + true_last_s * 1e6 + latency_us + jitter))
 
 
 def _data_packets(rng, channel_ids, values, times_s, fs_hz, spec, latency_us, per,
-                  steps=()):
+                  steps=(), bend=0.0):
     """(t_anchor, Packet) of one AFE; channels share index and anchor."""
     out = []
     count = len(times_s)
     for n, first in enumerate(range(0, count - per + 1, per)):
         anchor = _anchor(rng, times_s[first + per - 1], spec, latency_us)
         last_s = times_s[first + per - 1]
-        anchor += int(round(sum(us for at_s, us in steps if last_s >= at_s)))
+        anchor += int(round(sum(us for at_s, us in steps if last_s >= at_s)
+                            + bend * last_s * last_s))
         t_first = anchor - int(round((per - 1) * 1e6 / fs_hz))
         for channel_id, series in zip(channel_ids, values):
             data = tuple(int(v) for v in series[first:first + per])
@@ -223,16 +245,19 @@ def generate(spec: SessionSpec):
 
     ecg_fs = spec.ecg_fs_hz * (1 + spec.ecg_clock_ppm * 1e-6)
     ppg_fs = spec.ppg_fs_hz * (1 + spec.ppg_clock_ppm * 1e-6)
-    t_ecg = np.arange(int(spec.duration_s * ecg_fs)) / ecg_fs
-    t_ppg = spec.ppg_start_offset_us * 1e-6 + np.arange(
-        int((spec.duration_s - 0.01) * ppg_fs)) / ppg_fs
+    t_ecg = _sample_times(int(spec.duration_s * ecg_fs), spec.ecg_fs_hz,
+                          spec.ecg_clock_ppm, spec.ecg_clock_ppm_per_min)
+    t_ppg = spec.ppg_start_offset_us * 1e-6 + _sample_times(
+        int((spec.duration_s - 0.01) * ppg_fs), spec.ppg_fs_hz, spec.ppg_clock_ppm,
+        spec.ppg_clock_ppm_per_min)
     spacing_s = SLOT_SPACING_US[spec.led_pw_code] * 1e-6
     ppg = [_ppg(t_ppg + j * spacing_s, ppg_feet, rng, spec, gain)
            for j, gain in enumerate((1.0, 0.8, 0.9))]
 
     rows = _data_packets(rng, (ECG_CHANNEL,), [_ecg(t_ecg, beats, rng, spec)], t_ecg,
                          spec.ecg_fs_hz, spec, spec.ecg_latency_us,
-                         spec.ecg_packet_samples, spec.ecg_anchor_steps)
+                         spec.ecg_packet_samples, spec.ecg_anchor_steps,
+                         spec.ecg_anchor_bend_us_per_s2)
     rows += _data_packets(rng, tuple(PPG_SLOTS), ppg, t_ppg, spec.ppg_fs_hz, spec,
                           spec.ppg_latency_us, spec.ppg_packet_samples,
                           spec.ppg_anchor_steps)

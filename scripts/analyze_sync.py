@@ -1,14 +1,15 @@
-"""Analyse sync-test runs (sync-analysis-v1, FIFO-anchor mode).
+"""Analyse sync-test runs (sync-analysis-v2, FIFO-anchor mode).
 
 ``run``: one logger recording (verified against its manifest) of the common
 stimulus test, hardware/test_reports/sync_10min_test_plan.md sections 5, 9, 11:
 per-event table (CSV) and a JSON with L per channel, the ECG-PPG offset, A1-A4,
-A6, A7, A9-A11 and the run verdict. ``a5``: the A5 range over 10 run JSONs (5 on
+A6, A7, A9-A11 and the run verdict, on the time-axis model of the validation
+series (``--timebase-model``, plan section 9). ``a5``: the A5 range over 10 run JSONs (5 on
 each of two dates). Writes NEW files outside ``data/raw/``; refuses to
 overwrite. Results on SYNTHETIC recordings only verify code.
 
     python scripts/analyze_sync.py run --recording runs/bringup_v1/<dir> \
-        --output runs/sync_fifo/<name>
+        --output runs/sync_fifo/<name> [--timebase-model segmented-60s]
     python scripts/analyze_sync.py a5 --runs <10 run JSONs> --output runs/sync_fifo/a5
 """
 
@@ -63,11 +64,11 @@ def _provenance(extra):
             "python": platform.python_version(), **extra}
 
 
-def run(recording_dir, output, session_index=0, raw_root=None):
+def run(recording_dir, output, session_index=0, raw_root=None, timebase_model="line"):
     json_path, csv_path = check_output(output, raw_root)
     recording = si.load_recording(recording_dir)
     manifest = recording["manifest"]
-    result = sa.analyze_run(recording, session_index)
+    result = sa.analyze_run(recording, session_index, timebase_model=timebase_model)
     events = result.pop("events")
     result["provenance"] = _provenance({
         "recording": str(Path(recording_dir)), "raw_sha256": manifest["raw"]["sha256"],
@@ -115,12 +116,15 @@ def main():
     one.add_argument("--output", required=True, type=Path,
                      help="Base name: writes <base>.json and <base>_events.csv")
     one.add_argument("--session-index", type=int, default=0)
+    one.add_argument("--timebase-model", choices=si.TIMEBASE_MODELS, default="line",
+                     help="One model for every run of the validation series (plan 9)")
     agg = sub.add_parser("a5")
     agg.add_argument("--runs", required=True, nargs="+", type=Path)
     agg.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     if args.cmd == "run":
-        result = run(args.recording, args.output, args.session_index)
+        result = run(args.recording, args.output, args.session_index,
+                     timebase_model=args.timebase_model)
         print(json.dumps(sa.round_floats({"events_used": result["events_used"],
                                           "offset": result["offset"],
                                           "verdict": result["verdict"]}), indent=2))
