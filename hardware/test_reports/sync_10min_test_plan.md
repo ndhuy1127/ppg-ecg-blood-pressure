@@ -459,8 +459,7 @@ phải cận trên đã chứng minh.
 
 ### 11.5. Việc còn mở (phải chốt trước lần đo xác nhận đầu tiên)
 
-- Định nghĩa cụ thể **tải cao** cho A11 (ví dụ lệnh `ping` định kỳ, PPG ở mã LED cao nhất định
-  dùng, tiến trình nền trên PC); ghi vào đây trước khi đo.
+- ~~Định nghĩa cụ thể **tải cao** cho A11~~ (chốt 2026-11-21, mục 11.7).
 - Cách bật kích thích của mục 3 trong chính bản build nghiên cứu, ví dụ bằng lệnh từ PC lúc chạy.
   Nếu chỉ làm được bằng một bản build khác cờ `BOARD_STIM`, ghi ELF SHA-256 của cả hai và nêu là
   giới hạn của phép đo.
@@ -500,3 +499,41 @@ ECG chỉ được kiểm bằng phép đo đầu–cuối (mục 11.2); PAT tuy
 kết luận về PAT dựa trên ΔPAT giữa các phiên trên chính bo này. Mô hình PAT-only dùng
 Δ(1/PAT²), phụ thuộc giá trị PAT tuyệt đối, nên một offset cố định chưa biết làm đổi thang của
 đặc trưng này; ghi là giới hạn của endpoint phụ đó.
+
+### 11.7. Tải của A11 (chốt 2026-11-21, trước mọi lần đo xác nhận)
+
+Đề xuất kỹ thuật, qua một vòng phản biện độc lập, duyệt ngày 2026-11-21. Mục đích: mốc đọc
+FIFO gồm thời gian phục vụ ngắt, chuyển task và chờ USB; A11 kiểm phần này không đổi khi thiết bị
+và máy tính bận hơn.
+
+| | Tải thường | Tải cao |
+| --- | --- | --- |
+| Firmware | `esp32s3_devkitc_sync_fifo` (bản nghiên cứu cộng kích thích), ba chip thật | như tải thường |
+| Mã LED PPG | mã dùng cho nghiên cứu, khóa từ đầu lượt, không đổi trong lượt | như tải thường |
+| Logger | `record --commands --dc-every-s 2` (như protocol) | như tải thường |
+| Lệnh từ PC | không gửi | `ping` mỗi 1 s và `mark --event operator` (mã 4) mỗi 5 s |
+| Máy tính | chạy pin, không chạy gì khác | thêm một tiến trình nền chiếm trọn một lõi CPU (cố định trong `scripts/sync_load_schedule.py`) |
+
+- **Lịch:** làm ấm 10 phút (thiết bị chạy, logger chưa cần ghi), rồi một lượt 24 phút gồm 12 khối
+  2 phút, xen kẽ, bắt đầu bằng tải thường. `scripts/sync_load_schedule.py` chạy song song với
+  `record --commands`, đổi tải theo đồng hồ PC và gửi `mark --event cuff_end` (mã 2) ở **đầu mỗi
+  khối và cuối khối cuối** làm mốc ranh giới trên đồng hồ thiết bị (mã 2 khác mã 4 dùng làm tải).
+  Không gửi lệnh nào trong 2 s trước và 0,5 s sau mốc ranh giới, để mốc không bị lệnh khác chặn
+  (lệnh `MARK_EVENT` chờ quá 1 s thì không gửi); lệnh đến hạn muộn rơi vào khoảng này thì bỏ và
+  ghi `skipped_late`. Script từ chối bản ghi trong `data/raw/` và ghi nhật ký JSONL: tham số thực,
+  giờ PC đơn điệu và UTC của mỗi hành động, kết quả (`queued` chỉ là đã ghi vào hộp thư; thiết
+  bị trả lời gì xem `commands_sent.jsonl`), lúc bật và tắt tải CPU (tắt không được thì `kill`).
+- **Gán khối:** ranh giới là các sự kiện `0xC1` mã 2 theo thứ tự (13 mốc). Số mốc khác 13 thì
+  cả lượt "không đánh giá được", đo lại (một quy tắc duy nhất, không ghép khối khi thiếu mốc). Bỏ các xung kích thích (mã 3) trong **10 s sau mỗi ranh giới**; mỗi
+  khối còn khoảng 110 xung.
+- **Tính:** offset ECG–PPG theo cách của A4, riêng cho mỗi loại tải, gộp các khối cùng loại. Đạt
+  khi \|offset tải cao − offset tải thường\| ≤ 0,3 ms (A11). Báo thêm, không phải tiêu chí:
+  chênh lệch của 6 cặp khối liền kề (thường, cao), đồ thị offset theo khối (để thấy trôi theo
+  nhiệt lẫn với tải), `tx_timeout` và `queue_drop` của từng khối. A9 tính riêng cho từng loại
+  tải; A9 không đạt thì A11 "không đánh giá được". A10 chấm trên cả lượt.
+- **Bản ghi:** thử trên bàn, không người, ngoài `data/raw/`; ghi ELF SHA-256 của
+  `esp32s3_devkitc_sync_fifo` và `esp32s3_devkitc_all_real_fifo`. Mark mã 2 và 4 ở đây chỉ là
+  tải và mốc ranh giới; chỉ xung kích thích mã 3 dùng để tính offset.
+- **Giới hạn:** đây là phép thử tải lệnh và tải CPU. Trường hợp máy tính khựng hẳn (logger ngừng
+  đọc USB một lúc) không được tạo lại; nó chỉ được theo dõi qua A1 và số `tx_timeout`,
+  `queue_drop`. Kết luận chỉ đúng cho mức tải đã tạo.
