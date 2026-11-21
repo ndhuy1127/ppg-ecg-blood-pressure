@@ -18,7 +18,7 @@
 > đã khóa; không chọn kịch bản theo kết quả đẹp.
 
 Số "người đạt chuẩn" được đếm theo snapshot ở G4. Một người đạt chuẩn khi đã qua sàng lọc, có phiên
-hiệu chuẩn đạt và ít nhất một phiên sau đạt (RQ1 cần ≥ 2 phiên/người). Một phiên đạt khi có ≥ 2 lần
+hiệu chuẩn đạt và phiên 2 đạt (mỗi người đúng 2 phiên từ 2026-11-19; trước đó: ít nhất một phiên sau đạt). Một phiên đạt khi có ≥ 2 lần
 cuff hợp lệ tính được PAT và đặc trưng PPG; phân tích chính không lọc theo SQI (protocol mục 7.3,
 chốt 2026-10-29). Phiên sau mang cờ `led_readjusted` (protocol 6.1) không vào phân tích chính, nên
 không được tính là phiên sau đạt (sửa 2026-11-07, để mọi người đạt chuẩn đều đóng góp cho endpoint

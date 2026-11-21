@@ -5,6 +5,8 @@
 > từ [bản thông tin](participant_information_sheet_v0.1.md); không hứa gì ngoài bản thông tin, không
 > nhấn mạnh tiền bồi dưỡng. Chỉ đăng sau khi có chấp thuận, kèm số chấp thuận. Kênh đăng là đề xuất,
 > chờ thầy. Phần dưới đường kẻ là đúng nội dung bản nộp.
+>
+> Sửa 2026-11-21: 2 buổi cách nhau ít nhất 7 ngày, trong 4 tuần (chốt 2026-11-19).
 
 ---
 
@@ -26,7 +28,8 @@ bị chỉ dùng cho nghiên cứu, chưa được cấp phép như thiết bị
 
 ## Bạn sẽ làm gì?
 
-- Tham gia 2 hoặc 3 buổi đo trong vòng 4 tuần, mỗi buổi tối đa 2 giờ, tại [địa điểm].
+- Tham gia 2 buổi đo, buổi thứ hai cách buổi đầu từ 1 tới 4 tuần, mỗi buổi tối đa 2 giờ, tại
+  [địa điểm].
 - Ngồi yên đeo một bo cảm biến nhỏ ở cổ tay trái, dán ba miếng điện cực điện tim dùng một lần, và đo
   huyết áp bằng máy đo quấn ở bắp tay phải.
 - Nếu đồng ý: thở chậm theo hướng dẫn trong khoảng 15 phút, và tính nhẩm trong khoảng 3 phút.

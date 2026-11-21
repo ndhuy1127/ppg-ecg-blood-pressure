@@ -29,6 +29,11 @@
 >   hỏi thăm sau sự cố nếu người tham gia đồng ý; nơi xem kết quả chung; cách báo tổn hại; xác nhận
 >   yêu cầu xóa trong 02 ngày làm việc và xóa trong 20 ngày (Nghị định 356, Điều 5); bỏ câu "không
 >   thể rút" sau ngày khóa, thay bằng chính sách giữ lại kèm ô chờ xác nhận căn cứ.
+> - 2026-11-21, theo các thay đổi của dự án: 2 buổi, buổi 2 cách buổi 1 từ 7 ngày tới 4 tuần, tổng
+>   thời gian không quá 4 giờ (chốt 2026-11-19; mục 3.1, 3.3, 3.4); ngày khóa dữ liệu 21/05/2027
+>   (chốt 2026-11-19; mục 9); giá đỡ che đầu nối ở bo cổ tay và đầu chuyển có điện trở giới hạn
+>   dòng cho dây điện cực (chốt 2026-11-19; mục 3.4, 4); chia sẻ dữ liệu tùy chọn qua kho có kiểm
+>   soát truy cập, theo mục 11 của phiếu đồng thuận (chốt 2026-11-19; mục 8, 9).
 > - Giá trị là **đề xuất của nhóm, chờ thầy/hội đồng** (viết trong bài như giá trị thật để bản
 >   nộp dễ đọc; danh sách đầy đủ ở [README](README.md)): trần 35 người; ít nhất 24 giờ cân
 >   nhắc; nhịp thở 6 lần/phút; trục thời gian M2; nghỉ ≥ 5 phút trước khi đo hai tay; ngưỡng
@@ -89,9 +94,10 @@ buổi đo được hẹn lại khi da lành. Nhóm hỏi các câu này trong p
 
 ### 3.1. Số buổi và thời gian
 
-Bạn tham gia 2 hoặc 3 buổi đo, mỗi buổi vào một ngày khác nhau, tất cả trong vòng 4 tuần kể từ
-buổi đầu. Mỗi buổi kéo dài **tối đa 120 phút**; nhóm ước tính một buổi đủ các bước mất khoảng
-60–80 phút, buổi đầu lâu hơn một chút. Tổng thời gian tham gia không quá 6 giờ.
+Bạn tham gia 2 buổi đo. Buổi thứ hai cách buổi đầu ít nhất 7 ngày và không quá 4 tuần; nhóm hẹn
+cả hai buổi ngay khi hẹn buổi đầu. Mỗi buổi kéo dài **tối đa 120 phút**; nhóm ước tính một buổi đủ
+các bước mất khoảng 60–80 phút, buổi đầu lâu hơn một chút. Tổng thời gian tham gia không quá 4 giờ.
+Buổi đo cuối cùng của nghiên cứu là ngày 14/05/2027.
 
 ### 3.2. Trước mỗi buổi đo
 
@@ -100,20 +106,20 @@ buổi đầu. Mỗi buổi kéo dài **tối đa 120 phút**; nhóm ước tín
   hưởng gì.
 - Hãy mặc áo tay ngắn hoặc tay rộng để nhóm quấn được vòng bít ở bắp tay.
 - Tùy các ô bạn đánh dấu ở mục 9 của phiếu đồng thuận, nhóm sẽ nhắn tin hẹn lịch và nhắc bạn trước
-  mỗi buổi, và hỏi thăm bạn nếu khi ra về bạn còn khó chịu. Nếu bạn không đồng ý nhắc lịch, nhóm hẹn
-  lịch buổi sau trực tiếp với bạn khi kết thúc buổi trước.
+  mỗi buổi, và hỏi thăm bạn nếu khi ra về bạn còn khó chịu. Nếu bạn không đồng ý nhắc lịch, nhóm xác
+  nhận lại lịch buổi thứ hai trực tiếp với bạn khi kết thúc buổi đầu.
 
 ### 3.3. Các bước trong một buổi đo
 
 1. *Chỉ ở buổi đầu:* nhóm đọc lại thông tin với bạn và trả lời câu hỏi. Nếu đồng ý, bạn ký phiếu
    đồng thuận. Không có bước nào dưới đây được làm trước khi bạn ký.
 2. Bạn trả lời phiếu sàng lọc: tuổi, giới tính, tay thuận và các câu hỏi về sức khỏe ở mục 2.
-   Phiếu chỉ ghi mã nghiên cứu, không ghi họ tên. Ở các buổi sau, nhóm hỏi lại các câu này để biết
+   Phiếu chỉ ghi mã nghiên cứu, không ghi họ tên. Ở buổi thứ hai, nhóm hỏi lại các câu này để biết
    sức khỏe của bạn có thay đổi không.
 3. *Chỉ ở buổi đầu:* bạn ngồi nghỉ ít nhất 5 phút. Nhóm đo chu vi bắp tay phải để chọn cỡ vòng
    bít, rồi đo huyết áp ở mỗi tay một lần.
 4. Nhóm gắn thiết bị (mục 3.4) và kiểm tra tín hiệu. Ở buổi đầu, nhóm chỉnh độ sáng đèn của bo
-   cảm biến cho hợp với cổ tay bạn, mất vài phút. Các buổi sau dùng lại mức sáng đó; nếu tín hiệu
+   cảm biến cho hợp với cổ tay bạn, mất vài phút. Buổi thứ hai dùng lại mức sáng đó; nếu tín hiệu
    bị quá sáng, nhóm có thể chỉnh lại một lần, cũng mất vài phút.
 5. Bạn ngồi nghỉ yên tĩnh ít nhất 10 phút trên ghế có tựa lưng, hai bàn chân đặt trên sàn, hai
    tay đặt trên bàn. Sau đó máy đo huyết áp đo 2 lần lúc nghỉ, cách nhau ít nhất 2 phút.
@@ -128,12 +134,14 @@ Trong lúc ghi tín hiệu và lúc máy đo huyết áp bơm, bạn ngồi yên
 
 - **Bo cảm biến cổ tay:** một bo nhỏ (khoảng 4 × 3 cm) gắn bằng dây dán (velcro) ở **mặt lưng cổ
   tay trái**, tức phía mu bàn tay. Trên bo có đèn LED xanh lá, đỏ và hồng ngoại, cảm biến ánh
-  sáng để đo mạch và cảm biến chuyển động. Bo này nối với bo mạch đế đặt trên bàn bằng một dây
-  cáp dẹt dài khoảng 20–30 cm.
+  sáng để đo mạch và cảm biến chuyển động. Mặt áp vào da có một giá đỡ bằng nhựa che các đầu nối
+  và linh kiện, chỉ để hở cửa sổ của cảm biến. Bo này nối với bo mạch đế đặt trên bàn bằng một
+  dây cáp dẹt dài khoảng 20–30 cm.
 - **Ba miếng điện cực dán dùng một lần** để ghi điện tim. Đây là loại Ag/AgCl có gel, giống điện
   cực dùng khi đo điện tim thông thường. Một miếng dán ở mặt trong cổ tay trái, một miếng ở mặt
   trong cẳng tay trái và một miếng ở mặt trong cổ tay phải. Da được lau sạch trước khi dán, và
-  mỗi buổi dùng điện cực mới.
+  mỗi buổi dùng điện cực mới. Dây điện cực nối vào thiết bị qua một đầu nối có điện trở để hạn
+  chế dòng điện có thể đi qua người.
 - **Vòng bít máy đo huyết áp** quấn ở bắp tay phải. Trong mỗi buổi, máy bơm và xả khoảng 4 lần,
   **tối đa 6 lần**; buổi đầu có thêm 2 lần đo hai tay, nên khoảng 6 lần, tối đa 8 lần. Nếu buổi
   đó chỉ đo lúc nghỉ thì tối đa 4 lần (buổi đầu tối đa 6 lần). Mỗi lần đo mất khoảng 45–60 giây,
@@ -177,9 +185,10 @@ tham gia phần đo lúc nghỉ.
   để chắc rằng bo không có cạnh sắc, không có đầu nối nhô ra chạm da và không nóng bất thường.
 - **An toàn điện:** thiết bị dùng điện một chiều, điện áp thấp (không quá 5 V), lấy từ cổng USB
   của máy tính xách tay. Khi bạn đang đeo thiết bị, máy tính chạy bằng pin, không cắm sạc, và
-  thiết bị nghiên cứu không nối với ổ điện. Thiết bị chỉ được dùng trên người sau khi nhóm đã đo
-  dòng rò (dòng điện rất nhỏ có thể đi qua cơ thể ngoài ý muốn) trên chính bộ thiết bị này, và kết
-  quả nằm trong giới hạn của tiêu chuẩn an toàn thiết bị điện y tế IEC 60601-1
+  thiết bị nghiên cứu không nối với ổ điện. Mỗi dây điện cực có điện trở hạn chế dòng điện, kể cả
+  khi thiết bị bị lỗi. Thiết bị chỉ được dùng trên người sau khi nhóm đã đo dòng rò (dòng điện rất
+  nhỏ có thể đi qua cơ thể ngoài ý muốn) trên chính bộ thiết bị này, và kết quả nằm trong giới hạn
+  của tiêu chuẩn an toàn thiết bị điện y tế IEC 60601-1, được người có chuyên môn kiểm tra
   [số và ngày của biên bản đo dòng rò].
 - **Nghiệm pháp:** tính nhẩm có thể làm bạn căng thẳng; thở chậm có thể gây chóng mặt nhẹ hoặc tê
   đầu ngón tay. Nhóm quan sát bạn trong suốt nghiệm pháp.
@@ -234,8 +243,8 @@ thường hay không.
   tính, tay thuận, chu vi bắp tay và các câu trả lời sàng lọc; thời điểm các bước trong buổi đo.
   Nhóm không thu ảnh, video, ghi âm, mã sinh viên, số căn cước hay ngày sinh đầy đủ.
 - Thông tin sức khỏe và tín hiệu sinh lý của bạn là **dữ liệu cá nhân nhạy cảm**. Chúng chỉ được
-  dùng cho mục đích của nghiên cứu này, và cho nghiên cứu sau của nhóm nếu bạn đồng ý riêng ở mục 10
-  của phiếu đồng thuận. Bên kiểm soát dữ liệu là [đơn vị chủ trì]; bên xử lý dữ liệu là nhóm nghiên
+  dùng cho mục đích của nghiên cứu này; cho nghiên cứu sau của nhóm nếu bạn đồng ý riêng ở mục 10
+  của phiếu đồng thuận; và được chia sẻ qua kho dữ liệu nếu bạn đồng ý riêng ở mục 11. Bên kiểm soát dữ liệu là [đơn vị chủ trì]; bên xử lý dữ liệu là nhóm nghiên
   cứu.
 - Bảng nối mã với họ tên được lưu riêng, được mã hóa bằng mật khẩu, và chỉ người quản lý dữ liệu
   cùng một người dự phòng mở được. Số điện thoại hoặc email để hẹn lịch được lưu cùng bảng này và
@@ -251,11 +260,22 @@ thường hay không.
 - Dữ liệu không được đưa lên kho mã nguồn hay trang web công khai. Kết quả chỉ được công bố ở dạng
   tổng hợp, không nhận ra được từng người. Khi có kết quả, nhóm đăng tóm tắt kết quả chung tại
   [trang hoặc kênh thông tin]; nhóm không gửi kết quả riêng cho từng người.
+- **Chia sẻ dữ liệu cho nhà nghiên cứu khác (tùy chọn, mục 11 của phiếu đồng thuận).** Chỉ khi bạn
+  đánh dấu mục này, sau khi đề tài kết thúc, nhóm có thể đưa một bản rút gọn dữ liệu của bạn lên
+  [kho dữ liệu khoa học có kiểm soát truy cập, nơi đặt máy chủ]. Bản này gồm tín hiệu điện tim, PPG
+  và chuyển động, số đo huyết áp, tên nghiệm pháp, thời điểm tính từ đầu buổi đo, tuổi theo nhóm 5
+  năm và giới tính; nó mang một mã mới, không có họ tên, ngày giờ thật hay ghi chú. Người muốn dùng
+  phải được kho dữ liệu duyệt và ký thỏa thuận sử dụng dữ liệu, cam kết không tìm cách nhận diện
+  bạn và không chia sẻ tiếp. Tín hiệu điện tim có thể giúp nhận ra một người khi ghép với dữ liệu
+  khác, nên nguy cơ này không bằng 0. Dữ liệu đã chia sẻ thì không thu hồi được và được lưu theo
+  quy định của kho, có thể lâu hơn thời hạn lưu dưới đây. Nếu bạn không đánh dấu mục này, dữ liệu
+  của bạn không được chia sẻ ra ngoài nhóm, và việc tham gia không bị ảnh hưởng.
 - Dữ liệu được giữ theo [quy định lưu trữ của trường/hội đồng]. Nếu không có quy định, dữ liệu được
   giữ 03 năm rồi tiêu hủy. Thời hạn này tính từ mốc muộn hơn trong hai mốc: khi kết thúc đề tài và
   khi có công bố đầu tiên dùng dữ liệu này; nếu không có công bố thì tính từ khi kết thúc đề tài.
   Khi áp dụng thời hạn 03 năm này, dữ liệu được tiêu hủy không muộn hơn 05 năm kể từ khi kết thúc
-  đề tài.
+  đề tài. Đề tài dự kiến kết thúc vào tháng 7/2027. Bản đã chia sẻ qua kho dữ liệu (nếu bạn đồng ý ở
+  mục 11) theo quy định lưu của kho.
 - Dữ liệu của bạn được xử lý theo quy định của pháp luật Việt Nam về bảo vệ dữ liệu cá nhân. Bạn
   có quyền hỏi nhóm đang lưu những dữ liệu gì về bạn, yêu cầu sửa thông tin sai, rút lại sự đồng ý
   bằng văn bản và yêu cầu xóa dữ liệu theo mục 9, và khiếu nại theo đầu mối ở mục 11. Việc rút lại
@@ -275,13 +295,15 @@ Khi bạn rút lui, nhóm ngừng thu dữ liệu của bạn, và bạn chọn 
 - cho phép nhóm giữ dữ liệu đã thu để phân tích.
 
 Nhóm ghi lại lựa chọn của bạn, chỉ kèm mã nghiên cứu. Nếu bạn yêu cầu xóa trước ngày nhóm khóa dữ
-liệu để phân tích, tức ngày [ngày khóa dữ liệu], nhóm xác nhận đã nhận yêu cầu trong 02 ngày làm
+liệu để phân tích, tức ngày 21/05/2027, nhóm xác nhận đã nhận yêu cầu trong 02 ngày làm
 việc và xóa xong trong 20 ngày. Sau ngày đó, dữ liệu đã thu của bạn đã nằm trong bộ dữ liệu phân
 tích đã khóa. Nhóm đề nghị giữ dữ liệu này chỉ cho các phân tích đã định trước, nếu đơn vị chủ trì
 xác nhận có căn cứ cho việc giữ lại; nếu không có căn cứ thì nhóm xóa theo yêu cầu của bạn và chạy
 lại các phân tích không có dữ liệu của bạn [căn cứ: chờ thầy và đơn vị chủ trì xác nhận]. Kết quả
 đã công bố ở dạng tổng hợp thì không thể rút lại. Nhóm không thu thêm dữ liệu của bạn và không dùng dữ liệu
-của bạn cho mục đích mới nào khác.
+của bạn cho mục đích mới nào khác. Nếu bạn rút lại đồng ý ở mục 11 trước khi dữ liệu được chia sẻ
+(việc chia sẻ chỉ làm sau khi đề tài kết thúc), dữ liệu của bạn không được chia sẻ; bản đã chia sẻ
+thì không thu hồi được.
 
 Nhóm có thể dừng sự tham gia của bạn, kể cả khi bạn không yêu cầu, nếu: bạn không còn đủ điều kiện
 ở phiếu sàng lọc (ví dụ có thai, bắt đầu dùng thuốc tim mạch, có bệnh mới được chẩn đoán); có lần

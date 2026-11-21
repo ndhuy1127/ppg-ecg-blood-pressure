@@ -8,6 +8,10 @@
 > có hội đồng đạo đức trong nghiên cứu y sinh học (danh sách hội đồng cấp cơ sở của Cục Khoa học công
 > nghệ và Đào tạo, Bộ Y tế, cập nhật 2025-12-09); theo Điều 4.4 của Thông tư 43, tổ chức không có hội
 > đồng thì dùng hội đồng cấp cơ sở phù hợp lĩnh vực. Phần dưới đường kẻ là đúng nội dung bản nộp.
+>
+> Sửa 2026-11-21: 2 buổi cách nhau ít nhất 7 ngày (chốt 2026-11-19), thời gian thực hiện tới tháng
+> 7/2027, đầu chuyển điện cực có điện trở giới hạn dòng, mục tùy chọn chia sẻ dữ liệu; câu "chờ thầy
+> quyết định" ở mục 4 đổi thành "nhóm quyết trước khi nộp".
 
 ---
 
@@ -34,21 +38,22 @@
 | Loại đề tài | [đồ án/khóa luận/đề tài cấp …]; đã được thông qua về khoa học: [văn bản, số, ngày] |
 | Nguồn kinh phí | [nguồn kinh phí] |
 | Địa điểm nghiên cứu | [phòng thí nghiệm, địa chỉ] |
-| Thời gian thực hiện | [từ … đến …]; tuyển và đo trên người chỉ sau khi có văn bản chấp thuận |
-| Thiết kế | Nghiên cứu thực nghiệm tiến cứu, đo lặp lại 2–3 buổi; không dùng thuốc, không lấy mẫu sinh học |
+| Thời gian thực hiện | Từ [tháng/năm] đến tháng 7/2027; tuyển và đo trên người chỉ sau khi có văn bản chấp thuận |
+| Thiết kế | Nghiên cứu thực nghiệm tiến cứu, đo lặp lại 2 buổi cách nhau ít nhất 7 ngày; không dùng thuốc, không lấy mẫu sinh học |
 | Người tham gia | Người trưởng thành khỏe mạnh 18–35 tuổi; tối đa 35 người |
 
 ## 2. Tóm tắt nghiên cứu bằng ngôn ngữ phổ thông
 
 Nhóm nghiên cứu đang phát triển một thiết bị đeo ở cổ tay để thử theo dõi thay đổi huyết áp mà không
 cần vòng bít. Thiết bị ghi tín hiệu mạch bằng ánh sáng ở cổ tay và tín hiệu điện tim từ ba miếng điện
-cực dán. Người tham gia là người trẻ khỏe mạnh, đến phòng thí nghiệm 2 hoặc 3 buổi trong 4 tuần, mỗi
-buổi tối đa 2 giờ. Trong mỗi buổi, người tham gia ngồi yên đeo thiết bị, được đo huyết áp bằng máy đo
+cực dán. Người tham gia là người trẻ khỏe mạnh, đến phòng thí nghiệm 2 buổi, buổi sau cách buổi đầu
+từ 1 tới 4 tuần, mỗi buổi tối đa 2 giờ. Trong mỗi buổi, người tham gia ngồi yên đeo thiết bị, được đo huyết áp bằng máy đo
 quấn ở bắp tay vài lần, và nếu đồng ý thì làm hai việc đơn giản làm huyết áp thay đổi nhẹ: thở chậm
 theo hướng dẫn và tính nhẩm. Nhóm so sánh số đo của máy đo huyết áp với ước lượng từ tín hiệu của
 thiết bị, để biết việc thêm tín hiệu điện tim có giúp ước lượng chính xác hơn hay không. Thiết bị là
-nguyên mẫu nghiên cứu, chạy bằng điện áp thấp từ máy tính xách tay dùng pin, không dùng để chẩn đoán.
-Rủi ro chủ yếu là cảm giác bó chặt khi vòng bít bơm, kích ứng da nhẹ do điện cực, và căng thẳng hoặc
+nguyên mẫu nghiên cứu, chạy bằng điện áp thấp từ máy tính xách tay dùng pin, có điện trở giới hạn dòng
+trên từng dây điện cực, và không dùng để chẩn đoán. Người tham gia có thể chọn thêm việc cho phép chia
+sẻ dữ liệu đã giả danh hóa qua kho dữ liệu khoa học có kiểm soát truy cập. Rủi ro chủ yếu là cảm giác bó chặt khi vòng bít bơm, kích ứng da nhẹ do điện cực, và căng thẳng hoặc
 chóng mặt nhẹ khi làm hai nghiệm pháp.
 
 ## 3. Hình thức xét duyệt đề nghị
@@ -64,7 +69,7 @@ rủi ro và hình thức xét duyệt do hội đồng quyết định.
    lưu hành, không dùng để chẩn đoán hay điều trị), trong đó có việc nghiên cứu có thuộc diện thử
    nghiệm lâm sàng trang thiết bị y tế hay không, và các thủ tục nhóm cần thực hiện; nếu ngoài thẩm
    quyền của hội đồng, xin hội đồng hướng dẫn cơ quan có thẩm quyền (đề cương, mục 9.8).
-2. [Mục tùy chọn, chờ thầy quyết định.] Việc thử kỹ thuật thiết bị trên thành viên nhóm, không dùng số
+2. [Mục tùy chọn, nhóm quyết trước khi nộp.] Việc thử kỹ thuật thiết bị trên thành viên nhóm, không dùng số
    liệu cho nghiên cứu, có cần chấp thuận riêng hay không (đề cương, mục 9.8).
 
 ## 5. Hồ sơ kèm theo
@@ -80,7 +85,7 @@ rủi ro và hình thức xét duyệt do hội đồng quyết định.
 | 6 | Quy trình an toàn buổi đo và quy tắc dừng | 1.0, [ngày] |
 | 7 | Kế hoạch quản lý dữ liệu và bảo vệ dữ liệu cá nhân | 1.0, [ngày] |
 | 8 | Thông báo tuyển người tham gia | 1.0, [ngày] |
-| 9 | Biên bản đo dòng rò và thử nhiệt của thiết bị | [số, ngày] |
+| 9 | Biên bản đo dòng rò, phân tích lỗi đơn của đầu chuyển điện cực và thử nhiệt của thiết bị | [số, ngày] |
 | 10 | Tài liệu của máy đo huyết áp đối chứng (kết quả thẩm định độ chính xác) | [model] |
 | 11 | Lý lịch khoa học của chủ nhiệm đề tài và các nghiên cứu viên | [ngày] |
 | 12 | Chứng nhận đào tạo đạo đức trong nghiên cứu hoặc thực hành lâm sàng tốt | [số, ngày] |

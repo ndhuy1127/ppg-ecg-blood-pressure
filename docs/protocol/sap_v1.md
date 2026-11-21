@@ -9,7 +9,7 @@
 >   [kịch bản bài báo](../paper_scenarios_v0.1.md). Chỗ nào SAP đổi so với các file đó đều ghi rõ;
 >   các file đó đã được sửa theo ngày 2026-11-12.
 > - **Khi nào khóa:** bằng một commit có ngày, **trước pilot**. Sau pilot chỉ được điền những giá
->   trị ghi "chốt sau pilot" (δ, số người, phân bổ phiên), theo đúng quy tắc ở đây, trước khi thu
+>   trị ghi "chốt sau pilot" (δ, số người), theo đúng quy tắc ở đây, trước khi thu
 >   dữ liệu chính.
 > - **Những gì không được dùng:** không dùng kết quả RQ1, cũng không dùng sai số mô hình trên
 >   pilot hay dữ liệu chính, để chốt bất kỳ mục nào.
@@ -33,12 +33,17 @@
 > - **Sửa 2026-11-19 (chốt, báo thầy), sau mô phỏng v3 và phản biện độc lập:** mục 9 thêm kết
 >   quả 11 (nhiễu cuff 3–7 mmHg, M6, đo lặp cuff); mục 8 thêm trần δ; mục 13 thêm điểm 11–14
 >   (trần δ, điều kiện để M6 vào endpoint chính, đo lặp cuff, máy cuff).
+> - **Sửa 2026-11-21 (theo quyết định chốt 2026-11-19, báo thầy):** mỗi người đúng 2 phiên, phiên
+>   2 cách phiên 1 từ 7 ngày tới 4 tuần ([protocol](protocol_outline_v0.2.md) mục 3). Mục 1, 2
+>   đổi "phiên 2–3"/"ít nhất một phiên sau" thành phiên 2; mục 9 bỏ việc chọn phân bổ phiên sau
+>   pilot (quy tắc chỉ còn chọn số người); mục 13 điểm 6 sửa theo. "Phiên ≥ 2" ở các mục khác
+>   giữ nguyên chữ, nay nghĩa là phiên 2.
 
 ## 1. Câu hỏi và nguyên tắc
 
 - **RQ1:** ở người khỏe mạnh 18–35 tuổi không có trong dữ liệu huấn luyện, sau khi hiệu chuẩn
   bằng trung bình M0 của phiên 1, thêm PAT vào mô hình đặc trưng PPG có làm giảm sai số dự đoán
-  ΔSBP và ΔDBP ở phiên 2–3 so với chỉ dùng PPG hay không, và giảm bao nhiêu (RQ mục 4).
+  ΔSBP và ΔDBP ở phiên 2 (từ 7 ngày tới 4 tuần sau phiên 1) so với chỉ dùng PPG hay không, và giảm bao nhiêu (RQ mục 4).
 - SBP và DBP phân tích riêng. Một lần cuff là một nhãn. Đơn vị suy luận là người. Bootstrap lấy
   mẫu lại theo người.
 - PAT = PEP + PTT (cách viết gọn, mốc R), không gọi PAT là PTT.
@@ -53,9 +58,10 @@
 - **Người đạt chuẩn** (định nghĩa của [kịch bản bài báo](../paper_scenarios_v0.1.md), chép lại
   để khóa):
   - đã qua sàng lọc;
-  - có phiên 1 đạt và ít nhất một phiên sau đạt. Một phiên đạt khi có ≥ 2 lần cuff hợp lệ tính
+  - có phiên 1 đạt và phiên 2 đạt (sửa 2026-11-21; bản trước: ít nhất một phiên sau đạt). Một
+    phiên đạt khi có ≥ 2 lần cuff hợp lệ tính
     được PAT và đặc trưng PPG ([SQI v1](sqi_specification_v1.md) mục 4);
-  - phiên sau có cờ `led_readjusted` không được tính là phiên đạt;
+  - phiên 2 có cờ `led_readjusted` không được tính là phiên đạt;
   - người làm pilot không được tính.
 - **Tập phân tích chính:** mọi lần cuff hợp lệ ở phiên ≥ 2 (M0, M1, M2) của người đạt chuẩn,
   tính được cả PAT lẫn đặc trưng PPG. Không lọc theo SQI. Phiên `led_readjusted` không thuộc tập
@@ -349,6 +355,9 @@ code ghi trong `report.json`). Bản 2026-11-07 dùng CI percentile vẫn ở
    nhiều người hơn được ưu tiên. Bản 2026-11-07 (percentile) cho 3 phiên lợi hơn rõ (7–8 %),
    vì percentile không tính tới việc ít người thì phân vị phải rộng hơn. Kết luận này vẫn phụ
    thuộc giả định nhiễu theo lần cuff lớn hơn sai số riêng theo người, nên chốt sau pilot.
+   **Đã dùng ngày 2026-11-19:** dựa trên kết quả này, nhóm chốt mỗi người 2 phiên, phiên 2 cách
+   phiên 1 từ 7 ngày tới 4 tuần, không có phiên 3 ([protocol](protocol_outline_v0.2.md) mục 3).
+   Các dòng "× 3 phiên" ở đây và ở các kết quả sau chỉ còn để đối chiếu.
 2. **Khi PAT không thêm gì,** CI dài 0,9–2,0 mmHg (SBP) và 0,7–1,5 mmHg (DBP). Với
    δ_SBP = 2 và δ_DBP = 1,5, ít nhất 92 % nghiên cứu (SBP) và 94 % (DBP) cho kết quả "tương đương
    trong phạm vi δ", tức kết quả âm tính có thông tin.
@@ -588,10 +597,11 @@ bài báo đã sửa theo):**
    ứng M1 và M2. Năng lực mô hình vẫn là kịch bản, vì không được dùng sai số mô hình trên pilot.
    Ghi config và hash.
 2. Giữ trần tuyển 35 người, trừ người pilot, và lấy số buổi khả thi từ lịch thu chính.
-3. Trong các cách chia cùng số buổi, chọn cách có CI kỳ vọng hẹp nhất, với điều kiện ≥ 15 người
-   đạt chuẩn. Nếu hai cách chênh nhau dưới 5 % thì chọn cách nhiều người hơn, vì ít phụ thuộc giả
-   định hơn.
-4. Ghi N, phân bổ phiên và δ vào file này kèm ngày và commit, trước buổi thu chính đầu tiên.
+3. Mỗi người 2 phiên (chốt 2026-11-19, theo kết quả 1). N là số người lớn nhất mà số buổi khả
+   thi cho phép với 2 phiên mỗi người, trong trần tuyển; báo độ rộng CI kỳ vọng ở N đó. Nếu N cho
+   ít hơn 15 người đạt chuẩn kỳ vọng thì báo thầy trước khi thu chính. (Bản 2026-11-12 chọn giữa
+   các cách chia 2 hay 3 phiên cùng số buổi; bỏ khi số phiên đã cố định.)
+4. Ghi N và δ vào file này kèm ngày và commit, trước buổi thu chính đầu tiên.
 
 ## 10. Dữ liệu thiếu và lượt dừng
 
@@ -659,7 +669,7 @@ tương ứng):
 4. 10 000 lượt bootstrap, seed cố định ghi trong commit khóa; CI chính là khoảng bao của
    bootstrap-t và Student t (mục 5); không chọn Student t riêng.
 5. P2: ΔSBP có dấu của M2, ngưỡng báo động 10 mmHg; R3 chỉ để mô tả (mục 9).
-6. Quy tắc chọn số người và phân bổ phiên sau pilot (mục 9).
+6. Quy tắc chọn số người sau pilot (mục 9); số phiên cố định là 2 (chốt 2026-11-19).
 7. Các endpoint phụ 1–11 (mục 3).
 8. SQI v1 ([sqi_specification_v1.md](sqi_specification_v1.md)): cấu trúc cờ và cách dùng; ngưỡng
    khóa trên bản ghi G2.
@@ -692,7 +702,7 @@ Còn lại trước khi khóa (cập nhật 2026-11-12):
 - sổ lịch đo dự kiến (người, phiên, pha, số lần cuff định đo), trước pilot, để đếm lần đo và
   phiên bị bỏ (mục 4, "Thiếu pha"; mục 10); bảng đặc trưng chỉ có các lần cuff đã bấm (thêm
   2026-11-14);
-- sau pilot, trước thu chính: δ (có trần, mục 8), số người, phân bổ phiên, theo quy tắc ở mục 8
+- sau pilot, trước thu chính: δ (có trần, mục 8), số người, theo quy tắc ở mục 8
   và 9;
 - nếu M6 có trong hồ sơ: tỷ trọng các pha trong MAE, trước pilot (mục 13 điểm 12);
 - thêm 2026-11-15: code Bland–Altman cho đo lặp (mục 11) có test đáp án biết trước, trước lần
