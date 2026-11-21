@@ -377,7 +377,12 @@ breakout) chưa xác nhận bằng đo trực tiếp hay schematic v2. Chưa rõ
 nguyên nhân; chưa có schematic v2 và trang datasheet về `PLLINT`. Chốt 2026-11-21 sau phản
 biện độc lập: bản nghiên cứu giữ `ERR_PLL`; bản `esp32s3_devkitc_ecg_pll_diag` chỉ để chẩn đoán
 và làm tiếp mục 7. Với bản này, ánh xạ `SAMP` vẫn báo `edge missing` ngay sau mỗi lần khởi
-động lại (chưa kiểm cực tính `SAMP` bằng oscilloscope, mục 7 bước 4).
+động lại. Đếm cạnh bằng PCNT (bản tạm, 2026-11-21): GPIO21 và GPIO47 đều 32 cạnh lên và 32 cạnh
+xuống mỗi giây, cả khi `SAMP` gán cho INT2B lẫn khi đổi sang INTB; không có xung `SAMP` 512/s ở
+chân nào. **Với breakout này, mốc `SAMP` (bit 8) không dùng được**; packet ECG chỉ có mốc đọc
+FIFO. Đã chốt 2026-11-21: dùng mốc đọc FIFO, chỉ kiểm ΔPAT giữa các phiên
+([kế hoạch đo đồng bộ](../hardware/test_reports/sync_10min_test_plan.md) mục 11); chế độ FIFO của
+firmware nghiên cứu chưa cài, chờ triển khai và nghiệm thu.
 
 Bật bằng `pio run -d firmware -e esp32s3_devkitc_ecg_real` (`BOARD_ECG_REAL=1`,
 `BOARD_SAMP_CAPTURE=1`); PPG và IMU vẫn là nguồn giả. Dùng ở bring-up mục 7, khi

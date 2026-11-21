@@ -2,6 +2,10 @@
 
 > Chưa thực hiện vì chưa có phần cứng.
 >
+> **Chốt 2026-11-21: với breakout MAX30001 v2 `03/24` đang dùng, ECG không có mốc `SAMP`; áp
+> dụng mục 11 (chế độ mốc đọc FIFO).** Mục 11 thay các chỗ dùng `SAMP` ở mục 2, 3, 9 và 10 cho
+> cấu hình này; phần còn lại giữ nguyên.
+>
 > **Tiêu chí đạt/không đạt ở mục 9 đề xuất ngày 2026-11-11, duyệt ngày 2026-11-14**, viết trước khi
 > có số đo nào. Bản trước ghi "chưa chốt, chỉ đặt sau khi có số đo đầu tiên"; đặt ngưỡng sau
 > khi đã thấy số thì ngưỡng không còn kiểm được gì. Sau khi đo không đổi ngưỡng. Nếu buộc phải
@@ -290,7 +294,7 @@ là đề xuất kỹ thuật, **chưa có nguồn**; căn cứ ghi ở cuối m
 | A8 | Độ trễ ECG so với thiết kế | \|`L_ECG,SAMP` − 32,558 ms\| ≤ 0,98 ms, với `L_ECG,SAMP` đo theo **tâm xung** (xem dưới) | Nửa chu kỳ mẫu ECG: lệch cố định một mẫu (1,953 ms) phải bị bắt. Giá trị 32,558 ms theo mục 3 |
 | A9 | Độ phủ pha của kích thích | Chia chu kỳ mẫu của mỗi kênh thành 10 ô pha; mỗi ô có ít nhất 5 % số sự kiện (kỳ vọng 10 %) | Chỉ khi pha phủ đều thì ước lượng qua các sự kiện mới có độ phân giải dưới một mẫu |
 
-Cách đọc:
+Cách đọc (với cấu hình không có `SAMP`, dùng tiêu chí và cách đọc của mục 11):
 
 - **Đạt** khi A1–A6, A8 và A9 cùng đạt. A9 không đạt ở kênh nào thì A4–A6 và A8 là "không đánh
   giá được", không tính là đạt; khởi động lại (`SESSION_ID` mới là dãy độ lệch mới) rồi đo lại.
@@ -367,3 +371,110 @@ Phân tích dùng ΔPAT: trung vị PAT của một cửa sổ trừ trung vị 
   hệ thống ở trên không nhỏ hơn hẳn giá trị đó thì kết quả về PAT phải nêu giới hạn này.
 - Bảng chưa gồm sai số sinh lý và sai số thuật toán (nhịp bị bỏ sót, mốc giả, thay đổi hình
   dạng sóng); các phần đó thuộc [tài liệu mốc Tuần 5](../../docs/protocol/week05_fiducials_pat_validity.md).
+
+## 11. Chế độ mốc đọc FIFO cho ECG (chốt 2026-11-21)
+
+**Lý do.** Bring-up ngày 2026-11-20 và 2026-11-21 ([báo cáo](2026-11-20_v1_bringup.md) mục 9):
+breakout MAX30001 v2 `03/24` không đưa xung `SAMP` ra MCU ở chân ngắt nào, và `PLLINT` luôn bật
+khi ECG chạy, dù tốc độ lấy mẫu đúng 512 sps (+3 ppm). Chưa có schematic v2; không mua được bo
+thứ hai. Chốt sau hai vòng phản biện độc lập. Mục này thay các chỗ dùng `SAMP` ở mục 2, 3, 9 và 10
+cho cấu hình này; mọi phần khác của kế hoạch giữ nguyên.
+
+### 11.1. Phạm vi
+
+- Chỉ đánh giá **ΔPAT giữa các phiên trên chính bo này** (estimand của RQ1 dùng ΔPAT,
+  [SAP v1](../../docs/protocol/sap_v1.md) mục 4). **PAT tuyệt đối không được kiểm chứng**; báo cáo
+  và luận văn phải ghi điều này, cùng với giới hạn có sẵn về mốc PPG (mục 9).
+- Packet ECG: bit 8 luôn tắt. Mốc là thời điểm `esp_timer` ngay sau khi đọc word EOF, gán cho
+  mẫu cuối packet; các mẫu trước tính lùi theo chỉ số.
+- Hai bản ghi chẩn đoán ngày 2026-11-21 (`2026-11-21_s7_diag_pll_skip`,
+  `2026-11-21_s7_pll_diag_env`) là **pilot**, không dùng làm bằng chứng nghiệm thu. Số liệu pilot
+  chỉ dùng để đặt ngưỡng A10 dưới đây, trước mọi lần đo xác nhận.
+
+### 11.2. Tiêu chí
+
+| # | Thay đổi so với mục 9 |
+| --- | --- |
+| Mục 2 | Bỏ điều kiện "cực tính `SAMP` đã kiểm". Thêm: firmware là bản build nghiên cứu ở chế độ FIFO (11.3), đúng bản sẽ dùng trên người |
+| A1, A2, A5, A6, A9 | Giữ nguyên |
+| A3 | ECG dùng mốc đọc FIFO; ngưỡng giữ ± 0,2 ms |
+| A4 | Offset là `L_ECG,FIFO − L_PPG`; ngưỡng giữ 0,15 ms |
+| A7 | Giữ: chỉ báo cáo |
+| A8 | **Không đánh giá được.** Không có giá trị dự báo độc lập cho `L_ECG,FIFO`: 31,555 ms chỉ là trễ bộ lọc, phần từ lúc lấy mẫu tới lúc đọc FIFO chưa đo được khi không có `SAMP` hay oscilloscope. Báo giá trị `L_ECG,FIFO` đo được để tham khảo |
+| **A10 (mới)** | **Phần dư mốc từng packet ECG.** Với mỗi packet, dự đoán mốc của mẫu cuối bằng hồi quy tuyến tính mốc theo chỉ số trên các packet hợp lệ trong **10 s ngay trước** packet đó (chỉ dùng quá khứ). \|mốc đo − mốc dự đoán\| > **0,5 ms** (hai phía) thì gắn cờ packet, cắt chuỗi, và chỉ tính tiếp sau khi có lại 10 s hợp lệ. **Đạt khi 0 lần vượt** trong mọi lần đo xác nhận (10 lần của A5, lần 120 phút của A6, lần đo A11) |
+| **A11 (mới)** | **Offset theo tải.** Một lần chạy 24 phút, luân phiên khối 2 phút tải thường và tải cao theo lịch cố định (thường, cao, thường, cao…; 6 khối mỗi loại). Offset ECG–PPG tính riêng cho từng loại tải. **Đạt khi** \|offset tải cao − offset tải thường\| ≤ 0,3 ms |
+
+Căn cứ của ngưỡng (đề xuất kỹ thuật, chưa có nguồn):
+
+- A10: phần dư lớn nhất ở pilot là 175 µs trên 4 706 packet (khoảng 150 s), không có bước nhảy
+  nào trên 1 ms giữa hai packet liền nhau. 0,5 ms gấp khoảng 2,9 lần giá trị đó và bằng khoảng ¼
+  chu kỳ mẫu ECG, nên bắt được lệch một mẫu (1,953 ms) và các bước nhảy pha từ 0,5 ms. Bước nhỏ
+  hơn có thể lọt; A3 (trung vị 10 s, ± 0,2 ms) vẫn giữ.
+- A11: ngưỡng bằng ngưỡng A5. Mốc đọc FIFO gồm thời gian phục vụ ngắt, đánh thức task, đọc SPI;
+  phần này có thể đổi theo tải CPU và USB, đi thẳng vào ΔPAT nếu tải khác nhau giữa các phiên.
+- Logger cài A10 phải qua test trước khi dùng: chèn giả bước ± 1,953 ms và ± 0,75 ms vào giữa
+  một chuỗi sạch thì phát hiện được, chuỗi sạch thì không gắn cờ.
+
+**Cách đọc.** Cấu hình FIFO **đạt** khi A1–A6, A9, A10 và A11 cùng đạt; A8 ghi "không đánh giá
+được". Không đạt thì không tính PAT từ thiết bị (như mục 9), không nới ngưỡng.
+
+- Các nhánh của mục 9 vẫn áp dụng: A3 không đạt với một đường thẳng thì dùng hồi quy theo đoạn
+  60 s rồi xét lại A3–A6, A10 với mô hình đó; A9 không đạt thì A4–A6 và A11 "không đánh giá được",
+  khởi động lại và đo lại.
+- A11: kiểm A9 **riêng cho từng loại tải**, để chênh lệch về pha không thành chênh lệch offset giả.
+- A10 chưa chấm được trong 10 s đầu của mỗi chuỗi (chưa đủ quá khứ). Packet trong khoảng này là
+  "chưa kiểm": không tính vào số lần vượt, nhưng báo số packet đã chấm và chưa chấm của mỗi lần
+  đo; dữ liệu buổi đo xử lý theo 11.4.
+
+**Ngân sách sai số (mục 10) với mốc FIFO.** Thêm một thành phần hệ thống giữa phiên: chênh lệch
+offset do tải, tối đa 0,3 ms (A11). Nếu cộng thẳng với A5 và A6, sai số hệ thống của ΔPAT giữa hai
+phiên do thiết bị có thể tới khoảng 1,0 ms, thay cho 0,5–0,7 ms của mục 10. Vẫn là ước lượng, không
+phải cận trên đã chứng minh.
+
+### 11.3. Firmware và `PLLINT`
+
+- Bản build nghiên cứu ở chế độ FIFO: bit 8 tắt; không chờ cạnh `SAMP`, không `SYNCH` định kỳ
+  vì thiếu `SAMP`. `PLLINT` **chỉ ghi vào bộ đếm trong log**, không bật bit 3 và không làm dừng
+  ECG (với bo này cờ bật ở mọi lần đọc, nên gắn vào bit 3 sẽ làm mọi packet mang lỗi).
+- Bảo vệ thay cho `PLLINT`: firmware so số mẫu ECG với `esp_timer` trên mỗi cửa sổ 10 s; lệch
+  quá 512 sps ± 1 000 ppm thì bật bit 3 trên packet kế tiếp và cắt chuỗi (bit 5, V0.2 mục 5).
+  Logger kiểm A10 trên mọi bản ghi và ghi riêng nguyên nhân của từng cờ (A10, kiểm tốc độ, lỗi
+  AFE khác), gắn với chỉ số mẫu.
+- Các lần đo xác nhận chạy **đúng bản build sẽ dùng trên người** (cùng commit, cùng cờ build,
+  đối chiếu ELF SHA-256). Kích thích ở mục 3 cần bật được trong chính bản đó (11.5). Bản này chỉ
+  được dùng trên người sau khi mục 11.2 đạt. Đổi firmware phần thời gian thì đo lại.
+- Trước đó chỉ dùng bản chẩn đoán `esp32s3_devkitc_ecg_pll_diag`.
+
+### 11.4. Dữ liệu buổi đo: khi nào không tính PAT (khóa trước khi xem huyết áp)
+
+- Cửa sổ có packet ECG bị A10 gắn cờ, hoặc packet mang bit 3 (lỗi AFE, gồm lỗi kiểm tốc độ), hoặc
+  packet "chưa kiểm" của 10 s đầu chuỗi, thì **không tính PAT cho cửa sổ đó**. Cùng quy tắc cho mọi
+  người, phiên và nghiệm pháp.
+- Đây chỉ là một nguyên nhân "không tính được PAT". Nhãn cuff không bị loại; lần cuff không còn
+  cửa sổ nào có PAT được xử lý đúng như mọi lần mất ECG theo [SAP v1](../../docs/protocol/sap_v1.md)
+  mục 2–4 (tập đánh giá chính chỉ gồm các lần cuff tính được cả PAT lẫn đặc trưng PPG; lần mất ECG
+  còn PPG thuộc endpoint phụ đã khai báo). Mục này không thêm hay đổi quy tắc nào của SAP.
+- Báo tỷ lệ cửa sổ và lần cuff không tính được PAT vì nguyên nhân thời gian ECG, theo người và theo
+  nghiệm pháp.
+
+### 11.5. Việc còn mở (phải chốt trước lần đo xác nhận đầu tiên)
+
+- Định nghĩa cụ thể **tải cao** cho A11 (ví dụ lệnh `ping` định kỳ, PPG ở mã LED cao nhất định
+  dùng, tiến trình nền trên PC); ghi vào đây trước khi đo.
+- Cách bật kích thích của mục 3 trong chính bản build nghiên cứu, ví dụ bằng lệnh từ PC lúc chạy.
+  Nếu chỉ làm được bằng một bản build khác cờ `BOARD_STIM`, ghi ELF SHA-256 của cả hai và nêu là
+  giới hạn của phép đo.
+- Cài A10 trong logger và test chèn bước; cài kiểm tốc độ và chế độ FIFO trong firmware.
+- Sửa Packet Schema V0.2 mục 7 và metadata (`latency_l_us`, `latency_source` cho mốc FIFO) cho
+  khớp.
+- Nếu ProtoCentral trả lời có cách bật `SAMP` trên bo v2
+  ([issue #2](https://github.com/Protocentral/protocentral_max30001/issues/2)), quay lại tiêu chí
+  mục 9 gốc và đo lại.
+
+### 11.6. Giới hạn ghi trong luận văn
+
+Một breakout duy nhất; `PLLINT` luôn bật chưa giải thích được; không có mốc `SAMP`; thời gian
+ECG chỉ được kiểm bằng phép đo đầu–cuối (mục 11.2); PAT tuyệt đối không được kiểm chứng; mọi
+kết luận về PAT dựa trên ΔPAT giữa các phiên trên chính bo này. Mô hình PAT-only dùng
+Δ(1/PAT²), phụ thuộc giá trị PAT tuyệt đối, nên một offset cố định chưa biết làm đổi thang của
+đặc trưng này; ghi là giới hạn của endpoint phụ đó.
