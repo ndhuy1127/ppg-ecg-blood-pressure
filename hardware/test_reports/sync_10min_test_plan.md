@@ -484,7 +484,9 @@ phải cận trên đã chứng minh.
   (`runs/bringup_v1/2026-11-21_s7_ecg_fifo`): một chuỗi, kiểm tốc độ 19 cửa sổ 0 lỗi, A10 chấm
   5 763 packet, 0 cờ, phần dư lớn nhất 138 µs, p99 32 µs. Chỉ là pilot, không thay phép đo xác
   nhận.
-- Đưa A10 vào `device_session.py` để áp quy tắc 11.4 cho dữ liệu buổi đo.
+- ~~Đưa A10 vào `device_session.py` để áp quy tắc 11.4~~ (xong 2026-11-21,
+  `device-features-v2`): cờ `ecg:timing_unverified`, `ecg:afe_error`, cửa sổ có cờ không tính
+  PAT ([pipeline thiết bị](../../docs/protocol/device_session_pipeline.md) mục 3.4).
 - Sửa Packet Schema V0.2 mục 7 và metadata (`latency_l_us`, `latency_source` cho mốc FIFO) cho
   khớp.
 - Nếu ProtoCentral trả lời có cách bật `SAMP` trên bo v2

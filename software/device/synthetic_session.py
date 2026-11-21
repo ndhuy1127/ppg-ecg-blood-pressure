@@ -66,6 +66,9 @@ class SessionSpec:
     wander_hz: float = 0.25
     events: tuple = ()  # ((code, time_s), ...); time from the session start
     drop_packets: tuple = ()  # (("0xF1", seq), ...): lost on USB
+    # ((time_s, step_us), ...): from that sample time on, ECG anchors are shifted
+    # by step_us (a mis-timed FIFO read path; A10 test, added 2026-11-21).
+    ecg_anchor_steps: tuple = ()
     session_id: int = 1
     seed: int = 20261113
 
@@ -129,12 +132,15 @@ def _anchor(rng, true_last_s, spec, latency_us):
     return int(round(spec.start_us + true_last_s * 1e6 + latency_us + jitter))
 
 
-def _data_packets(rng, channel_ids, values, times_s, fs_hz, spec, latency_us, per):
+def _data_packets(rng, channel_ids, values, times_s, fs_hz, spec, latency_us, per,
+                  steps=()):
     """(t_anchor, Packet) of one AFE; channels share index and anchor."""
     out = []
     count = len(times_s)
     for n, first in enumerate(range(0, count - per + 1, per)):
         anchor = _anchor(rng, times_s[first + per - 1], spec, latency_us)
+        last_s = times_s[first + per - 1]
+        anchor += int(round(sum(us for at_s, us in steps if last_s >= at_s)))
         t_first = anchor - int(round((per - 1) * 1e6 / fs_hz))
         for channel_id, series in zip(channel_ids, values):
             data = tuple(int(v) for v in series[first:first + per])
@@ -178,7 +184,7 @@ def generate(spec: SessionSpec):
 
     rows = _data_packets(rng, (ECG_CHANNEL,), [_ecg(t_ecg, beats, rng, spec)], t_ecg,
                          spec.ecg_fs_hz, spec, spec.ecg_latency_us,
-                         spec.ecg_packet_samples)
+                         spec.ecg_packet_samples, spec.ecg_anchor_steps)
     rows += _data_packets(rng, tuple(PPG_SLOTS), ppg, t_ppg, spec.ppg_fs_hz, spec,
                           spec.ppg_latency_us, spec.ppg_packet_samples)
     rows.append((spec.start_us - 1, _max30101_state(spec, spec.start_us - 1)))

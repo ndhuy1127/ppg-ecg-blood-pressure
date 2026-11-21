@@ -21,17 +21,34 @@ not locked (SQI v1: locked on G2). BP is never read here.
 import numpy as np
 
 from software.data_io.live_monitor import adc_ceiling, led_codes
+from software.device import ecg_anchor_residual as a10
 from software.feature_extraction.week04 import VERSION_V2, SignalWindow, extract_window
 from software.signal_processing.fiducials import Channel, SignalConfig
 from software.signal_processing.pat_validity import (
     PatRules, detectable_foot_span, pat_beats,
 )
 
-VERSION = "device-features-v1"
+# v2 (2026-11-21): ECG timing flags of sync_10min_test_plan.md section 11.4 (A10
+# per-packet state, ECG STATUS bit 3) and no PAT for a window that has them.
+VERSION = "device-features-v2"
 PPG_KEYS = ("0xF1", "0xF2", "0xF3", "0xF4")
 # LED lock states of a window (led_lock_status) that set ppg:led_not_locked.
 LOCK_NOT_HELD = ("no_lock_metadata", "not_applied", "applied_after_window_start",
                  "state_unverified", "codes_differ")
+# A10 states of an ECG packet that leave its anchor unchecked or failed.
+A10_NOT_OK = ("flagged", "not_yet_scored")
+# Flags that stop PAT for a window (sync_10min_test_plan.md section 11.4).
+ECG_TIMING_FLAGS = ("ecg:timing_unverified", "ecg:afe_error")
+
+
+def annotate_ecg_timing(packets):
+    """Add ``a10_state`` (ecg_anchor_residual.classify) to every ECG packet row,
+    in place; ``hardware_flags`` refuses ECG packets without it, so the 11.4 rule
+    cannot be skipped by mistake. Call once per recording, on all its packets."""
+    for p, state in zip(packets, a10.classify(packets)):
+        if p["channel_id"] == a10.ECG_KEY:
+            p["a10_state"] = state
+    return packets
 
 
 def ecg_codes(words):
@@ -132,6 +149,17 @@ def hardware_flags(series, rows_by_key, packets, session, colors, sqi, lock_stat
         for chain in np.unique(s.chain[rows]):
             idx = s.index[rows][s.chain[rows] == chain]
             for p in _packets_in(packets, key, int(chain), idx.min(), idx.max()):
+                if key == a10.ECG_KEY:
+                    # Section 11.4 of the sync test plan: an ECG anchor that A10
+                    # flagged or could not check yet, or an AFE error (bit 3, which
+                    # includes the FIFO-mode rate check), stops PAT for the window.
+                    if "a10_state" not in p:
+                        raise ValueError("ECG packets lack a10_state: call "
+                                         "annotate_ecg_timing on the recording first")
+                    if p["a10_state"] in A10_NOT_OK:
+                        flags.append("ecg:timing_unverified")
+                    if p["status"] >> 3 & 1:
+                        flags.append("ecg:afe_error")
                 for bit, name in bits.items():
                     if p["status"] >> bit & 1 and (bit != 2 or key == "0xE1") and (
                             bit != 6 or key in PPG_KEYS):
@@ -190,7 +218,9 @@ def window_features(cuff, series, packets, session, config, identity):
     for key in [k for k in PPG_KEYS if k in series]:
         ppg = _channel(series[key], rows[key], series[key].value[rows[key]],
                        identity["clock_id"])
-        verified = has_ecg and all(series[k].latency_applied for k in ("0xE1", key))
+        timing_ok = not set(ECG_TIMING_FLAGS) & set(out["hardware_flags"])
+        verified = has_ecg and timing_ok and all(series[k].latency_applied
+                                                  for k in ("0xE1", key))
         metadata = {"sample_id": f"{identity['recording']}:{cuff['event_id']}:{key}",
                     "subject_id": identity["subject_id"] or "SYN_NONE",
                     "source": f"device:{identity['recording']}",

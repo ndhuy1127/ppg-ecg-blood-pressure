@@ -85,6 +85,22 @@ def _verdict(flagged, scored):
     return True if scored else None
 
 
+# Per-packet states returned by classify().
+STATES = ("scored", "flagged", "not_yet_scored", "not_scored")
+
+
+def classify(packets, window_us=WINDOW_US, limit_us=LIMIT_US):
+    """A10 state of every input row, as a list in input order: ``scored``
+    (within the limit), ``flagged``, ``not_yet_scored`` (under 10 s of history),
+    ``not_scored`` (unreliable anchor, or a row the logger did not keep, such as a
+    duplicate), or None for a row that is not ECG. Rows are told apart by
+    position, so a duplicate never takes the state of the packet it repeats.
+    Same rule as ``check``."""
+    states = {}
+    _run(packets, window_us, limit_us, states)
+    return [states.get(id(p)) if p["channel_id"] == ECG_KEY else None for p in packets]
+
+
 def check(packets, window_us=WINDOW_US, limit_us=LIMIT_US):
     """Run A10 on the ECG packets of one recording.
 
@@ -97,6 +113,10 @@ def check(packets, window_us=WINDOW_US, limit_us=LIMIT_US):
     True) and ``passed`` over all sessions (False if any session is False, else
     None if any is None or there is no ECG packet, else True).
     """
+    return _run(packets, window_us, limit_us, {})
+
+
+def _run(packets, window_us, limit_us, states):
     if window_us <= 0 or limit_us <= 0:
         raise ValueError("window_us and limit_us must be positive")
     ecg = [p for p in packets if p["channel_id"] == ECG_KEY]
@@ -111,8 +131,10 @@ def check(packets, window_us=WINDOW_US, limit_us=LIMIT_US):
         def restart():
             state["window"], state["start_k"] = _Window(), None
 
+        where = id(row)
         if row["disposition"] not in KEPT_DISPOSITIONS or row["sample_index_ext"] is None:
             state["not_scored"] += 1
+            states[where] = "not_scored"
             continue
         segment = _segment_key(row)
         if segment != state["segment"] or row["sample_index_ext"] != state["next_index"]:
@@ -121,6 +143,7 @@ def check(packets, window_us=WINDOW_US, limit_us=LIMIT_US):
         state["next_index"] = row["sample_index_ext"] + row["sample_count"]
         if row["disposition"] != "accepted":
             state["not_scored"] += 1
+            states[where] = "not_scored"
             restart()
             continue
         k = row["sample_index_ext"] + row["sample_count"] - 1
@@ -133,11 +156,14 @@ def check(packets, window_us=WINDOW_US, limit_us=LIMIT_US):
         predicted = window.predict(k) if ready else None
         if predicted is None:
             state["warmup"] += 1
+            states[where] = "not_yet_scored"
         else:
             residual = t - predicted
             state["scored"] += 1
             state["abs"].append(abs(residual))
+            states[where] = "scored"
             if abs(residual) > limit_us:
+                states[where] = "flagged"
                 state["flags"].append({"seq_ext": row["seq_ext"],
                                        "chain_id": row["chain_id"],
                                        "last_sample_index": k,

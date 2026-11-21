@@ -187,3 +187,16 @@ def test_script_refuses_raw_root_and_existing_output(tmp_path):
     existing.write_text(json.dumps({}), encoding="utf-8")
     with pytest.raises(ValueError, match="exists"):
         script.check_output(existing, raw_root=raw)
+
+
+def test_classify_gives_each_row_its_own_state_even_for_duplicates():
+    rows = ecg_rows(15, start_seq=0)
+    # A duplicate of a warm-up packet (same seq) and one of a later packet.
+    dup_warm = {**rows[5], "disposition": "duplicate", "chain_id": None}
+    dup_late = {**rows[400], "disposition": "duplicate", "chain_id": None}
+    packets = rows + [dup_warm, dup_late] + ecg_rows(1, channel="0xF1")
+    states = a10.classify(packets)
+    assert len(states) == len(packets)
+    assert states[5] == "not_yet_scored" and states[400] == "scored"
+    assert states[len(rows)] == "not_scored" and states[len(rows) + 1] == "not_scored"
+    assert states[-1] is None  # not ECG

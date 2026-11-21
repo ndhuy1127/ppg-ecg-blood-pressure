@@ -33,7 +33,7 @@ CLEAN = dict(ppg_noise_sd=0.0, ecg_noise_sd=0.0)
 
 
 def _run(tmp_path, spec, t0_s=70.0, color="green", config=CONFIG, subject=None,
-         session_update=None):
+         session_update=None, mutate_packets=None):
     directory, truth = make_recording(tmp_path, spec)
     recording = si.load_recording(directory)
     series, _, flags = si.session_series(recording)
@@ -48,7 +48,10 @@ def _run(tmp_path, spec, t0_s=70.0, color="green", config=CONFIG, subject=None,
     identity = {"subject_id": subject, "session_id": "S001" if subject else None,
                 "recording": "rec", "raw_sha256": recording["manifest"]["raw"]["sha256"],
                 "source_type": "SYNTHETIC", "clock_id": "SYN_ESP_TIMER_US"}
-    packets = [p for p in recording["packets"] if p["chain_id"] is not None]
+    if mutate_packets is not None:
+        mutate_packets(recording["packets"])
+    packets = [p for p in fe.annotate_ecg_timing(recording["packets"])
+               if p["chain_id"] is not None]
     result = fe.window_features(window, series, packets, session, config, identity)
     return result, result["by_color"].get(color), truth, flags
 
@@ -137,7 +140,8 @@ def test_window_without_ecg_keeps_ppg_features(tmp_path):
     identity = {"subject_id": None, "session_id": None, "recording": "rec",
                 "raw_sha256": recording["manifest"]["raw"]["sha256"],
                 "source_type": "SYNTHETIC", "clock_id": "SYN_ESP_TIMER_US"}
-    packets = [p for p in recording["packets"] if p["chain_id"] is not None]
+    packets = [p for p in fe.annotate_ecg_timing(recording["packets"])
+               if p["chain_id"] is not None]
     result = fe.window_features(window, series, packets,
                                 recording["decode"]["sessions"][0], CONFIG, identity)
     assert result["missing"] == "ecg" and "ecg:absent" in result["hardware_flags"]
@@ -271,3 +275,67 @@ def test_slot_spacing_is_the_datasheet_table():
     from software.device.max30101 import SLOT_SPACING_US
     assert SLOT_SPACING_US == {0: 427, 1: 525, 2: 720, 3: 1107}
     assert si.SLOT_SPACING_US is SLOT_SPACING_US
+
+
+# ECG timing rule of sync_10min_test_plan.md section 11.4 (device-features-v2): a
+# window whose ECG packets A10 flagged or could not check yet, or that carry
+# STATUS bit 3, gets no PAT; PPG features stay (the cuff can still enter PPG-only).
+
+def _ecg_in(packets, start_s, end_s, start_us=1_000_000):
+    return [p for p in packets if p["channel_id"] == "0xE1"
+            and start_us + start_s * 1e6 <= p["t_anchor_us"] < start_us + end_s * 1e6]
+
+
+def _no_pat_but_ppg(result, chosen, flag):
+    assert flag in result["hardware_flags"]
+    assert chosen["pat_validity"] is None and chosen["features"]["pat_median_ms"] is None
+    assert chosen["features"]["ppg_hr_bpm"] is not None
+    row = fe.cuff_row({"event_id": "E01", "phase": "M0", "status": "valid",
+                       "safety_stop": False, "led_readjusted": False, "pilot": False,
+                       "sbp_mmhg": 120.0, "dbp_mmhg": 80.0}, result,
+                      {"subject_id": None, "session_id": None, "recording": "rec",
+                       "source_type": "SYNTHETIC"}, "green")
+    assert row["pat_ms"] is None and flag in row["flags"]
+
+
+def test_clean_window_after_10_s_keeps_pat(tmp_path):
+    result, chosen, _, _ = _run(tmp_path, SessionSpec(duration_s=80, events=((1, 70.0),),
+                                                      **CLEAN))
+    assert not set(fe.ECG_TIMING_FLAGS) & set(result["hardware_flags"])
+    assert chosen["pat_validity"]["n_valid"] > 0
+
+
+def test_window_in_the_first_10_s_of_the_chain_has_no_pat(tmp_path):
+    # Window [5 s, 35 s): its first packets have under 10 s of history.
+    spec = SessionSpec(duration_s=40, events=((1, 35.0),), **CLEAN)
+    result, chosen, _, _ = _run(tmp_path, spec)
+    _no_pat_but_ppg(result, chosen, "ecg:timing_unverified")
+
+
+def test_anchor_step_flagged_by_a10_stops_pat(tmp_path):
+    def step(packets):
+        for p in _ecg_in(packets, 50.0, 80.0):
+            p["t_anchor_us"] += 1953  # one ECG sample late from 50 s on
+    result, chosen, _, _ = _run(tmp_path, SessionSpec(duration_s=80, events=((1, 70.0),),
+                                                      **CLEAN), mutate_packets=step)
+    _no_pat_but_ppg(result, chosen, "ecg:timing_unverified")
+
+
+def test_ecg_afe_error_bit_stops_pat(tmp_path):
+    def bit3(packets):
+        _ecg_in(packets, 55.0, 56.0)[0]["status"] |= 1 << 3
+    result, chosen, _, _ = _run(tmp_path, SessionSpec(duration_s=80, events=((1, 70.0),),
+                                                      **CLEAN), mutate_packets=bit3)
+    _no_pat_but_ppg(result, chosen, "ecg:afe_error")
+
+
+def test_hardware_flags_refuse_unannotated_ecg_packets(tmp_path):
+    directory, _ = make_recording(tmp_path, SessionSpec(duration_s=40,
+                                                        events=((1, 35.0),), **CLEAN))
+    recording = si.load_recording(directory)
+    series, _, _ = si.session_series(recording)
+    rows = {key: np.arange(len(s.t_us)) for key, s in series.items()}
+    packets = [p for p in recording["packets"] if p["chain_id"] is not None]
+    with pytest.raises(ValueError, match="a10_state"):
+        fe.hardware_flags(series, rows, packets, recording["decode"]["sessions"][0], {},
+                          CONFIG["sqi_hardware"], "not_applicable")

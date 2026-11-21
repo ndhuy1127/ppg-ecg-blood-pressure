@@ -121,6 +121,20 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 
 ### 3.4. Ghi chú và giới hạn
 
+- **Quy tắc thời gian ECG (thêm 2026-11-21, `device-features-v2`;
+  [kế hoạch đo đồng bộ](../../hardware/test_reports/sync_10min_test_plan.md) mục 11.4).**
+  `device_session.py` chạy A10 (`software/device/ecg_anchor_residual.py`) trên mọi packet của
+  bản ghi và gắn trạng thái cho từng packet ECG (`annotate_ecg_timing`). Cửa sổ có packet ECG bị
+  A10 gắn cờ hay chưa chấm được (10 s đầu mỗi chuỗi), hoặc mang STATUS bit 3, có cờ
+  `ecg:timing_unverified` hay `ecg:afe_error` và **không tính PAT**; đặc trưng PPG và ECG khác
+  vẫn tính, nên lần cuff đó đi theo đúng đường "mất ECG" của SAP. `hardware_flags` từ chối packet
+  ECG chưa gắn trạng thái, để không bỏ sót quy tắc. Trạng thái A10 gán theo từng dòng packet,
+  nên bản sao (`duplicate`) không lấy trạng thái của packet gốc; packet của cửa sổ lọc theo cả
+  phiên thiết bị lẫn phiên bản schema. Test: `tests/test_device_features.py` (cửa sổ trong 10 s
+  đầu, bước 1,953 ms, bit 3, packet chưa gắn trạng thái), `tests/test_device_ingest.py` (bước
+  1,953 ms sinh trước khi mã hóa, qua logger và `device_session.py`: cuff chứa bước mất PAT,
+  cuff sạch giữ PAT, cả hai giữ đặc trưng PPG và ECG), `tests/test_ecg_anchor_residual.py`.
+
 - Sườn lên tuyến tính làm chân sóng `tangent` trùng mốc đặt. Khi có nhiễu, độ dốc lớn nhất bị
   nhiễu đẩy lên nên chân sóng `tangent` lệch muộn có hệ thống: ở nhiễu 0,2 % biên độ, lệch tới
   khoảng 10 ms trên dữ liệu giả (thử 2026-11-13). Đây là tính chất của phương pháp, không phải
