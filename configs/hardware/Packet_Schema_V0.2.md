@@ -232,6 +232,10 @@ bắt đầu giữa phiên vẫn nhận được trong vòng 10 s.
 > mục 11. Metadata: `latency_samp_l_us` và `latency_samp_source` không dùng (luồng không có bit
 > 8); `latency_l_us`, `latency_source` của `0xE1` ghi cho mốc FIFO, null kèm lý do cho tới khi
 > có số đo. Firmware chế độ FIFO chưa cài (việc còn mở của mục 11.5 kế hoạch đó).
+> Cập nhật 2026-11-22: firmware chế độ FIFO đã cài (env `*_fifo`) và ghi `EN_INT2 = 0x000000`
+> (INT2B tắt), vì mỗi sườn của xung `SAMP` ở INT2B làm bật `PLLINT` trên bo này (báo cáo
+> bring-up mục 9.4); `afe_config` của `0xE1` ghi giá trị đó. Mục 7.1 vẫn áp dụng cho bo xuất
+> được `SAMP`.
 
 Đã duyệt ngày 2026-10-24: bật xung `SAMP` của MAX30001 **luôn** và dùng làm
 mốc thời gian ECG; chốt thời điểm cạnh bằng MCPWM capture của ESP32-S3; sửa V0.2 (chưa

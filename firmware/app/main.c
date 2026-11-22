@@ -848,7 +848,9 @@ static max30001_err_t ecg_start_chip(uint32_t *info)
     }
 #elif BOARD_ECG_FIFO_MODE
     if (err == MAX30001_ERR_PLL) {
-        /* PLLINT never clears on this board; the rate check stands in for it. */
+        /* With INT2B off the PLL usually passes the lock wait on this board,
+         * but PLLINT still comes back about 100-150 times a second; a timeout
+         * is not fatal here, the rate check stands in for it. */
         ESP_LOGW(TAG, "MAX30001 PLLINT still set after %d ms: going on (FIFO-anchor mode)",
                  ECG_PLL_TIMEOUT_MS);
         err = MAX30001_OK;
@@ -893,6 +895,13 @@ static void ecg_reader_task(void *arg)
     ESP_ERROR_CHECK(max30001_esp_init(&s_ecg_bus, BOARD_ECG_SPI_HZ,
                                       xTaskGetCurrentTaskHandle()));
     max30001_v1_regs(&s_ecg_regs);
+    if (BOARD_ECG_FIFO_MODE) {
+        /* INT2B disabled (decided 2026-11-22): on the breakout v2 03/24 the
+         * SAMP pulse never reaches the MCU, and each of its edges trips PLLINT
+         * (two unlock events per sample, bring-up report 9). With INT2B off the
+         * PLL passes the lock wait. The written value goes into 0xD2 as usual. */
+        s_ecg_regs.en_int2 = 0u;
+    }
     uint32_t info = 0;
     max30001_err_t err = MAX30001_ERR_BUS;
     for (int i = 0; i < AFE_START_TRIES && err != MAX30001_OK; i++) {

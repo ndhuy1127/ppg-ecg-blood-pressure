@@ -107,7 +107,7 @@ thật mà chạy trên bo Waveshare đứng riêng thì chip đó khởi độn
 | `esp32s3_devkitc_ppg_delay` | giả / giả / giả | `FAKE_PPG_DELAY=1` | Bring-up mục 2 bước 6: PPG đọc trễ, N > 8 |
 | `esp32s3_devkitc_ecg_real` | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_SAMP_CAPTURE=1` | Bring-up mục 7: breakout ECG trên bo đế. Bit 8 tắt (`BOARD_SAMP_VERIFIED` mặc định 0); chỉ thêm `-DBOARD_SAMP_VERIFIED=1` sau khi kiểm xong mục 7 bước 4 |
 | `esp32s3_devkitc_ecg_pll_diag` (thêm 2026-11-21, chỉ chẩn đoán) | MAX30001 / giả / giả | như `ecg_real`, thêm `BOARD_ECG_PLL_DIAG=1` | Breakout v2 `03/24` có `PLLINT` luôn bật (mục "Driver MAX30001"). Chạy tiếp sau timeout PLL, in `STATUS` và `CNFG_GEN`, tắt rồi bật `EN_ECG` một lần, giữ bit 3 khi có `PLLINT` nhưng không khởi động lại ánh xạ `SAMP` chỉ vì `PLLINT`. Bit 8 tắt (`#error` nếu bật cùng `BOARD_SAMP_VERIFIED`). Không dùng cho bản ghi nghiên cứu |
-| `esp32s3_devkitc_ecg_fifo` (thêm 2026-11-21) | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_ECG_FIFO_MODE=1` | Chế độ mốc FIFO ([kế hoạch đo đồng bộ](../hardware/test_reports/sync_10min_test_plan.md) mục 11): bit 8 tắt, không capture hay ánh xạ `SAMP`, không `SYNCH` định kỳ, `PLLINT` chỉ đếm, kiểm tốc độ 10 s (± 1 000 ppm) bật bit 3 và 5 khi lệch. Thử trên bàn A3, A10 với bo đế |
+| `esp32s3_devkitc_ecg_fifo` (thêm 2026-11-21) | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_ECG_FIFO_MODE=1` | Chế độ mốc FIFO ([kế hoạch đo đồng bộ](../hardware/test_reports/sync_10min_test_plan.md) mục 11): bit 8 tắt, không capture hay ánh xạ `SAMP`, INT2B tắt (`EN_INT2 = 0`, từ 2026-11-22), không `SYNCH` định kỳ, `PLLINT` chỉ đếm, kiểm tốc độ 10 s (± 1 000 ppm) bật bit 3 và 5 khi lệch. Thử trên bàn A3, A10 với bo đế |
 | `esp32s3_devkitc_all_real_fifo` (thêm 2026-11-21) | MAX30001 / MAX30101 / BMI270 | như `all_real` nhưng `BOARD_ECG_FIFO_MODE=1`, không `BOARD_SAMP_CAPTURE` | Bản nghiên cứu cho breakout v2 `03/24`; chỉ dùng trên người sau khi mục 11.2 của kế hoạch đo đồng bộ đạt |
 | `esp32s3_devkitc_sync_fifo` (thêm 2026-11-21) | MAX30001 / MAX30101 / BMI270 | như `all_real_fifo`, thêm `BOARD_STIM=1` | Phép đo đồng bộ ở chế độ FIFO; chỉ khác bản nghiên cứu ở `BOARD_STIM`, ghi ELF SHA-256 của cả hai |
 | `esp32s3_devkitc_ppg_real` | giả / MAX30101 / giả | `BOARD_PPG_REAL=1` | Bring-up mục 8 bước 4, 6, 10: MAX30101 qua cáp |
@@ -390,6 +390,16 @@ ngày 2026-11-21 (`BOARD_ECG_FIFO_MODE`, `app/ecg_rate.c`, ba env `*_fifo`); ch�
 (tốc độ nhanh hơn danh định khoảng 3 ppm; log lúc đó in −3,6 ppm vì công thức cũ ngược dấu, đã
 sửa sau rà soát), A10 chấm 5 763 packet, 0 cờ, phần dư lớn nhất 138 µs. Đây là pilot, chưa phải
 nghiệm thu mục 11.2.
+
+**INT2B tắt ở chế độ mốc FIFO (chốt 2026-11-22,
+[báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9.4).** Dò `STATUS`
+khoảng 30 µs một lần cho thấy `PLLINT` bật hai đợt mỗi mẫu, khớp với hai sườn của xung `SAMP` ở
+INT2B; PLL vẫn tạo đúng tần số (`FMSTR = 01` cho đúng 500 sps theo tỉ lệ 125/128). Với
+`EN_INT2 = 0x000000` số đợt giảm khoảng 90 % và chip qua bước chờ PLL, nên khi
+`BOARD_ECG_FIFO_MODE=1`, `app/main.c` ghi `EN_INT2 = 0` sau `max30001_v1_regs` (giá trị này đi
+vào `0xD2`). Còn khoảng 100–150 đợt mỗi giây chưa rõ nguyên nhân; timeout PLL ở chế độ này vẫn
+không gây lỗi. Các bản dùng `SAMP` (`ecg_real`, `all_real`, `sync10`, `ecg_pll_diag`) giữ
+`EN_INT2 = 0x000201`.
 
 Bật bằng `pio run -d firmware -e esp32s3_devkitc_ecg_real` (`BOARD_ECG_REAL=1`,
 `BOARD_SAMP_CAPTURE=1`); PPG và IMU vẫn là nguồn giả. Dùng ở bring-up mục 7, khi
