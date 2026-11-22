@@ -97,7 +97,7 @@
 
 | # | Bước | Chi tiết | Đạt | Ghi chú |
 | --- | --- | --- | --- | --- |
-| 1 | Kiểm khi nhận (chưa hàn, chưa cấp nguồn) | BU mục 1 | [ ] | Một phần 2026-11-20: cáp ECG, breakout MAX30001, ký hiệu module và nhãn chân bo Waveshare; còn mã LDO, số đo thước kẹp, mã MAX30101/BMI270 ([báo cáo](2026-11-20_v1_bringup.md) mục 16) |
+| 1 | Kiểm khi nhận (chưa hàn, chưa cấp nguồn) | BU mục 1 | [ ] | Một phần 2026-11-20: cáp ECG, breakout MAX30001, ký hiệu module và nhãn chân bo Waveshare; còn mã LDO, mã MAX30101/BMI270; bỏ số đo thước kẹp (2026-11-22, lắp thử thấy vừa) ([báo cáo](2026-11-20_v1_bringup.md) mục 16) |
 | 2 | Bo Waveshare đứng riêng: nạp env khung, `record` 10 phút | BU mục 2 | [x] | 2026-11-20, bước 1–7 đạt; không làm `bMaxPower` và dòng USB (chưa có USB tester) |
 | 3 | PCB trần: thông mạch, chập | BU mục 3 | [ ] | |
 | 4 | Chuẩn bị module (không sửa module; đầu chuyển ECG, giá đỡ MAX30101) | BU mục 4 | [ ] | |

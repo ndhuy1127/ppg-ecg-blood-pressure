@@ -35,7 +35,7 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 | Cáp ECG của kit | Đếm số dây; đo thông mạch từng đầu bấm với tip/ring/sleeve của giắc 3,5 mm | Ba dây: LA ↔ ring, RA ↔ tip, RL ↔ sleeve (protocol v0.2 mục 5.2). Khác thì dán nhãn lại theo kết quả đo, không theo màu nắp. Chỉ có hai dây hoặc không có dây nối sleeve: dừng cấu hình 3 điện cực cho tới khi có cáp 3 dây (danh sách mua mục 3) |
 | SparkFun MAX30101 | Mã và vị trí jumper | SEN-16474; có JP1 (LED nguồn), hàng chân GND, 3.3V, SDA, SCL, INT, 1.8V |
 | SparkFun BMI270 | Mã và kích thước | SEN-22397 (1" × 1"), không phải SEN-22398; có jumper `I2C` và `ADR` |
-| Cả bốn module (bo Waveshare, breakout MAX30001, MAX30101, BMI270) | Trước khi hàn, đo từng module bằng thước kẹp: kích thước bo, bước chân header, vị trí lỗ bắt vít so với hàng chân; so với footprint KiCad (thêm 2026-10-29: footprint mới đối chiếu với file CAD và bản vẽ của nhà sản xuất, chưa với module thật) | Khớp footprint; ghi số đo vào báo cáo. Lệch thì dừng, không hàn (A.6 mục 2) |
+| Cả bốn module (bo Waveshare, breakout MAX30001, MAX30101, BMI270) | Trước khi hàn, đo từng module bằng thước kẹp: kích thước bo, bước chân header, vị trí lỗ bắt vít so với hàng chân; so với footprint KiCad (thêm 2026-10-29: footprint mới đối chiếu với file CAD và bản vẽ của nhà sản xuất, chưa với module thật) | Khớp footprint; ghi số đo vào báo cáo. Lệch thì dừng, không hàn (A.6 mục 2). Lần lắp V1 đầu tiên: không đo số, lắp thử thấy cả bốn module vừa (chốt 2026-11-22) |
 | Cả bốn module | Đặt lên bản in 1:1 của hai bo | Lỗ bắt vít, hàng chân và lỗ spacer trùng footprint (A.6 mục 2) |
 
 **Breakout MAX30001 bản v2 (ghi 2026-11-14; cách xử lý sửa sau khi thảo luận và duyệt
