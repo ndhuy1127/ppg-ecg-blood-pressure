@@ -399,7 +399,10 @@ INT2B; PLL vẫn tạo đúng tần số (`FMSTR = 01` cho đúng 500 sps theo t
 `BOARD_ECG_FIFO_MODE=1`, `app/main.c` ghi `EN_INT2 = 0` sau `max30001_v1_regs` (giá trị này đi
 vào `0xD2`). Còn khoảng 100–150 đợt mỗi giây chưa rõ nguyên nhân; timeout PLL ở chế độ này vẫn
 không gây lỗi. Các bản dùng `SAMP` (`ecg_real`, `all_real`, `sync10`, `ecg_pll_diag`) giữ
-`EN_INT2 = 0x000201`.
+`EN_INT2 = 0x000201`. Dò thêm từng thanh ghi (lead-off, fast recovery, INTB, cách ly đầu vào,
+bias, nguồn và bộ đẩy của INT2B; báo cáo mục 9.4): phần theo nhịp mẫu chỉ xuất hiện khi chân
+INT2B đổi mức; phần ngẫu nhiên còn lại không đổi theo thanh ghi nào, chờ phép đo đồng bộ để biết
+có ảnh hưởng tới ΔPAT hay không.
 
 Bật bằng `pio run -d firmware -e esp32s3_devkitc_ecg_real` (`BOARD_ECG_REAL=1`,
 `BOARD_SAMP_CAPTURE=1`); PPG và IMU vẫn là nguồn giả. Dùng ở bring-up mục 7, khi
