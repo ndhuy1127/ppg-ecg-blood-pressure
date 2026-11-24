@@ -30,7 +30,10 @@ from software.signal_processing.pat_validity import (
 
 # v2 (2026-11-21): ECG timing flags of sync_10min_test_plan.md section 11.4 (A10
 # per-packet state, ECG STATUS bit 3) and no PAT for a window that has them.
-VERSION = "device-features-v2"
+# v3 (2026-11-24): ecg:lead_off from the ECG signal instead of STATUS bit 2 (on the
+# breakout v2 the chip's DC lead-off flag is set with good contact too; bring-up
+# report 9.10), and no PAT for a window that has it.
+VERSION = "device-features-v3"
 PPG_KEYS = ("0xF1", "0xF2", "0xF3", "0xF4")
 # LED lock states of a window (led_lock_status) that set ppg:led_not_locked.
 LOCK_NOT_HELD = ("no_lock_metadata", "not_applied", "applied_after_window_start",
@@ -39,6 +42,14 @@ LOCK_NOT_HELD = ("no_lock_metadata", "not_applied", "applied_after_window_start"
 A10_NOT_OK = ("flagged", "not_yet_scored")
 # Flags that stop PAT for a window (sync_10min_test_plan.md section 11.4).
 ECG_TIMING_FLAGS = ("ecg:timing_unverified", "ecg:afe_error")
+PAT_BLOCKING_FLAGS = (*ECG_TIMING_FLAGS, "ecg:lead_off")
+# MAX30001 CNFG_ECG (0x15) ECG_GAIN, D17:D16 (p. 53): the full scale of
+# sqi_hardware.ecg_full_scale_mv (50 mV = VREF 1 V / 20 V/V) holds for code 00 only.
+ECG_GAIN_SHIFT, ECG_GAIN_20 = 16, 0
+# ETAG of a valid ECG sample (000, 010 EOF; p. 65 Table 48): a fast-recovery word
+# (001, 011) carries no valid voltage and stays out of the lead-off level.
+ECG_VALID_ETAGS = (0, 2)
+LEAD_OFF_KEYS = ("ecg_lead_off_abs_mv", "ecg_lead_off_hold_s", "ecg_full_scale_mv")
 
 
 def annotate_ecg_timing(packets):
@@ -59,8 +70,58 @@ def ecg_codes(words):
     return codes, (words >> 3) & 7
 
 
+def _valid_codes(series, rows):
+    codes, etag = ecg_codes(series.value[rows])
+    return codes[np.isin(etag, ECG_VALID_ETAGS)]
+
+
+def ecg_lead_off(series, start_us, end_us, sqi):
+    """(flag, quality) of the window [start_us, end_us), sync test plan 11.4 and
+    SQI v1 section 3.3 (decided 2026-11-24): set when a valid ECG sample of
+    [start_us - hold, end_us) reaches sqi.ecg_lead_off_abs_mv, so the hold after
+    the last such sample (an electrode put back) is covered. Quality:
+    ``ecg_max_abs_mv``, the largest valid |ECG| of the window itself (None without
+    samples; it can stay under the level while the hold flags the window), and
+    ``ecg_lead_off_lookback_s``, the seconds of ECG samples seen in the hold before
+    the window (under the hold after a gap or near the recording start, where an
+    earlier lead-off cannot be seen)."""
+    hold_us = sqi["ecg_lead_off_hold_s"] * 1e6
+    scale = sqi["ecg_full_scale_mv"] / (1 << 17)
+    limit = sqi["ecg_lead_off_abs_mv"] / scale
+    codes = _valid_codes(series, _slice(series, start_us - hold_us, end_us))
+    flag = bool(len(codes)) and bool(np.max(np.abs(codes)) >= limit)
+    window = _valid_codes(series, _slice(series, start_us, end_us))
+    lookback = len(_slice(series, start_us - hold_us, start_us)) / series.fs_nominal_hz
+    return flag, {"ecg_max_abs_mv": float(np.max(np.abs(window)) * scale) if len(window)
+                  else None, "ecg_lead_off_lookback_s": float(lookback)}
+
+
+def check_ecg_gain(session, source_type):
+    """Refuse a recording whose MAX30001 ran with another ECG gain than 20 V/V at
+    any time of the session: the lead-off level in mV assumes it. A DEVICE
+    recording must show at least one configured chip state with CNFG_ECG (0x15);
+    SYNTHETIC recordings carry none and are not checked."""
+    states = [s for s in (session.get("afe_config") or {}).get("MAX30001") or []
+              if s.get("source") == "chip" and s.get("configured")
+              and (s.get("registers") or {}).get("0x15") is not None]
+    if source_type != "SYNTHETIC" and not states:
+        raise ValueError("no configured MAX30001 chip state with CNFG_ECG (0x15) in the "
+                         "session: the ECG gain behind the lead-off level is unverified")
+    for state in states:
+        value = state["registers"]["0x15"]
+        gain = int(value, 16) >> ECG_GAIN_SHIFT & 3
+        if gain != ECG_GAIN_20:
+            raise ValueError(f"MAX30001 ECG_GAIN {gain} (CNFG_ECG {value}): the "
+                             "lead-off level assumes 20 V/V (code 00)")
+
+
 def load_config(config):
-    """(SignalConfig, PatRules) from ``configs/data/device_session_v1.json``."""
+    """(SignalConfig, PatRules) from ``configs/data/device_session_v1.json``; refuses
+    a config without the lead-off keys of device-features-v3."""
+    missing = [k for k in LEAD_OFF_KEYS if k not in config.get("sqi_hardware", {})]
+    if missing:
+        raise ValueError(f"sqi_hardware lacks {missing} (device-features-v3, "
+                         "configs/data/device_session_v1.json since 2026-11-24)")
     return SignalConfig(**config["signal"]), PatRules(**config["pat_validity"])
 
 
@@ -140,7 +201,9 @@ def hardware_flags(series, rows_by_key, packets, session, colors, sqi, lock_stat
     states = [s for s in ((session.get("afe_config") or {}).get("MAX30101") or [])
               if s["source"] == "chip" and s["configured"]]
     ceiling = adc_ceiling(states[-1]["registers"]) if states else None
-    bits = {0: "afe:fifo_overflow", 2: "ecg:lead_off", 6: "ppg:alc_overflow"}
+    # STATUS bit 2 (ECG lead-off) is no longer a flag (device-features-v3):
+    # ecg:lead_off comes from the signal, see ecg_lead_off.
+    bits = {0: "afe:fifo_overflow", 6: "ppg:alc_overflow"}
     for key, rows in rows_by_key.items():
         s = series[key]
         if not len(rows):
@@ -161,8 +224,7 @@ def hardware_flags(series, rows_by_key, packets, session, colors, sqi, lock_stat
                     if p["status"] >> 3 & 1:
                         flags.append("ecg:afe_error")
                 for bit, name in bits.items():
-                    if p["status"] >> bit & 1 and (bit != 2 or key == "0xE1") and (
-                            bit != 6 or key in PPG_KEYS):
+                    if p["status"] >> bit & 1 and (bit != 6 or key in PPG_KEYS):
                         flags.append(name)
             if len(np.setdiff1d(np.arange(idx.min(), idx.max() + 1), idx)):
                 flags.append("stream:gap")
@@ -196,6 +258,12 @@ def window_features(cuff, series, packets, session, config, identity):
     lock_status = led_lock_status(session, start, t0, bool(identity.get("subject_id")))
     hw_flags, hw_quality = hardware_flags(series, rows, packets, session, colors,
                                           config["sqi_hardware"], lock_status)
+    if "0xE1" in series:
+        check_ecg_gain(session, identity["source_type"])
+        lead_off, quality = ecg_lead_off(series["0xE1"], start, t0, config["sqi_hardware"])
+        hw_quality.update(quality)
+        if lead_off:
+            hw_flags = sorted({*hw_flags, "ecg:lead_off"})
     out = {"version": VERSION, "event_id": cuff["event_id"], "phase": cuff["phase"],
            "window_pre_s": pre, "hardware_flags": hw_flags,
            "hardware_quality": hw_quality, "led_lock_status": lock_status,
@@ -218,7 +286,7 @@ def window_features(cuff, series, packets, session, config, identity):
     for key in [k for k in PPG_KEYS if k in series]:
         ppg = _channel(series[key], rows[key], series[key].value[rows[key]],
                        identity["clock_id"])
-        timing_ok = not set(ECG_TIMING_FLAGS) & set(out["hardware_flags"])
+        timing_ok = not set(PAT_BLOCKING_FLAGS) & set(out["hardware_flags"])
         verified = has_ecg and timing_ok and all(series[k].latency_applied
                                                   for k in ("0xE1", key))
         metadata = {"sample_id": f"{identity['recording']}:{cuff['event_id']}:{key}",

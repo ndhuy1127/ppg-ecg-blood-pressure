@@ -135,6 +135,27 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
   1,953 ms sinh trước khi mã hóa, qua logger và `device_session.py`: cuff chứa bước mất PAT,
   cuff sạch giữ PAT, cả hai giữ đặc trưng PPG và ECG), `tests/test_ecg_anchor_residual.py`.
 
+- **Tuột điện cực ECG từ tín hiệu (chốt 2026-11-24, `device-features-v3`;
+  [bring-up](../../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9.10).** STATUS bit 2 không
+  còn là cờ: trên breakout v2 cờ lead-off của chip bật cả khi tiếp xúc tốt. `ecg_lead_off` gắn
+  `ecg:lead_off` khi một mẫu ECG trong `[đầu cửa sổ − 30 s, t0)` có \|mã\| ≥ 35 / 50 × 2^17
+  (35 mV trên thang ±50 mV), nên 30 s sau mẫu kịch biên cuối cùng (điện cực vừa gắn lại) cũng bị
+  gắn cờ; cửa sổ đó **không tính PAT**, đặc trưng PPG vẫn tính (như quy tắc thời gian ECG ở trên).
+  Chỉ mẫu hợp lệ (ETAG `000`, `010`) được xét; từ phục hồi nhanh (`001`, `011`) không mang điện áp
+  hợp lệ (bản ghi người 2026-11-24 không có từ nào như vậy, kể cả lúc kịch biên).
+  `hardware_quality.ecg_max_abs_mv` ghi \|ECG\| lớn nhất của chính cửa sổ (có thể dưới mức trong
+  lúc giữ 30 s); `ecg_lead_off_lookback_s` ghi số giây ECG có trong 30 s trước cửa sổ (thiếu khi có
+  khoảng trống hay gần đầu bản ghi: tuột điện cực trước đó không thấy được). Mức mV giả định gain
+  20 V/V: `check_ecg_gain` từ chối bản ghi có trạng thái chip với `ECG_GAIN` khác `00` ở bất kỳ lúc
+  nào của phiên, và bản ghi DEVICE không có trạng thái chip đã cấu hình kèm `CNFG_ECG`. Ba giá trị ở
+  `sqi_hardware` của `configs/data/device_session_v1.json`; `load_config` từ chối config thiếu
+  chúng. Bộ sinh SYNTHETIC có đỉnh R 30 000 mã (khoảng 11 mV), không theo thang vật lý; test trôi
+  đường nền đặt mức về hết thang. **Giới hạn:** quy tắc chỉ bắt tuột làm kịch biên như đã thấy; tiếp
+  xúc trở kháng cao mà không kịch biên, hay 50 Hz lớn, không bị bắt; một cú cử động rất mạnh có thể
+  bị gắn cờ dù điện cực vẫn dính. Tiêu chí thêm chỉ xét sau khi có dữ liệu G2. Test:
+  `tests/test_device_features.py` (mức ngay trên và dưới ngưỡng, hai cực, biên của khoảng giữ và
+  cửa sổ, khoảng trống trước cửa sổ, từ phục hồi nhanh, bit 2 một mình, gain, config thiếu khóa).
+
 - Sườn lên tuyến tính làm chân sóng `tangent` trùng mốc đặt. Khi có nhiễu, độ dốc lớn nhất bị
   nhiễu đẩy lên nên chân sóng `tangent` lệch muộn có hệ thống: ở nhiễu 0,2 % biên độ, lệch tới
   khoảng 10 ms trên dữ liệu giả (thử 2026-11-13). Đây là tính chất của phương pháp, không phải

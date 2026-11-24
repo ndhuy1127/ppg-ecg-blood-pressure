@@ -533,12 +533,18 @@ phải cận trên đã chứng minh.
 - Cửa sổ có packet ECG bị A10 gắn cờ, hoặc packet mang bit 3 (lỗi AFE, gồm lỗi kiểm tốc độ), hoặc
   packet "chưa kiểm" của 10 s đầu chuỗi, thì **không tính PAT cho cửa sổ đó**. Cùng quy tắc cho mọi
   người, phiên và nghiệm pháp.
+- **Tuột điện cực ECG (chốt 2026-11-24, bring-up mục 9.10):** cửa sổ có mẫu ECG thô có \|giá trị\| ≥ 35 mV (70 % thang ±50 mV; lúc tháo dây đo được khoảng 41 mV, ECG và nhiễu cử động trong mục 9.10 dưới 10 mV), tính cả 30 s sau mẫu như vậy cuối cùng, thì **không
+  tính PAT**. Cờ lead-off của chip (STATUS bit 2) không dùng: trên breakout v2 nó bật cả khi tiếp xúc
+  tốt. Ngưỡng 35 mV đặt từ phép thử tháo dây, không dùng nhãn huyết áp. Cài trong
+  `software/device/features.py` (`device-features-v3`).
 - Đây chỉ là một nguyên nhân "không tính được PAT". Nhãn cuff không bị loại; lần cuff không còn
   cửa sổ nào có PAT được xử lý đúng như mọi lần mất ECG theo [SAP v1](../../docs/protocol/sap_v1.md)
   mục 2–4 (tập đánh giá chính chỉ gồm các lần cuff tính được cả PAT lẫn đặc trưng PPG; lần mất ECG
   còn PPG thuộc endpoint phụ đã khai báo). Mục này không thêm hay đổi quy tắc nào của SAP.
 - Báo tỷ lệ cửa sổ và lần cuff không tính được PAT vì nguyên nhân thời gian ECG, theo người và theo
-  nghiệm pháp.
+  nghiệm pháp. Từ 2026-11-24 báo riêng phần do tuột điện cực (`ecg:lead_off`), cả ở các lần cuff
+  hiệu chuẩn, trước khi lọc người đủ điều kiện, vì một người có thể mất mốc PAT hiệu chuẩn hay rơi
+  xuống dưới số lần cuff tối thiểu.
 
 ### 11.5. Việc còn mở (phải chốt trước lần đo xác nhận đầu tiên)
 

@@ -74,7 +74,7 @@ Lấy từ STATUS và nội dung packet của Packet Schema V0.2 trong cửa s�
 | --- | --- | --- |
 | `ppg:adc_saturation` | Tỷ lệ mẫu PPG của từng màu chạm trần ADC. Trần lấy theo độ phân giải trong `0x0A` của `0xD2`, như dòng DC của logger ([packet_logger.md](packet_logger.md)) | > 5 % thời gian cửa sổ, theo protocol 6.1 và 7.3 ý 1 |
 | `ppg:alc_overflow` | Có packet PPG mang STATUS bit 6 | Bất kỳ |
-| `ecg:lead_off` | Có packet ECG mang STATUS bit 2 | Bất kỳ |
+| `ecg:lead_off` | Có packet ECG mang STATUS bit 2. **Sửa 2026-11-24** ([bring-up](../../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9.10): bit 2 bật cả khi tiếp xúc tốt trên breakout v2, nên cờ đổi thành: trong cửa sổ có mẫu ECG thô có \|giá trị\| ≥ 35 mV (70 % thang ±50 mV; lúc tháo dây đo được khoảng 41 mV, ECG và nhiễu cử động trong mục 9.10 dưới 10 mV), tính cả 30 s sau mẫu như vậy cuối cùng; chỉ mẫu có ETAG hợp lệ; chỉ bắt tuột làm kịch biên, không bắt tiếp xúc kém mà không kịch biên; `device-features-v3` | Bất kỳ; cửa sổ **không tính PAT** ([kế hoạch đo đồng bộ](../../hardware/test_reports/sync_10min_test_plan.md) mục 11.4) |
 | `ecg:timing_unverified` (thêm 2026-11-21, `device-features-v2`) | Có packet ECG mà A10 gắn cờ hoặc chưa chấm được (10 s đầu mỗi chuỗi), [kế hoạch đo đồng bộ](../../hardware/test_reports/sync_10min_test_plan.md) mục 11.2, 11.4 | Bất kỳ; cửa sổ **không tính PAT**, đặc trưng PPG vẫn tính |
 | `ecg:afe_error` (thêm 2026-11-21, `device-features-v2`) | Có packet ECG mang STATUS bit 3 (lỗi đọc AFE, gồm lỗi kiểm tốc độ của chế độ FIFO) | Bất kỳ; cửa sổ **không tính PAT**, đặc trưng PPG vẫn tính |
 | `afe:fifo_overflow` | Có packet ECG hay PPG mang STATUS bit 0 (mẫu cũ, mất mẫu) | Bất kỳ |
