@@ -194,6 +194,13 @@ max30001_err_t max30001_start(const max30001_bus_t *bus, const max30001_regs_t *
     if (!info_ok(value)) {
         return MAX30001_ERR_INFO;
     }
+    /* Both interrupt outputs off before either is configured: on the breakout
+     * v2 03/24 INTB and INT2B are shorted on the chip side (bring-up report
+     * 9.8), so one output must never drive while the other still has its reset
+     * setting. The table then writes EN_INT before EN_INT2. */
+    if (max30001_write(bus, MAX30001_EN_INT, 0u) || max30001_write(bus, MAX30001_EN_INT2, 0u)) {
+        return MAX30001_ERR_BUS;
+    }
     for (size_t i = 0; i < 8; i++) {
         if (max30001_write(bus, writes[i].reg, writes[i].value)) {
             return MAX30001_ERR_BUS;

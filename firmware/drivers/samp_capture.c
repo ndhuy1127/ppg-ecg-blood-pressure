@@ -10,9 +10,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "samp_edges.h"
+#include "samp_jitter.h"
 
 #define PAIR_PERIOD_MS 100
 #define PAIR_MAX_SPREAD_US 2
+#define PAIR_TRIES 4
 #define PAIR_MAX_AGE_US 1000000LL
 #define SOFT_CATCH_WAIT_TICKS 2
 
@@ -31,12 +33,65 @@ static portMUX_TYPE s_lock = portMUX_INITIALIZER_UNLOCKED;
 static bool s_have_pair;
 static pair_t s_pair;
 static samp_capture_stats_t s_stats;
+static TaskHandle_t volatile s_notify_task;
+static DRAM_ATTR volatile uint32_t s_notify_every;
+static DRAM_ATTR volatile uint32_t s_notify_count;
+static DRAM_ATTR samp_jitter_t s_jitter; /* nominal 0 (off) until samp_capture_jitter_init */
 
 static bool IRAM_ATTR on_samp(mcpwm_cap_channel_handle_t chan,
                               const mcpwm_capture_event_data_t *edata, void *user)
 {
     samp_edges_push(edata->cap_value);
-    return false;
+    portENTER_CRITICAL_ISR(&s_lock);
+    samp_jitter_add(&s_jitter, edata->cap_value);
+    portEXIT_CRITICAL_ISR(&s_lock);
+    TaskHandle_t task = s_notify_task;
+    if (task == NULL || ++s_notify_count < s_notify_every) {
+        return false;
+    }
+    s_notify_count = 0;
+    BaseType_t woken = pdFALSE;
+    vTaskNotifyGiveFromISR(task, &woken);
+    return woken == pdTRUE;
+}
+
+void samp_capture_notify(TaskHandle_t task, uint32_t every)
+{
+    s_notify_every = every ? every : 1u;
+    s_notify_count = 0;
+    s_notify_task = task;
+}
+
+void samp_capture_notify_restart(void)
+{
+    s_notify_count = 0;
+}
+
+void samp_capture_jitter_init(uint32_t fs_mhz)
+{
+    /* Nominal period in capture ticks: 80 MHz / 512 sps = 156 250 exactly. */
+    uint32_t nominal = (uint32_t)(((uint64_t)s_resolution_hz * 1000u + fs_mhz / 2u) / fs_mhz);
+    portENTER_CRITICAL(&s_lock);
+    samp_jitter_init(&s_jitter, nominal, s_resolution_hz);
+    portEXIT_CRITICAL(&s_lock);
+}
+
+void samp_capture_jitter_break(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    samp_jitter_break(&s_jitter);
+    portEXIT_CRITICAL(&s_lock);
+}
+
+samp_jitter_stats_t samp_capture_jitter(uint32_t *ticks_per_s)
+{
+    portENTER_CRITICAL(&s_lock);
+    samp_jitter_stats_t s = s_jitter.stats;
+    portEXIT_CRITICAL(&s_lock);
+    if (ticks_per_s) {
+        *ticks_per_s = s_resolution_hz;
+    }
+    return s;
 }
 
 static bool IRAM_ATTR on_soft(mcpwm_cap_channel_handle_t chan,
@@ -88,21 +143,38 @@ static void pair_task(void *arg)
     static portMUX_TYPE bracket = portMUX_INITIALIZER_UNLOCKED;
     TickType_t wake = xTaskGetTickCount();
     for (;;) {
-        s_soft_done = false;
-        portENTER_CRITICAL(&bracket);
-        int64_t t0 = esp_timer_get_time();
-        esp_err_t err = mcpwm_capture_channel_trigger_soft_catch(s_soft);
-        int64_t t1 = esp_timer_get_time();
-        portEXIT_CRITICAL(&bracket);
-        for (int i = 0; i < SOFT_CATCH_WAIT_TICKS && !s_soft_done; i++) {
-            vTaskDelay(1);
+        /* Up to PAIR_TRIES brackets per period: a flash cache miss inside the
+         * first one (likely while another task logs a lot) makes it too wide,
+         * and the next one runs from a warm cache. Each rejected bracket counts.
+         * A try whose software catch never came ends the period: its callback
+         * could still land inside the next try and pair a stale capture value
+         * with the next try's esp_timer reads. */
+        bool ok = false;
+        pair_t now = {0};
+        for (int attempt = 0; attempt < PAIR_TRIES && !ok; attempt++) {
+            s_soft_done = false;
+            portENTER_CRITICAL(&bracket);
+            int64_t t0 = esp_timer_get_time();
+            esp_err_t err = mcpwm_capture_channel_trigger_soft_catch(s_soft);
+            int64_t t1 = esp_timer_get_time();
+            portEXIT_CRITICAL(&bracket);
+            for (int i = 0; i < SOFT_CATCH_WAIT_TICKS && !s_soft_done; i++) {
+                vTaskDelay(1);
+            }
+            bool caught = s_soft_done;
+            ok = err == ESP_OK && caught && t1 - t0 < PAIR_MAX_SPREAD_US;
+            now = (pair_t){.ticks = s_soft_ticks, .us = (t0 + t1) / 2};
+            if (!ok) {
+                portENTER_CRITICAL(&s_lock);
+                s_stats.pairs_rejected++;
+                portEXIT_CRITICAL(&s_lock);
+            }
+            if (!caught) {
+                break;
+            }
         }
-        bool ok = err == ESP_OK && s_soft_done && t1 - t0 < PAIR_MAX_SPREAD_US;
-        pair_t now = {.ticks = s_soft_ticks, .us = (t0 + t1) / 2};
         portENTER_CRITICAL(&s_lock);
-        if (!ok) {
-            s_stats.pairs_rejected++;
-        } else {
+        if (ok) {
             if (s_have_pair) {
                 /* Transfer error: the new pair against the old one's prediction. */
                 int64_t error_ns = (ticks_to_us(&s_pair, now.ticks) - now.us) * 1000;

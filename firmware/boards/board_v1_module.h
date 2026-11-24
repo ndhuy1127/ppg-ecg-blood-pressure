@@ -77,6 +77,52 @@
 #if defined(BOARD_ECG_PLL_DIAG) && BOARD_ECG_FIFO_MODE && BOARD_ECG_PLL_DIAG
 #error "BOARD_ECG_FIFO_MODE and BOARD_ECG_PLL_DIAG are different builds"
 #endif
+/* SAMP bench mode (decided 2026-11-23, sync_10min_test_plan.md section 11.8): a
+ * bench tool, not a research build. On the breakout v2 03/24 both header pins
+ * always show the same level, so SAMP reaches the MCU only when one chip output
+ * drives: INTB off (EN_INT = 0), INT2B = SAMP, GPIO21 neither interrupt nor
+ * level; the FIFO is read after every 16 SAMP edges. PLLINT is only counted and
+ * the 10 s rate check runs as in the FIFO-anchor mode; the SAMP mapping runs
+ * with bit 8 off, and UART0 logs FIFO read and SAMP edge of each mapped packet. */
+#ifndef BOARD_ECG_SAMP_BENCH
+#define BOARD_ECG_SAMP_BENCH 0
+#endif
+#if BOARD_ECG_SAMP_BENCH && !(BOARD_ECG_REAL && BOARD_SAMP_CAPTURE)
+#error "BOARD_ECG_SAMP_BENCH needs BOARD_ECG_REAL and BOARD_SAMP_CAPTURE"
+#endif
+#if BOARD_ECG_SAMP_BENCH && BOARD_ECG_FIFO_MODE
+#error "BOARD_ECG_SAMP_BENCH and BOARD_ECG_FIFO_MODE are different builds"
+#endif
+#if defined(BOARD_SAMP_VERIFIED) && BOARD_ECG_SAMP_BENCH && BOARD_SAMP_VERIFIED
+#error "BOARD_ECG_SAMP_BENCH keeps ECG bit 8 off"
+#endif
+#if defined(BOARD_ECG_PLL_DIAG) && BOARD_ECG_SAMP_BENCH && BOARD_ECG_PLL_DIAG
+#error "BOARD_ECG_SAMP_BENCH and BOARD_ECG_PLL_DIAG are different builds"
+#endif
+/* Measured 2026-11-23 (bring-up report 9.6): SAMP is active low (low about 25 %
+ * of each period), so its onset is the falling edge; a rising edge would shift
+ * every t_SAMP by the pulse width (about 488 us) without any mapping error. */
+#if BOARD_ECG_SAMP_BENCH && BOARD_SAMP_RISING_EDGE
+#error "BOARD_ECG_SAMP_BENCH captures the falling SAMP edge (BOARD_SAMP_RISING_EDGE=0)"
+#endif
+/* PLLINT only counted, PLL timeout not fatal, 10 s rate check (section 11.3). */
+#define BOARD_ECG_PLLINT_COUNT_ONLY (BOARD_ECG_FIFO_MODE || BOARD_ECG_SAMP_BENCH)
+/* Measured 2026-11-24 (bring-up report 9.8): on the breakout v2 03/24, INTB and
+ * INT2B are shorted on the chip side of its level shifter, so only one of them
+ * may be enabled; with both, one drives high while the other pulls SAMP low.
+ * 1 (the breakout in use) builds the real ECG only in the FIFO-anchor mode
+ * (INT2B off) or the SAMP bench mode (INTB off). 0 is for a breakout whose
+ * interrupt pins were checked to be separate, passed at build time like the
+ * SAMP edge: PLATFORMIO_BUILD_FLAGS="-DBOARD_ECG_INT_SHORTED=0". */
+#ifndef BOARD_ECG_INT_SHORTED
+#define BOARD_ECG_INT_SHORTED 1
+#endif
+#if BOARD_ECG_INT_SHORTED != 0 && BOARD_ECG_INT_SHORTED != 1
+#error "BOARD_ECG_INT_SHORTED must be 0 or 1"
+#endif
+#if BOARD_ECG_INT_SHORTED && BOARD_ECG_REAL && !(BOARD_ECG_FIFO_MODE || BOARD_ECG_SAMP_BENCH)
+#error "BOARD_ECG_INT_SHORTED: INTB and INT2B are shorted on this breakout; use a *_fifo env or ecg_samp_bench, or -DBOARD_ECG_INT_SHORTED=0 for separate pins"
+#endif
 
 /* PPG read (Packet Schema V0.2 section 7.6): 0 wakes the reader on PPG_RDY
  * (an interrupt only wakes it; the FIFO pointers, not a count of interrupts,

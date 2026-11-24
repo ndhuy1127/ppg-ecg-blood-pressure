@@ -33,8 +33,9 @@ typedef struct {
      * no longer breaks the SAMP mapping, so a flag stuck at 1 does not force a
      * SYNCH every 10 s. Set by the caller; ecg_read_init keeps it. */
     bool pllint_no_remap;
-    /* FIFO-anchor mode (BOARD_ECG_FIFO_MODE, decided 2026-11-21): PLLINT is only
-     * counted by the caller; it sets no STATUS bit and breaks nothing. */
+    /* FIFO-anchor mode (BOARD_ECG_FIFO_MODE, decided 2026-11-21) and SAMP bench
+     * mode (BOARD_ECG_SAMP_BENCH, 2026-11-23): PLLINT is only counted by the
+     * caller; it sets no STATUS bit and breaks nothing. */
     bool pllint_ignore;
 } ecg_read_t;
 

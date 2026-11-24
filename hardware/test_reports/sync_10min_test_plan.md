@@ -458,6 +458,10 @@ khi ECG chạy, dù tốc độ lấy mẫu đúng 512 sps (+3 ppm). Chưa có s
 thứ hai. Chốt sau hai vòng phản biện độc lập. Mục này thay các chỗ dùng `SAMP` ở mục 2, 3, 9 và 10
 cho cấu hình này; mọi phần khác của kế hoạch giữ nguyên.
 
+Sửa 2026-11-23: `SAMP` thực ra tới MCU khi chỉ một đầu ra ngắt của chip đẩy (báo cáo mục 9.6); cấu
+hình cũ, INTB = EINT cùng INT2B = `SAMP`, che mất nó. Mốc đọc FIFO vẫn là mốc chính; `SAMP` dùng làm
+công cụ đo trên bàn và quy tắc đổi mốc khóa trước ở mục 11.8.
+
 ### 11.1. Phạm vi
 
 - Chỉ đánh giá **ΔPAT giữa các phiên trên chính bo này** (estimand của RQ1 dùng ΔPAT,
@@ -579,9 +583,10 @@ phải cận trên đã chứng minh.
   PAT ([pipeline thiết bị](../../docs/protocol/device_session_pipeline.md) mục 3.4).
 - Sửa Packet Schema V0.2 mục 7 và metadata (`latency_l_us`, `latency_source` cho mốc FIFO) cho
   khớp.
-- Nếu ProtoCentral trả lời có cách bật `SAMP` trên bo v2
+- ~~Nếu ProtoCentral trả lời có cách bật `SAMP` trên bo v2
   ([issue #2](https://github.com/Protocentral/protocentral_max30001/issues/2)), quay lại tiêu chí
-  mục 9 gốc và đo lại.
+  mục 9 gốc và đo lại.~~ Thay bằng mục 11.8 (2026-11-23): nhóm tự tìm ra cách lấy `SAMP`
+  (báo cáo mục 9.6); việc đổi mốc theo quy tắc khóa ở mục 11.8, không theo câu trả lời của hãng.
 
 ### 11.6. Giới hạn ghi trong luận văn
 
@@ -639,3 +644,49 @@ và máy tính bận hơn.
 - **Giới hạn:** đây là phép thử tải lệnh và tải CPU. Trường hợp máy tính khựng hẳn (logger ngừng
   đọc USB một lúc) không được tạo lại; nó chỉ được theo dõi qua A1 và số `tx_timeout`,
   `queue_drop`. Kết luận chỉ đúng cho mức tải đã tạo.
+
+### 11.8. Mốc `SAMP` trên bàn và quy tắc đổi mốc (chốt 2026-11-23, trước mọi lần đo xác nhận)
+
+Sau khi thấy `SAMP` tới MCU khi chỉ một đầu ra ngắt đẩy ([báo cáo](2026-11-20_v1_bringup.md) mục
+9.6). Chốt sau hai vòng phản biện độc lập, trước mọi lần đo xác nhận và trước khi xem huyết áp
+hay sai số RQ1.
+
+- **Mốc chính giữ là mốc đọc FIFO.** Mục 11.1–11.7 giữ nguyên; bản nghiên cứu vẫn là
+  `esp32s3_devkitc_all_real_fifo`.
+- **`SAMP` là công cụ đo trên bàn**, env `esp32s3_devkitc_ecg_samp_bench` (ECG thật, PPG và IMU
+  giả): INTB tắt (`EN_INT = 0`), INT2B = `SAMP` kiểu CMOS, bắt cạnh xuống trên GPIO47 (xung tích cực
+  thấp). Vì hai header luôn cùng mức, GPIO21 cũng mang `SAMP`, nên bản này không dùng ngắt hay mức
+  của GPIO21; FIFO được đọc sau mỗi 16 cạnh `SAMP`, có đường đọc dự phòng khi 40 ms không có mẫu.
+  `PLLINT` chỉ đếm, timeout PLL lúc khởi động không gây lỗi, kiểm tốc độ 10 s như chế độ FIFO.
+  Ánh xạ `SAMP` chạy (mục 7.2–7.3 của Packet Schema V0.2) nhưng **bit 8 tắt**; log UART0 ghi từng
+  packet nhận ánh xạ: chỉ số mẫu cuối, thời điểm đọc xong FIFO (`t_EOF`) và thời điểm cạnh `SAMP`
+  của mẫu đó (`t_SAMP`). Không dùng bản này cho bản ghi tính PAT.
+- **Kiểm trên bàn của bản `SAMP`** (báo cáo, không phải tiêu chí của bản FIFO): sai số đổi đồng hồ
+  MCPWM sang `esp_timer` ≤ 5 µs; không tràn FIFO; số lỗi ánh xạ theo nguyên nhân và số lần ánh xạ
+  lại; phân bố `t_EOF − t_SAMP` khi tải thường và tải cao (lịch tải mục 11.7). Lịch đọc của bản này
+  khác bản FIFO (đánh thức theo cạnh `SAMP`, không theo EINT), nên phân bố đó chỉ mô tả lịch đọc
+  này.
+- **Ánh xạ cạnh–mẫu** chỉ coi là đã kiểm khi phép đo có kích thích cho `L_ECG,SAMP` đạt A8 (lệch một
+  mẫu, 1,953 ms, bị bắt). Chưa có oscilloscope nên không kiểm trực tiếp được cạnh đầu tiên sau
+  `SYNCH`; trước khi A8 đạt, bit 8 tắt.
+- **Quy tắc đổi mốc (khóa trước; không xét lại sau khi xem số):**
+  1. Làm loạt xác nhận của bản FIFO trước. Bản FIFO **đạt** khi A1–A6, A9, A10 và A11 cùng đạt
+     (mục 11.2; A8 không đánh giá được), theo quy tắc đo lại của mục 9 và 11.2. Đạt thì giữ mốc
+     FIFO, kể cả khi bản `SAMP` cho số tốt hơn.
+  2. Bản FIFO **trượt** khi một trong các tiêu chí trên không đạt sau quy tắc đo lại. Chỉ khi đó mới
+     viết và duyệt bản nghiên cứu có mốc `SAMP` (bit 8) và làm loạt xác nhận đầy đủ cho nó. Đổi sang
+     mốc `SAMP` khi và chỉ khi bản đó đạt A1–A6, A8, A9 (mục 9), A11 trên chính cấu hình `SAMP` (A9
+     riêng cho từng loại tải) và **0 lần mất ánh xạ hoặc quay về mốc FIFO** ngoài phép chèn lỗi,
+     trong toàn bộ loạt.
+  3. Cả hai không đạt: không tính PAT từ thiết bị (như mục 9).
+  4. Mọi lượt có bản `SAMP` báo số packet mất ánh xạ theo tải và theo lần đo; không chọn đoạn.
+  5. **Số lần đo lại (thêm 2026-11-23, sau rà soát độc lập, trước mọi lần đo xác nhận):** A1 giữ quy
+     tắc của mục 9 (quá 1 trong 5 lần phải đo lại thì không đạt). Mỗi lượt được đo lại tối đa hai lần
+     vì A9 (tổng ba lần thử); hết ba lần mà A9 vẫn không đạt thì tiêu chí phụ thuộc A9 của bản đang
+     thử là **không đánh giá được**: không tính là đạt, cũng không tính là trượt để sang nhánh 2.
+     Khi đó dừng loạt, sửa bố trí kích thích, ghi lại lý do, và làm lại loạt của bản đó từ đầu. Mọi
+     lượt, kể cả lượt bị loại hay đo lại, được ghi và báo; điều kiện "0 lần mất ánh xạ" của nhánh 2
+     tính trên mọi lượt đã chạy của loạt `SAMP`, không chỉ lượt được giữ.
+- **Giới hạn:** A8 chỉ kiểm phía ECG, và 32,558 ms dựa một phần vào phép đo của ADI trên MAX30003;
+  một lệch cố định phía PPG không bị A8 bắt. Kể cả với mốc `SAMP`, PAT tuyệt đối vẫn ghi là chưa
+  kiểm chứng (mục 11.1, 11.6).

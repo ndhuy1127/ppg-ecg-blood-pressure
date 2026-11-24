@@ -72,6 +72,18 @@ def test_fifo_envs_differ_from_samp_builds_only_by_the_fifo_mode():
     assert not set(FAULT_FLAGS) & set(all_fifo)
 
 
+def test_samp_bench_env_is_ecg_real_with_bit8_off_and_only_there():
+    # Sync test plan 11.8 (2026-11-23): a bench tool, ECG alone, bit 8 off.
+    _, ecg_real = env_flags("esp32s3_devkitc_ecg_real")
+    _, bench = env_flags("esp32s3_devkitc_ecg_samp_bench")
+    assert bench == {**ecg_real, "BOARD_SAMP_VERIFIED": "0", "BOARD_ECG_SAMP_BENCH": "1"}
+    assert not set(FAULT_FLAGS) & set(bench)
+    ini, _ = env_flags("esp32s3_devkitc")
+    for section in ini.sections():
+        if section.startswith("env:") and section != "env:esp32s3_devkitc_ecg_samp_bench":
+            assert "BOARD_ECG_SAMP_BENCH" not in env_flags(section.removeprefix("env:"))[1]
+
+
 def test_sync10_env_is_all_real_plus_verified_samp_and_stimulus():
     _, all_real = env_flags("esp32s3_devkitc_all_real")
     _, sync10 = env_flags("esp32s3_devkitc_sync10")
@@ -134,3 +146,88 @@ def test_board_header_guards_the_fifo_mode(compiler, tmp_path, flags, builds):
     assert (build.returncode == 0) == builds, build.stderr
     if not builds:
         assert "BOARD_ECG_FIFO_MODE" in build.stderr
+
+
+BENCH = ("-DBOARD_ECG_REAL=1", "-DBOARD_SAMP_CAPTURE=1", "-DBOARD_ECG_SAMP_BENCH=1")
+
+
+@pytest.mark.parametrize("flags,builds,count_only", [
+    (BENCH, True, 1),
+    ((*BENCH, "-DBOARD_SAMP_VERIFIED=0"), True, 1),
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_ECG_SAMP_BENCH=1"), False, None),
+    (("-DBOARD_SAMP_CAPTURE=1", "-DBOARD_ECG_SAMP_BENCH=1"), False, None),
+    ((*BENCH, "-DBOARD_SAMP_VERIFIED=1"), False, None),
+    ((*BENCH, "-DBOARD_ECG_FIFO_MODE=1"), False, None),
+    ((*BENCH, "-DBOARD_ECG_PLL_DIAG=1"), False, None),
+    ((*BENCH, "-DBOARD_SAMP_RISING_EDGE=1"), False, None),
+    ((*BENCH, "-DBOARD_SAMP_RISING_EDGE=0"), True, 1),
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_ECG_FIFO_MODE=1"), True, 1),
+    (("-DBOARD_ECG_REAL=1", "-DBOARD_SAMP_CAPTURE=1", "-DBOARD_ECG_INT_SHORTED=0"), True, 0),
+])
+def test_board_header_guards_the_samp_bench_mode(compiler, tmp_path, flags, builds,
+                                                  count_only):
+    source = tmp_path / "board.c"
+    source.write_text('#include "board_v1_module.h"\n'
+                      "_Static_assert(BOARD_ECG_PLLINT_COUNT_ONLY == EXPECTED, \"count\");\n"
+                      "int bench = BOARD_ECG_SAMP_BENCH;\n",
+                      encoding="utf-8")
+    out = tmp_path / ("board.obj" if os.name == "nt" else "board.o")
+    expected = f"-DEXPECTED={count_only if count_only is not None else 0}"
+    build = subprocess.run(
+        [*compiler, "-std=c11", "-Wall", "-Wextra", "-Werror", "-c",
+         "-I", str(ROOT / "firmware/boards"), *flags, expected, str(source), "-o", str(out)],
+        capture_output=True, text=True,
+    )
+    assert (build.returncode == 0) == builds, build.stderr
+    if not builds:
+        assert "BOARD_ECG_SAMP_BENCH" in build.stderr
+
+
+# Envs that enable both interrupt outputs (INTB = EINT, INT2B = SAMP): refused by
+# default since INTB and INT2B are shorted on the breakout v2 03/24 (bring-up
+# report 9.8), built only with -DBOARD_ECG_INT_SHORTED=0.
+BOTH_OUTPUTS = {"esp32s3_devkitc_ecg_real", "esp32s3_devkitc_ecg_pll_diag",
+                "esp32s3_devkitc_all_real", "esp32s3_devkitc_sync10"}
+
+
+def _header_build(compiler, tmp_path, flags):
+    source = tmp_path / "board.c"
+    source.write_text('#include "board_v1_module.h"\nint shorted = BOARD_ECG_INT_SHORTED;\n',
+                      encoding="utf-8")
+    out = tmp_path / ("board.obj" if os.name == "nt" else "board.o")
+    return subprocess.run(
+        [*compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-c",
+         "-I", str(ROOT / "firmware/boards"), *flags, str(source), "-o", str(out)],
+        capture_output=True, text=True,
+    )
+
+
+def _all_envs():
+    ini, _ = env_flags("esp32s3_devkitc")
+    return [s.removeprefix("env:") for s in ini.sections() if s.startswith("env:")]
+
+
+def test_both_output_envs_are_the_real_ecg_envs_outside_the_one_output_modes():
+    for name in _all_envs():
+        flags = env_flags(name)[1]
+        both = (flags.get("BOARD_ECG_REAL") == "1"
+                and flags.get("BOARD_ECG_FIFO_MODE") != "1"
+                and flags.get("BOARD_ECG_SAMP_BENCH") != "1")
+        assert both == (name in BOTH_OUTPUTS), name
+
+
+@pytest.mark.parametrize("name", _all_envs())
+def test_board_header_refuses_both_outputs_unless_the_pins_are_separate(
+        compiler, tmp_path, name):
+    flags = [f"-D{k}={v}" if v else f"-D{k}" for k, v in env_flags(name)[1].items()]
+    build = _header_build(compiler, tmp_path, flags)
+    assert (build.returncode == 0) == (name not in BOTH_OUTPUTS), build.stderr
+    if name in BOTH_OUTPUTS:
+        assert "BOARD_ECG_INT_SHORTED" in build.stderr
+    separate = _header_build(compiler, tmp_path, [*flags, "-DBOARD_ECG_INT_SHORTED=0"])
+    assert separate.returncode == 0, separate.stderr
+
+
+def test_board_header_refuses_an_unknown_shorted_value(compiler, tmp_path):
+    build = _header_build(compiler, tmp_path, ["-DBOARD_ECG_INT_SHORTED=2"])
+    assert build.returncode != 0 and "must be 0 or 1" in build.stderr
