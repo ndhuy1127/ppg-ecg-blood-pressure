@@ -121,6 +121,57 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 
 ### 3.4. Ghi chú và giới hạn
 
+- **Quy tắc thời gian ECG (thêm 2026-11-21, `device-features-v2`;
+  [kế hoạch đo đồng bộ](../../hardware/test_reports/sync_10min_test_plan.md) mục 11.4).**
+  `device_session.py` chạy A10 (`software/device/ecg_anchor_residual.py`) trên mọi packet của
+  bản ghi và gắn trạng thái cho từng packet ECG (`annotate_ecg_timing`). Cửa sổ có packet ECG bị
+  A10 gắn cờ hay chưa chấm được (10 s đầu mỗi chuỗi), hoặc mang STATUS bit 3, có cờ
+  `ecg:timing_unverified` hay `ecg:afe_error` và **không tính PAT**; đặc trưng PPG và ECG khác
+  vẫn tính, nên lần cuff đó đi theo đúng đường "mất ECG" của SAP. `hardware_flags` từ chối packet
+  ECG chưa gắn trạng thái, để không bỏ sót quy tắc. Trạng thái A10 gán theo từng dòng packet,
+  nên bản sao (`duplicate`) không lấy trạng thái của packet gốc; packet của cửa sổ lọc theo cả
+  phiên thiết bị lẫn phiên bản schema. Test: `tests/test_device_features.py` (cửa sổ trong 10 s
+  đầu, bước 1,953 ms, bit 3, packet chưa gắn trạng thái), `tests/test_device_ingest.py` (bước
+  1,953 ms sinh trước khi mã hóa, qua logger và `device_session.py`: cuff chứa bước mất PAT,
+  cuff sạch giữ PAT, cả hai giữ đặc trưng PPG và ECG), `tests/test_ecg_anchor_residual.py`.
+
+- **Hướng tín hiệu PPG (chốt 2026-11-25).** Số đếm MAX30101 giảm khi máu tăng ở thì tâm thu, nên
+  `device_session_v1.json` đặt `ppg_polarity = −1`; bộ sinh SYNTHETIC (`synthetic-device-session-v2`)
+  sinh số đếm giảm theo mạch, ánh sáng kích thích đồng bộ vẫn làm số đếm tăng. Định nghĩa chân sóng
+  cho dữ liệu thiết bị: [device_ppg_foot_definition_v1.md](device_ppg_foot_definition_v1.md) (bản
+  nháp). Test: `tests/test_device_features.py` (hướng số đếm của bộ sinh, ánh sáng kích thích, lật
+  sai thì PAT lệch).
+
+- **PAT neo theo R (`device-features-v4`, 2026-11-25, bản nháp chưa khóa).** Chân sóng dùng cho PAT
+  lấy từ `fiducials.feet_after_r` (`rise-after-r-v1`): sườn lên đầu tiên sau R đủ 30 % biên độ cục bộ,
+  tiếp tuyến tại bước dốc nhất cắt mức đầu sườn; mỗi R một trạng thái (`ok`, `out_of_range`,
+  `no_rise`, `ambiguous`, `edge`) lưu trong `pat_validity` (`r_status`, `foot_status`,
+  `foot_per_r_s`); PAT của nhịp `ok` qua quy tắc khoảng và MAD. Đặc trưng chỉ dùng PPG vẫn từ
+  `features-sqi-v2`; cờ ghép nhịp cũ ở `legacy_pat_flags`. Config: khối `pat_foot` (bắt buộc).
+  Định nghĩa và giới hạn: [device_ppg_foot_definition_v1.md](device_ppg_foot_definition_v1.md).
+  Test: `tests/test_feet_after_r.py`, `tests/test_device_features.py`.
+
+- **Tuột điện cực ECG từ tín hiệu (chốt 2026-11-24, `device-features-v3`;
+  [bring-up](../../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9.10).** STATUS bit 2 không
+  còn là cờ: trên breakout v2 cờ lead-off của chip bật cả khi tiếp xúc tốt. `ecg_lead_off` gắn
+  `ecg:lead_off` khi một mẫu ECG trong `[đầu cửa sổ − 30 s, t0)` có \|mã\| ≥ 35 / 50 × 2^17
+  (35 mV trên thang ±50 mV), nên 30 s sau mẫu kịch biên cuối cùng (điện cực vừa gắn lại) cũng bị
+  gắn cờ; cửa sổ đó **không tính PAT**, đặc trưng PPG vẫn tính (như quy tắc thời gian ECG ở trên).
+  Chỉ mẫu hợp lệ (ETAG `000`, `010`) được xét; từ phục hồi nhanh (`001`, `011`) không mang điện áp
+  hợp lệ (bản ghi người 2026-11-24 không có từ nào như vậy, kể cả lúc kịch biên).
+  `hardware_quality.ecg_max_abs_mv` ghi \|ECG\| lớn nhất của chính cửa sổ (có thể dưới mức trong
+  lúc giữ 30 s); `ecg_lead_off_lookback_s` ghi số giây ECG có trong 30 s trước cửa sổ (thiếu khi có
+  khoảng trống hay gần đầu bản ghi: tuột điện cực trước đó không thấy được). Mức mV giả định gain
+  20 V/V: `check_ecg_gain` từ chối bản ghi có trạng thái chip với `ECG_GAIN` khác `00` ở bất kỳ lúc
+  nào của phiên, và bản ghi DEVICE không có trạng thái chip đã cấu hình kèm `CNFG_ECG`. Ba giá trị ở
+  `sqi_hardware` của `configs/data/device_session_v1.json`; `load_config` từ chối config thiếu
+  chúng. Bộ sinh SYNTHETIC có đỉnh R 30 000 mã (khoảng 11 mV), không theo thang vật lý; test trôi
+  đường nền đặt mức về hết thang. **Giới hạn:** quy tắc chỉ bắt tuột làm kịch biên như đã thấy; tiếp
+  xúc trở kháng cao mà không kịch biên, hay 50 Hz lớn, không bị bắt; một cú cử động rất mạnh có thể
+  bị gắn cờ dù điện cực vẫn dính. Tiêu chí thêm chỉ xét sau khi có dữ liệu G2. Test:
+  `tests/test_device_features.py` (mức ngay trên và dưới ngưỡng, hai cực, biên của khoảng giữ và
+  cửa sổ, khoảng trống trước cửa sổ, từ phục hồi nhanh, bit 2 một mình, gain, config thiếu khóa).
+
 - Sườn lên tuyến tính làm chân sóng `tangent` trùng mốc đặt. Khi có nhiễu, độ dốc lớn nhất bị
   nhiễu đẩy lên nên chân sóng `tangent` lệch muộn có hệ thống: ở nhiễu 0,2 % biên độ, lệch tới
   khoảng 10 ms trên dữ liệu giả (thử 2026-11-13). Đây là tính chất của phương pháp, không phải

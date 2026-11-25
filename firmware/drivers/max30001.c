@@ -15,6 +15,16 @@
 #define MASK_MNGR_DYN 0xFFFFFFu
 #define MASK_EN_INT 0xFFFF03u
 
+/* DCLOFF_VTH code (p. 48): 0 = VMID +- 300 mV, 1 = 400, 2 = 450, 3 = 500. Only a
+ * bench check of the lead-off thresholds (bring-up report 9.2, 2026-11-22)
+ * builds another value; every recording keeps 1. */
+#ifndef BOARD_ECG_DCLOFF_VTH
+#define BOARD_ECG_DCLOFF_VTH 1
+#endif
+#if BOARD_ECG_DCLOFF_VTH < 0 || BOARD_ECG_DCLOFF_VTH > 3
+#error "BOARD_ECG_DCLOFF_VTH must be 0..3"
+#endif
+
 /* Waits that the datasheet does not specify; engineering choices. */
 #define RESET_SETTLE_MS 10u
 #define PLL_POLL_MS 5u
@@ -30,7 +40,8 @@ void max30001_v1_regs(max30001_regs_t *regs)
      * (EN_DCLOFF 01) with 10 nA (IMAG 010), pull-up on ECGP (IPOL 0), threshold
      * VMID +- 400 mV (VTH 01); resistive bias off (EN_RBIAS 00), RBIASV left
      * at its default 01. */
-    regs->cnfg_gen = (1u << 19) | (1u << 12) | (2u << 8) | (1u << 6) | (1u << 2);
+    regs->cnfg_gen = (1u << 19) | (1u << 12) | (2u << 8)
+                    | ((unsigned)BOARD_ECG_DCLOFF_VTH << 6) | (1u << 2);
     /* CNFG_CAL (p. 50): calibration source off, FCAL and FIFTY at defaults. */
     regs->cnfg_cal = (4u << 12) | (1u << 11);
     /* CNFG_EMUX (p. 51): both inputs connected (the default isolates them),
@@ -182,6 +193,13 @@ max30001_err_t max30001_start(const max30001_bus_t *bus, const max30001_regs_t *
     }
     if (!info_ok(value)) {
         return MAX30001_ERR_INFO;
+    }
+    /* Both interrupt outputs off before either is configured: on the breakout
+     * v2 03/24 INTB and INT2B are shorted on the chip side (bring-up report
+     * 9.8), so one output must never drive while the other still has its reset
+     * setting. The table then writes EN_INT before EN_INT2. */
+    if (max30001_write(bus, MAX30001_EN_INT, 0u) || max30001_write(bus, MAX30001_EN_INT2, 0u)) {
+        return MAX30001_ERR_BUS;
     }
     for (size_t i = 0; i < 8; i++) {
         if (max30001_write(bus, writes[i].reg, writes[i].value)) {

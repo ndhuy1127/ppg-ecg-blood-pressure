@@ -47,6 +47,7 @@ CODE = ("scripts/device_session.py", "software/__init__.py",
         "software/device/__init__.py", "software/feature_extraction/__init__.py",
         "software/signal_processing/__init__.py", "software/data_io/__init__.py",
         "software/device/session_ingest.py", "software/device/features.py",
+        "software/device/ecg_anchor_residual.py",
         "software/device/max30101.py", "software/feature_extraction/week04.py",
         "software/signal_processing/fiducials.py",
         "software/signal_processing/pat_validity.py", "software/data_io/live_monitor.py",
@@ -113,7 +114,11 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
                 "raw_sha256": manifest["raw"]["sha256"],
                 "source_type": manifest["source_type"],
                 "clock_id": recording["metadata"]["clock_id"]}
-    packets = [p for p in recording["packets"] if p["session_id"] == session["session_id"]
+    # A10 runs on every packet of the recording (sync test plan 11.2, 11.4).
+    fe.annotate_ecg_timing(recording["packets"])
+    version = int(session["packet_schema"].rsplit("v0.", 1)[1])
+    packets = [p for p in recording["packets"]
+               if (p["session_id"], p["version"]) == (session["session_id"], version)
                and p["chain_id"] is not None]
     results, rows = [], []
     for cuff in windows:

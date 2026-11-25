@@ -190,6 +190,14 @@ int main(void)
             int err = max30001_check(&bus, &v1);
             printf("%d\n", err);
             flush_log();
+        } else if (cmd[0] == 'O') { /* one interrupt output only, as main.c sets it */
+            scanf("%u", &a);
+            if (a == 1) {
+                v1.en_int = 0; /* SAMP bench mode: INTB off */
+            } else {
+                v1.en_int2 = 0; /* FIFO-anchor mode: INT2B off */
+            }
+            printf("ok\n");
         } else if (cmd[0] == 'Z') { /* power-on reset, not commanded */
             memset(s_regs, 0, sizeof(s_regs));
             printf("ok\n");
@@ -334,11 +342,38 @@ def test_start_resets_checks_info_configures_and_waits_for_the_pll(chip):
     writes = ["W10:081244", "W12:004800", "W14:000000", "W15:001000", "W04:7b0004",
               "W05:bfffff", "W02:800001", "W03:000201"]
     reads = [w[:3].replace("W", "R") for w in writes]
-    # Reset, settle, a discarded first read, INFO, writes, read-backs, then
-    # STATUS until two reads in a row show no PLLINT (3 latched + 2 clear).
-    assert log == (["W08:000000", "D10", "R0f", "R0f"] + writes + reads
+    # Reset, settle, a discarded first read, INFO, both interrupt outputs off,
+    # writes, read-backs, then STATUS until two reads in a row show no PLLINT
+    # (3 latched + 2 clear).
+    assert log == (["W08:000000", "D10", "R0f", "R0f", "W02:000000", "W03:000000"]
+                   + writes + reads
                    + ["R01", "D5", "R01", "D5", "R01", "D5", "R01", "D5", "R01"])
     assert frames == len(log) - log.count("D10") - log.count("D5")
+
+
+@pytest.mark.parametrize("off", [1, 2])
+def test_one_output_never_drives_while_the_other_may(harness, off):
+    # Breakout v2 03/24 (bring-up report 9.8): INTB and INT2B are shorted. With
+    # one output disabled in the register image (1: INTB, SAMP bench; 2: INT2B,
+    # FIFO mode), no write during start or SYNCH may enable an output while the
+    # other is not known to be off. The reset value of both is taken as unknown.
+    chip = Chip(harness)
+    assert chip(f"O {off}") == ["ok"]
+    err, _, _, log = chip.start()
+    assert err == ERR_OK
+    result, restart = chip("T", 2)
+    assert result == str(ERR_OK)
+    chip.close()
+    state = {"02": None, "03": None}  # None = unknown (reset value)
+    for entry in log + restart.rstrip(";").split(";"):
+        reg, _, value = entry[1:].partition(":")
+        if entry.startswith("W") and reg == "08":
+            state = {"02": None, "03": None}
+        elif entry.startswith("W") and reg in state:
+            state[reg] = int(value, 16) & 3
+            other = state["03" if reg == "02" else "02"]
+            assert state[reg] == 0 or other == 0, (entry, log)
+    assert state[{1: "02", 2: "03"}[off]] == 0
 
 
 @pytest.mark.parametrize("info", ["000000", "641000", "540000"])

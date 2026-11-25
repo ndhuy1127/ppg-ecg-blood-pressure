@@ -19,3 +19,8 @@ mức đã đọc (toàn văn hay abstract).
   phải sửa theo lần tra (đã sửa ngày 2026-10-30), và danh sách bài cần lấy toàn văn (N6
   đã đọc toàn văn ngày 2026-10-30 từ bản PDF nhóm tải; S4 đọc toàn văn cùng ngày từ bản miễn phí
   trên trang Microsoft Research, kết quả ở mục 3.3).
+- [Aurora-BP: truy cập, điều khoản và đối sánh biến (2026-11-25)](aurora_bp_access_and_variables.md):
+  nguồn (Zenodo, GitHub), điều khoản chính của DUA (chỉ nghiên cứu, không tái phân phối, không
+  kết hợp với nguồn dữ liệu khác), mô tả dữ liệu, bảng đối sánh biến, nội dung soạn sẵn cho phần
+  mục đích sử dụng và các điểm chưa rõ. Chỉ đọc trang công khai; chưa tải dữ liệu, chưa chấp
+  nhận DUA.

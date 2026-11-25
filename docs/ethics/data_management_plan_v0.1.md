@@ -29,10 +29,19 @@
 >   kết; giữ liên lạc tối đa 30 ngày để hỏi thăm sau sự cố; bỏ câu "không thực hiện được" sau mốc khóa,
 >   thay bằng đề nghị giữ lại kèm ô chờ căn cứ pháp lý và phương án dự phòng (xóa và chạy lại).
 > - Đề xuất của nhóm, chờ thầy/hội đồng: thời hạn lưu, nơi lưu, người quản lý (đề xuất Huy, dự
->   phòng Linh), mốc khóa dữ liệu. Mốc khóa hiện gắn với cổng G4 (Tuần 20, tuần 2027-01-28 đến
->   2027-02-03); nếu đề tài kéo dài theo [đề xuất Tuần 7](../meetings/week_07_de_xuat_sua_protocol_va_ho_so.md)
->   mục 2.1 thì đổi thành 2027-06-04. Không chọn ngày công bố làm mốc khóa, vì ngày này không biết
->   trước nên không cam kết được với người tham gia.
+>   phòng Linh). Không chọn ngày công bố làm mốc khóa, vì ngày này không biết trước nên không cam
+>   kết được với người tham gia.
+> - 2026-11-21, theo các thay đổi của dự án:
+>   - **Mốc khóa dữ liệu 21/05/2027** (chốt 2026-11-19 khi đề tài kết thúc đầu tháng 7/2027; trùng
+>     cổng G4). Thay mốc cũ gắn với G4 Tuần 20 (tuần 2027-01-28 đến 2027-02-03) và giá trị
+>     2027-06-04 của [đề xuất Tuần 7](../meetings/week_07_de_xuat_sua_protocol_va_ho_so.md) mục 2.1.
+>     Buổi đo cuối 14/05/2027, nên người có buổi cuối muộn nhất còn 7 ngày để yêu cầu xóa trước mốc
+>     khóa; ngày này ghi trong bản thông tin từ lúc tuyển.
+>   - **Chia sẻ dữ liệu tùy chọn** (chốt 2026-11-19): mục 9 viết lại thành quy tắc quản trị theo
+>     đề xuất Tuần 7 mục 2.4; mục 7 thêm ngoại lệ cho bản đã chia sẻ. Kho dữ liệu, nơi đặt máy chủ
+>     và đơn vị chịu trách nhiệm còn để trống. Nếu tới lúc nộp chưa điền được các ô này thì cân
+>     nhắc bỏ mục 11 của phiếu đồng thuận thay vì nộp một mục mơ hồ (đề xuất Tuần 7 mục 2.4).
+>   - **Người trực** (chốt 2026-11-19): thêm 2 người trực; quyền truy cập ở mục 4 gồm họ.
 > - Chi tiết kỹ thuật (thư mục `data/raw/<subject>/<session>/<recording>/`, logger
 >   `packet-logger-v3`, manifest SHA-256) ở [quy ước dữ liệu](../quy_uoc_du_lieu.md) và
 >   [hướng dẫn logger](../protocol/packet_logger.md).
@@ -63,7 +72,7 @@
 | Phiếu sàng lọc | Giấy, chỉ ghi mã nghiên cứu | Không trực tiếp; có tuổi, giới tính, tay thuận và các câu trả lời về sức khỏe |
 | Tín hiệu PPG, điện tim, chuyển động và mốc thời gian | Phần mềm ghi trên máy tính xách tay (qua USB) | Không trực tiếp; dạng sóng là dữ liệu sinh trắc nên không phải ẩn danh tuyệt đối |
 | Số đo huyết áp (tâm thu, tâm trương, mạch) và thời điểm đo | Phiếu ghi buổi đo, theo mã lượt đo | Không trực tiếp |
-| Thông tin kỹ thuật của buổi đo (cấu hình thiết bị, vị trí đeo, nhiệt độ phòng) | Phần mềm ghi và phiếu ghi buổi đo | Không |
+| Thông tin kỹ thuật của buổi đo (cấu hình thiết bị, vị trí đeo, nhiệt độ phòng, điện trở đầu chuyển điện cực) | Phần mềm ghi và phiếu ghi buổi đo | Không |
 | Nhật ký sự cố, nhật ký rút lui | Biểu mẫu, chỉ ghi mã | Không trực tiếp |
 
 Nhóm không thu mã sinh viên, số căn cước, ngày sinh đầy đủ, ảnh, video, ghi âm hay vị trí GPS. Họ
@@ -101,7 +110,8 @@ email.
 - Phiếu giấy được cất trong tủ có khóa tại [phòng], phiếu đồng thuận và phiếu sàng lọc ở hai bìa
   riêng.
 - Quyền truy cập: dữ liệu nghiên cứu (chỉ mang mã) do các thành viên nhóm nghiên cứu có tên trong hồ
-  sơ và giảng viên hướng dẫn truy cập; bảng liên kết chỉ người quản lý dữ liệu và người dự phòng mở
+  sơ, người trực có tên trong danh sách người trực (chỉ phần cần cho buổi đo và kiểm tra chất lượng
+  dữ liệu) và giảng viên hướng dẫn truy cập; bảng liên kết chỉ người quản lý dữ liệu và người dự phòng mở
   được, giảng viên hướng dẫn không được mở. Thành viên hội đồng đạo đức hoặc cơ quan có thẩm quyền
   được xem hồ sơ, kể cả phiếu có họ tên, khi giám sát nghiên cứu. Không chia sẻ dữ liệu ra ngoài khi
   chưa có chấp thuận (mục 9).
@@ -132,7 +142,7 @@ email.
   - giữ phiếu đồng thuận làm hồ sơ về việc đồng thuận;
   - ghi lại thao tác xóa (mã, ngày, người làm).
 - Mốc khóa dữ liệu là bản chụp dữ liệu (kèm mã băm SHA-256) được khóa trước lần phân tích chính đầu
-  tiên, vào ngày [ngày khóa dữ liệu]. Ngày này được ghi trong bản thông tin (mục 9) ngay từ khi
+  tiên, vào ngày 21/05/2027. Ngày này được ghi trong bản thông tin (mục 9) ngay từ khi
   tuyển, nên người tham gia biết trước.
 - Sau mốc khóa, dữ liệu đã nằm trong bộ dữ liệu phân tích đã khóa. Nhóm đề nghị giữ dữ liệu này cho
   các phân tích đã định trước, vì các phân tích (đánh giá chéo bỏ từng người) dùng chung toàn bộ bộ
@@ -140,6 +150,9 @@ email.
   căn cứ thì nhóm xóa theo yêu cầu và chạy lại các phân tích không có dữ liệu của người đó]. Kết quả
   đã công bố ở dạng tổng hợp không thể rút lại. Nhóm vẫn ngừng thu thêm dữ liệu, xóa thông tin liên
   lạc, và không dùng dữ liệu của người đó cho mục đích mới nào khác.
+- Người rút lui, dù chọn xóa hay giữ, được hỏi có rút lại đồng ý ở mục 11 của phiếu đồng thuận
+  không; rút lại trước khi chia sẻ thì dữ liệu của họ không vào bản chia sẻ (mục 9). Người chọn xóa
+  thì không vào bản chia sẻ. Bản đã chia sẻ không thu hồi được.
 - Khi nhóm dừng sự tham gia của một người (bản thông tin mục 9), dữ liệu đã thu được xử lý như dữ
   liệu của người đã đồng ý, và người đó vẫn có quyền yêu cầu xóa trước mốc khóa.
 
@@ -150,9 +163,13 @@ email.
   thúc đề tài và ngày có công bố đầu tiên dùng dữ liệu này. Nếu không có công bố thì tính từ ngày
   kết thúc đề tài, nên mốc luôn là một ngày cụ thể và không bị kéo dài bởi các công bố sau. Khi áp
   dụng thời hạn 03 năm này, dữ liệu được tiêu hủy không muộn hơn 05 năm kể từ ngày kết thúc đề tài.
+- Đề tài dự kiến kết thúc vào tháng 7/2027 [ngày kết thúc chính thức theo quyết định của đơn vị].
 - Ngoại lệ: hồ sơ sự cố dữ liệu (mục 8) được giữ ít nhất 05 năm kể từ ngày khắc phục xong sự cố
   (Nghị định 356/2025/NĐ-CP, Điều 29), kể cả khi dữ liệu nghiên cứu đã tiêu hủy; hồ sơ này chỉ mang
   mã và không chứa tín hiệu.
+- Ngoại lệ: bản rút gọn đã chia sẻ qua kho dữ liệu (mục 9), chỉ gồm dữ liệu của người đồng ý ở mục
+  11 của phiếu đồng thuận, được lưu theo quy định của kho [thời hạn lưu của kho]. Bản gốc trong nhóm
+  vẫn tiêu hủy theo thời hạn ở trên.
 - Cách tiêu hủy: xóa an toàn theo loại thiết bị lưu trữ, hủy phiếu giấy bằng máy hủy và lập biên bản
   tiêu hủy.
 
@@ -175,10 +192,24 @@ liệu; gửi nhầm dữ liệu; đưa nhầm dữ liệu lên kho mã nguồn 
 ## 9. Chia sẻ, công bố và sử dụng sau
 
 - Chỉ công bố số liệu tổng hợp, không nhận ra được từng người.
-- Dữ liệu không được chia sẻ ra ngoài nhóm nghiên cứu. Việc chia sẻ dữ liệu đã giả danh hóa ra ngoài
-  (ví dụ lên kho dữ liệu khoa học) không thuộc hồ sơ này; nếu muốn làm thì phải có đồng thuận riêng
-  của người tham gia và chấp thuận của hội đồng.
-- Nếu mục 10 của phiếu đồng thuận được giữ [chờ thầy/hội đồng], dữ liệu của người đã đồng ý ở mục
+- Ngoài trường hợp dưới đây, dữ liệu không được chia sẻ ra ngoài nhóm nghiên cứu.
+
+**Chia sẻ có kiểm soát (mục 11 của phiếu đồng thuận, tùy chọn).**
+
+<!-- cols: 30,70 -->
+| Quy tắc | Nội dung |
+| --- | --- |
+| Của ai | Chỉ người tham gia đã đánh dấu mục 11 và không rút lại đồng ý trước ngày chia sẻ; không gồm người đã chọn xóa dữ liệu khi rút lui |
+| Dữ liệu được chia sẻ | Tín hiệu điện tim, PPG và chuyển động; số đo huyết áp và mạch của máy đo; tên nghiệm pháp; thời điểm tính từ đầu buổi đo; số thứ tự buổi; tuổi theo nhóm 5 năm; giới tính; cấu hình thiết bị cần để đọc tín hiệu |
+| Không chia sẻ | Họ tên, thông tin liên lạc, mã `SUB` của nghiên cứu, ngày giờ thật, ghi chú tự do, câu trả lời sàng lọc từng câu, nhật ký sự cố, chu vi bắp tay chính xác |
+| Giả danh hóa trước khi chia sẻ | Gán mã mới ngẫu nhiên, khác mã `SUB`; bảng nối mã mới với mã `SUB` chỉ người quản lý dữ liệu giữ, cùng chỗ với bảng liên kết, và tiêu hủy cùng bảng liên kết. Dời mọi mốc thời gian về thời điểm tương đối trong buổi. Người quản lý dữ liệu và một thành viên khác kiểm bản chia sẻ theo danh sách "không chia sẻ" trước khi đưa lên |
+| Nơi lưu | [tên kho dữ liệu khoa học có kiểm soát truy cập; quốc gia đặt máy chủ]; đơn vị chịu trách nhiệm: [đơn vị chủ trì/khoa]. Nếu máy chủ ở nước ngoài: [đơn vị chủ trì xác nhận thủ tục chuyển dữ liệu cá nhân ra nước ngoài theo pháp luật về bảo vệ dữ liệu cá nhân] |
+| Ai được dùng, cho mục đích gì | Nhà nghiên cứu được kho duyệt yêu cầu truy cập, chỉ cho nghiên cứu về đo huyết áp và tín hiệu sinh lý; phải ký thỏa thuận sử dụng dữ liệu, cam kết không tìm cách nhận diện người tham gia, không ghép với dữ liệu khác để nhận diện và không chia sẻ tiếp. Việc giảng viên hay nhóm duyệt từng yêu cầu không thay cho các điều kiện này |
+| Thời điểm | Không trước khi đề tài kết thúc; trong giới hạn đó, khi bài báo chính được nhận hoặc sau buổi bảo vệ đồ án, tùy điều nào đến trước |
+| Thời hạn lưu | Theo quy định của kho [thời hạn]; là ngoại lệ của mục 7 |
+| Rút lui | Rút lại đồng ý ở mục 11 trước ngày chia sẻ thì dữ liệu không được chia sẻ; bản đã chia sẻ không thu hồi được. Người tham gia được báo điều này trong bản thông tin |
+| Nguy cơ nhận diện lại | Dạng sóng điện tim là dữ liệu sinh trắc; điện tim nhiều chuyển đạo đã được chứng minh có thể nhận ra cùng một người trong dữ liệu đã ẩn danh, còn với điện tim một chuyển đạo của nghiên cứu này thì chưa có số liệu. Vì vậy chỉ chia sẻ qua kho có kiểm soát truy cập, không đăng công khai |
+- Nếu mục 10 của phiếu đồng thuận được giữ [chờ quyết định], dữ liệu của người đã đồng ý ở mục
   đó có thể được chính nhóm dùng trong nghiên cứu tiếp theo về ước lượng huyết áp từ tín hiệu PPG và
   điện tim, với cùng cách lưu trữ, cùng người được truy cập và cùng thời hạn lưu như kế hoạch này.
   Mỗi nghiên cứu tiếp theo dùng dữ liệu này phải có chấp thuận của hội đồng đạo đức. Người tham gia

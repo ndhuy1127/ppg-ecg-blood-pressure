@@ -47,33 +47,74 @@ def _correlated(rng, shape, sd_a, sd_b, rho):
     return sd_a * z1, sd_b * (rho * z1 + np.sqrt(1 - rho ** 2) * z2)
 
 
-def simulate_d(rng, replicates, subjects, sessions, target, models, effect):
-    """``(d, d0, delta_sd)``: per-subject d_s and d0_s, shape (replicates, subjects),
-    and the SD of the reference changes (one value per replicate)."""
+def session_cuffs(m6=None):
+    """Cuffs of one evaluation session: CUFFS, plus M6 at the end when ``m6`` is set."""
+    return CUFFS + (("M6",) if m6 else ())
+
+
+def simulate_d(rng, replicates, subjects, sessions, target, models, effect, m6=None,
+               repeat=None, extras=False):
+    """``(d, d0, delta_sd, reference)``: per-subject d_s and d0_s, shape
+    (replicates, subjects), the SD of the reference changes (one value per
+    replicate) and the reference changes. Without the options below the draws and
+    results are those of configs v1 and v2.
+
+    Options of config v3:
+
+    - ``m6`` ({"m6_mean", "m6_sd", "pat_gain"}): an M6 cuff with a subject-level
+      response. ``pat_gain`` False gives PPG+PAT the PPG-only slope b at M6 (PAT
+      adds nothing there); default True (same b as at the other cuffs).
+    - ``repeat`` ({"phases", "rho"}): the label of each listed phase is the mean
+      of two cuffs whose errors correlate rho, so its noise SD is
+      sigma_cuff * sqrt((1 + rho) / 2). Predictions are not averaged and the
+      plateau has no drift, so this is the best case of repeated cuffs.
+    - ``extras`` True appends a dict: d against the latent true change
+      (``d_true``), d over the M0-M2 cuffs only (``d_core``) and the mean MAE of
+      each model and of zero-change against the cuff.
+    """
+    cuffs = session_cuffs(m6)
     n_eval = sessions - 1
-    shape = (replicates, subjects, n_eval, len(CUFFS))
+    shape = (replicates, subjects, n_eval, len(cuffs))
     day = rng.normal(0, target["tau_day"], (replicates, subjects, n_eval, 1))
     m1 = rng.normal(target["m1_mean"], target["m1_sd"], (replicates, subjects, 1, 1))
     m2 = rng.normal(effect["m2_mean"], effect["m2_sd"], (replicates, subjects, 1, 1))
-    maneuver = np.zeros((1, 1, 1, len(CUFFS)))
-    is_m1 = np.array([c == "M1" for c in CUFFS])
-    is_m2 = np.array([c == "M2" for c in CUFFS])
-    true = day + np.where(is_m1, m1, 0) + np.where(is_m2, m2, 0) + maneuver
+    is_m1 = np.array([c == "M1" for c in cuffs])
+    is_m2 = np.array([c == "M2" for c in cuffs])
+    is_m6 = np.array([c == "M6" for c in cuffs])
+    true = day + np.where(is_m1, m1, 0) + np.where(is_m2, m2, 0)
+    if m6:
+        m6_s = rng.normal(m6["m6_mean"], m6["m6_sd"], (replicates, subjects, 1, 1))
+        true = true + np.where(is_m6, m6_s, 0)
     cal = rng.normal(0, target["sigma_cuff"] / np.sqrt(2), (replicates, subjects, 1, 1))
-    reference = true + rng.normal(0, target["sigma_cuff"], shape) - cal
+    noise = rng.normal(0, target["sigma_cuff"], shape)
+    if repeat:
+        averaged = np.array([c in repeat["phases"] for c in cuffs])
+        noise = noise * np.where(averaged, np.sqrt((1 + repeat["rho"]) / 2), 1.0)
+    reference = true + noise - cal
     base, added = models["ppg"], models["ppg_pat"]
     u_p, u_a = _correlated(rng, (replicates, subjects, 1, 1), base["sigma_u"],
                            added["sigma_u"], models["rho_u"])
     v_p, v_a = _correlated(rng, shape, base["sigma_v"], added["sigma_v"],
                            models["rho_v"])
-    error_p = base["b"] * true + u_p + v_p - reference
-    error_a = added["b"] * true + u_a + v_a - reference
+    b_added = added["b"]
+    if m6 and not m6.get("pat_gain", True):
+        b_added = np.where(is_m6, base["b"], added["b"])
+    pred_p = base["b"] * true + u_p + v_p
+    pred_a = b_added * true + u_a + v_a
+    error_p, error_a = pred_p - reference, pred_a - reference
     mae = lambda e: np.abs(e).mean(axis=(2, 3))  # noqa: E731
-    mae_a = mae(error_a)
-    d = mae_a - mae(error_p)
-    d0 = mae_a - mae(-reference)
+    mae_a, mae_p, mae_0 = mae(error_a), mae(error_p), mae(-reference)
+    d = mae_a - mae_p
+    d0 = mae_a - mae_0
     delta_sd = reference.reshape(replicates, -1).std(axis=1, ddof=1)
-    return d, d0, delta_sd, reference
+    if not extras:
+        return d, d0, delta_sd, reference
+    core = ~is_m6
+    more = {"d_true": mae(pred_a - true) - mae(pred_p - true),
+            "d_core": mae(error_a[..., core]) - mae(error_p[..., core]),
+            "mae_ppg_pat": float(mae_a.mean()), "mae_ppg": float(mae_p.mean()),
+            "mae_zero_change": float(mae_0.mean())}
+    return d, d0, delta_sd, reference, more
 
 
 def draw_counts(draws, subjects, rng):
@@ -137,13 +178,13 @@ def reading(low, high, delta):
         list(READINGS[:4]), READINGS[4])
 
 
-def p2_statistic(reference):
-    """Median over subjects of the signed M2 change against the mean of the M0
-    cuffs of the same (first evaluation) session: the P2 statistic of the pilot."""
+def p2_statistic(reference, cuffs=CUFFS, phase="M2"):
+    """Median over subjects of the signed change at ``phase`` against the mean of
+    the M0 cuffs of the same (first evaluation) session: the P2 statistic of the
+    pilot for M2, the same statistic for M6."""
     first = reference[:, :, 0, :]
-    m0 = first[:, :, [i for i, c in enumerate(CUFFS) if c == "M0"]].mean(axis=2)
-    m2 = first[:, :, CUFFS.index("M2")]
-    return np.median(m2 - m0, axis=1)
+    m0 = first[:, :, [i for i, c in enumerate(cuffs) if c == "M0"]].mean(axis=2)
+    return np.median(first[:, :, cuffs.index(phase)] - m0, axis=1)
 
 
 def r3_statistic(reference):
@@ -154,22 +195,35 @@ def r3_statistic(reference):
 
 def run_design(seed, replicates, draws, subjects, sessions, target, models, effect,
                deltas, levels, methods=("percentile",), primary="percentile",
-               draw_blocks=1):
+               draw_blocks=1, m6=None, repeat=None, extras=False):
     """One design. ``levels`` holds the full results of the ``primary`` CI method;
     ``ci_methods`` holds the error shares and width of every method in ``methods``.
     The simulated studies are split into ``draw_blocks`` blocks, each with its own
-    subject draws (1, as in v1: every study of the design shares one set)."""
+    subject draws (1, as in v1: every study of the design shares one set).
+    ``m6``, ``repeat``: options of config v3 (see simulate_d). With either set, or
+    ``extras``, the row also reports d against the latent truth, d over M0-M2,
+    the MAEs and CI width quantiles."""
     rng = np.random.default_rng(seed)
-    d, d0, delta_sd, reference = simulate_d(rng, replicates, subjects, sessions,
-                                            target, models, effect)
+    v3 = bool(m6 or repeat or extras)
+    d, d0, delta_sd, reference, *more = simulate_d(
+        rng, replicates, subjects, sessions, target, models, effect, m6, repeat,
+        extras=v3)
+    cuffs = session_cuffs(m6)
     out = {"subjects": subjects, "sessions": sessions,
            "visits": subjects * sessions,
-           "eval_cuffs_per_subject": (sessions - 1) * len(CUFFS),
+           "eval_cuffs_per_subject": (sessions - 1) * len(cuffs),
            "mean_d": float(d.mean()), "mean_d0": float(d0.mean()),
            "reference_delta_sd": float(np.median(delta_sd)),
            "r3_median": float(np.median(r3_statistic(reference))),
-           "p2_median": float(np.median(p2_statistic(reference))),
+           "p2_median": float(np.median(p2_statistic(reference, cuffs))),
            "ci_method": primary, "levels": {}, "ci_methods": {}}
+    if m6:
+        out["p6_median"] = float(np.median(p2_statistic(reference, cuffs, "M6")))
+    if more:
+        extra = more[0]
+        out.update({"mean_d_true": float(extra["d_true"].mean()),
+                    "mean_d_core": float(extra["d_core"].mean()),
+                    **{k: v for k, v in extra.items() if k.startswith("mae_")}})
     wanted = list(dict.fromkeys((primary, *methods)))
     limits = {(m, level): np.empty((4, replicates)) for m in wanted for level in levels}
     for rows in np.array_split(np.arange(replicates), draw_blocks):
@@ -186,6 +240,10 @@ def run_design(seed, replicates, draws, subjects, sessions, target, models, effe
                      "p_lower_above_0": float(np.mean(low > 0)),
                      "p_upper_below_0_zero_change": float(np.mean(high0 < 0)),
                      "p_main_conclusion": float(np.mean((high < 0) & (high0 < 0)))}
+            if v3:
+                block["ci_width_q10_q50_q90"] = [
+                    float(q) for q in np.quantile(high - low, [0.1, 0.5, 0.9])]
+                block["ci_width_d0_mean"] = float(np.mean(high0 - low0))
             out["ci_methods"].setdefault(method, {})[str(level)] = dict(block)
             if method != primary:
                 continue

@@ -1,6 +1,7 @@
 # Trình tự bring-up V1-module
 
-> **Chưa thực hiện**: chưa có module và PCB. Áp dụng cho KiCad V1-module (bo đế
+> **Đang thực hiện từ 2026-11-20** (mục 2 đạt; mục 1 một phần;
+> [báo cáo](2026-11-20_v1_bringup.md)). Áp dụng cho KiCad V1-module (bo đế
 > V1-draft5, bo cổ tay V1-draft5, 2026-10-27), pin map chuẩn ở
 > [custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) mục
 > A.7 và [firmware khung](../../firmware/README.md).
@@ -17,7 +18,8 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 
 - Đồng hồ vạn năng, oscilloscope ít nhất 2 kênh, thước kẹp, kính lúp.
 - USB tester cắm giữa laptop và cáp USB-C của bo Waveshare để đọc điện áp và dòng.
-- Máy hàn, thiếc, flux, bấc hút thiếc, nhíp, dao rọc giấy (cắt jumper).
+- Máy hàn, thiếc, flux, bấc hút thiếc, nhíp. Không cắt jumper hay gỡ linh kiện trên module
+  (chốt 2026-11-19).
 - Laptop chạy pin, cài PlatformIO theo [firmware/README.md](../../firmware/README.md).
 - Bản in PCB tỉ lệ 1:1 của hai bo (KiCad: Plot hoặc Print, tỉ lệ 1:1).
 
@@ -33,7 +35,7 @@ sang bước sau. Giá trị đo ghi vào báo cáo theo mục 11.
 | Cáp ECG của kit | Đếm số dây; đo thông mạch từng đầu bấm với tip/ring/sleeve của giắc 3,5 mm | Ba dây: LA ↔ ring, RA ↔ tip, RL ↔ sleeve (protocol v0.2 mục 5.2). Khác thì dán nhãn lại theo kết quả đo, không theo màu nắp. Chỉ có hai dây hoặc không có dây nối sleeve: dừng cấu hình 3 điện cực cho tới khi có cáp 3 dây (danh sách mua mục 3) |
 | SparkFun MAX30101 | Mã và vị trí jumper | SEN-16474; có JP1 (LED nguồn), hàng chân GND, 3.3V, SDA, SCL, INT, 1.8V |
 | SparkFun BMI270 | Mã và kích thước | SEN-22397 (1" × 1"), không phải SEN-22398; có jumper `I2C` và `ADR` |
-| Cả bốn module (bo Waveshare, breakout MAX30001, MAX30101, BMI270) | Trước khi hàn, đo từng module bằng thước kẹp: kích thước bo, bước chân header, vị trí lỗ bắt vít so với hàng chân; so với footprint KiCad (thêm 2026-10-29: footprint mới đối chiếu với file CAD và bản vẽ của nhà sản xuất, chưa với module thật) | Khớp footprint; ghi số đo vào báo cáo. Lệch thì dừng, không hàn (A.6 mục 2) |
+| Cả bốn module (bo Waveshare, breakout MAX30001, MAX30101, BMI270) | Trước khi hàn, đo từng module bằng thước kẹp: kích thước bo, bước chân header, vị trí lỗ bắt vít so với hàng chân; so với footprint KiCad (thêm 2026-10-29: footprint mới đối chiếu với file CAD và bản vẽ của nhà sản xuất, chưa với module thật) | Khớp footprint; ghi số đo vào báo cáo. Lệch thì dừng, không hàn (A.6 mục 2). Lần lắp V1 đầu tiên: không đo số, lắp thử thấy cả bốn module vừa (chốt 2026-11-22) |
 | Cả bốn module | Đặt lên bản in 1:1 của hai bo | Lỗ bắt vít, hàng chân và lỗ spacer trùng footprint (A.6 mục 2) |
 
 **Breakout MAX30001 bản v2 (ghi 2026-11-14; cách xử lý sửa sau khi thảo luận và duyệt
@@ -48,6 +50,12 @@ nên không dùng vị trí linh kiện của file v1.0. Đọc từ ảnh bo (c
 - một điện trở 0805 in `0` (0 Ω) cạnh TXB0108, nhiều khả năng là R1 bật chân OE: **không gỡ**;
 - thứ tự nhãn 10 chân như v1.0: `GND, VCC, GND, INT2, INT1, FCLK, CSB, SCK, MOSI, MISO`.
 
+Đo ngày 2026-11-20 ([báo cáo](2026-11-20_v1_bringup.md) mục 3.1): bo có **hai** điện trở
+`01C`, không phải một. Một `01C` có một pad 0 Ω với sleeve, pad kia ≈ 10 kΩ (ứng viên R3). Mỗi
+`4992` có một pad 0 Ω với tip (hoặc ring), pad kia ≈ 50 kΩ. Linh kiện 0402 chưa đo, nhánh
+BIN/BIP chưa xác định. Màn hình đồng hồ hiện `0L` (hở mạch) dễ đọc nhầm thành 0 Ω: kiểm lại
+khi một linh kiện có cả hai pad "0" với một dây.
+
 Cách xác định khi chưa có schematic v2: rút nguồn, cắm cáp ECG đã đo thông mạch (đầu bấm ↔
 tip/ring/sleeve), đồng hồ ở thang Ω (không dùng tiếng bíp), chờ số ổn định và đảo que. Điện trở
 có một pad 0 Ω với sleeve là ứng viên R3. Linh kiện có cả hai pad 0 Ω với tip (hoặc ring) là
@@ -58,13 +66,10 @@ thấy ứng viên thì ghi "chưa xác định được nhánh BIN/BIP", không
 VCM; hai pad nối tip/ring chưa chứng minh linh kiện đó dẫn vào BIN/BIP. Các nhận định "nhiều
 khả năng" ở trên (điện trở `4992`, R1) cũng chỉ dựa vào hình dáng và mã in.
 
-**Điều kiện để làm bước 4 phần breakout** (sửa 2026-11-14): có sơ đồ net của bo v2 cho từng linh
-kiện sẽ thay hay gỡ, với bằng chứng ở **cả hai đầu**: schematic v2 (danh sách linh kiện hay BOM
-riêng là chưa đủ, vì không cho biết net), hoặc đường mạch nhìn thấy được trên bo, có ảnh hai mặt
-ghi vào báo cáo, nối từ pad của linh kiện tới chân hay linh kiện đã biết net (đã đề nghị
-ProtoCentral gửi schematic v2). Sơ đồ net phải chỉ rõ đường bảo vệ đầu vào ECG (điện trở nối tiếp)
-nằm ở đâu để không đụng vào. Người duyệt ký xác nhận sơ đồ net trước khi hàn. Không có thì không
-sửa breakout và không đo trên người với breakout này.
+**Không sửa breakout (chốt 2026-11-19, `custom_board_proposal.md` A.1, A.2).** Không dùng đầu
+chuyển ECG (bỏ 2026-11-26, `custom_board_proposal.md` A.2): cáp điện cực cắm thẳng vào jack của
+breakout. Đo thông mạch ở trên vẫn làm và ghi vào báo cáo để biết sleeve, tip, ring nối tới đâu
+trên bo (đã đề nghị ProtoCentral gửi schematic v2).
 
 ## 2. Bo Waveshare đứng riêng (chỉ cắm USB)
 
@@ -92,6 +97,10 @@ sửa breakout và không đo trên người với breakout này.
    VDD3P3_RTC_IO, tức 3,3 V). Ghi nguyên văn kết quả vào báo cáo.
 3. Nạp firmware khung (`pio run -d firmware -t upload --upload-port COMx`). Mở log
    UART0 (115 200 baud): thấy `packet self-test passed`, `SESSION_ID`, ELF SHA-256.
+   Mọi bản nạp dùng để ghi số liệu (bước này, bước 6 và các mục sau) build sạch trước
+   (`pio run -d firmware -e <env> -t clean`), rồi đối chiếu phiên bản ứng dụng trên UART0
+   với commit và với `firmware_version` của metadata (thêm 2026-11-20: build tăng dần đã
+   nạp image cũ, [firmware/README.md](../../firmware/README.md) mục "Kiểm tra khi có bo").
 4. Đo chân 3V3–GND của bo Waveshare: khoảng 3,3 V. Ghi giá trị đo và dòng đọc trên USB
    tester khi firmware khung đang chạy (mốc so sánh cho mục 6–8).
 5. Ghi luồng packet từ cổng USB native 10 phút không tải bằng logger
@@ -129,15 +138,16 @@ sửa breakout và không đo trên người với breakout này.
    chân của J1 (bo cổ tay) tới pad M1/M3 tương ứng; GND ở chân 2, 4, 6, 8, 10, 12, 14
    (thứ tự cáp V1-draft4). J3.1 (`STIM`) tới pad 6 của U1, J3.2 tới GND.
 
-## 4. Sửa module (trước khi lắp)
+## 4. Chuẩn bị module (trước khi lắp; không sửa module, chốt 2026-11-19)
+
+Không thay, gỡ hay cắt linh kiện, jumper nào trên module (`custom_board_proposal.md` A.1). Chụp
+ảnh hai mặt từng module khi nhận để làm mốc. Chỉ hàn header.
 
 | Module | Việc | Đạt khi |
 | --- | --- | --- |
-| Breakout MAX30001 | Thay R3 bằng 220 kΩ ±1 %, cỡ 0805 (datasheet yêu cầu ≥ 200 kΩ, A.2). Bo v2: chỉ làm khi sơ đồ net v2 đã được duyệt cho điện trở sleeve → VCM, có bằng chứng cả hai đầu (mục 1, ghi chú v2) | Đo R3 trước khi hàn lên bo: 220 kΩ ±1 %. Sau khi hàn, sleeve → điện trở mới khoảng 220 kΩ; tip và ring vẫn thông tới điện trở nối tiếp đầu vào như trước khi sửa; ảnh trước và sau ghi vào báo cáo |
-| Breakout MAX30001 | Gỡ R7, R8 (0 Ω, cỡ 0402): ngắt jack khỏi BIP/BIN của BioZ; đường ECG đi qua điện trở nối tiếp đầu vào (v1.0: R4, R5 51 kΩ; v2: theo sơ đồ net v2, ứng viên là hai điện trở `4992`) vẫn giữ nguyên. Bo v2: chỉ làm khi sơ đồ net v2 đã được duyệt cho hai linh kiện này và cho điện trở nối tiếp, có bằng chứng cả hai đầu (mục 1, ghi chú v2) | Pad R7, R8 hở mạch; tip và ring vẫn thông tới điện trở nối tiếp đầu vào, giá trị đo như trước khi gỡ; ảnh trước và sau ghi vào báo cáo |
 | Breakout MAX30001 | Hàn header SV1 10 chân (có trong kit) từ mặt dưới: thân nhựa header ở mặt dưới, chân dài chĩa xuống, mặt linh kiện và jack 3,5 mm quay lên (thêm 2026-10-27) | Chân thẳng, không cầu thiếc. Đặt breakout lên bản in 1:1 của bo đế: chân GND ở đầu hàng phía jack trùng J1.1, lỗ vít trùng lỗ NPTH (23,37; 2,97). Lỗ vít không trùng nghĩa là breakout đang bị lật; một trong hai cách lật làm đảo thứ tự chân (VCC rơi vào lỗ MOSI) |
-| SparkFun MAX30101 | Cắt JP1 để tắt LED nguồn đỏ (LED cùng mặt với cảm biến, A.3) | Khi cấp nguồn, LED nguồn không sáng |
-| SparkFun BMI270 | Cắt jumper `I2C` và `ADR` để chạy SPI (A.3) | Hai jumper hở mạch |
+| SparkFun MAX30101 | Không cắt JP1, không tháo đầu Qwiic. Làm giá đỡ đen theo A.3 che LED nguồn D1, hai đầu Qwiic và mọi chỗ dẫn điện phía da | Vật liệu giá đỡ chắn được ánh sáng 880 nm (thử bằng chính cảm biến trong hộp tối); khi lắp, D1 không lọt sáng ra ngoài, đầu Qwiic không chạm được từ phía da |
+| SparkFun BMI270 | Không cắt jumper `I2C`, `ADR`, `PWR` (A.3) | Ba jumper còn nguyên như lúc nhận |
 
 ## 5. Hàn và lắp
 
@@ -168,8 +178,9 @@ sửa breakout và không đo trên người với breakout này.
    đồ chân bị gương, chân 3V3 của module rơi vào pad OCS); vít, đai ốc và spacer nylon
    M2 ở ba lỗ, mỗi lỗ hai spacer (tròn Ø ≤ 4,5 mm hoặc lục giác 4 mm giữa hai cạnh, M1
    và M3 mỗi bên một cái). Không dùng spacer lục giác cỡ M3: chạm thân nhựa header
-   ([danh sách mua](../bom/purchase_list_v1_module.md) mục 2). Miếng đệm dán ở góc thứ
-   tư.
+   ([danh sách mua](../bom/purchase_list_v1_module.md) mục 2). Góc thứ tư dùng
+   miếng đệm không keo, kẹp bằng giá đỡ (không dán keo lên module, sửa 2026-11-19). Lắp giá
+   đỡ MAX30101 cùng vít với M1.
 4. Đo lại 3V3–GND: không chập.
 
 ## 6. Bo đế với bo Waveshare (chưa có breakout và bo cổ tay)
@@ -203,7 +214,9 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    dùng để nhận chip (`protocentral_max30001_arduino_library`, `src/protocentral_max30001.cpp`).
 3. Cấu hình theo A.2: 512 sps, gain 20 V/V, `ECG_DLPF` 40,96 Hz, tắt `ECG_DHPF`,
    lead-off DC 10 nA ±400 mV (chốt 2026-10-25), `EN_BIOZ = 0`, **tắt lead
-   bias nội** (cấu hình 3 điện cực, VCM qua R3), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
+   bias nội** (cấu hình 3 điện cực, VCM qua R3),
+   BioZ tắt hẳn: `BMUX_OPENP/N = 1`, `BIOZ_CGMAG = 000` (thêm 2026-11-19; driver chưa ghi hai
+   thanh ghi này), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
    và `EN_INT2`, `EFIT = 15`, `SAMP_IT = 00` (xung `SAMP` mỗi mẫu), `CLR_SAMP = 1`,
    chỉ `SAMP` ra INT2B (chốt 2026-10-24, Packet Schema V0.2 mục 7). Đọc lại từng thanh ghi đã ghi.
 4. Oscilloscope:

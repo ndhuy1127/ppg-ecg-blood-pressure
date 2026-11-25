@@ -46,6 +46,12 @@
 #define MAX30001_ST_SAMP (1u << 9)
 #define MAX30001_ST_PLLINT (1u << 8)
 #define MAX30001_ST_LDOFF_MASK 0x00000Fu
+/* DC lead-off comparator outputs: ECGP above / below and ECGN above / below the
+ * DCLOFF_VTH window (p. 41-42). */
+#define MAX30001_ST_LDOFF_PH (1u << 3)
+#define MAX30001_ST_LDOFF_PL (1u << 2)
+#define MAX30001_ST_LDOFF_NH (1u << 1)
+#define MAX30001_ST_LDOFF_NL (1u << 0)
 
 /* EN_INT2 bit that routes SAMP to INT2B (p. 43). */
 #define MAX30001_EN_SAMP (1u << 9)

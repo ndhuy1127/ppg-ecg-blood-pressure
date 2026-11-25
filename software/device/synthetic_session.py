@@ -5,6 +5,9 @@ Unlike ``packet_simulation_v3`` (random payloads), this builds waveforms:
 - R peaks are narrow Gaussians on the ECG; each PPG pulse starts at R + PAT with a
   linear upstroke, so the maximum-upslope tangent of ``fiducials.ppg_fiducials``
   meets the valley level exactly at the set onset (no shape bias in the answer);
+- PPG counts fall with the pulse, as the MAX30101 reflectance counts do (v2,
+  2026-11-24, bring-up report): the pipeline turns them up with ppg_polarity -1.
+  Light of the optical sync stimulus still raises the counts;
 - every channel has its own sample clock: the true rate is the nominal rate times
   (1 + ppm 1e-6), and the sample times of the AFE never meet those of another AFE;
 - packet anchors follow Packet Schema V0.1 section 5: ``T_ANCHOR_US`` = true time
@@ -28,7 +31,9 @@ from software.data_io.packet_wire import (
 )
 from software.device.max30101 import SLOT_SPACING_US
 
-VERSION = "synthetic-device-session-v1"
+# v2 (2026-11-25): physiological PPG falls in raw counts (ppg_raw_inverted, as the
+# MAX30101); v1 recordings are rebuilt with SessionSpec(ppg_raw_inverted=False).
+VERSION = "synthetic-device-session-v2"
 PPG_SLOTS = {0xF1: "green", 0xF2: "red", 0xF3: "ir"}  # V1 (schema section 7)
 ECG_SCALE = 30000.0  # ADC codes per unit of the synthetic ECG
 PPG_DC, PPG_AC = 100000.0, 20000.0
@@ -66,8 +71,45 @@ class SessionSpec:
     wander_hz: float = 0.25
     events: tuple = ()  # ((code, time_s), ...); time from the session start
     drop_packets: tuple = ()  # (("0xF1", seq), ...): lost on USB
+    # ((time_s, step_us), ...): from that sample time on, ECG anchors are shifted
+    # by step_us (a mis-timed FIFO read path; A10 test, added 2026-11-21).
+    ecg_anchor_steps: tuple = ()
+    ppg_anchor_steps: tuple = ()  # same, for the PPG anchors (all slots)
+    # Sync-test stimulus (added 2026-11-21, sync_10min_test_plan.md sections 3-5):
+    # a square pulse of stim_width_s starting at each time of stim_s (s from the
+    # session start) appears in the ECG stim_ecg_delay_us later and in every PPG
+    # slot stim_ppg_delay_us later, with linear edges of stim_edge_s centred on
+    # the true edges (so the 50 % crossings are exact); an event 0xC1 code 3 is
+    # added at each time. ecg_beats / ppg_beats False leave the physiology out;
+    # declare_latency False writes latency_l_us null, as the sync run needs.
+    stim_s: tuple = ()
+    stim_width_s: float = 0.05
+    stim_edge_s: float = 0.006
+    stim_ecg_delay_us: int = 31555
+    stim_ppg_delay_us: int = 0
+    stim_ecg_amp: float = 0.05
+    stim_ppg_amp: float = 0.5
+    # ECG pulse through an ideal low-pass of this cutoff (Hz) instead of linear
+    # edges: symmetric ringing (Gibbs), 50 % crossings still at the true edges.
+    stim_ecg_lowpass_hz: float = 0.0
+    ecg_beats: bool = True
+    ppg_beats: bool = True
+    # True (v2): the pulse, its noise and wander lower the raw counts, as on the
+    # MAX30101; False rebuilds the upright counts of synthetic-device-session-v1.
+    ppg_raw_inverted: bool = True
+    declare_latency: bool = True
     session_id: int = 1
     seed: int = 20261113
+    # Fields added after 2026-11-21 go last, so positional calls keep their meaning.
+    # Linear drift of the clock error (ppm per minute; added 2026-11-21): the
+    # rate at time t is fs (1 + (ppm + per_min t / 60 s) 1e-6), so the sample
+    # times bend away from one line (A3 segmented-fit test).
+    ecg_clock_ppm_per_min: float = 0.0
+    ppg_clock_ppm_per_min: float = 0.0
+    # ECG anchors later by bend t^2 (us, t in s from the start): a read delay that
+    # drifts while the sampling clock does not. With bend = -ecg_clock_ppm_per_min
+    # / 120 the anchors match those of that clock drift (added 2026-11-21).
+    ecg_anchor_bend_us_per_s2: float = 0.0
 
 
 def pat_at(spec, t_s):
@@ -89,8 +131,33 @@ def _wander(t, amplitude, hz):
     return amplitude * (np.sin(2 * np.pi * hz * t) + np.sin(2 * np.pi * hz / 5 * t + 1.0))
 
 
+def _stim(t, spec, delay_us, amplitude, lowpass_hz=0.0):
+    """The stimulus pulses as seen ``delay_us`` after each start time."""
+    values = np.zeros_like(t)
+    half = spec.stim_edge_s / 2
+    if lowpass_hz:
+        from scipy.special import sici
+
+        def step(x):  # step response of an ideal low-pass, 0.5 at x = 0
+            return 0.5 + sici(2 * np.pi * lowpass_hz * x)[0] / np.pi
+
+        for start in spec.stim_s:
+            on = start + delay_us * 1e-6
+            values += amplitude * (step(t - on) - step(t - on - spec.stim_width_s))
+        return values
+    for start in spec.stim_s:
+        on, off = start + delay_us * 1e-6, start + delay_us * 1e-6 + spec.stim_width_s
+        level = np.clip((t - (on - half)) / spec.stim_edge_s, 0, 1)
+        level = np.minimum(level, np.clip(((off + half) - t) / spec.stim_edge_s, 0, 1))
+        values += amplitude * level
+    return values
+
+
 def _ecg(t, beats, rng, spec):
     values = np.zeros_like(t)
+    if spec.stim_s:
+        values += _stim(t, spec, spec.stim_ecg_delay_us, spec.stim_ecg_amp,
+                        spec.stim_ecg_lowpass_hz)
     for r in beats:
         near = np.abs(t - r) < 0.05
         values[near] += np.exp(-0.5 * ((t[near] - r) / 0.008) ** 2)
@@ -112,6 +179,8 @@ def _pulse(dt):
 
 
 def _ppg(t, feet, rng, spec, gain):
+    """Raw counts: DC, minus the physiological part (pulses, noise, wander) when
+    ``ppg_raw_inverted``, plus the light of the sync stimulus (always upward)."""
     values = np.zeros_like(t)
     for foot in feet:
         values += _pulse(t - foot)
@@ -120,8 +189,23 @@ def _ppg(t, feet, rng, spec, gain):
         noise[(t >= start) & (t < end)] = spec.noise_sd
     values = values + rng.normal(0, 1, t.shape) * noise
     values += _wander(t, spec.ppg_wander, spec.wander_hz)
+    if spec.ppg_raw_inverted:
+        values = -values
+    if spec.stim_s:
+        values += _stim(t, spec, spec.stim_ppg_delay_us, spec.stim_ppg_amp) / gain
     counts = PPG_DC + gain * PPG_AC * values
     return np.clip(np.round(counts), 0, (1 << 18) - 1).astype(int)
+
+
+def _sample_times(count, fs_hz, ppm, ppm_per_min):
+    """Times (s) of samples 0..count-1 of a clock whose error is ppm at t = 0 and
+    changes by ppm_per_min per minute: sample n sits where the integrated rate
+    fs (t + 1e-6 (ppm t + ppm_per_min t^2 / 120)) reaches n."""
+    n = np.arange(count, dtype=float)
+    if not ppm_per_min:
+        return n / (fs_hz * (1 + ppm * 1e-6))
+    a, b, c = 1e-6 * ppm_per_min / 120, 1 + 1e-6 * ppm, -n / fs_hz
+    return -2 * c / (b + np.sqrt(b * b - 4 * a * c))  # stable root of a t^2 + b t + c
 
 
 def _anchor(rng, true_last_s, spec, latency_us):
@@ -129,12 +213,16 @@ def _anchor(rng, true_last_s, spec, latency_us):
     return int(round(spec.start_us + true_last_s * 1e6 + latency_us + jitter))
 
 
-def _data_packets(rng, channel_ids, values, times_s, fs_hz, spec, latency_us, per):
+def _data_packets(rng, channel_ids, values, times_s, fs_hz, spec, latency_us, per,
+                  steps=(), bend=0.0):
     """(t_anchor, Packet) of one AFE; channels share index and anchor."""
     out = []
     count = len(times_s)
     for n, first in enumerate(range(0, count - per + 1, per)):
         anchor = _anchor(rng, times_s[first + per - 1], spec, latency_us)
+        last_s = times_s[first + per - 1]
+        anchor += int(round(sum(us for at_s, us in steps if last_s >= at_s)
+                            + bend * last_s * last_s))
         t_first = anchor - int(round((per - 1) * 1e6 / fs_hz))
         for channel_id, series in zip(channel_ids, values):
             data = tuple(int(v) for v in series[first:first + per])
@@ -161,28 +249,33 @@ def generate(spec: SessionSpec):
     ``truth`` holds the set R times, foot times and PAT of every beat on the MCU
     clock (us), and the true sample rates."""
     rng = np.random.default_rng(spec.seed)
-    beats = beat_times(spec)
+    beats = beat_times(spec) if spec.ecg_beats else np.array([])
     pats = pat_at(spec, beats)
     feet = beats + pats / 1000
     missed = set(spec.missed_ppg_beats)
-    ppg_feet = np.array([f for i, f in enumerate(feet) if i not in missed])
+    ppg_feet = np.array([f for i, f in enumerate(feet) if i not in missed and spec.ppg_beats])
 
     ecg_fs = spec.ecg_fs_hz * (1 + spec.ecg_clock_ppm * 1e-6)
     ppg_fs = spec.ppg_fs_hz * (1 + spec.ppg_clock_ppm * 1e-6)
-    t_ecg = np.arange(int(spec.duration_s * ecg_fs)) / ecg_fs
-    t_ppg = spec.ppg_start_offset_us * 1e-6 + np.arange(
-        int((spec.duration_s - 0.01) * ppg_fs)) / ppg_fs
+    t_ecg = _sample_times(int(spec.duration_s * ecg_fs), spec.ecg_fs_hz,
+                          spec.ecg_clock_ppm, spec.ecg_clock_ppm_per_min)
+    t_ppg = spec.ppg_start_offset_us * 1e-6 + _sample_times(
+        int((spec.duration_s - 0.01) * ppg_fs), spec.ppg_fs_hz, spec.ppg_clock_ppm,
+        spec.ppg_clock_ppm_per_min)
     spacing_s = SLOT_SPACING_US[spec.led_pw_code] * 1e-6
     ppg = [_ppg(t_ppg + j * spacing_s, ppg_feet, rng, spec, gain)
            for j, gain in enumerate((1.0, 0.8, 0.9))]
 
     rows = _data_packets(rng, (ECG_CHANNEL,), [_ecg(t_ecg, beats, rng, spec)], t_ecg,
                          spec.ecg_fs_hz, spec, spec.ecg_latency_us,
-                         spec.ecg_packet_samples)
+                         spec.ecg_packet_samples, spec.ecg_anchor_steps,
+                         spec.ecg_anchor_bend_us_per_s2)
     rows += _data_packets(rng, tuple(PPG_SLOTS), ppg, t_ppg, spec.ppg_fs_hz, spec,
-                          spec.ppg_latency_us, spec.ppg_packet_samples)
+                          spec.ppg_latency_us, spec.ppg_packet_samples,
+                          spec.ppg_anchor_steps)
     rows.append((spec.start_us - 1, _max30101_state(spec, spec.start_us - 1)))
-    for ordinal, (code, time_s) in enumerate(spec.events):
+    events = sorted([*spec.events, *((3, t) for t in spec.stim_s)], key=lambda e: e[1])
+    for ordinal, (code, time_s) in enumerate(events):
         anchor = int(round(spec.start_us + time_s * 1e6))
         rows.append((anchor, Packet(WIRE_VERSION_V02, EVENT_CHANNEL, spec.session_id,
                                     ordinal, ordinal, anchor, anchor, 0, 0, (code,))))
@@ -197,6 +290,12 @@ def generate(spec: SessionSpec):
         "missed_ppg_beats": sorted(missed),
         "ecg_fs_true_hz": ecg_fs, "ppg_fs_true_hz": ppg_fs,
         "slot_spacing_us": SLOT_SPACING_US[spec.led_pw_code],
+        # Effective latency of each channel on the anchor-fitted time axis: the
+        # stimulus delay plus the anchor latency plus the mean anchor jitter.
+        "stim_l_ecg_us": spec.stim_ecg_delay_us + spec.ecg_latency_us
+        + spec.anchor_jitter_us / 2,
+        "stim_l_ppg_us": spec.stim_ppg_delay_us + spec.ppg_latency_us
+        + spec.anchor_jitter_us / 2,
     }
     return stream, metadata(spec), truth
 
@@ -220,9 +319,14 @@ def metadata(spec):
                              *((f"0x{c:02X}", spec.ppg_fs_hz, spec.ppg_latency_us)
                                for c in PPG_SLOTS)):
         channels[key] = {"sensor": "SYNTHETIC", "fs_nominal_mhz": int(fs * 1000),
-                         "latency_l_us": int(latency + half),
-                         "latency_source": f"SYNTHETIC: {VERSION} parameter",
+                         "latency_l_us": int(latency + half) if spec.declare_latency
+                         else None,
+                         "latency_source": f"SYNTHETIC: {VERSION} parameter"
+                         if spec.declare_latency else None,
                          "unit_conversion": None, "afe_config": None}
+        if not spec.declare_latency:
+            reasons[f"channels.{key}.latency_l_us"] = "sync run: L is what it measures"
+            reasons[f"channels.{key}.latency_source"] = "sync run: L is what it measures"
         reasons[f"channels.{key}.unit_conversion"] = "synthetic integers"
         reasons[f"channels.{key}.afe_config"] = "no AFE in simulation"
     channels["0xC1"] = {"sensor": "SYNTHETIC_EVENT", "fs_nominal_mhz": None,

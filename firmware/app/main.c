@@ -8,6 +8,8 @@
  * IMU, and the ECG SAMP edges from the fake ECG source unless the capture is in.
  */
 #include <inttypes.h>
+#include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -31,6 +33,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "ecg_loop.h"
+#include "ecg_rate.h"
 #include "ecg_read.h"
 #include "imu_plan.h"
 #include "max30001.h"
@@ -176,6 +179,15 @@ typedef struct {
  * 5 marks the re-anchor that the next packet continues (V0.2 section 5). */
 #define CARRY_BITS (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_MCU_BUFFER_OVERFLOW                     | PKT_STATUS_INDEX_REANCHORED)
 
+/* In FIFO-anchor and SAMP bench modes the ECG rate check marks a fault with bits 3 and 5 on one
+ * packet; if that packet is dropped, bit 3 moves on too, so the cause is not
+ * lost (sync test plan 11.3). Other channels and modes carry CARRY_BITS only. */
+static uint16_t carry_mask(uint8_t channel_id)
+{
+    return CARRY_BITS | ((BOARD_ECG_PLLINT_COUNT_ONLY && channel_id == PKT_CH_ECG)
+                             ? PKT_STATUS_AFE_ERROR : 0u);
+}
+
 /* One event (the t0 button, a sync stimulus pulse, or a MARK_EVENT command),
  * with the edges of its source that the queue dropped just before it (always 0
  * for a command: a full queue answers it BUSY instead). */
@@ -225,7 +237,8 @@ static bool enqueue(pkt_t *p)
         return true;
     }
     if (carries) {
-        s_drop_bits[k] = (p->status & CARRY_BITS) | PKT_STATUS_MCU_BUFFER_OVERFLOW;
+        s_drop_bits[k] = (p->status & carry_mask(p->channel_id))
+                         | PKT_STATUS_MCU_BUFFER_OVERFLOW;
     }
     s_stats[k].queue_drop++;
     return false;
@@ -261,7 +274,8 @@ static void tx_task(void *arg)
             }
             s_stats[k].tx_timeout++;
             /* Not for 0xD2 (one channel, three AFEs): its SEQ gap shows the loss. */
-            carry[k] = p.channel_id != PKT_CH_AFE_CONFIG ? p.status & CARRY_BITS : 0u;
+            carry[k] = p.channel_id != PKT_CH_AFE_CONFIG ? p.status & carry_mask(p.channel_id)
+                                                        : 0u;
         }
     }
 }
@@ -716,19 +730,91 @@ static void fake_samp_edge(uint64_t index, int64_t t_us)
 #ifndef BOARD_SAMP_VERIFIED
 #define BOARD_SAMP_VERIFIED 0
 #endif
+/*
+ * BOARD_ECG_PLL_DIAG=1 (env esp32s3_devkitc_ecg_pll_diag; diagnostic only,
+ * decided 2026-11-21): on the ProtoCentral breakout v2 03/24, PLLINT stays set
+ * although the chip samples at 512 sps (bring-up report 2026-11-20). This build
+ * goes on after the PLL timeout instead of giving up, logs STATUS and CNFG_GEN
+ * raw, turns EN_ECG off and on once to see whether PLLINT clears, keeps bit 3 on
+ * every packet with PLLINT, and does not restart the SAMP mapping for PLLINT
+ * alone, so the per-edge SAMP checks of bring-up section 7 can run. Bit 8 stays
+ * off. Research builds keep the PLL timeout as an error.
+ */
+#ifndef BOARD_ECG_PLL_DIAG
+#define BOARD_ECG_PLL_DIAG 0
+#endif
+#if BOARD_ECG_PLL_DIAG && BOARD_SAMP_VERIFIED
+#error "BOARD_ECG_PLL_DIAG is a diagnostic build: bit 8 must stay off"
+#endif
+#if BOARD_ECG_FIFO_MODE && (BOARD_SAMP_VERIFIED || BOARD_ECG_PLL_DIAG)
+#error "BOARD_ECG_FIFO_MODE: bit 8 off, not a diagnostic build"
+#endif
 #define ECG_FS_NOMINAL_MHZ 512000u
 #define ECG_POLL_MS 10
 #define ECG_PLL_TIMEOUT_MS 1000
+/* FIFO-anchor mode: rate check window and tolerance (sync test plan 11.3). */
+#define ECG_RATE_WINDOW_US 10000000LL
+#define ECG_RATE_TOL_PPM 1000u
 
 static max30001_bus_t s_ecg_bus;
 static max30001_regs_t s_ecg_regs;
 static int64_t s_ecg_lag_min_us = INT64_MAX, s_ecg_lag_max_us = INT64_MIN;
+static uint32_t s_ecg_status_reads, s_ecg_pllint_reads; /* STATUS reads, with PLLINT */
+/* STATUS reads with DCLOFFINT, and with each LDOFF bit (index = bit, so
+ * 0 NL, 1 NH, 2 PL, 3 PH): UART0 log only, to tell which input and side trip
+ * the lead-off flag (bring-up report 9.2, added 2026-11-22). */
+static uint32_t s_ecg_dcloff_reads, s_ecg_ldoff_reads[4];
+static ecg_rate_t s_ecg_rate; /* FIFO-anchor and SAMP bench modes only; ECG task */
+/* Copy for log_stats, published by the ECG task under the lock after each window. */
+static ecg_rate_t s_ecg_rate_pub;
+static portMUX_TYPE s_ecg_rate_mux = portMUX_INITIALIZER_UNLOCKED;
+static uint32_t s_ecg_epoch; /* SAMP mapping starts since boot (SYNCH) */
+
+#if BOARD_ECG_SAMP_BENCH
+/* SAMP bench mode (sync test plan 11.8): every packet the mapping accepts and
+ * whose read ended on EOF gives one UART0 line
+ *   SB <epoch> <index of the last sample> <t_EOF us> <t_SAMP us>
+ * printed by a low-priority task, so the ECG reader does not wait on the UART
+ * for these lines (its own error logs still go through stdout). A line is
+ * queued before the packet goes to the USB queue: either side can drop one when
+ * full, so match lines to packets by epoch and index, not by order. */
+#define SAMP_BENCH_QUEUE_LEN 128
+#define SAMP_BENCH_EVERY_EDGES 16u /* FIFO read after 16 samples, as EFIT 15 */
+typedef struct {
+    uint32_t epoch;
+    uint32_t k_last;
+    int64_t t_eof_us;
+    int64_t t_samp_us;
+} samp_bench_rec_t;
+static QueueHandle_t s_bench_queue;
+static uint32_t s_bench_logged, s_bench_dropped;
+
+static void samp_bench_log_task(void *arg)
+{
+    (void)arg;
+    samp_bench_rec_t r;
+    for (;;) {
+        if (xQueueReceive(s_bench_queue, &r, portMAX_DELAY) == pdTRUE) {
+            printf("SB %" PRIu32 " %" PRIu32 " %" PRId64 " %" PRId64 "\n", r.epoch, r.k_last,
+                   r.t_eof_us, r.t_samp_us);
+        }
+    }
+}
+#endif
 
 static void ecg_mapping_start(void *arg)
 {
     (void)arg;
+#if BOARD_ECG_SAMP_BENCH
+    /* Runs in the ECG task with SAMP masked (max30001_restart): restart the
+     * count of 16 edges and drop a wake-up left from the old epoch. */
+    samp_capture_notify_restart();
+    (void)ulTaskNotifyTake(pdTRUE, 0);
+#endif
+    samp_capture_jitter_break(); /* no interval across the SYNCH */
     samp_edges_clear();
     samp_map_restart(&s_samp, esp_timer_get_time());
+    s_ecg_epoch++;
 }
 
 static uint32_t s_ecg_generation; /* successful configurations since boot */
@@ -737,13 +823,86 @@ static void ecg_give_up(const char *what, int err)
 {
     ESP_LOGE(TAG, "MAX30001 %s failed (%d): no ECG packets", what, err);
     afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_CHIP, false, s_ecg_generation, NULL, 0);
-    max30001_write(&s_ecg_bus, MAX30001_EN_INT, 0); /* best effort: quiet INTB */
+    /* Best effort: quiet both interrupt outputs (INT2B may drive SAMP). */
+    max30001_write(&s_ecg_bus, MAX30001_EN_INT, 0);
+    max30001_write(&s_ecg_bus, MAX30001_EN_INT2, 0);
     max30001_esp_stop();
     /* Suspend rather than delete: an INTB ISR already running on the other
      * core may still notify this task, so its handle must stay valid. */
     for (;;) {
         vTaskSuspend(NULL);
     }
+}
+
+#if BOARD_ECG_PLL_DIAG
+/* Log STATUS and CNFG_GEN raw; once (first start), turn EN_ECG (CNFG_GEN D19)
+ * off and on and count STATUS reads without PLLINT over the next second. True
+ * when every bus access worked and CNFG_GEN reads back as written. */
+static bool ecg_pll_diag(bool toggle)
+{
+    const uint32_t mask = 0xFEFFFFu; /* bits CNFG_GEN defines (drivers/max30001.c) */
+    uint32_t st = 0, gen = 0;
+    bool ok = max30001_read(&s_ecg_bus, MAX30001_STATUS, &st) == 0;
+    ok = ok && max30001_read(&s_ecg_bus, MAX30001_CNFG_GEN, &gen) == 0;
+    ESP_LOGW(TAG, "PLL diag: STATUS 0x%06" PRIx32 ", CNFG_GEN 0x%06" PRIx32
+                  " (written 0x%06" PRIx32 ")", st, gen, s_ecg_regs.cnfg_gen);
+    if (!toggle || !ok) {
+        return ok;
+    }
+    ok = max30001_write(&s_ecg_bus, MAX30001_CNFG_GEN, s_ecg_regs.cnfg_gen & ~(1u << 19)) == 0;
+    vTaskDelay(pdMS_TO_TICKS(20));
+    uint32_t off1 = 0, off2 = 0;
+    max30001_read(&s_ecg_bus, MAX30001_STATUS, &off1);
+    max30001_read(&s_ecg_bus, MAX30001_STATUS, &off2);
+    /* Always write EN_ECG back on, even if turning it off failed. */
+    ok = (max30001_write(&s_ecg_bus, MAX30001_CNFG_GEN, s_ecg_regs.cnfg_gen) == 0) && ok;
+    unsigned clear = 0, reads = 0;
+    for (int ms = 0; ms < 1000; ms += 5) {
+        uint32_t v = 0;
+        if (max30001_read(&s_ecg_bus, MAX30001_STATUS, &v) == 0) {
+            reads++;
+            clear += (v & MAX30001_ST_PLLINT) ? 0u : 1u;
+        }
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
+    gen = 0;
+    ok = (max30001_read(&s_ecg_bus, MAX30001_CNFG_GEN, &gen) == 0) && ok;
+    ok = ok && (gen & mask) == (s_ecg_regs.cnfg_gen & mask);
+    ESP_LOGW(TAG, "PLL diag: EN_ECG off: STATUS 0x%06" PRIx32 ", 0x%06" PRIx32
+                  "; back on: %u of %u STATUS reads without PLLINT in 1 s; CNFG_GEN 0x%06"
+                  PRIx32 "%s", off1, off2, clear, reads, gen, ok ? "" : " (NOT as written)");
+    return ok;
+}
+#endif
+
+/*
+ * max30001_start. The diagnostic build goes on after a PLL timeout and runs
+ * ecg_pll_diag (toggle at the first start, locked or not); a failed diagnostic
+ * or a CNFG_GEN not back as written counts as a read-back error.
+ */
+static max30001_err_t ecg_start_chip(uint32_t *info)
+{
+    max30001_err_t err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, info);
+#if BOARD_ECG_PLL_DIAG
+    if (err == MAX30001_OK || err == MAX30001_ERR_PLL) {
+        if (err == MAX30001_ERR_PLL) {
+            ESP_LOGW(TAG, "MAX30001 PLL not locked after %d ms: going on (BOARD_ECG_PLL_DIAG)",
+                     ECG_PLL_TIMEOUT_MS);
+        }
+        err = ecg_pll_diag(s_ecg_generation == 0) ? MAX30001_OK : MAX30001_ERR_READBACK;
+    }
+#elif BOARD_ECG_PLLINT_COUNT_ONLY
+    if (err == MAX30001_ERR_PLL) {
+        /* With only one interrupt output driving, the PLL usually passes the
+         * lock wait on this board, but PLLINT still comes back about 100-150
+         * times a second; a timeout is not fatal here, the rate check stands in
+         * for it. */
+        ESP_LOGW(TAG, "MAX30001 PLLINT still set after %d ms: going on (%s mode)",
+                 ECG_PLL_TIMEOUT_MS, BOARD_ECG_FIFO_MODE ? "FIFO-anchor" : "SAMP bench");
+        err = MAX30001_OK;
+    }
+#endif
+    return err;
 }
 
 /*
@@ -754,9 +913,10 @@ static void ecg_give_up(const char *what, int err)
 static bool ecg_start_again(ecg_read_t *ecg)
 {
     uint32_t info = 0;
-    max30001_err_t err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+    max30001_err_t err = ecg_start_chip(&info);
     if (err == MAX30001_OK) {
-        err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
+        err = max30001_restart(&s_ecg_bus, &s_ecg_regs,
+                               BOARD_ECG_FIFO_MODE ? NULL : ecg_mapping_start, NULL);
     }
     if (err != MAX30001_OK) {
         ESP_LOGE(TAG, "MAX30001 start failed (%d), retrying", (int)err);
@@ -781,13 +941,43 @@ static void ecg_reader_task(void *arg)
     ESP_ERROR_CHECK(max30001_esp_init(&s_ecg_bus, BOARD_ECG_SPI_HZ,
                                       xTaskGetCurrentTaskHandle()));
     max30001_v1_regs(&s_ecg_regs);
+    if (BOARD_ECG_FIFO_MODE) {
+        /* INT2B disabled (decided 2026-11-22): on the breakout v2 03/24 INTB and
+         * INT2B are shorted on the chip side (bring-up report 9.8), so a SAMP
+         * pulse on INT2B fights the EINT output and trips PLLINT twice per
+         * sample (9.4). The written value goes into 0xD2 as usual. */
+        s_ecg_regs.en_int2 = 0u;
+    }
+#if BOARD_ECG_SAMP_BENCH
+    /* SAMP bench mode (decided 2026-11-23, sync test plan 11.8): INTB and INT2B
+     * are shorted on the chip side (bring-up report 9.6, 9.8), so INTB is off and
+     * INT2B alone drives SAMP. GPIO21 then carries SAMP too: its interrupt is
+     * off and its level is not used; the reader wakes on SAMP edges. */
+    s_ecg_regs.en_int = 0u;
+    ESP_ERROR_CHECK(gpio_intr_disable(BOARD_ECG_INTB_GPIO));
+    s_bench_queue = xQueueCreate(SAMP_BENCH_QUEUE_LEN, sizeof(samp_bench_rec_t));
+    if (s_bench_queue == NULL
+        || xTaskCreate(samp_bench_log_task, "samp_bench", 3072, NULL, 2, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "SAMP bench log task not started");
+        abort();
+    }
+#endif
+#if BOARD_ECG_INT_SHORTED
+    /* The board header already refuses such a build; this catches a later
+     * change of the register image (output type bits D1:D0 of both). */
+    if ((s_ecg_regs.en_int & 3u) && (s_ecg_regs.en_int2 & 3u)) {
+        ESP_LOGE(TAG, "EN_INT 0x%06" PRIx32 " and EN_INT2 0x%06" PRIx32 " both drive the"
+                      " shorted interrupt outputs", s_ecg_regs.en_int, s_ecg_regs.en_int2);
+        abort();
+    }
+#endif
     uint32_t info = 0;
     max30001_err_t err = MAX30001_ERR_BUS;
     for (int i = 0; i < AFE_START_TRIES && err != MAX30001_OK; i++) {
         if (i > 0) {
             vTaskDelay(pdMS_TO_TICKS(AFE_START_RETRY_MS));
         }
-        err = max30001_start(&s_ecg_bus, &s_ecg_regs, ECG_PLL_TIMEOUT_MS, &info);
+        err = ecg_start_chip(&info);
     }
     ESP_LOGI(TAG, "MAX30001 INFO 0x%06" PRIx32 ", start %d", info, (int)err);
     if (err != MAX30001_OK) {
@@ -802,18 +992,26 @@ static void ecg_reader_task(void *arg)
     }
     if (BOARD_SAMP_CAPTURE) {
         ESP_ERROR_CHECK(samp_capture_start(BOARD_ECG_INT2B_GPIO, BOARD_SAMP_RISING_EDGE));
+        samp_capture_jitter_init(ECG_FS_NOMINAL_MHZ); /* interval statistics, report 9.9 */
+#if BOARD_ECG_SAMP_BENCH
+        samp_capture_notify(xTaskGetCurrentTaskHandle(), SAMP_BENCH_EVERY_EDGES);
+#endif
     } else {
         ESP_LOGW(TAG, "no SAMP capture: ECG anchors from FIFO reads only");
     }
     if (!BOARD_SAMP_VERIFIED) {
         ESP_LOGW(TAG, "SAMP alignment not verified: ECG bit 8 off (bring-up section 7)");
     }
-    err = max30001_restart(&s_ecg_bus, &s_ecg_regs, ecg_mapping_start, NULL);
+    err = max30001_restart(&s_ecg_bus, &s_ecg_regs,
+                           BOARD_ECG_FIFO_MODE ? NULL : ecg_mapping_start, NULL);
     if (err != MAX30001_OK) {
         ecg_give_up("SYNCH", (int)err);
     }
     ecg_read_t ecg;
     ecg_read_init(&ecg, false);
+    ecg.pllint_no_remap = BOARD_ECG_PLL_DIAG;
+    ecg.pllint_ignore = BOARD_ECG_PLLINT_COUNT_ONLY;
+    ecg_rate_init(&s_ecg_rate);
     ecg_loop_t loop;
     ecg_loop_init(&loop, esp_timer_get_time());
     for (;;) {
@@ -833,15 +1031,20 @@ static void ecg_reader_task(void *arg)
                 ESP_LOGE(TAG, "MAX30001 %s (%d): starting it again",
                          err != MAX30001_OK ? "check failed" : "silent", (int)err);
                 imu_index_read_failed(&ecg.index);
-                samp_map_error(&s_samp, SAMP_AFE, now);
+                if (!BOARD_ECG_FIFO_MODE) {
+                    samp_map_error(&s_samp, SAMP_AFE, now);
+                }
                 afe_publish(PKT_AFE_MAX30001, PKT_AFE_SOURCE_CHIP, false, s_ecg_generation,
                             NULL, 0);
                 ecg_loop_down(&loop, now);
                 continue;
             }
         }
-        bool synch = samp_map_restart_due(&s_samp, esp_timer_get_time());
-        if (!ecg_loop_read_due(&loop, now, woke, max30001_esp_intb_low(), synch)) {
+        /* FIFO-anchor mode has no SAMP mapping, so no mapping restart (SYNCH). */
+        bool synch = !BOARD_ECG_FIFO_MODE && samp_map_restart_due(&s_samp, esp_timer_get_time());
+        /* SAMP bench mode: GPIO21 carries SAMP, so its level says nothing. */
+        bool intb_low = !BOARD_ECG_SAMP_BENCH && max30001_esp_intb_low();
+        if (!ecg_loop_read_due(&loop, now, woke, intb_low, synch)) {
             continue; /* no edge, INTB high, samples recent, no SYNCH: wait */
         }
         max30001_fifo_t f;
@@ -849,6 +1052,14 @@ static void ecg_reader_task(void *arg)
         bool bus_ok = max30001_read_fifo(&s_ecg_bus, &f) == MAX30001_OK;
         uint64_t t_read = esp_timer_get_time(); /* right after the EOF word, if any */
         bus_ok = bus_ok && max30001_read(&s_ecg_bus, MAX30001_STATUS, &st) == 0;
+        if (bus_ok) {
+            s_ecg_status_reads++;
+            s_ecg_pllint_reads += (st & MAX30001_ST_PLLINT) ? 1u : 0u;
+            s_ecg_dcloff_reads += (st & MAX30001_ST_DCLOFFINT) ? 1u : 0u;
+            for (int b = 0; b < 4; b++) {
+                s_ecg_ldoff_reads[b] += (st >> b) & 1u;
+            }
+        }
         ecg_read_plan_t plan = ecg_read_plan(&ecg, &f, bus_ok, st, t_read,
                                              ECG_FS_NOMINAL_MHZ,
                                              PKT_STATUS_LATENCY_UNMEASURED);
@@ -857,24 +1068,34 @@ static void ecg_reader_task(void *arg)
             plan.mapping_error = true;
             plan.cause = SAMP_AFE;
         }
-        if (plan.mapping_error) {
+        if (plan.mapping_error && !BOARD_ECG_FIFO_MODE) {
             samp_map_error(&s_samp, plan.cause, esp_timer_get_time());
         }
         if (plan.send) {
             imu_chunk_t *c = &plan.chunk;
             uint64_t anchor = t_read;
             int64_t deadline = (int64_t)t_read + SAMP_WAIT_PERIODS * period_us;
-            if (s_samp.state != SAMP_ERROR) {
+            if (!BOARD_ECG_FIFO_MODE && s_samp.state != SAMP_ERROR) {
                 samp_edges_wait(c->first_index + c->count - 1u, deadline);
             }
             int64_t edge_us;
-            if (samp_map_packet(&s_samp, c->first_index, c->count, samp_edges_lookup, NULL,
-                                deadline, esp_timer_get_time(), &edge_us) == SAMP_OK) {
+            if (!BOARD_ECG_FIFO_MODE
+                && samp_map_packet(&s_samp, c->first_index, c->count, samp_edges_lookup, NULL,
+                                   deadline, esp_timer_get_time(), &edge_us) == SAMP_OK) {
                 if (!(c->status & PKT_STATUS_AFE_FIFO_OVERFLOW)) {
                     /* Only drains that ended on EOF have a bounded read time. */
                     int64_t lag = (int64_t)t_read - edge_us;
                     s_ecg_lag_min_us = lag < s_ecg_lag_min_us ? lag : s_ecg_lag_min_us;
                     s_ecg_lag_max_us = lag > s_ecg_lag_max_us ? lag : s_ecg_lag_max_us;
+#if BOARD_ECG_SAMP_BENCH
+                    const samp_bench_rec_t rec = {s_ecg_epoch, c->first_index + c->count - 1u,
+                                                  (int64_t)t_read, edge_us};
+                    if (xQueueSend(s_bench_queue, &rec, 0) == pdTRUE) {
+                        s_bench_logged++;
+                    } else {
+                        s_bench_dropped++;
+                    }
+#endif
                 }
                 if (BOARD_SAMP_VERIFIED) {
                     anchor = (uint64_t)edge_us;
@@ -896,6 +1117,29 @@ static void ecg_reader_task(void *arg)
             }
             enqueue(&p);
             ecg_loop_samples(&loop, (int64_t)t_read);
+            if (BOARD_ECG_PLLINT_COUNT_ONLY) {
+                /* Rate check on reliable anchors only: a drain without EOF (bit 0)
+                 * has an unbounded anchor, and a re-anchored index (bit 5) starts a
+                 * new window. A fault marks the next packet with bits 3 and 5. */
+                if (c->status & (PKT_STATUS_AFE_FIFO_OVERFLOW | PKT_STATUS_INDEX_REANCHORED)) {
+                    ecg_rate_reset(&s_ecg_rate);
+                }
+                if (!(c->status & PKT_STATUS_AFE_FIFO_OVERFLOW)
+                    && ecg_rate_packet(&s_ecg_rate, c->first_index + c->count - 1u,
+                                       (int64_t)t_read, ECG_FS_NOMINAL_MHZ, ECG_RATE_TOL_PPM,
+                                       ECG_RATE_WINDOW_US)) {
+                    ESP_LOGE(TAG, "ECG rate off by %.0f ppm over the 10 s window ending at"
+                                  " sample %" PRIu32 " (generation %" PRIu32
+                                  "): bits 3 and 5 on the next packet",
+                             s_ecg_rate.last_ppm, (uint32_t)(c->first_index + c->count - 1u),
+                             s_ecg_generation);
+                    imu_index_read_failed(&ecg.index);
+                    ecg_rate_reset(&s_ecg_rate);
+                }
+                portENTER_CRITICAL(&s_ecg_rate_mux);
+                s_ecg_rate_pub = s_ecg_rate;
+                portEXIT_CRITICAL(&s_ecg_rate_mux);
+            }
         }
         if (synch) {
             /* After the read: SYNCH clears the FIFO, so it held nothing unsent. */
@@ -1613,13 +1857,15 @@ static void log_stats(void)
      * interval of about two periods. */
     static const char *const STATES[] = {"unmapped", "mapped", "error"};
     const uint32_t *r = s_samp.results;
-    ESP_LOGI(TAG, "SAMP %s: packets bit 8 %" PRIu32 ", FIFO-read %" PRIu32 "; errors: "
-                  "missed/overwritten %" PRIu32 ", extra %" PRIu32 ", edge missing %" PRIu32
-                  ", late %" PRIu32 ", index %" PRIu32 ", FIFO overflow %" PRIu32
-                  ", AFE %" PRIu32 "; restarts %" PRIu32,
-             STATES[s_samp.state], s_samp.packets_samp, s_samp.packets_fifo, r[SAMP_LONG],
-             r[SAMP_SHORT], r[SAMP_EDGE_MISSING], r[SAMP_LATE], r[SAMP_INDEX],
-             r[SAMP_OVERFLOW], r[SAMP_AFE], s_samp.remaps);
+    if (!BOARD_ECG_FIFO_MODE) { /* FIFO-anchor mode has no SAMP mapping */
+        ESP_LOGI(TAG, "SAMP %s: packets bit 8 %" PRIu32 ", FIFO-read %" PRIu32 "; errors: "
+                      "missed/overwritten %" PRIu32 ", extra %" PRIu32 ", edge missing %"
+                      PRIu32 ", late %" PRIu32 ", index %" PRIu32 ", FIFO overflow %" PRIu32
+                      ", AFE %" PRIu32 "; restarts %" PRIu32,
+                 STATES[s_samp.state], s_samp.packets_samp, s_samp.packets_fifo,
+                 r[SAMP_LONG], r[SAMP_SHORT], r[SAMP_EDGE_MISSING], r[SAMP_LATE],
+                 r[SAMP_INDEX], r[SAMP_OVERFLOW], r[SAMP_AFE], s_samp.remaps);
+    }
 #if BOARD_ECG_REAL
     if (s_ecg_lag_min_us <= s_ecg_lag_max_us) {
         /* Bring-up check of the SAMP alignment (V0.2 section 7.2): with the right
@@ -1628,12 +1874,50 @@ static void log_stats(void)
                       " us%s", s_ecg_lag_min_us, s_ecg_lag_max_us,
                  BOARD_SAMP_VERIFIED ? "" : " (bit 8 off until verified)");
     }
+    ESP_LOGI(TAG, "ECG STATUS reads after FIFO reads %" PRIu32 ", with PLLINT %" PRIu32,
+             s_ecg_status_reads,
+             s_ecg_pllint_reads);
+    ESP_LOGI(TAG, "ECG STATUS reads with DCLOFFINT %" PRIu32 "; LDOFF_PH %" PRIu32
+                  ", LDOFF_PL %" PRIu32 ", LDOFF_NH %" PRIu32 ", LDOFF_NL %" PRIu32,
+             s_ecg_dcloff_reads, s_ecg_ldoff_reads[3], s_ecg_ldoff_reads[2],
+             s_ecg_ldoff_reads[1], s_ecg_ldoff_reads[0]);
+    if (BOARD_ECG_PLLINT_COUNT_ONLY) {
+        portENTER_CRITICAL(&s_ecg_rate_mux);
+        ecg_rate_t rate = s_ecg_rate_pub;
+        portEXIT_CRITICAL(&s_ecg_rate_mux);
+        ESP_LOGI(TAG, "ECG rate check: windows %" PRIu32 ", faults %" PRIu32
+                      ", last %+.1f ppm", rate.windows, rate.faults, rate.last_ppm);
+    }
+#if BOARD_ECG_SAMP_BENCH
+    ESP_LOGI(TAG, "SAMP bench: epoch %" PRIu32 ", SB lines queued %" PRIu32 ", dropped %" PRIu32,
+             s_ecg_epoch, s_bench_logged, s_bench_dropped);
+#endif
 #endif
     if (BOARD_SAMP_CAPTURE) {
         samp_capture_stats_t c = samp_capture_stats();
         ESP_LOGI(TAG, "SAMP clock pairs %" PRIu32 ", rejected %" PRIu32 ", max error %" PRId64
                       " ns, conversions refused (no fresh pair) %" PRIu32,
                  c.pairs, c.pairs_rejected, c.max_error_ns, c.stale);
+        uint32_t hz = 0;
+        samp_jitter_stats_t j = samp_capture_jitter(&hz);
+        if (j.n > 0 && hz > 0) {
+            /* Interval minus nominal period (bring-up report 9.9), since boot. */
+            const double ns = 1e9 / hz;
+            const double mean = (double)j.sum_dev / j.n;
+            const double var = (double)j.sum_sq / j.n - mean * mean;
+            ESP_LOGI(TAG, "SAMP intervals %" PRIu32 ", gaps %" PRIu32 ", dev min %.1f max %.1f"
+                          " mean %.2f SD %.2f ns; |dev| <=0.125/0.5/1/5/20/100/more us: %" PRIu32
+                          " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32,
+                     j.n, j.gaps, j.min_dev * ns, j.max_dev * ns, mean * ns,
+                     var > 0 ? sqrt(var) * ns : 0.0, j.bins[0], j.bins[1], j.bins[2], j.bins[3],
+                     j.bins[4], j.bins[5], j.bins[6]);
+            ESP_LOGI(TAG, "SAMP 16-period sums %" PRIu32 ", dev min %.1f max %.1f ns;"
+                          " 256-period sums %" PRIu32 ", dev min %.1f max %.1f ns",
+                     j.span_n[0], j.span_n[0] ? j.span_min[0] * ns : 0.0,
+                     j.span_n[0] ? j.span_max[0] * ns : 0.0, j.span_n[1],
+                     j.span_n[1] ? j.span_min[1] * ns : 0.0,
+                     j.span_n[1] ? j.span_max[1] * ns : 0.0);
+        }
     }
 }
 

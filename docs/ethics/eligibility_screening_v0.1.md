@@ -21,8 +21,12 @@
 > - 2026-10-31, sau vòng thảo luận thứ hai: câu hỏi L2 và bản thông tin chép đúng "hệ
 >   thần kinh giao cảm" (bản trước viết "thần kinh", rộng hơn tiêu chí); lý do L2 không gọi PAT là
 >   "thời gian truyền mạch"; khuyên đi khám để được đo lại khi chênh hai tay.
-> - Đề xuất của nhóm, cần thầy/bác sĩ xác nhận: độ tuổi 18–35, L7, L8, ngưỡng chênh hai tay
->   10 mmHg, giới tính.
+> - Đề xuất của nhóm, cần thầy/bác sĩ xác nhận: L7, L8, ngưỡng chênh hai tay 10 mmHg, giới tính.
+>   Độ tuổi 18–35 giữ nguyên (chốt 2026-11-19, đã cân nhắc nới lên 18–50 và không làm: người trên
+>   35 tuổi chỉ là số ít trong nguồn tuyển, không đủ để phân tích theo tuổi mà thêm khác biệt về độ
+>   cứng động mạch).
+> - 2026-11-21: tiêu chí chọn số 4 và quy tắc hoãn buổi sửa theo lịch 2 buổi, buổi 2 cách buổi 1
+>   từ 7 ngày tới 4 tuần (chốt 2026-11-19); "buổi 2–3" đổi thành "buổi 2".
 > - Câu hỏi còn mở, không thuộc bản nộp: việc đo thử trên chính thành viên nhóm (G2) có cần phê
 >   duyệt hay không (câu hỏi gửi thầy ở báo cáo Tuần 5 và
 >   [đề xuất Tuần 7](../meetings/week_07_de_xuat_sua_protocol_va_ho_so.md) mục 2.6). Cho tới khi
@@ -41,8 +45,8 @@ buổi đo.
    đồng nhất và giảm rủi ro chung khi làm nghiệm pháp.
 2. Tự nguyện ký phiếu đồng thuận sau khi đã nhận bản thông tin được ít nhất 24 giờ.
 3. Tự khai không có bệnh tim mạch đã được chẩn đoán.
-4. Có thể ngồi yên trong buổi đo dài tối đa 120 phút, và tham gia ít nhất 2, tối đa 3 buổi đo trong
-   4 tuần.
+4. Có thể ngồi yên trong buổi đo dài tối đa 120 phút, và tham gia 2 buổi đo, buổi 2 cách buổi 1
+   từ 7 ngày tới 4 tuần.
 
 ## 2. Tiêu chuẩn loại trừ
 
@@ -66,10 +70,11 @@ giải thích chi tiết.
 Nếu chu vi bắp tay phải nằm ngoài các cỡ vòng bít của máy đo thì không đo được; khi đó người tham
 gia không đủ điều kiện về kỹ thuật (cỡ vòng bít: [theo model máy đo đã chọn]).
 
-**Hoãn buổi và dừng tham gia.** Buổi bị hoãn vì L5 hay L9 được hẹn lại; ở buổi 2–3, buổi hẹn lại
-vẫn phải nằm trong 4 tuần kể từ buổi 1. Nếu ở buổi 2–3 người tham gia trả lời "có" ở một tiêu chí
-L1–L4 hoặc L6–L8 mà ở buổi trước là "không", người đó dừng tham gia từ buổi này; dữ liệu đã thu
-được xử lý theo mục 9 của bản thông tin.
+**Hoãn buổi và dừng tham gia.** Buổi bị hoãn vì L5 hay L9 được hẹn lại; ở buổi 2, buổi hẹn lại
+vẫn phải cách buổi 1 ít nhất 7 ngày và nằm trong 4 tuần kể từ buổi 1, và không muộn hơn ngày
+14/05/2027. Nếu ở buổi 2 người tham gia trả lời "có" ở một tiêu chí L1–L4 hoặc L6–L8 mà ở buổi 1
+là "không", người đó dừng tham gia từ buổi này; dữ liệu đã thu được xử lý theo mục 9 của bản thông
+tin.
 
 ## 3. Đo huyết áp hai tay ở buổi 1
 

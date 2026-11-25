@@ -38,6 +38,16 @@ int main(void)
             scanf("%d", &restarted);
             ecg_read_init(&r, restarted != 0);
             printf("ok\n");
+        } else if (cmd[0] == 'P') {
+            int on = 0;
+            scanf("%d", &on);
+            r.pllint_no_remap = on != 0;
+            printf("ok\n");
+        } else if (cmd[0] == 'Q') {
+            int on = 0;
+            scanf("%d", &on);
+            r.pllint_ignore = on != 0;
+            printf("ok\n");
         } else if (cmd[0] == 'R') {
             unsigned samples, eof, empty, overflow, bad, bus_ok, status;
             unsigned long long t;
@@ -133,6 +143,39 @@ def test_lead_off_and_pll_flags_survive_an_empty_read(ecg):
     flagged = ecg.read(16, 1_031_250)
     assert flagged["status"] == BIT4 | BIT2 | BIT3 and flagged["first"] == 16
     assert ecg.read(16, 1_062_500)["status"] == BIT4  # sent once, then cleared
+
+
+def test_pll_diag_keeps_bit3_but_not_the_mapping_error(ecg):
+    # Diagnostic build (BOARD_ECG_PLL_DIAG): a PLLINT stuck at 1 is still reported
+    # on every packet (bit 3), but alone it no longer breaks the SAMP mapping.
+    ecg("P 1")
+    ecg.read(16, 1_000_000)
+    stuck = ecg.read(16, 1_031_250, status=PLLINT)
+    assert stuck["send"] == 1 and stuck["status"] == BIT4 | BIT3
+    assert (stuck["error"], stuck["cause"]) == (0, -1)
+    assert stuck["first"] == 16
+    lead = ecg.read(16, 1_062_500, status=PLLINT | DCLOFFINT)
+    assert lead["error"] == 0 and lead["status"] == BIT4 | BIT3 | BIT2
+    # The setting survives a restart, and other causes still break the mapping.
+    ecg("I 1")
+    again = ecg.read(16, 1_093_750, status=PLLINT)
+    assert (again["first"], again["error"]) == (0, 0)
+    assert again["status"] == BIT4 | BIT3 | BIT5
+    over = ecg.read(16, 1_125_000, status=PLLINT | EOVF)
+    assert (over["error"], over["cause"]) == (1, OVERFLOW_CAUSE)
+
+
+def test_fifo_mode_ignores_pllint_but_not_other_flags(ecg):
+    # BOARD_ECG_FIFO_MODE (sync test plan 11.3): PLLINT, always set on this board,
+    # is only counted; lead-off and overflow keep their meaning.
+    ecg("Q 1")
+    ecg.read(16, 1_000_000)
+    stuck = ecg.read(16, 1_031_250, status=PLLINT)
+    assert stuck["status"] == BIT4 and (stuck["error"], stuck["cause"]) == (0, -1)
+    lead = ecg.read(16, 1_062_500, status=PLLINT | DCLOFFINT)
+    assert lead["status"] == BIT4 | BIT2 and lead["error"] == 0
+    over = ecg.read(16, 1_093_750, status=PLLINT | EOVF)
+    assert (over["error"], over["cause"]) == (1, OVERFLOW_CAUSE)
 
 
 @pytest.mark.parametrize("how", ["tag", "eovf"])

@@ -105,11 +105,25 @@ thật mà chạy trên bo Waveshare đứng riêng thì chip đó khởi độn
 | `esp32s3_devkitc_imu_stall` | giả / giả / giả | `FAKE_IMU_STALLS=1` | Bring-up mục 2 bước 6: IMU cố ý dừng đọc (bit 7, FIFO đầy, neo lại) |
 | `esp32s3_devkitc_samp_faults` | giả / giả / giả | `FAKE_SAMP_FAULTS=1` | Bring-up mục 2 bước 6: xung `SAMP` giả mất và thừa |
 | `esp32s3_devkitc_ppg_delay` | giả / giả / giả | `FAKE_PPG_DELAY=1` | Bring-up mục 2 bước 6: PPG đọc trễ, N > 8 |
-| `esp32s3_devkitc_ecg_real` | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_SAMP_CAPTURE=1` | Bring-up mục 7: breakout ECG trên bo đế. Bit 8 tắt (`BOARD_SAMP_VERIFIED` mặc định 0); chỉ thêm `-DBOARD_SAMP_VERIFIED=1` sau khi kiểm xong mục 7 bước 4 |
+| `esp32s3_devkitc_ecg_real` | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_SAMP_CAPTURE=1` | Bring-up mục 7: breakout ECG trên bo đế. Bit 8 tắt (`BOARD_SAMP_VERIFIED` mặc định 0); chỉ thêm `-DBOARD_SAMP_VERIFIED=1` sau khi kiểm xong mục 7 bước 4. **Breakout v2 `03/24`: không build mặc định từ 2026-11-24** (cần `-DBOARD_ECG_INT_SHORTED=0`, xem dưới bảng) |
+| `esp32s3_devkitc_ecg_pll_diag` (thêm 2026-11-21, chỉ chẩn đoán) | MAX30001 / giả / giả | như `ecg_real`, thêm `BOARD_ECG_PLL_DIAG=1` | Breakout v2 `03/24` có `PLLINT` luôn bật (mục "Driver MAX30001"). Chạy tiếp sau timeout PLL, in `STATUS` và `CNFG_GEN`, tắt rồi bật `EN_ECG` một lần, giữ bit 3 khi có `PLLINT` nhưng không khởi động lại ánh xạ `SAMP` chỉ vì `PLLINT`. Bit 8 tắt (`#error` nếu bật cùng `BOARD_SAMP_VERIFIED`). Không dùng cho bản ghi nghiên cứu. **Breakout v2 `03/24`: không build mặc định từ 2026-11-24** (cần `-DBOARD_ECG_INT_SHORTED=0`, xem dưới bảng) |
+| `esp32s3_devkitc_ecg_fifo` (thêm 2026-11-21) | MAX30001 / giả / giả | `BOARD_ECG_REAL=1`, `BOARD_ECG_FIFO_MODE=1` | Chế độ mốc FIFO ([kế hoạch đo đồng bộ](../hardware/test_reports/sync_10min_test_plan.md) mục 11): bit 8 tắt, không capture hay ánh xạ `SAMP`, INT2B tắt (`EN_INT2 = 0`, từ 2026-11-22), không `SYNCH` định kỳ, `PLLINT` chỉ đếm, kiểm tốc độ 10 s (± 1 000 ppm) bật bit 3 và 5 khi lệch. Thử trên bàn A3, A10 với bo đế |
+| `esp32s3_devkitc_ecg_samp_bench` (thêm 2026-11-23, công cụ đo trên bàn) | MAX30001 / giả / giả | như `ecg_real`, thêm `BOARD_SAMP_VERIFIED=0`, `BOARD_ECG_SAMP_BENCH=1` | Chế độ `SAMP` trên bàn ([kế hoạch đo đồng bộ](../hardware/test_reports/sync_10min_test_plan.md) mục 11.8): INTB tắt (`EN_INT = 0`), INT2B = `SAMP`, không dùng ngắt hay mức GPIO21, đọc FIFO sau mỗi 16 cạnh `SAMP` (dự phòng 40 ms), `PLLINT` chỉ đếm, kiểm tốc độ 10 s, ánh xạ `SAMP` chạy nhưng bit 8 tắt (`#error` nếu bật cùng `BOARD_SAMP_VERIFIED`, `BOARD_ECG_FIFO_MODE` hay `BOARD_ECG_PLL_DIAG`). Mỗi packet nhận ánh xạ in một dòng UART0 `SB <epoch> <k> <t_EOF> <t_SAMP>`. Không dùng cho bản ghi tính PAT |
+| `esp32s3_devkitc_all_real_fifo` (thêm 2026-11-21) | MAX30001 / MAX30101 / BMI270 | như `all_real` nhưng `BOARD_ECG_FIFO_MODE=1`, không `BOARD_SAMP_CAPTURE` | Bản nghiên cứu cho breakout v2 `03/24`; chỉ dùng trên người sau khi mục 11.2 của kế hoạch đo đồng bộ đạt |
+| `esp32s3_devkitc_sync_fifo` (thêm 2026-11-21) | MAX30001 / MAX30101 / BMI270 | như `all_real_fifo`, thêm `BOARD_STIM=1` | Phép đo đồng bộ ở chế độ FIFO; chỉ khác bản nghiên cứu ở `BOARD_STIM`, ghi ELF SHA-256 của cả hai |
 | `esp32s3_devkitc_ppg_real` | giả / MAX30101 / giả | `BOARD_PPG_REAL=1` | Bring-up mục 8 bước 4, 6, 10: MAX30101 qua cáp |
 | `esp32s3_devkitc_imu_real` | giả / giả / BMI270 | `BOARD_IMU_REAL=1` | Bring-up mục 8 bước 5: BMI270 qua cáp, dấu trục |
-| `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 120 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO |
-| `esp32s3_devkitc_sync10` | MAX30001 / MAX30101 / BMI270 | như `all_real` nhưng `BOARD_SAMP_VERIFIED=1`, thêm `BOARD_STIM=1` | Chỉ phép đo đồng bộ 10 phút, **sau** khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xung đầu tiên khớp mẫu đầu FIFO, và sau khi đã chốt độ rộng xung LED |
+| `esp32s3_devkitc_all_real` (thêm 2026-10-29) | MAX30001 / MAX30101 / BMI270 | ba cờ chip thật, `BOARD_SAMP_CAPTURE=1`, `BOARD_SAMP_VERIFIED=0`; không `BOARD_STIM`, không cờ tạo lỗi | Bring-up mục 8 bước 8 (nguồn và tín hiệu khi cả hệ chạy) và bước 9 (chạy 120 phút). Bit 8 tắt: ánh xạ `SAMP` chạy và in log nhưng packet ECG dùng mốc đọc FIFO. **Breakout v2 `03/24`: không build mặc định từ 2026-11-24** (cần `-DBOARD_ECG_INT_SHORTED=0`, xem dưới bảng) |
+| `esp32s3_devkitc_sync10` | MAX30001 / MAX30101 / BMI270 | như `all_real` nhưng `BOARD_SAMP_VERIFIED=1`, thêm `BOARD_STIM=1` | Chỉ phép đo đồng bộ 10 phút, **sau** khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xung đầu tiên khớp mẫu đầu FIFO, và sau khi đã chốt độ rộng xung LED. **Breakout v2 `03/24`: không build mặc định từ 2026-11-24** (cần `-DBOARD_ECG_INT_SHORTED=0`, xem dưới bảng) |
+
+**Hai đầu ra ngắt nối chung (2026-11-24, [báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md)
+mục 9.8).** Trên breakout v2 `03/24`, INTB và INT2B của MAX30001 nối chung ở phía chip của bộ
+dịch mức, nên chỉ được bật một đầu ra. `boards/board_v1_module.h` có `BOARD_ECG_INT_SHORTED`
+(mặc định 1, chỉ nhận 0 hoặc 1): khi bằng 1, bản có MAX30001 thật chỉ build ở chế độ mốc FIFO
+(INT2B tắt) hoặc `SAMP` trên bàn (INTB tắt); bốn env bật cả hai đầu ra (`ecg_real`,
+`ecg_pll_diag`, `all_real`, `sync10`) dừng ở `#error`. Chỉ truyền
+`-DBOARD_ECG_INT_SHORTED=0` (qua `PLATFORMIO_BUILD_FLAGS`, như dưới đây) với một breakout đã kiểm
+hai chân ngắt riêng. `app/main.c` còn `abort()` nếu ảnh thanh ghi bật cả hai đầu ra khi cờ bằng 1.
 
 **Giá trị đo ở bring-up truyền lúc build, không sửa `platformio.ini`.** Hai giá trị
 chưa chốt: cực tính cạnh `SAMP` (`BOARD_SAMP_RISING_EDGE`, 0 cạnh xuống là mặc định,
@@ -122,6 +136,9 @@ $env:PLATFORMIO_BUILD_FLAGS = "-DBOARD_SAMP_RISING_EDGE=1 -DBOARD_PPG_LED_PW_US=
 pio run -d firmware -e esp32s3_devkitc_sync10
 Remove-Item Env:PLATFORMIO_BUILD_FLAGS   # để bản build sau không mang cờ cũ
 ```
+
+Với breakout v2 `03/24`, `sync10` không build (hai đầu ra nối chung); phép đo đồng bộ dùng
+`esp32s3_devkitc_sync_fifo` với cùng cách truyền `BOARD_PPG_LED_PW_US`.
 
 - Đã kiểm 2026-10-29 với PlatformIO 6.1.19, build `esp32s3_devkitc_all_real` vào một
   thư mục build riêng (`PLATFORMIO_BUILD_DIR`): với
@@ -326,10 +343,16 @@ khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận c�
   thêm 2026-11-11). Phần GPIO và
   `esp_timer` trong `main.c` chỉ kiểm bằng build.
 
-## Kiểm tra khi có bo (chưa làm)
+## Kiểm tra khi có bo (bước 1–4 và 6 đạt 2026-11-20; bước 5 chờ bo đế)
 
 Đây là phần firmware của
-[trình tự bring-up](../hardware/test_reports/v1_bringup_procedure.md) mục 2.
+[trình tự bring-up](../hardware/test_reports/v1_bringup_procedure.md) mục 2. Kết quả ở
+[báo cáo 2026-11-20](../hardware/test_reports/2026-11-20_v1_bringup.md).
+
+Build sạch (`pio run -d firmware -e <env> -t clean`) trước khi nạp một bản dùng để ghi số
+liệu. Build tăng dần trên `.pio/build` cũ có thể giữ phiên bản ứng dụng cũ trong image: ngày
+2026-11-20 các env tạo lỗi nạp ra `4ee3e6d-dirty` dù commit là `d588222`, và logger báo
+`firmware_metadata_mismatch`.
 
 1. Nạp, mở UART0: thấy `packet self-test passed` và `SESSION_ID`.
 2. Ghi cổng USB native trong 10 phút chạy không tải bằng logger:
@@ -346,7 +369,9 @@ khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận c�
    Bản mặc định: mọi packet ECG có bit 8, logger không báo gì về `SAMP`. Bản
    `esp32s3_devkitc_samp_faults`: mỗi lỗi giả cho khoảng 32 packet ECG không bit 8 rồi
    một lần neo lại (bit 5), không có `timestamp_anomaly` hay
-   `samp_resumed_without_reanchor`. Bản `esp32s3_devkitc_ppg_delay`: mỗi 10 s một
+   `samp_resumed_without_reanchor`. Số packet không bit 8 tăng dần qua các lỗi (đo
+   2026-11-20: 34, 35, 36, …): lỗi giả cách đúng 10 s, bằng `SAMP_REMAP_MIN_GAP_US`, nên mỗi
+   lần khởi động lại ánh xạ trễ thêm khoảng 30 ms so với lần trước. Bản `esp32s3_devkitc_ppg_delay`: mỗi 10 s một
    packet PPG mỗi khe có khoảng 10 mẫu, logger không báo gì.
 5. Bấm t0 vài lần: có packet `0xC1` tương ứng.
 6. Lệnh từ PC (bring-up mục 2 bước 7): ghi với `--commands`, gửi `ping`,
@@ -356,7 +381,69 @@ khi bring-up mục 7 bước 4 đã kiểm cực tính `SAMP` và xác nhận c�
    quả 8 (`out_of_range`) cho mã 128, kể cả với PPG giả (kiểm trần đứng trước kiểm
    chip).
 
-## Driver MAX30001 (2026-10-25, chưa chạy trên chip)
+## Driver MAX30001 (2026-10-25; chạy trên chip từ 2026-11-20)
+
+**Kết quả trên breakout v2 `03/24` (2026-11-20/21,
+[báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9).** SPI, `INFO`
+(`0x5210b4`) và đọc lại 8 thanh ghi đạt; `CNFG_GEN` đọc lại `0x081244`. `PLLINT` (`STATUS` D8)
+bật ở mọi lần đọc khi ECG bật, tắt khi `EN_ECG = 0`, nên `max30001_start` báo `ERR_PLL` và bản
+`ecg_real` không có ECG. Khi bỏ qua timeout, chip vẫn lấy mẫu: 512,0015 sps theo `esp_timer`
+(+3 ppm, sáu đoạn 10 s) khi chân 6 để hở; nguồn clock (nhiều khả năng oscillator trên
+breakout) chưa xác nhận bằng đo trực tiếp hay schematic v2. Chưa rõ
+nguyên nhân; chưa có schematic v2 và trang datasheet về `PLLINT`. Chốt 2026-11-21 sau phản
+biện độc lập: bản nghiên cứu giữ `ERR_PLL`; bản `esp32s3_devkitc_ecg_pll_diag` chỉ để chẩn đoán
+và làm tiếp mục 7. Với bản này, ánh xạ `SAMP` vẫn báo `edge missing` ngay sau mỗi lần khởi
+động lại. Đếm cạnh bằng PCNT (bản tạm, 2026-11-21): GPIO21 và GPIO47 đều 32 cạnh lên và 32 cạnh
+xuống mỗi giây, cả khi `SAMP` gán cho INT2B lẫn khi đổi sang INTB; không có xung `SAMP` 512/s ở
+chân nào. **Với breakout này, mốc `SAMP` (bit 8) không dùng được**; packet ECG chỉ có mốc đọc
+FIFO. Đã chốt 2026-11-21: dùng mốc đọc FIFO, chỉ kiểm ΔPAT giữa các phiên
+([kế hoạch đo đồng bộ](../hardware/test_reports/sync_10min_test_plan.md) mục 11). Chế độ FIFO cài
+ngày 2026-11-21 (`BOARD_ECG_FIFO_MODE`, `app/ecg_rate.c`, ba env `*_fifo`); chạy thử trên bàn
+190 s với `ecg_fifo`: một chuỗi, `PLLINT` ở 6 366/6 366 lần đọc, kiểm tốc độ 19 cửa sổ 0 lỗi
+(tốc độ nhanh hơn danh định khoảng 3 ppm; log lúc đó in −3,6 ppm vì công thức cũ ngược dấu, đã
+sửa sau rà soát), A10 chấm 5 763 packet, 0 cờ, phần dư lớn nhất 138 µs. Đây là pilot, chưa phải
+nghiệm thu mục 11.2.
+
+**Sửa 2026-11-23 ([báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md) mục
+9.6):** hai header `INT1`, `INT2` của breakout v2 luôn cùng mức (mức cao thắng). `SAMP` tới cả
+GPIO21 lẫn GPIO47 khi chỉ một đầu ra ngắt của chip đẩy, hoặc cả hai cùng chọn `SAMP`; cấu hình
+INTB = EINT cùng INT2B = `SAMP` che mất nó, và chính hai đầu ra đẩy ngược mức gây phần `PLLINT`
+theo nhịp mẫu. Mốc FIFO vẫn là mốc chính; `SAMP` dùng qua env `esp32s3_devkitc_ecg_samp_bench`
+(bảng "Bản build"), quy tắc đổi mốc ở kế hoạch đo đồng bộ mục 11.8. Cặp đồng hồ của
+`drivers/samp_capture.c` thử tới bốn lần mỗi 100 ms: trên bàn, phần lớn lần thử đầu bị loại vì
+quá 2 µs (nhiều khả năng do cache miss), khiến không có cặp còn mới và ánh xạ báo thiếu cạnh. Một
+lần thử không nhận được soft catch thì dừng chu kỳ đó, để callback đến muộn không bị ghép với lần
+thử sau (sửa sau rà soát độc lập). Ở chế độ `SAMP` trên bàn, mỗi lần bắt đầu ánh xạ (`SYNCH`) đếm lại
+16 cạnh và bỏ lần đánh thức còn sót của epoch cũ; `#error` nếu build cùng `BOARD_SAMP_RISING_EDGE=1`
+(`SAMP` tích cực thấp, cạnh bật là cạnh xuống).
+
+**Sửa 2026-11-24 ([báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md) mục
+9.8):** "mức cao thắng" là do INTB và INT2B nối chung ở phía chip của TXB0108 (đo thông mạch;
+firmware dò cho số đợt `PLLINT` giảm theo số xung `SAMP` khi hai đầu ra đẩy ngược). `max30001_start`
+ghi `EN_INT = 0` và `EN_INT2 = 0` ngay sau `SW_RST`, trước bảng cấu hình, để không lúc nào một đầu ra
+đẩy khi đầu kia còn giá trị reset; khi bỏ cuộc, `app/main.c` tắt cả hai đầu ra.
+
+**Thống kê khoảng cạnh `SAMP` (2026-11-24, [báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md)
+mục 9.9).** Ở mọi bản có `BOARD_SAMP_CAPTURE=1`, callback capture đưa từng cạnh vào
+`include/samp_jitter.h` (chỉ số nguyên, test host `tests/test_firmware_samp_jitter.py`): khoảng giữa hai
+cạnh liền nhau trừ chu kỳ danh định (156 250 tick 80 MHz cho 1/512 s), nhỏ nhất, lớn nhất, trung bình,
+SD, bảy ô theo \|lệch\| (≤ 0,125 / 0,5 / 1 / 5 / 20 / 100 µs, hơn nữa), và tổng 16 và 256 khoảng
+liền nhau trừ 16 hay 256 chu kỳ. Khoảng lệch quá nửa chu kỳ (mất hay thừa cạnh) tính là gap và bắt
+đầu chuỗi mới; mỗi lần bắt đầu ánh xạ (`SYNCH`) cũng bắt đầu chuỗi mới. UART0 in hai dòng
+`SAMP intervals …` và `SAMP 16-period sums …` mỗi 10 s, cộng dồn từ lúc khởi động.
+
+**INT2B tắt ở chế độ mốc FIFO (chốt 2026-11-22,
+[báo cáo bring-up](../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9.4).** Dò `STATUS`
+khoảng 30 µs một lần cho thấy `PLLINT` bật hai đợt mỗi mẫu, khớp với hai sườn của xung `SAMP` ở
+INT2B; PLL vẫn tạo đúng tần số (`FMSTR = 01` cho đúng 500 sps theo tỉ lệ 125/128). Với
+`EN_INT2 = 0x000000` số đợt giảm khoảng 90 % và chip qua bước chờ PLL, nên khi
+`BOARD_ECG_FIFO_MODE=1`, `app/main.c` ghi `EN_INT2 = 0` sau `max30001_v1_regs` (giá trị này đi
+vào `0xD2`). Còn khoảng 100–150 đợt mỗi giây chưa rõ nguyên nhân; timeout PLL ở chế độ này vẫn
+không gây lỗi. Các bản dùng `SAMP` (`ecg_real`, `all_real`, `sync10`, `ecg_pll_diag`) giữ
+`EN_INT2 = 0x000201` (từ 2026-11-24 không build với breakout v2, xem trên). Dò thêm từng thanh ghi (lead-off, fast recovery, INTB, cách ly đầu vào,
+bias, nguồn và bộ đẩy của INT2B; báo cáo mục 9.4): phần theo nhịp mẫu chỉ xuất hiện khi chân
+INT2B đổi mức; phần ngẫu nhiên còn lại không đổi theo thanh ghi nào, chờ phép đo đồng bộ để biết
+có ảnh hưởng tới ΔPAT hay không.
 
 Bật bằng `pio run -d firmware -e esp32s3_devkitc_ecg_real` (`BOARD_ECG_REAL=1`,
 `BOARD_SAMP_CAPTURE=1`); PPG và IMU vẫn là nguồn giả. Dùng ở bring-up mục 7, khi
@@ -367,6 +454,9 @@ breakout đã cắm vào bo đế.
   2026-10-23 tới 2026-10-25):
   - 512 sps (`FMSTR 00`); gain 20 V/V; `ECG_DLPF` 40,96 Hz; tắt `ECG_DHPF`;
   - lead-off DC 10 nA, VMID ± 400 mV; fast recovery tự động; tắt lead bias nội;
+    ngưỡng đổi được khi build bằng `-DBOARD_ECG_DCLOFF_VTH=0..3` (±300/400/450/500 mV),
+    chỉ để kiểm ngưỡng trên bàn, mọi bản ghi giữ 1; UART0 in mỗi 10 s số lần đọc STATUS có
+    `DCLOFFINT` và từng bit `LDOFF_PH/PL/NH/NL` (thêm 2026-11-22);
   - BioZ, PACE và bộ dò R của chip đều tắt;
   - INTB = `EINT` (`EFIT = 15`), INT2B = `SAMP` mỗi mẫu, tự xóa; cả hai ra CMOS.
 

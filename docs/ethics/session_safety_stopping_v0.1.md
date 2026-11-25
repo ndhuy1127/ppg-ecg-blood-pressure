@@ -30,6 +30,17 @@
 >   gọi 115; không triệu chứng thì gọi đầu mối y tế trong buổi; ≥ 140/90 thì khuyên đi khám. Danh
 >   sách triệu chứng ở ý (d) là đề xuất, chưa có nguồn; ESC 2024 yêu cầu đánh giá khả năng cấp cứu
 >   tăng huyết áp khi BP ≥ 180/110 [số trang]. Bộ Word ngày 2026-10-31 phải dựng lại theo file này.
+> - 2026-11-19 (không sửa module): mục 2 thay việc cắt đầu nối Qwiic bằng giá đỡ che đầu nối và đèn
+>   báo, thêm dòng kiểm đầu chuyển điện cực có điện trở giới hạn dòng
+>   ([custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) A.1–A.3).
+> - 2026-11-21: mục 9 viết lại theo
+>   [kế hoạch đo dòng rò và thử nhiệt](../../hardware/test_reports/leakage_thermal_test_plan_v1.md)
+>   (phương pháp, ánh xạ phép đo và quy tắc đạt duyệt 2026-11-14; đầu chuyển thêm 2026-11-19): ba
+>   điện cực và mặt bo cổ tay là một bộ phận ứng dụng, đo dòng rò bệnh nhân với mọi đầu nối nối
+>   chung, dòng phụ theo từng cặp và theo một-với-phần-còn-lại, đo với đúng đầu chuyển và cáp, bảng
+>   phân tích lỗi đơn của đầu chuyển; thử nhiệt với giá đỡ thật. Mục 1 thêm 2 người trực được tuyển
+>   thêm (chốt 2026-11-19); mục 2 thêm điều kiện bảng phân tích lỗi đơn đã được duyệt. Giới hạn số
+>   vẫn chưa đối chiếu nguyên văn IEC 60601-1.
 > - Nguồn của hai ngưỡng huyết áp **chưa đọc nguyên văn**: phải đọc và ghi số trang trước khi
 >   nộp. Europe PMC không có toàn văn; theo OpenAlex (tra 2026-10-29), hướng dẫn ESH 2023
 >   ([10.1097/HJH.0000000000003480](https://doi.org/10.1097/HJH.0000000000003480)) có bản ở kho
@@ -47,7 +58,9 @@ không tư vấn y khoa**; các quyết định dưới đây là quy tắc an t
 - Mỗi buổi đo có ít nhất hai thành viên nhóm đã được huấn luyện theo quy trình này: một người vận
   hành thiết bị và máy đo huyết áp, một người theo dõi người tham gia và ghi chép.
 - Ít nhất một người có mặt đã học sơ cứu cơ bản: [họ tên, chứng nhận sơ cứu].
-- Danh sách người được phép vận hành buổi đo: [danh sách người trực].
+- Danh sách người được phép vận hành buổi đo, gồm các thành viên nhóm và 2 người trực được tuyển
+  thêm, đã được huấn luyện theo quy trình này: [danh sách người trực]. Người không có tên trong danh
+  sách không vận hành buổi đo.
 - Đầu mối y tế: [cơ sở y tế/đầu mối y tế, điện thoại].
 
 ## 2. Kiểm tra trước khi gắn thiết bị lên người
@@ -55,15 +68,21 @@ không tư vấn y khoa**; các quyết định dưới đây là quy tắc an t
 Một người đọc, một người kiểm tra; kết quả ghi vào phiếu ghi buổi đo (chỉ ghi mã, không ghi tên).
 
 - [ ] Có văn bản chấp thuận đạo đức còn hiệu lực cho đúng phiên bản đề cương đang dùng.
-- [ ] Đã có biên bản đo dòng rò và biên bản thử nhiệt trên chính bộ thiết bị này (mục 9), kết quả
-      đạt, có chữ ký của người phụ trách phần cứng.
+- [ ] Đã có biên bản đo dòng rò, bảng phân tích lỗi đơn của đầu chuyển điện cực và biên bản thử
+      nhiệt trên chính bộ thiết bị này (mục 9), kết quả đạt, có chữ ký của người phụ trách phần
+      cứng và của người có chuyên môn duyệt.
 - [ ] Laptop chạy bằng pin và đã rút sạc. Laptop không nối với thiết bị nào khác cắm điện lưới
       (màn hình ngoài, ổ cứng hay hub USB có nguồn riêng) và không cắm cáp mạng.
 - [ ] Bo MCU chỉ nối với laptop qua một cáp USB-C; không có nguồn nào khác cấp vào bo đế.
 - [ ] Máy đo huyết áp chỉ nối với người tham gia qua ống hơi và vòng bít, không có dây điện nào nối
       với thiết bị nghiên cứu. [Máy chạy pin trong lúc đo nếu model cho phép.]
-- [ ] Bo cổ tay không có cạnh sắc; đầu nối Qwiic đã được tháo hoặc có giá đỡ để không chạm da; tấm
-      che cửa sổ quang còn nguyên vẹn; cáp dẹt không đứt và được cắm đúng chiều.
+- [ ] Bo cổ tay không có cạnh sắc; giá đỡ cảm biến còn nguyên, che kín đầu nối Qwiic và đèn báo
+      nguồn để không chạm da; tấm che cửa sổ quang còn nguyên vẹn; cáp dẹt không đứt và được cắm
+      đúng chiều.
+- [ ] Cáp điện cực ECG cắm qua đầu chuyển có điện trở giới hạn dòng, đầu chuyển nằm trong hộp khóa
+      và không thể cắm thẳng cáp vào bo; điện trở từng dây đo trước buổi đo, cả khi uốn cáp, nằm
+      giữa ngưỡng dưới và ngưỡng trên đã ghi [ngưỡng của từng dây], và được ghi vào phiếu ghi buổi
+      đo (mục B). Hở mạch hay chập đều không đạt.
 - [ ] Sau 5 phút chạy, bo cổ tay không ấm bất thường khi chạm (kiểm tra nhanh; giới hạn nhiệt độ
       được kiểm bằng phép thử ở mục 9).
 - [ ] Dòng LED của bo cảm biến không vượt trần của nghiên cứu: mã `0x7F` cho mỗi màu, tức khoảng
@@ -178,24 +197,42 @@ mối y tế, và lối đưa người bệnh ra xe cấp cứu [mô tả].
 
 **Đo dòng rò:**
 
-- Đo dòng rò qua người tham gia (dòng rò bệnh nhân) ở từng điện cực ECG và ở bo cổ tay.
+- Đo trên đúng cấu hình dùng trong buổi đo: bo mạch nghiên cứu đã lắp đủ, bo MCU, một cáp USB,
+  laptop chạy pin đã rút sạc và không nối thiết bị nào khác, đầu chuyển và cáp điện cực dùng cho
+  người, firmware của buổi đo đang ghi, dòng LED ở trần. Điện cực được thay bằng miếng kim loại
+  nhỏ; bo cổ tay đặt trên tấm kim loại cách điện với bàn. Không nối máy hiện sóng hay thiết bị dùng
+  điện lưới vào hệ trong lúc đo.
+- Ba điện cực ECG và mặt bo cổ tay tiếp xúc da được coi là **một** bộ phận ứng dụng, loại dự kiến
+  là BF [người có chuyên môn xác nhận; nếu bo cổ tay được coi là bộ phận riêng thì đo riêng và đo
+  thêm dòng tổng].
+- **Dòng rò bệnh nhân:** nối chung mọi đầu nối với người, đo tới vỏ và cổng USB của laptop, tới
+  tấm dưới bo cổ tay và tới đất bảo vệ của phòng.
+- **Dòng phụ bệnh nhân:** đo giữa từng cặp điện cực, giữa từng điện cực và tấm dưới bo cổ tay, và
+  giữa một đầu nối với mọi đầu nối còn lại nối chung.
 - Ưu tiên mượn máy phân tích an toàn điện y tế từ đơn vị vật tư thiết bị y tế hoặc bệnh viện. Nếu
-  không mượn được thì dựng mạch đo theo IEC 60601-1, đo bằng đồng hồ vạn năng và ghi rõ giới hạn đo
-  cùng độ bất định.
-- Đo trên đúng cấu hình dùng trong buổi đo: bo mạch nghiên cứu, bo MCU, cáp USB và laptop chạy pin.
-- Loại bộ phận ứng dụng dự kiến là BF (điện cực dán ngoài da) [cần xác nhận]. Giới hạn đề xuất
-  cho BF (chưa đối chiếu nguyên văn IEC 60601-1, chờ duyệt): dòng rò bệnh nhân và dòng phụ bệnh
-  nhân 100 µA AC và 10 µA DC ở điều kiện bình thường, 500 µA AC và 50 µA DC ở điều kiện lỗi
-  đơn. Thiết bị đạt khi mọi giá trị đo ở điều kiện bình thường, cộng độ bất định, không quá 50 %
+  không mượn được thì dựng mạch đo theo IEC 60601-1, kiểm mạch đo bằng dòng đã biết ở một chiều và
+  ở vài tần số trước khi đo, và ghi rõ giới hạn đo cùng độ bất định. Phép thử đặt điện áp lưới lên
+  bộ phận ứng dụng chỉ làm bằng máy phân tích; không có máy thì ghi là chưa đo.
+- Giới hạn đề xuất cho BF (chưa đối chiếu nguyên văn IEC 60601-1, chờ duyệt): dòng rò bệnh nhân và
+  dòng phụ bệnh nhân 100 µA AC và 10 µA DC ở điều kiện bình thường, 500 µA AC và 50 µA DC ở điều
+  kiện lỗi đơn. Không dùng giới hạn "dòng rò bệnh nhân tổng" cho ba điện cực của một chức năng điện
+  tim. Thiết bị đạt khi mọi giá trị đo ở điều kiện bình thường, cộng độ bất định, không quá 50 %
   giới hạn. Cách đo chi tiết:
   [kế hoạch đo dòng rò và thử nhiệt](../../hardware/test_reports/leakage_thermal_test_plan_v1.md).
-- Biên bản ghi phạm vi phép đo: dòng rò bệnh nhân và dòng phụ giữa các điện cực, ở điều kiện bình
-  thường và điều kiện lỗi đơn, cả thành phần AC lẫn DC. Phần nào dụng cụ không đo được thì ghi rõ
-  là chưa đo, và thiết bị chỉ được dùng trên người khi người có chuyên môn [người duyệt biên bản]
-  xác nhận phần đã đo là đủ.
+- **Phân tích lỗi đơn của đầu chuyển điện cực:** bảng ghi điện áp lỗi lớn nhất có thể chạm tới từng
+  điện cực, trường hợp một điện trở của đầu chuyển bị chập và lỗi ở mạch đo điện tim; dòng một
+  chiều qua mỗi điện cực ở điều kiện lỗi đơn không quá 50 µA. Bảng này quyết định giá trị điện trở
+  và ngưỡng kiểm trước mỗi buổi (mục 2), và phải được người có chuyên môn duyệt trước khi đo trên
+  người.
+- Biên bản ghi phạm vi phép đo: dòng rò bệnh nhân và dòng phụ, ở điều kiện bình thường và điều kiện
+  lỗi đơn, cả thành phần AC lẫn DC, thang đo và độ bất định của dụng cụ. Phần nào dụng cụ không đo
+  được thì ghi rõ là chưa đo, và thiết bị chỉ được dùng trên người khi người có chuyên môn [người
+  duyệt biên bản] xác nhận phần đã đo là đủ.
+- Đo lại khi thay bất kỳ bộ phận nào của chuỗi trên (bo, đầu chuyển, cáp, laptop).
 
 **Thử nhiệt:** cho thiết bị chạy liên tục 120 phút (bằng buổi đo dài nhất) với dòng LED ở trần của
-nghiên cứu, ở nhiệt độ phòng đo; đo nhiệt độ bề mặt bo cổ tay ở mặt tiếp xúc da. Nhiệt độ cao nhất
+nghiên cứu, ở nhiệt độ phòng đo, với giá đỡ bo cổ tay thật đã lắp; đo nhiệt độ bề mặt bo cổ tay ở
+mặt tiếp xúc da. Làm lại khi thay giá đỡ. Nhiệt độ cao nhất
 không được vượt 41 °C (mức nội bộ, thấp hơn giới hạn 43 °C cho bề mặt tiếp xúc da ≥ 10 phút của
 IEC 60601-1; đề xuất, chưa đối chiếu nguyên văn, chờ duyệt).
 

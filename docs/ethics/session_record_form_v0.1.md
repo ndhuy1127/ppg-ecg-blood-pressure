@@ -7,6 +7,10 @@
 > Tệp số `cuff_log` mà metadata `packet-session-metadata-v1` trỏ tới vẫn chưa chốt định dạng
 > ([hướng dẫn logger](../protocol/packet_logger.md), mục "Metadata phiên"); khi chốt thì dùng đúng
 > các cột của bảng C. Phần dưới đường kẻ là đúng nội dung bản nộp.
+>
+> Sửa 2026-11-21: ô buổi chỉ còn 1 và 2 (chốt 2026-11-19); mục B thêm điện trở từng dây của đầu
+> chuyển điện cực và kiểm giá đỡ bo cổ tay, vì bảng kiểm an toàn mục 2 (sửa 2026-11-19) yêu cầu đo
+> và ghi trước mỗi buổi. Ngưỡng trên, ngưỡng dưới của điện trở còn chờ bảng phân tích lỗi đơn.
 
 ---
 
@@ -16,7 +20,7 @@ bìa với phiếu đồng thuận. Số đo được nhập vào tệp nhật k
 ## A. Thông tin buổi đo
 
 <!-- cols: 34,33,33; noheader -->
-| Mã nghiên cứu: SUB____ | Buổi: S____ (☐ 1 ☐ 2 ☐ 3) | Ngày: ____/____/______ |
+| Mã nghiên cứu: SUB____ | Buổi: S____ (☐ 1 ☐ 2) | Ngày: ____/____/______ |
 | --- | --- | --- |
 | Giờ bắt đầu: ____:____ | Nhiệt độ phòng: ______ °C | Phiên bản đề cương: ____ |
 | Người vận hành (mã): ____ | Người theo dõi (mã): ____ | |
@@ -24,12 +28,16 @@ bìa với phiếu đồng thuận. Số đo được nhập vào tệp nhật k
 ## B. Trước khi đo
 
 - ☐ Đã làm đủ bảng kiểm an toàn (quy trình an toàn, mục 2).
+- Điện trở đầu chuyển điện cực, đo trước khi gắn (kΩ): dây cổ tay trái ______ dây cổ tay phải ______
+  dây tham chiếu ______; ☐ cả ba nằm trong ngưỡng [ngưỡng dưới–ngưỡng trên của từng dây]
+- ☐ Giá đỡ bo cổ tay còn nguyên, che kín đầu nối và đèn báo.
+- Buổi 2: số ngày kể từ buổi 1: ______ (từ 7 tới 28 ngày)
 - ☐ Phiếu sàng lọc của buổi này: đủ điều kiện.
 - ☐ Người tham gia đồng ý tiếp tục. Nghiệm pháp đã đồng ý trong phiếu đồng thuận: ☐ thở chậm
   ☐ tính nhẩm.
 - Vị trí bo cổ tay: cách mỏm trâm trụ ______ cm; nấc dây đeo: ______. Cỡ vòng bít: ______.
 - Mức dòng LED (mã): xanh ______ đỏ ______ hồng ngoại ______
-  ☐ buổi 1: chỉnh và khóa  ☐ buổi sau: dùng lại mức đã khóa  ☐ chỉnh lại một lần (sai lệch đề cương)
+  ☐ buổi 1: chỉnh và khóa  ☐ buổi 2: dùng lại mức đã khóa  ☐ chỉnh lại một lần (sai lệch đề cương)
 - Màu chưa vào khoảng sau 6 vòng chỉnh (nếu có): ______
 
 ## C. Các lượt đo huyết áp (tay phải)
@@ -72,7 +80,8 @@ bơm nghỉ ít nhất 2 phút.
 - ☐ Đã dặn người tham gia liên hệ nhóm nếu có phản ứng da hay khó chịu sau buổi đo.
 - Dừng buổi: ☐ không ☐ có, số nhật ký sự cố: ______
 - Sai lệch đề cương (nếu có): ______
-- Buổi tiếp theo: ☐ hẹn trực tiếp ☐ nhắn tin (chỉ khi người tham gia đồng ý ở mục 9 của phiếu đồng
-  thuận); ngày dự kiến: ____/____/______
+- Buổi 1: lịch buổi 2 ☐ xác nhận trực tiếp ☐ nhắn tin (chỉ khi người tham gia đồng ý ở mục 9 của
+  phiếu đồng thuận); ngày dự kiến: ____/____/______ (cách buổi 1 từ 7 tới 28 ngày, không muộn hơn
+  14/05/2027)
 
 Người ghi (mã nhóm): ______   Chữ ký: ______________   Người kiểm tra (mã nhóm): ______

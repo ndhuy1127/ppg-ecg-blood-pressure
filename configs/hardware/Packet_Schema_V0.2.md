@@ -223,6 +223,20 @@ bắt đầu giữa phiên vẫn nhận được trong vòng 10 s.
 
 ## 7. Mốc xung `SAMP` cho ECG, bit 8 (sửa đổi 2026-10-24)
 
+> **Chốt 2026-11-21 (chế độ mốc FIFO).** Breakout MAX30001 v2 `03/24` đang dùng không đưa xung
+> `SAMP` ra MCU và có `PLLINT` luôn bật
+> ([báo cáo bring-up 2026-11-20](../../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9).
+> Với bo này, packet ECG **luôn tắt bit 8** và dùng mốc đọc FIFO (V0.1 mục 5.2); mục 7.1–7.5 chỉ
+> áp dụng khi có bo xuất được `SAMP`. Tiêu chí kiểm thời gian và giới hạn (chỉ ΔPAT, không kiểm
+> PAT tuyệt đối) ở [kế hoạch đo đồng bộ](../../hardware/test_reports/sync_10min_test_plan.md)
+> mục 11. Metadata: `latency_samp_l_us` và `latency_samp_source` không dùng (luồng không có bit
+> 8); `latency_l_us`, `latency_source` của `0xE1` ghi cho mốc FIFO, null kèm lý do cho tới khi
+> có số đo. Firmware chế độ FIFO chưa cài (việc còn mở của mục 11.5 kế hoạch đó).
+> Cập nhật 2026-11-22: firmware chế độ FIFO đã cài (env `*_fifo`) và ghi `EN_INT2 = 0x000000`
+> (INT2B tắt), vì mỗi sườn của xung `SAMP` ở INT2B làm bật `PLLINT` trên bo này (báo cáo
+> bring-up mục 9.4); `afe_config` của `0xE1` ghi giá trị đó. Mục 7.1 vẫn áp dụng cho bo xuất
+> được `SAMP`.
+
 Đã duyệt ngày 2026-10-24: bật xung `SAMP` của MAX30001 **luôn** và dùng làm
 mốc thời gian ECG; chốt thời điểm cạnh bằng MCPWM capture của ESP32-S3; sửa V0.2 (chưa
 có firmware V0.2 chạy, chưa có dữ liệu V0.2) thay vì nâng version; không thêm kênh

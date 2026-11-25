@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | PPG | SparkFun Photodetector Breakout MAX30101 (Qwiic) | SEN-16474 | 1568-16474-ND | 1 | $35,03 | 141 | Mouser 474-SEN-16474, $36,49 |
 | 2 | IMU | SparkFun 6DoF IMU Breakout BMI270 (Qwiic), bản 1" × 1" | SEN-22397 | 1568-22397-ND | 1 | $18,50 | 491 | Mouser 474-SEN-22397, $18,50 |
-| 4 | Sửa breakout ECG | Điện trở 220 kΩ ±1% 0805 (thay R3) | Yageo RC0805FR-07220KL | 311-220KCRCT-ND | 10 | $0,034 | 2 171 | Yageo AC0805FR-07220KL |
+| 4 | Đầu chuyển ECG (bỏ 2026-11-26, không dùng) | Điện trở 220 kΩ ±1% 0805 (dây sleeve của đầu chuyển ECG; không thay R3 trên breakout, chốt 2026-11-19) | Yageo RC0805FR-07220KL | 311-220KCRCT-ND | 10 | $0,034 | 2 171 | Yageo AC0805FR-07220KL |
 | 6 | MCU | ~~Espressif ESP32-S3-DevKitC-1-N8R8~~ **Đã đặt thay bằng Waveshare ESP32-S3-DEV-KIT-N8R8-M (module Espressif ESP32-S3-WROOM-1-N8R8, header hàn sẵn, một cổng USB-C)** (2026-10-27, xem ghi chú) | ESP32-S3-DEVKITC-1-N8R8 (bản cũ) | — | 1 | — | — | Bo Espressif chính hãng nếu cần thay |
 
 - Không nhầm BMI270 với bản SEN-22398 ("Micro", 0,75" × 0,30"); footprint bo cổ
@@ -69,12 +69,16 @@
 | 7 | Điện cực | [3M Red Dot 2228](https://minhtrimedical.com/dien-cuc-do-tim-3m-2228-red-dot-4cm-x-33cm), 4 × 3,3 cm, hộp 50 miếng | Minh Trí Medical | 1 hộp | 150.000 đ | Còn hàng | 10 điện cực kèm kit MAX30001 |
 | 8 | Kết nối | Cáp USB-C có dây dữ liệu, khoảng 1 m, đầu kia khớp cổng laptop (USB-A hay USB-C); đổi 2026-10-27 theo bo Waveshare | Chưa chọn nơi bán | 1 | Chưa tra | — | Cáp USB-C có dữ liệu bất kỳ (không dùng cáp chỉ sạc) |
 | 9 | Lắp bo cổ tay | [Header đực 1×40, 2,54 mm](https://hshop.vn/rao-duc-don-chon-thang-40chon) | hshop | 2 | 2.000 đ | Còn hàng | — |
+| 10 | Đầu chuyển ECG | Phích đực 3,5 mm TRS hàn dây, ổ cái 3,5 mm TRS, điện trở chân cắm ±1 % cho tip/ring (giá trị còn mở, A.2), ống co nhiệt, hộp bọc (chốt 2026-11-19) | Chưa chọn nơi bán | 1 bộ | Chưa tra | — | — |
+| 11 | Giá đỡ MAX30101 | Vật liệu đen chắn được 880 nm (in 3D hoặc cắt mica đen), miếng đệm không keo cho góc thứ tư (chốt 2026-11-19) | Chưa chọn nơi bán | 1 | Chưa tra | — | Mua thêm một SEN-16474 nếu giá đỡ không đạt (A.3) |
 
-Tạm tính mua trong nước: **154.000 đ** cộng 1 cáp USB-C (chưa tra giá), chưa
+Tạm tính mua trong nước: **154.000 đ** cộng 1 cáp USB-C, dòng 10 và 11 (chưa tra giá), chưa
 gồm phí ship.
 
 - Header đực (dòng 9) để hàn M1 (MAX30101) và M3 (BMI270) lên bo cổ tay
   ([custom_board_proposal.md](../../configs/hardware/custom_board_proposal.md) A.3).
+- Dòng 10–11 thay cho việc sửa module: không thay, gỡ hay cắt linh kiện trên module
+  (chốt 2026-11-19, `custom_board_proposal.md` A.1).
 
 - MCU là bo Waveshare ESP32-S3-DEV-KIT-N8R8-M, đặt 2026-10-27 (dòng 6, mục 1.1);
   nơi bán và giá chưa ghi. Bo OEM "ESP32-S3-DevKitC N16R8" (thegioiic,
@@ -158,8 +162,8 @@ Trình tự đầy đủ, kể cả bước cấp nguồn:
      3,3 V (A.6 mục 4).
    - Một cáp USB-C cho hai cổng COM: USB native `303A:1001` (packet) và CH343 (log
      UART0); ghi cổng nào là cổng nào (firmware README).
-2. **Breakout MAX30001:** kiểm revision so với `pc_max30001_brk_v1.0` và cỡ của R3,
-   R7, R8. Theo file Eagle ở commit `99705eb` (2022-10-11) của repo
+2. **Breakout MAX30001:** kiểm revision so với `pc_max30001_brk_v1.0` và vị trí của R3,
+   R7, R8 (chỉ để biết đường sleeve, tip, ring; không sửa breakout, chốt 2026-11-19). Theo file Eagle ở commit `99705eb` (2022-10-11) của repo
    `Protocentral/protocentral_max30001`: R3 10 kΩ cỡ 0805, R7/R8 0 Ω cỡ 0402. Silkscreen
    trong file `.brd` này là `pc_max30001/3/4_brk 03/22`, giống ảnh bo đã mua
    (đối chiếu 2026-10-27). Bo nhận về in `v2`, `03/24` (ghi 2026-11-14), khác file v1.0: xem
@@ -168,8 +172,8 @@ Trình tự đầy đủ, kể cả bước cấp nguồn:
    VCM (sleeve của jack). Chỉ có 2 dây thì phải có cáp 3 điện cực trước khi chạy
    cấu hình này (cáp 3 dây của ProtoCentral, hoặc tự làm từ jack 3,5 mm và 3 dây
    đầu bấm).
-4. **SparkFun BMI270:** đúng bản SEN-22397, có jumper `I2C` và `ADR` để cắt khi
-   dùng SPI.
+4. **SparkFun BMI270:** đúng bản SEN-22397, có jumper `I2C` và `ADR`; giữ nguyên khi
+   dùng SPI (chốt 2026-11-19, `custom_board_proposal.md` A.3).
 
 ## 4. Không mua đợt này
 

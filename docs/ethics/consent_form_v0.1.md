@@ -19,8 +19,14 @@
 >   mục 5 dẫn cách xử lý yêu cầu xóa ở mục 9 của bản thông tin thay vì nói "chỉ thực hiện được";
 >   mục 9 tách hai mục đích liên hệ (hẹn lịch; hỏi thăm sau sự cố, giữ tối đa 30 ngày), mỗi mục
 >   đích một ô theo Luật 91/2025/QH15.
-> - Mục 10 vẫn chờ thầy/hội đồng quyết định có giữ hay không; nếu giữ thì điều kiện ở
+> - Mục 10 vẫn chờ quyết định có giữ hay không (nhóm quyết trước khi nộp, báo thầy; hội đồng có
+>   thể yêu cầu bỏ); nếu giữ thì điều kiện ở
 >   [kế hoạch quản lý dữ liệu](data_management_plan_v0.1.md) mục 9.
+> - 2026-11-21: thêm mục 11 (tùy chọn) cho chia sẻ dữ liệu đã giả danh hóa qua kho có kiểm soát
+>   truy cập (chốt 2026-11-19, theo [đề xuất Tuần 7](../meetings/week_07_de_xuat_sua_protocol_va_ho_so.md)
+>   mục 2.4); mục 6 nói rõ dữ liệu chỉ ra ngoài nhóm khi đồng ý mục 11; quy tắc quản trị ở
+>   [quản lý dữ liệu](data_management_plan_v0.1.md) mục 9. Mục 3 ghi đầu chuyển có điện trở giới
+>   hạn dòng; câu "mục 8–10" đổi thành "mục 8–11".
 
 ---
 
@@ -31,23 +37,24 @@
 - **Mã nghiên cứu của người tham gia:** `SUB___` (nghiên cứu viên ghi)
 
 Người tham gia tự đánh dấu ☒ vào ô của từng mục mình đồng ý và ký ở cuối phiếu. Các mục 1–7 là
-điều kiện để tham gia; các mục 8–10 là tùy chọn.
+điều kiện để tham gia; các mục 8–11 là tùy chọn.
 
 <!-- cols: 6,82,12 -->
 | TT | Nội dung | Đồng ý |
 | ---: | --- | :---: |
 | 1 | Tôi đã đọc (hoặc được đọc cho nghe) bản thông tin có phiên bản ghi ở trên. Tôi đã có thời gian cân nhắc, và các câu hỏi của tôi đã được trả lời. | ^☐ |
 | 2 | Tôi hiểu rằng thiết bị là nguyên mẫu dùng cho nghiên cứu, chưa được cấp phép như một thiết bị y tế, và kết quả của thiết bị không được dùng để chẩn đoán hay điều trị. | ^☐ |
-| 3 | Tôi đồng ý đeo bo cảm biến ở cổ tay trái, được dán ba điện cực Ag/AgCl (ở cổ tay trái, cẳng tay trái và cổ tay phải) để ghi điện tim, và được đo huyết áp bằng vòng bít ở bắp tay phải (ở buổi đầu, đo thêm mỗi tay một lần), như mô tả trong bản thông tin. | ^☐ |
+| 3 | Tôi đồng ý tham gia 2 buổi đo; đeo bo cảm biến ở cổ tay trái, được dán ba điện cực Ag/AgCl (ở cổ tay trái, cẳng tay trái và cổ tay phải; dây điện cực nối qua đầu nối có điện trở hạn chế dòng điện) để ghi điện tim, và được đo huyết áp bằng vòng bít ở bắp tay phải (ở buổi đầu, đo thêm mỗi tay một lần), như mô tả trong bản thông tin. | ^☐ |
 | 4 | Tôi hiểu rằng thiết bị được nối qua cáp USB với một máy tính xách tay chạy bằng pin, và máy tính không cắm sạc trong lúc tôi đeo thiết bị. | ^☐ |
 | 5 | Tôi hiểu rằng việc tham gia là tự nguyện. Tôi có thể dừng một nghiệm pháp, dừng buổi đo hoặc rút lui bất cứ lúc nào mà không cần nêu lý do và không bị ảnh hưởng gì. Khi rút lui, tôi được chọn xóa hoặc giữ dữ liệu đã thu; cách xử lý yêu cầu xóa trước và sau ngày khóa dữ liệu được ghi ở mục 9 của bản thông tin. | ^☐ |
-| 6 | Tôi đồng ý để dữ liệu tín hiệu, số đo huyết áp và câu trả lời sàng lọc của tôi được xử lý cho mục đích của nghiên cứu này và được lưu dưới mã nghiên cứu như mô tả ở mục 8 của bản thông tin. Tôi được biết đây là dữ liệu cá nhân nhạy cảm, và kết quả chỉ được công bố ở dạng tổng hợp, không nhận ra được cá nhân. Tôi hiểu rằng thành viên hội đồng đạo đức hoặc cơ quan có thẩm quyền có thể xem hồ sơ của tôi khi giám sát nghiên cứu và phải giữ bí mật. | ^☐ |
+| 6 | Tôi đồng ý để dữ liệu tín hiệu, số đo huyết áp và câu trả lời sàng lọc của tôi được xử lý cho mục đích của nghiên cứu này và được lưu dưới mã nghiên cứu như mô tả ở mục 8 của bản thông tin. Tôi được biết đây là dữ liệu cá nhân nhạy cảm, và kết quả chỉ được công bố ở dạng tổng hợp, không nhận ra được cá nhân. Dữ liệu của tôi chỉ được chia sẻ ra ngoài nhóm nghiên cứu nếu tôi đồng ý ở mục 11. Tôi hiểu rằng thành viên hội đồng đạo đức hoặc cơ quan có thẩm quyền có thể xem hồ sơ của tôi khi giám sát nghiên cứu và phải giữ bí mật. | ^☐ |
 | 7 | Tôi sẽ trả lời phiếu sàng lọc một cách trung thực và sẽ báo cho nhóm nếu tình trạng sức khỏe của tôi thay đổi giữa các buổi. | ^☐ |
 | 8 | **Tùy chọn.** Tôi đồng ý thực hiện các nghiệm pháp làm thay đổi huyết áp:<br>☐ thở chậm  ☐ tính nhẩm | |
-| 9 | **Tùy chọn.** Tôi đồng ý để nhóm liên hệ với tôi qua điện thoại, tin nhắn hoặc email (đánh dấu từng mục):<br>☐ để hẹn lịch và nhắc các buổi đo của nghiên cứu này; thông tin liên lạc được xóa khi tôi xong buổi cuối hoặc rút lui. Nếu không đồng ý, lịch buổi sau được hẹn trực tiếp khi kết thúc buổi trước.<br>☐ để hỏi thăm nếu khi ra về tôi còn khó chịu do buổi đo; khi đó nhóm giữ thông tin liên lạc thêm tối đa 30 ngày chỉ cho việc này. | |
-| 10 | **Tùy chọn.** Tôi đồng ý để dữ liệu đã giả danh hóa của tôi (thông tin nhận diện đã được thay bằng mã) được nhóm dùng trong nghiên cứu tiếp theo về ước lượng huyết áp từ tín hiệu PPG và điện tim, trong thời hạn lưu ở mục 8 của bản thông tin. [Mục này chờ thầy/hội đồng quyết định có giữ hay không.] | ^☐ |
+| 9 | **Tùy chọn.** Tôi đồng ý để nhóm liên hệ với tôi qua điện thoại, tin nhắn hoặc email (đánh dấu từng mục):<br>☐ để hẹn lịch và nhắc các buổi đo của nghiên cứu này; thông tin liên lạc được xóa khi tôi xong buổi cuối hoặc rút lui. Nếu không đồng ý, lịch buổi thứ hai được xác nhận trực tiếp khi kết thúc buổi đầu.<br>☐ để hỏi thăm nếu khi ra về tôi còn khó chịu do buổi đo; khi đó nhóm giữ thông tin liên lạc thêm tối đa 30 ngày chỉ cho việc này. | |
+| 10 | **Tùy chọn.** Tôi đồng ý để dữ liệu đã giả danh hóa của tôi (thông tin nhận diện đã được thay bằng mã) được nhóm dùng trong nghiên cứu tiếp theo về ước lượng huyết áp từ tín hiệu PPG và điện tim, trong thời hạn lưu ở mục 8 của bản thông tin. [Mục này chờ quyết định có giữ hay không.] | ^☐ |
+| 11 | **Tùy chọn.** Tôi đồng ý để sau khi đề tài kết thúc, một bản rút gọn đã giả danh hóa của tín hiệu, số đo huyết áp, tuổi theo nhóm 5 năm và giới tính của tôi được đưa lên một kho dữ liệu khoa học có kiểm soát truy cập, như mô tả ở mục 8 của bản thông tin. Tôi hiểu rằng người dùng phải ký thỏa thuận sử dụng dữ liệu, cam kết không tìm cách nhận diện tôi và không chia sẻ tiếp; rằng nguy cơ bị nhận diện lại không bằng 0; và rằng dữ liệu đã chia sẻ thì không thu hồi được. | ^☐ |
 
-Nếu không đánh dấu các mục tùy chọn (8–10), việc tham gia vẫn không bị ảnh hưởng.
+Nếu không đánh dấu các mục tùy chọn (8–11), việc tham gia vẫn không bị ảnh hưởng.
 
 <!-- cols: 22,39,39 -->
 | | Người tham gia | Nghiên cứu viên lấy đồng thuận |

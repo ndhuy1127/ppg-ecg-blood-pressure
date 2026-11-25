@@ -49,6 +49,11 @@ CUFF_STATUS = ("valid", "no_result", "device_error")
 # every recording and only flagged; sample times are not changed (added 2026-11-15).
 A3_BLOCK_US = 10_000_000
 A3_LIMIT_US = 200.0
+# Time-axis models (sync_10min_test_plan.md section 9, "Mô hình theo đoạn", decided
+# 2026-11-21): one line per chain, or a continuous piecewise-linear function of the
+# sample index with knots every 60 s of nominal samples from the first anchor.
+TIMEBASE_MODELS = ("line", "segmented-60s")
+SEGMENT_S = 60.0
 PHASES = ("M0", "M1", "M2")
 REQUIRED_FILES = ("raw.bin", "decode.json", "packets.csv", "samples.csv",
                   "session_metadata.json", "logger_config.json")
@@ -193,17 +198,27 @@ def _a3_block_max(anchor, residuals):
     return float(max(abs(np.median(residuals[block == j])) for j in np.unique(block)))
 
 
-def fit_timebase(packets, fs_nominal_hz):
-    """Line ``T_ANCHOR_US = a + b k`` over anchor-checked packets of one chain.
+def fit_timebase(packets, fs_nominal_hz, model="line"):
+    """Time axis ``T_ANCHOR_US = f(k)`` over anchor-checked packets of one chain.
 
     ECG packets with STATUS bit 8 (SAMP edges) and FIFO-read anchors have an
     unknown offset between them, so only one source is used: SAMP when present.
-    Returns a dict with a, b (us per sample), fs_hz, n_anchors, residual_sd_us,
-    residual_block_max_us (largest |median residual| over 10 s blocks of anchor
-    time, the statistic of A3; a last block spanning under half a block joins the
-    one before, so a few trailing anchors do not carry their own jitter; None with
-    fewer than three anchors) and anchor_source; with fewer than two anchors b is
-    the nominal period and the fit is flagged; with none, None."""
+    Returns a dict with a, b (us per sample) of one line, fs_hz, n_anchors,
+    residual_sd_us, residual_block_max_us (largest |median residual| over 10 s
+    blocks of anchor time, the statistic of A3; a last block spanning under half a
+    block joins the one before, so a few trailing anchors do not carry their own
+    jitter; None with fewer than three anchors), anchor_source and model; with
+    fewer than two anchors b is the nominal period and the fit is flagged; with
+    none, None.
+
+    ``model`` "segmented-60s" (plan section 9) adds knots_k and knot_t_us of a
+    continuous piecewise-linear fit and puts its residuals in residual_sd_us and
+    residual_block_max_us; a, b stay those of the line (the overall rate, A2) and
+    the line's A3 statistic is kept as line_residual_block_max_us. When the
+    segmented fit breaks a rule (segment_problem), knots and residuals are None
+    and the time axis falls back to the line, flagged."""
+    if model not in TIMEBASE_MODELS:
+        raise ValueError(f"Unknown time-axis model {model!r}")
     reliable = [p for p in packets if p["disposition"] == "accepted"]
     samp = [p for p in reliable if p["channel_id"] == "0xE1" and p["status"] >> 8 & 1]
     source = "samp" if samp else "fifo_read"
@@ -223,10 +238,85 @@ def fit_timebase(packets, fs_nominal_hz):
         residual = float(np.std(residuals, ddof=2)) if len(use) > 2 else None
         block_max = _a3_block_max(anchor, residuals) if len(use) > 2 else None
         nominal = False
-    return {"a_us": float(a), "b_us": float(b), "fs_hz": 1e6 / float(b),
-            "n_anchors": len(use), "residual_sd_us": residual,
-            "residual_block_max_us": block_max,
-            "anchor_source": source, "nominal_rate": nominal}
+    fit = {"a_us": float(a), "b_us": float(b), "fs_hz": 1e6 / float(b),
+           "n_anchors": len(use), "residual_sd_us": residual,
+           "residual_block_max_us": block_max,
+           "anchor_source": source, "nominal_rate": nominal, "model": model}
+    if model == "segmented-60s":
+        fit["line_residual_block_max_us"] = block_max
+        fit.update(_fit_segmented(k, anchor, fs_nominal_hz, a, b, nominal))
+    return fit
+
+
+def segment_knots(k_first, k_last, fs_nominal_hz):
+    """Knots of the segmented model: k_first, then every round(60 s x fs_nominal)
+    samples while below k_last, then k_last; a last segment under half a
+    segment joins the one before (its knot is dropped)."""
+    step = int(round(SEGMENT_S * fs_nominal_hz))
+    knots = [float(k_first)]
+    while knots[-1] + step < k_last:
+        knots.append(knots[-1] + step)
+    knots.append(float(k_last))
+    if len(knots) > 2 and knots[-1] - knots[-2] < step / 2:
+        del knots[-2]
+    return np.array(knots)
+
+
+def _fit_segmented(k, anchor, fs_nominal_hz, a, b, nominal):
+    """Least squares of a continuous piecewise-linear function of k (hat basis on
+    the knots), fitted to the residuals of the line for numerical range. Rules:
+    every segment holds at least 3 anchors spanning at least half of it, and
+    every segment slope is positive; otherwise segment_problem is set."""
+    empty = {"knots_k": None, "knot_t_us": None, "residual_sd_us": None,
+             "residual_block_max_us": None}
+    if nominal or len(k) < 3:
+        return {**empty, "segment_problem": "too_few_anchors"}
+    knots = segment_knots(k.min(), k.max(), fs_nominal_hz)
+    j = np.clip(np.searchsorted(knots, k, side="right") - 1, 0, len(knots) - 2)
+    for s in range(len(knots) - 1):
+        inside = k[j == s]
+        if len(inside) < 3 or np.ptp(inside) < (knots[s + 1] - knots[s]) / 2:
+            return {**empty, "segment_problem": f"segment {s} sparse"}
+    w = (k - knots[j]) / (knots[j + 1] - knots[j])
+    y = anchor - (a + b * k)
+    n = len(knots)
+    gram, rhs = np.zeros((n, n)), np.zeros(n)
+    for col_a, wa in ((j, 1 - w), (j + 1, w)):
+        np.add.at(rhs, col_a, wa * y)
+        for col_b, wb in ((j, 1 - w), (j + 1, w)):
+            np.add.at(gram, (col_a, col_b), wa * wb)
+    coef = np.linalg.solve(gram, rhs)
+    knot_t = a + b * knots + coef
+    if np.any(np.diff(knot_t) <= 0):
+        return {**empty, "segment_problem": "non_positive_slope"}
+    residuals = y - (coef[j] * (1 - w) + coef[j + 1] * w)
+    return {"knots_k": knots.tolist(), "knot_t_us": knot_t.tolist(),
+            "residual_sd_us": float(np.std(residuals, ddof=n)) if len(k) > n else None,
+            "residual_block_max_us": _a3_block_max(anchor, residuals),
+            "segment_problem": None}
+
+
+def timebase_at(fit, k):
+    """Anchor time (us) of sample index ``k`` on a fit of ``fit_timebase``: the
+    segmented function when it has knots (end segments extended), else the line."""
+    k = np.asarray(k, float)
+    if not fit.get("knots_k"):
+        return fit["a_us"] + fit["b_us"] * k
+    knots, values = np.asarray(fit["knots_k"]), np.asarray(fit["knot_t_us"])
+    j = np.clip(np.searchsorted(knots, k, side="right") - 1, 0, len(knots) - 2)
+    slope = (values[j + 1] - values[j]) / (knots[j + 1] - knots[j])
+    return values[j] + slope * (k - knots[j])
+
+
+def timebase_index_at(fit, t_us):
+    """Inverse of ``timebase_at``: the (fractional) sample index at time ``t_us``."""
+    t_us = np.asarray(t_us, float)
+    if not fit.get("knots_k"):
+        return (t_us - fit["a_us"]) / fit["b_us"]
+    knots, values = np.asarray(fit["knots_k"]), np.asarray(fit["knot_t_us"])
+    j = np.clip(np.searchsorted(values, t_us, side="right") - 1, 0, len(knots) - 2)
+    slope = (knots[j + 1] - knots[j]) / (values[j + 1] - values[j])
+    return knots[j] + slope * (t_us - values[j])
 
 
 def _led_state(session):
@@ -244,9 +334,11 @@ def _led_state(session):
     return widths.pop(), channels, None
 
 
-def session_series(recording, session_index=0):
+def session_series(recording, session_index=0, timebase_model="line"):
     """Per data channel ``ChannelSeries`` of one decoded session (by position in
-    ``decode.json``), plus the timebase table and flags."""
+    ``decode.json``), plus the timebase table and flags. ``timebase_model`` is one
+    of ``TIMEBASE_MODELS`` (plan section 9); "line" unless a sync validation
+    series qualified the segmented model."""
     decode, metadata = recording["decode"], recording["metadata"]
     session = decode["sessions"][session_index]
     sid = session["session_id"]
@@ -270,7 +362,8 @@ def session_series(recording, session_index=0):
         t_us = np.full(len(index), np.nan)
         known = True
         for chain_id in np.unique(chain):
-            fit = fit_timebase(by_chain.get((key, int(chain_id)), []), fs_nominal)
+            fit = fit_timebase(by_chain.get((key, int(chain_id)), []), fs_nominal,
+                               timebase_model)
             row = {"device_session_id": sid, "channel": key, "chain_id": int(chain_id),
                    **(fit or {"n_anchors": 0})}
             # SAMP anchors have their own latency (Packet Schema V0.2 section 8).
@@ -284,11 +377,13 @@ def session_series(recording, session_index=0):
                 continue
             if fit["nominal_rate"]:
                 flags.append(f"{key}:chain{int(chain_id)}:single_anchor_nominal_rate")
+            if fit.get("segment_problem"):
+                flags.append(f"{key}:chain{int(chain_id)}:segmented_fit_invalid")
             elif (fit["residual_block_max_us"] is not None
                   and fit["residual_block_max_us"] > A3_LIMIT_US):
                 flags.append(f"{key}:chain{int(chain_id)}:timebase_residual_above_a3")
             mask = chain == chain_id
-            t_us[mask] = fit["a_us"] + fit["b_us"] * index[mask] - (latency or 0)
+            t_us[mask] = timebase_at(fit, index[mask]) - (latency or 0)
         offset = None
         if key in PPG_KEYS:
             slot = PPG_KEYS.index(key)

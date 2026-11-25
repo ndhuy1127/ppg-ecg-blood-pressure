@@ -227,8 +227,8 @@ def test_a3_flag_follows_the_statistic(lossy, monkeypatch):
     _, directory, _ = lossy
     fit = si.fit_timebase
 
-    def above(packets, fs_nominal_hz):
-        out = fit(packets, fs_nominal_hz)
+    def above(packets, fs_nominal_hz, model="line"):
+        out = fit(packets, fs_nominal_hz, model)
         if out is not None and not out["nominal_rate"]:
             out = {**out, "residual_block_max_us": si.A3_LIMIT_US + 1}
         return out
@@ -237,3 +237,24 @@ def test_a3_flag_follows_the_statistic(lossy, monkeypatch):
     _, _, flags = si.session_series(si.load_recording(directory))
     flagged = {f.split(":")[0] for f in flags if f.endswith(":timebase_residual_above_a3")}
     assert flagged == {"0xE1", "0xF1", "0xF2", "0xF3"}
+
+
+def test_script_applies_the_ecg_timing_rule_end_to_end(tmp_path):
+    # Sync test plan 11.4 through the logger and the entry point: an ECG anchor
+    # step of one sample (1.953 ms) at 80 s, generated before encoding, is caught
+    # by A10; the cuff whose window holds it gets no PAT, the clean cuff keeps it,
+    # and both keep their PPG and ECG features.
+    spec = SessionSpec(duration_s=110, events=((1, 45.0), (1, 95.0)),
+                       ecg_anchor_steps=((80.0, 1953.0),), ppg_noise_sd=0.0,
+                       ecg_noise_sd=0.0)
+    directory, _ = make_recording(tmp_path, spec)
+    log = write_cuff_log(tmp_path / "log.csv", [cuff_row("E01", "M0", 0),
+                                                cuff_row("E02", "M0", 1)])
+    _, rows = device_session.run(directory, log, DEVICE_CONFIG, tmp_path / "out")
+    clean, stepped = rows
+    assert clean["pat_ms"] is not None and "ecg:timing_unverified" not in clean["flags"]
+    assert stepped["pat_ms"] is None and stepped["pat_sqi_v2_median_ms"] is None
+    assert "ecg:timing_unverified" in stepped["flags"]
+    for row in rows:
+        assert row["ppg_hr_bpm"] is not None and row["ppg_rise_time_ms"] is not None
+        assert row["ecg_hr_bpm"] is not None
