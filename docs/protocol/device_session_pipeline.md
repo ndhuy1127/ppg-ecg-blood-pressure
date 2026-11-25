@@ -135,6 +135,22 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
   1,953 ms sinh trước khi mã hóa, qua logger và `device_session.py`: cuff chứa bước mất PAT,
   cuff sạch giữ PAT, cả hai giữ đặc trưng PPG và ECG), `tests/test_ecg_anchor_residual.py`.
 
+- **Hướng tín hiệu PPG (chốt 2026-11-25).** Số đếm MAX30101 giảm khi máu tăng ở thì tâm thu, nên
+  `device_session_v1.json` đặt `ppg_polarity = −1`; bộ sinh SYNTHETIC (`synthetic-device-session-v2`)
+  sinh số đếm giảm theo mạch, ánh sáng kích thích đồng bộ vẫn làm số đếm tăng. Định nghĩa chân sóng
+  cho dữ liệu thiết bị: [device_ppg_foot_definition_v1.md](device_ppg_foot_definition_v1.md) (bản
+  nháp). Test: `tests/test_device_features.py` (hướng số đếm của bộ sinh, ánh sáng kích thích, lật
+  sai thì PAT lệch).
+
+- **PAT neo theo R (`device-features-v4`, 2026-11-25, bản nháp chưa khóa).** Chân sóng dùng cho PAT
+  lấy từ `fiducials.feet_after_r` (`rise-after-r-v1`): sườn lên đầu tiên sau R đủ 30 % biên độ cục bộ,
+  tiếp tuyến tại bước dốc nhất cắt mức đầu sườn; mỗi R một trạng thái (`ok`, `out_of_range`,
+  `no_rise`, `ambiguous`, `edge`) lưu trong `pat_validity` (`r_status`, `foot_status`,
+  `foot_per_r_s`); PAT của nhịp `ok` qua quy tắc khoảng và MAD. Đặc trưng chỉ dùng PPG vẫn từ
+  `features-sqi-v2`; cờ ghép nhịp cũ ở `legacy_pat_flags`. Config: khối `pat_foot` (bắt buộc).
+  Định nghĩa và giới hạn: [device_ppg_foot_definition_v1.md](device_ppg_foot_definition_v1.md).
+  Test: `tests/test_feet_after_r.py`, `tests/test_device_features.py`.
+
 - **Tuột điện cực ECG từ tín hiệu (chốt 2026-11-24, `device-features-v3`;
   [bring-up](../../hardware/test_reports/2026-11-20_v1_bringup.md) mục 9.10).** STATUS bit 2 không
   còn là cờ: trên breakout v2 cờ lead-off của chip bật cả khi tiếp xúc tốt. `ecg_lead_off` gắn

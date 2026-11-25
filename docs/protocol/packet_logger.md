@@ -790,8 +790,8 @@ config/metadata được so với manifest.
     nên luồng này không làm bộ nhớ của logger tăng thêm. RAM trống tối thiểu của máy
     đều **dưới 25 %**, kể cả ngay lúc bắt đầu (9–15 %), trước khi logger chạy. Phần lớn
     RAM đã bị các ứng dụng đang mở chiếm (khoảng 2,5 GB trình soạn thảo, 1,7 GB trình
-    duyệt, 1,7 GB máy ảo WSL, hơn 1 GB dịch vụ hệ thống ở thời điểm đo). Chưa có số
-    của máy sạch (đóng hết ứng dụng), vì phải làm việc trên chính máy này.
+    duyệt, 1,7 GB máy ảo WSL, hơn 1 GB dịch vụ hệ thống ở thời điểm đo). Số của máy
+    đã đóng ứng dụng: mục dưới (2026-11-25).
   - Giới hạn của phép đo: luồng tổng hợp một phiên, không có lỗi; không có thiết bị,
     cổng serial, `--commands`, lệnh xuống hay `0xD2`. Chế độ `--source-file` không
     phát lại thời gian thực, nên phần ghi chỉ kéo dài vài giây và các dòng báo mức DC
@@ -814,6 +814,20 @@ config/metadata được so với manifest.
        từng byte với output hiện tại; đã có các test tương đương trong
        `tests/test_packet_streaming.py`). Chỉ làm khi bước 1 không đủ, vì chưa có
        trường hợp thiếu RAM cụ thể.
+- **RAM trên laptop buổi đo khi đã đóng ứng dụng (đo 2026-11-25).** Cùng máy, cùng luồng như lần
+  2026-11-13 (819 288 packet, 120 phút, sinh lại bằng script tạm trong `tmp/`, không nằm trong
+  repo), cùng cách đo (logger chạy như tiến trình con, lấy mẫu mỗi 0,5 s; Python 3.11.9 gốc, không
+  qua lớp khởi chạy của venv). Trước khi đo: đóng trình duyệt, trình soạn thảo và các ứng dụng nặng,
+  chạy `wsl --shutdown`; chỉ giữ ứng dụng điều khiển phiên làm việc. Logger báo 0 issue.
+
+  | Lần | Đỉnh lúc ghi | Đỉnh lúc giải mã | Thời gian giải mã | RAM trống lúc bắt đầu | RAM trống tối thiểu |
+  | --- | --- | --- | --- | --- | --- |
+  | 1 | 24 MB | 895 MB | 34 s | 11 623 MB (68,8 %) | 10 459 MB (61,9 %) |
+  | 2 | 24 MB | 895 MB | 34 s | 11 198 MB (66,3 %) | 10 338 MB (61,2 %) |
+
+  - Đỉnh của logger không đổi so với lần 2026-11-13 (894–895 MB). RAM trống tối thiểu khoảng
+    10,3 GB, gấp khoảng 5 lần mức 2 GB của bước 1. **Bước 1 đủ; không cần bước 2** (giải mã theo
+    khối). Giới hạn như lần trước: luồng tổng hợp, không có thiết bị hay `--commands`.
 - Chỉ dùng thư viện chuẩn; chưa có hiệu chỉnh `L`, fs thật hay drift.
 
 ## Quy ước packet của firmware (D1–D10)

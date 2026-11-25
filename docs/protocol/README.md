@@ -47,6 +47,9 @@ ra, mốc ECG/PPG, PAT, SQI, tiêu chí loại dữ liệu và kế hoạch phâ
 - [Pipeline dữ liệu thiết bị](device_session_pipeline.md): ingest bản ghi logger, mốc và PAT ở
   ECG 512 / PPG 200 sps, phân tích RQ1 theo SAP v1 bằng một lệnh; đề xuất 2026-11-13, sửa sau
   khi thảo luận và duyệt 2026-11-14, mới chạy trên SYNTHETIC
+- [Chân sóng PPG cho dữ liệu thiết bị](device_ppg_foot_definition_v1.md) (`device-foot-v1`):
+  hướng tín hiệu PPG chốt 2026-11-25; định nghĩa chân sóng, quy tắc trường hợp khó và cách thẩm
+  định là bản nháp, khóa sau khi thử trên cổ tay
 - [Theo dõi thí nghiệm và kiểm tính tất định nhiều seed](experiment_tracking.md):
   quy ước tên thí nghiệm/artifact, bảng tổng hợp sinh từ `report.json`, B3 nhiều seed
   (2026-11-07)

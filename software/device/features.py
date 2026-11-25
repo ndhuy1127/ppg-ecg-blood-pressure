@@ -23,9 +23,10 @@ import numpy as np
 from software.data_io.live_monitor import adc_ceiling, led_codes
 from software.device import ecg_anchor_residual as a10
 from software.feature_extraction.week04 import VERSION_V2, SignalWindow, extract_window
+from software.signal_processing import fiducials as fd
 from software.signal_processing.fiducials import Channel, SignalConfig
 from software.signal_processing.pat_validity import (
-    PatRules, detectable_foot_span, pat_beats,
+    PatRules, classify_pat, detectable_foot_span,
 )
 
 # v2 (2026-11-21): ECG timing flags of sync_10min_test_plan.md section 11.4 (A10
@@ -33,7 +34,10 @@ from software.signal_processing.pat_validity import (
 # v3 (2026-11-24): ecg:lead_off from the ECG signal instead of STATUS bit 2 (on the
 # breakout v2 the chip's DC lead-off flag is set with good contact too; bring-up
 # report 9.10), and no PAT for a window that has it.
-VERSION = "device-features-v3"
+# v4 (2026-11-25): PAT feet anchored on R (fiducials.feet_after_r, rise-after-r-v1,
+# draft device-foot-v1: docs/protocol/device_ppg_foot_definition_v1.md); the PPG-only
+# features keep the feet of features-sqi-v2.
+VERSION = "device-features-v4"
 PPG_KEYS = ("0xF1", "0xF2", "0xF3", "0xF4")
 # LED lock states of a window (led_lock_status) that set ppg:led_not_locked.
 LOCK_NOT_HELD = ("no_lock_metadata", "not_applied", "applied_after_window_start",
@@ -50,6 +54,39 @@ ECG_GAIN_SHIFT, ECG_GAIN_20 = 16, 0
 # (001, 011) carries no valid voltage and stays out of the lead-off level.
 ECG_VALID_ETAGS = (0, 2)
 LEAD_OFF_KEYS = ("ecg_lead_off_abs_mv", "ecg_lead_off_hold_s", "ecg_full_scale_mv")
+PAT_FOOT_KEYS = ("method", "rise_min_fraction", "ambiguous_fraction", "search_s")
+FOOT_STATUSES = ("ok", "out_of_range", "no_rise", "ambiguous", "edge")
+# features-sqi-v2 flags of its own R-foot pairing: kept apart as legacy diagnostics,
+# since the cuff's PAT comes from the R-anchored feet (v4).
+LEGACY_PAT_FLAGS = ("pat:unmatched_beats", "pat:too_few_pairs")
+
+
+def pat_from_feet(r_times, feet, status, per_r, rules):
+    """PAT validity of one window from ``fiducials.feet_after_r``: one record per R
+    keeps its detector status; the PAT of "ok" beats goes through ``classify_pat``
+    (range and MAD outlier rule). Counts: n_pairs ("ok" beats) = n_valid + n_outlier
+    + ok beats outside the pat_validity range; n_out_of_range adds the detector's
+    out_of_range; n_no_foot ("no_rise"), n_ambiguous, n_edge; n_unpaired_r =
+    n_no_foot + n_ambiguous; R = ok + detector out_of_range + n_unpaired_r + n_edge."""
+    ok = [i for i, st in enumerate(status) if st == "ok"]
+    pats = [(feet[k] - r_times[i]) * 1000 for k, i in enumerate(ok)]
+    result = classify_pat(pats, rules)
+    result["pairs"] = [(int(i), k, float(p)) for k, (i, p) in enumerate(zip(ok, pats))]
+    result["r_status"] = list(status)
+    # Detector out_of_range plus any ok beat that classify_pat put out of range
+    # (if pat_validity were narrower than signal.pat_*), so the counts add up.
+    result["n_out_of_range"] += status.count("out_of_range")
+    result["n_no_foot"] = status.count("no_rise")
+    result["n_ambiguous"] = status.count("ambiguous")
+    result["n_edge"] = status.count("edge")
+    result["n_unpaired_r"] = result["n_no_foot"] + result["n_ambiguous"]
+    result["foot_status"] = {k: status.count(k) for k in FOOT_STATUSES}
+    result["pat_feet_s"] = [float(f) for f in feet]
+    result["foot_per_r_s"] = [None if f is None else float(f) for f in per_r]
+    if result["n_unpaired_r"]:
+        result["flags"] = sorted({*result["flags"], "pat:unmatched_beats"})
+    result["detector"] = fd.RISE_AFTER_R_V1
+    return result
 
 
 def annotate_ecg_timing(packets):
@@ -122,6 +159,11 @@ def load_config(config):
     if missing:
         raise ValueError(f"sqi_hardware lacks {missing} (device-features-v3, "
                          "configs/data/device_session_v1.json since 2026-11-24)")
+    foot = config.get("pat_foot", {})
+    missing = [k for k in PAT_FOOT_KEYS if k not in foot]
+    if missing or foot.get("method") != fd.RISE_AFTER_R_V1:
+        raise ValueError(f"pat_foot needs {list(PAT_FOOT_KEYS)} with method "
+                         f"{fd.RISE_AFTER_R_V1} (device-features-v4, 2026-11-25)")
     return SignalConfig(**config["signal"]), PatRules(**config["pat_validity"])
 
 
@@ -303,12 +345,14 @@ def window_features(cuff, series, packets, session, config, identity):
                                                "fit, latency L from session metadata")
                               if verified else "")
         result = extract_window(window, signal, VERSION_V2)
-        validity, color_flags = None, list(result["flags"])
+        validity = None
+        color_flags = [f for f in result["flags"] if f not in LEGACY_PAT_FLAGS]
+        legacy_flags = [f for f in result["flags"] if f in LEGACY_PAT_FLAGS]
         r = np.asarray(result["fiducials"]["r_times_s"])
         feet = np.asarray(result["fiducials"]["foot_times_s"])
         if verified and len(rows[key]) > 1 and len(r):
             try:
-                span = detectable_foot_span(ppg.timestamps, signal.edge_s,
+                detectable_foot_span(ppg.timestamps, signal.edge_s,
                                             signal.foot_lookback_s)
             except ValueError:
                 # The PPG covers too little of the window for any foot (under
@@ -318,16 +362,29 @@ def window_features(cuff, series, packets, session, config, identity):
                 # whole session).
                 color_flags.append("pat:no_foot_span")
             else:
-                validity = pat_beats(r, feet, rules, foot_span=span)
+                # PAT feet anchored on R (v4); the PPG-only features above keep
+                # their own feet, found without R.
+                values, times, issues, _ = fd.prepare(ppg, signal, "ppg")
+                if issues:
+                    color_flags.append("pat:ppg_not_usable")
+                else:
+                    pf = config["pat_foot"]
+                    feet, foot_status, per_r = fd.feet_after_r(
+                        values, times, r, signal, rise_min_fraction=pf["rise_min_fraction"],
+                        ambiguous_fraction=pf["ambiguous_fraction"], search_s=pf["search_s"])
+                    validity = pat_from_feet(r, feet, foot_status, per_r, rules)
+                    color_flags.extend(validity["flags"])
         out["by_color"][series[key].name] = {
-            "channel": key, "features": result["features"], "flags": color_flags,
+            "channel": key, "features": result["features"],
+            "flags": sorted(set(color_flags)), "legacy_pat_flags": legacy_flags,
             "quality": result["quality"], "fiducials": result["fiducials"],
             "pat_validity": None if validity is None else {
                 k: validity[k] for k in ("version", "n_pairs", "n_valid",
                                          "n_out_of_range", "n_outlier", "n_unpaired_r",
                                          "n_no_foot", "n_edge", "median_valid_ms",
                                          "iqr_valid_ms", "flags", "pairs",
-                                         "r_status")}}
+                                         "r_status", "foot_status", "pat_feet_s",
+                                         "foot_per_r_s", "n_ambiguous", "detector")}}
     return out
 
 

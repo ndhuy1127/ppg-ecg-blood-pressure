@@ -5,6 +5,9 @@ Unlike ``packet_simulation_v3`` (random payloads), this builds waveforms:
 - R peaks are narrow Gaussians on the ECG; each PPG pulse starts at R + PAT with a
   linear upstroke, so the maximum-upslope tangent of ``fiducials.ppg_fiducials``
   meets the valley level exactly at the set onset (no shape bias in the answer);
+- PPG counts fall with the pulse, as the MAX30101 reflectance counts do (v2,
+  2026-11-24, bring-up report): the pipeline turns them up with ppg_polarity -1.
+  Light of the optical sync stimulus still raises the counts;
 - every channel has its own sample clock: the true rate is the nominal rate times
   (1 + ppm 1e-6), and the sample times of the AFE never meet those of another AFE;
 - packet anchors follow Packet Schema V0.1 section 5: ``T_ANCHOR_US`` = true time
@@ -28,7 +31,9 @@ from software.data_io.packet_wire import (
 )
 from software.device.max30101 import SLOT_SPACING_US
 
-VERSION = "synthetic-device-session-v1"
+# v2 (2026-11-25): physiological PPG falls in raw counts (ppg_raw_inverted, as the
+# MAX30101); v1 recordings are rebuilt with SessionSpec(ppg_raw_inverted=False).
+VERSION = "synthetic-device-session-v2"
 PPG_SLOTS = {0xF1: "green", 0xF2: "red", 0xF3: "ir"}  # V1 (schema section 7)
 ECG_SCALE = 30000.0  # ADC codes per unit of the synthetic ECG
 PPG_DC, PPG_AC = 100000.0, 20000.0
@@ -89,6 +94,9 @@ class SessionSpec:
     stim_ecg_lowpass_hz: float = 0.0
     ecg_beats: bool = True
     ppg_beats: bool = True
+    # True (v2): the pulse, its noise and wander lower the raw counts, as on the
+    # MAX30101; False rebuilds the upright counts of synthetic-device-session-v1.
+    ppg_raw_inverted: bool = True
     declare_latency: bool = True
     session_id: int = 1
     seed: int = 20261113
@@ -171,9 +179,9 @@ def _pulse(dt):
 
 
 def _ppg(t, feet, rng, spec, gain):
+    """Raw counts: DC, minus the physiological part (pulses, noise, wander) when
+    ``ppg_raw_inverted``, plus the light of the sync stimulus (always upward)."""
     values = np.zeros_like(t)
-    if spec.stim_s:
-        values += _stim(t, spec, spec.stim_ppg_delay_us, spec.stim_ppg_amp) / gain
     for foot in feet:
         values += _pulse(t - foot)
     noise = np.full(t.shape, spec.ppg_noise_sd)
@@ -181,6 +189,10 @@ def _ppg(t, feet, rng, spec, gain):
         noise[(t >= start) & (t < end)] = spec.noise_sd
     values = values + rng.normal(0, 1, t.shape) * noise
     values += _wander(t, spec.ppg_wander, spec.wander_hz)
+    if spec.ppg_raw_inverted:
+        values = -values
+    if spec.stim_s:
+        values += _stim(t, spec, spec.stim_ppg_delay_us, spec.stim_ppg_amp) / gain
     counts = PPG_DC + gain * PPG_AC * values
     return np.clip(np.round(counts), 0, (1 << 18) - 1).astype(int)
 

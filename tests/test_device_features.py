@@ -100,7 +100,7 @@ def test_missed_ppg_beat_is_flagged(tmp_path):
     r = np.array(chosen["fiducials"]["r_times_s"])
     index = int(np.argmin(np.abs(r - missed_r)))
     assert abs(r[index] - missed_r) < 0.002
-    assert validity["r_status"][index] == "no_foot"
+    assert validity["r_status"][index] == "no_rise"  # rise-after-r-v1 status
 
 
 def test_noisy_span_is_flagged_and_clean_window_is_not(tmp_path):
@@ -485,3 +485,58 @@ def test_config_without_the_lead_off_keys_is_refused():
     del old["sqi_hardware"]["ecg_lead_off_hold_s"]
     with pytest.raises(ValueError, match="ecg_lead_off_hold_s"):
         fe.load_config(old)
+
+
+# PPG orientation (2026-11-25): the MAX30101 reflectance counts fall with the
+# systolic blood volume, so device_session_v1 turns the PPG up (ppg_polarity -1) and
+# the generator emits falling counts (synthetic-device-session-v2). The generator
+# and the config are checked apart, so a matching sign error in both cannot pass.
+
+def _raw_green(tmp_path, spec):
+    directory, truth = make_recording(tmp_path, spec)
+    series, _, _ = si.session_series(si.load_recording(directory))
+    s = series["0xF1"]
+    return np.asarray(s.t_us, float), np.asarray(s.value, float), truth
+
+
+def _level(t_us, values, at_us, half_width_us=4000):
+    return float(np.mean(values[np.abs(t_us - at_us) <= half_width_us]))
+
+
+def test_raw_ppg_counts_fall_with_the_pulse(tmp_path):
+    from software.device.synthetic_session import VERSION
+    assert VERSION == "synthetic-device-session-v2"
+    assert CONFIG["signal"]["ppg_polarity"] == -1
+    t, v, truth = _raw_green(tmp_path, SessionSpec(duration_s=20, **CLEAN))
+    lat = 1500  # ppg_latency_us of the spec: times in series are latency-corrected
+    for r_us, pat in list(zip(truth["r_us"], truth["pat_ms"]))[5:10]:
+        foot = r_us + pat * 1000
+        before, top = _level(t, v, foot - 30_000), _level(t, v, foot + 100_000)
+        assert top < before - 1000, (before, top, lat)
+
+
+def test_upright_counts_of_v1_are_still_available(tmp_path):
+    t, v, truth = _raw_green(tmp_path, SessionSpec(duration_s=20, ppg_raw_inverted=False,
+                                                   **CLEAN))
+    foot = truth["r_us"][5] + truth["pat_ms"][5] * 1000
+    assert _level(t, v, foot + 100_000) > _level(t, v, foot - 30_000) + 1000
+
+
+def test_stimulus_light_still_raises_the_counts(tmp_path):
+    spec = SessionSpec(duration_s=20, ppg_beats=False, stim_s=(10.0,), stim_width_s=0.05,
+                       **CLEAN)
+    t, v, _ = _raw_green(tmp_path, spec)
+    on = 1_000_000 + 10.0e6
+    assert _level(t, v, on + 25_000, 15_000) > _level(t, v, on - 40_000, 15_000) + 1000
+
+
+def test_wrong_ppg_orientation_loses_the_pat(tmp_path):
+    spec = SessionSpec(duration_s=80, events=((1, 70.0),), **CLEAN)
+    upright = copy.deepcopy(NO_FILTER)
+    upright["signal"]["ppg_polarity"] = 1
+    _, chosen, truth, _ = _run(tmp_path, spec, config=upright)
+    validity = chosen["pat_validity"]
+    # Upside down, the "upstroke" is the falling edge of the real pulse: the feet
+    # pair with R but sit far from the set onset (about 175 ms on this spec).
+    assert validity is not None and validity["pairs"]
+    assert np.median(np.abs(_pat_errors(chosen, truth))) > 50

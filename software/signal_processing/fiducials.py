@@ -358,6 +358,143 @@ def detect(channel: Channel, config: SignalConfig, kind: str):
     return np.array([b[0] for b in beats], dtype=float), []
 
 
+RISE_AFTER_R_V1 = "rise-after-r-v1"
+# A rising run may be interrupted for at most this many forward steps (10 ms at
+# 200 sps) by a flat or falling step that loses at most RUN_BRIDGE_DROP of the
+# beat scale; quantization or residual noise then does not split one upstroke and
+# raise B. A real notch between two waves is longer or deeper.
+RUN_BRIDGE_STEPS = 2
+RUN_BRIDGE_DROP = 0.02
+
+
+def _rising_runs(values, times, bridge_steps=0, bridge_drop=0.0):
+    """(start, stop, steepest) sample indices of every run where the forward slope
+    stays positive: values rise from ``start`` to ``stop``; ``steepest`` is the
+    middle of the equally steepest forward steps (as ``ppg_fiducials``). Runs
+    separated by at most ``bridge_steps`` non-rising steps that lose at most
+    ``bridge_drop`` (in signal units) are merged; the merged run keeps the start of
+    the first part."""
+    slopes = np.diff(values) / np.diff(times)
+    raw, k = [], 0
+    while k < len(slopes):
+        if slopes[k] > 0:
+            j = k
+            while j < len(slopes) and slopes[j] > 0:
+                j += 1
+            raw.append([k, j])
+            k = j
+        else:
+            k += 1
+    merged = []
+    for start, stop in raw:
+        if merged:
+            last = merged[-1]
+            gap = start - last[1]
+            drop = values[last[1]] - np.min(values[last[1]:start + 1])
+            if gap <= bridge_steps and drop <= bridge_drop:
+                last[1] = stop
+                continue
+        merged.append([start, stop])
+    runs = []
+    for start, stop in merged:
+        part = slopes[start:stop]
+        top = np.flatnonzero(np.isclose(part, part.max(), rtol=1e-6, atol=1e-12))
+        runs.append((start, stop, start + int(top[len(top) // 2])))
+    return runs, slopes
+
+
+def feet_after_r(values, times, r_times, config, *, rise_min_fraction, ambiguous_fraction,
+                 search_s):
+    """PAT feet anchored on R (device-foot-v1 draft, rise-after-r-v1; docs/protocol/
+    device_ppg_foot_definition_v1.md section 3) on a PREPARED (oriented, filtered)
+    PPG window.
+
+    Scale: the median over R of the local pulse range (max - min of the PPG in
+    [R, min(next R, R + search_s))), so a distant artefact does not move it. For
+    each R, rising runs (bridged as ``_rising_runs``) that start in that interval;
+    a run qualifies when it climbs at least ``rise_min_fraction`` of the scale.
+    The first qualifying run is the systolic rise: A is its steepest step, B the
+    value at its start, and the foot is where the tangent at A meets B. Status per R:
+    - "ok": that foot lies in [R + pat_min_s, R + pat_max_s];
+    - "out_of_range": it does not (the limit applies to the extrapolated foot);
+    - "no_rise": no qualifying run;
+    - "ambiguous": an earlier run, climbing at least ``ambiguous_fraction`` of the
+      scale but under the qualifying size, also has a foot in range (it may be the
+      true onset), the foot is at or after the next R, or it is not after the
+      previous beat's foot;
+    - "edge": the foot is within ``config.edge_s`` of the window start, the chosen
+      run reaches the window end (rise not complete), or no run qualifies while
+      the interval starts before the PPG or runs past its end.
+    A later qualifying run (a reflected wave, even a taller one) does not make the
+    beat ambiguous. PPG-only features never use this: it needs R.
+
+    Returns (feet of "ok" beats, strictly increasing; status per R; foot per R or
+    None when no foot was extrapolated).
+    """
+    values = np.asarray(values, dtype=float)
+    times = np.asarray(times, dtype=float)
+    r_times = np.asarray(r_times, dtype=float)
+    if not 0 < ambiguous_fraction < rise_min_fraction < 1 or search_s <= 0:
+        raise ValueError("Need 0 < ambiguous_fraction < rise_min_fraction < 1, search_s > 0")
+    n = len(r_times)
+    if len(values) < 3 or not n:
+        return np.array([], dtype=float), ["no_rise"] * n, [None] * n
+    ends = [min(r + search_s, r_times[i + 1] if i + 1 < n else np.inf)
+            for i, r in enumerate(r_times)]
+    local = []
+    for r, end in zip(r_times, ends):
+        inside = values[(times >= r) & (times < end)]
+        if len(inside) > 1:
+            local.append(float(np.ptp(inside)))
+    scale = float(np.median(local)) if local else 0.0
+    runs, slopes = _rising_runs(values, times, RUN_BRIDGE_STEPS, RUN_BRIDGE_DROP * scale)
+    last = len(values) - 1
+
+    def foot_of(start, steep):
+        return float(times[steep] - (values[steep] - values[start]) / slopes[steep])
+
+    def in_range(r, foot):
+        # Same 1e-6 ms boundary tolerance as pat_validity._in_range, so float
+        # rounding never drops a PAT that sits on a limit.
+        return r + config.pat_min_s - 1e-9 <= foot <= r + config.pat_max_s + 1e-9
+
+    feet, status, per_r = [], [], []
+    for i, (r, end) in enumerate(zip(r_times, ends)):
+        next_r = r_times[i + 1] if i + 1 < n else np.inf
+        chosen, earlier = None, []
+        for start, stop, steep in runs:
+            if not r <= times[start] < end:
+                continue
+            rise = values[stop] - values[start]
+            if scale > 0 and rise >= rise_min_fraction * scale:
+                chosen = (start, stop, steep)
+                break
+            if scale > 0 and rise >= ambiguous_fraction * scale:
+                earlier.append((start, steep))
+        if chosen is None:
+            # No PPG over the whole interval (it starts before the window or runs
+            # past its end) is an edge, not a missed beat.
+            status.append("edge" if end > times[-1] or r < times[0] else "no_rise")
+            per_r.append(None)
+            continue
+        start, stop, steep = chosen
+        foot = foot_of(start, steep)
+        per_r.append(foot)
+        if stop >= last or foot < times[0] + config.edge_s:
+            status.append("edge")
+        elif not in_range(r, foot):
+            status.append("out_of_range")
+        elif (any(in_range(r, foot_of(*e)) for e in earlier) or foot >= next_r
+              or (feet and foot <= feet[-1])):
+            # An earlier candidate onset, a foot at or after the next R (it may
+            # belong to that R), or a foot not after the previous beat's foot.
+            status.append("ambiguous")
+        else:
+            feet.append(foot)
+            status.append("ok")
+    return np.array(feet, dtype=float), status, per_r
+
+
 def pair_pat(r_times, foot_times, config):
     """One-to-one forward pairing; reject ambiguous candidates and crossed beats."""
     r_times, foot_times = np.asarray(r_times), np.asarray(foot_times)
