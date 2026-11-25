@@ -90,19 +90,18 @@ ghi lại:
   mục 7 bước 6); chỉ thay mạch chia áp trong phép đo này khi simulator có đầu vào
   trigger nhận xung GPIO6. Không nối GPIO trực tiếp vào đầu vào ECG.
   **Nút tham chiếu (chốt 2026-10-25): nút "cơ thể" nối chân sleeve của jack điện
-  cực** (RL → điện trở sleeve của đầu chuyển ECG → R3 trên breakout → VCM; sửa 2026-11-19,
-  trước là R3 220 kΩ trên breakout), không phải GND của bo. Lý do: ở AVDD = 1,8 V đầu
+  cực** (RL → R3 trên breakout, ≈ 10 kΩ theo kết luận tạm → VCM; không dùng đầu chuyển ECG, chốt
+  2026-11-26), không phải GND của bo. Lý do: ở AVDD = 1,8 V đầu
   vào ECG chỉ làm việc trong VMID ± 550 mV, VMID = AVDD/2,15 ≈ 0,84 V, tức khoảng
   0,29–1,39 V (MAX30001 tr. 3, tr. 22); GND 0 V nằm ngoài dải này, còn VCM 0,65 V
   (tr. 8) nằm trong. Đấu nối: tip (RA) nối sleeve; GPIO6 → điện trở trên cỡ 10 MΩ →
   ring (LA) → điện trở dưới cỡ 3,3 kΩ → sleeve. Ước lượng (kiểm bằng
-  oscilloscope trước khi chạy; mạch là GPIO6 → 10 MΩ → 3,3 kΩ → khoảng 220 kΩ tới VCM
-  0,65 V; điện trở tip/ring của đầu chuyển không có dòng chảy qua vì đầu vào ECG trở kháng cao,
-  nên vi sai không đổi; nếu dây sleeve dùng hai điện trở 220 kΩ thì mức chung lệch khoảng gấp
-  đôi, vẫn trong dải): khi GPIO6 ở 3,3 V, dòng khoảng (3,3 − 0,65) V / 10,22 MΩ ≈ 0,26 µA, cho
-  vi sai khoảng +0,86 mV ở LA so với RA và đẩy mức chung lên khoảng 57 mV qua điện trở sleeve;
-  khi GPIO6 ở 0 V, dòng khoảng −64 nA, vi sai khoảng −0,21 mV, mức chung lệch khoảng
-  −14 mV. Biên độ xung vi sai vì vậy khoảng 1,07 mV, mọi mức vẫn trong dải trên. Ghi
+  oscilloscope trước khi chạy; mạch là GPIO6 → 10 MΩ → 3,3 kΩ → khoảng 10 kΩ tới VCM
+  0,65 V; điện trở tip/ring trên breakout không có dòng chảy qua vì đầu vào ECG trở kháng cao,
+  nên vi sai không đổi; tính lại 2026-11-26 khi bỏ đầu chuyển): khi GPIO6 ở 3,3 V, dòng khoảng
+  (3,3 − 0,65) V / 10,01 MΩ ≈ 0,26 µA, cho vi sai khoảng +0,87 mV ở LA so với RA và đẩy mức
+  chung lên khoảng 2,6 mV qua R3; khi GPIO6 ở 0 V, dòng khoảng −65 nA, vi sai khoảng
+  −0,21 mV, mức chung lệch khoảng −0,7 mV. Biên độ xung vi sai vì vậy khoảng 1,08 mV, mọi mức vẫn trong dải trên. Ghi
   giá trị điện trở thực tế và số đo vào sơ đồ đấu nối.
 - **Kênh PPG:** cùng xung đó điều khiển một LED ngoài (qua điện trở hạn dòng)
   đặt trên cửa sổ cảm biến MAX3010x, trong hộp tối. Ánh sáng tăng làm số đếm ADC

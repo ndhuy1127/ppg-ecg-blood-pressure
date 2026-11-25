@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | PPG | SparkFun Photodetector Breakout MAX30101 (Qwiic) | SEN-16474 | 1568-16474-ND | 1 | $35,03 | 141 | Mouser 474-SEN-16474, $36,49 |
 | 2 | IMU | SparkFun 6DoF IMU Breakout BMI270 (Qwiic), bản 1" × 1" | SEN-22397 | 1568-22397-ND | 1 | $18,50 | 491 | Mouser 474-SEN-22397, $18,50 |
-| 4 | Đầu chuyển ECG | Điện trở 220 kΩ ±1% 0805 (dây sleeve của đầu chuyển ECG; không thay R3 trên breakout, chốt 2026-11-19) | Yageo RC0805FR-07220KL | 311-220KCRCT-ND | 10 | $0,034 | 2 171 | Yageo AC0805FR-07220KL |
+| 4 | Đầu chuyển ECG (bỏ 2026-11-26, không dùng) | Điện trở 220 kΩ ±1% 0805 (dây sleeve của đầu chuyển ECG; không thay R3 trên breakout, chốt 2026-11-19) | Yageo RC0805FR-07220KL | 311-220KCRCT-ND | 10 | $0,034 | 2 171 | Yageo AC0805FR-07220KL |
 | 6 | MCU | ~~Espressif ESP32-S3-DevKitC-1-N8R8~~ **Đã đặt thay bằng Waveshare ESP32-S3-DEV-KIT-N8R8-M (module Espressif ESP32-S3-WROOM-1-N8R8, header hàn sẵn, một cổng USB-C)** (2026-10-27, xem ghi chú) | ESP32-S3-DEVKITC-1-N8R8 (bản cũ) | — | 1 | — | — | Bo Espressif chính hãng nếu cần thay |
 
 - Không nhầm BMI270 với bản SEN-22398 ("Micro", 0,75" × 0,30"); footprint bo cổ

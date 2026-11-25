@@ -66,11 +66,10 @@ thấy ứng viên thì ghi "chưa xác định được nhánh BIN/BIP", không
 VCM; hai pad nối tip/ring chưa chứng minh linh kiện đó dẫn vào BIN/BIP. Các nhận định "nhiều
 khả năng" ở trên (điện trở `4992`, R1) cũng chỉ dựa vào hình dáng và mã in.
 
-**Không sửa breakout (chốt 2026-11-19, `custom_board_proposal.md` A.1, A.2).** Điện trở giới hạn
-dòng nằm trong đầu chuyển ECG, ngoài breakout, nên không cần sơ đồ net v2 để hàn. Đo thông mạch ở
-trên vẫn làm và ghi vào báo cáo, vì phân tích lỗi đơn của đầu chuyển cần biết sleeve, tip, ring
-nối tới đâu trên bo (đã đề nghị ProtoCentral gửi schematic v2). Chưa có đầu chuyển đạt mục 4 thì
-không đo trên người với breakout này.
+**Không sửa breakout (chốt 2026-11-19, `custom_board_proposal.md` A.1, A.2).** Không dùng đầu
+chuyển ECG (bỏ 2026-11-26, `custom_board_proposal.md` A.2): cáp điện cực cắm thẳng vào jack của
+breakout. Đo thông mạch ở trên vẫn làm và ghi vào báo cáo để biết sleeve, tip, ring nối tới đâu
+trên bo (đã đề nghị ProtoCentral gửi schematic v2).
 
 ## 2. Bo Waveshare đứng riêng (chỉ cắm USB)
 
@@ -142,11 +141,10 @@ không đo trên người với breakout này.
 ## 4. Chuẩn bị module (trước khi lắp; không sửa module, chốt 2026-11-19)
 
 Không thay, gỡ hay cắt linh kiện, jumper nào trên module (`custom_board_proposal.md` A.1). Chụp
-ảnh hai mặt từng module khi nhận để làm mốc. Chỉ hàn header và làm đầu chuyển ECG.
+ảnh hai mặt từng module khi nhận để làm mốc. Chỉ hàn header.
 
 | Module | Việc | Đạt khi |
 | --- | --- | --- |
-| Đầu chuyển ECG (thay việc thay R3, gỡ R7/R8) | Làm đầu chuyển giắc 3,5 mm có điện trở nối tiếp trên sleeve, tip, ring theo A.2; hộp bọc khóa phía giắc breakout. Giá trị điện trở tip/ring và cách bố trí hai điện trở sleeve còn mở (A.2) | Đo từng dây từ đầu bấm điện cực tới chân tương ứng ở phía phích cắm, trong ngưỡng trên và dưới đã ghi trước, cả khi uốn cáp; không thông giữa các dây; ảnh ghi vào báo cáo. Chưa đạt thì không đo trên người |
 | Breakout MAX30001 | Hàn header SV1 10 chân (có trong kit) từ mặt dưới: thân nhựa header ở mặt dưới, chân dài chĩa xuống, mặt linh kiện và jack 3,5 mm quay lên (thêm 2026-10-27) | Chân thẳng, không cầu thiếc. Đặt breakout lên bản in 1:1 của bo đế: chân GND ở đầu hàng phía jack trùng J1.1, lỗ vít trùng lỗ NPTH (23,37; 2,97). Lỗ vít không trùng nghĩa là breakout đang bị lật; một trong hai cách lật làm đảo thứ tự chân (VCC rơi vào lỗ MOSI) |
 | SparkFun MAX30101 | Không cắt JP1, không tháo đầu Qwiic. Làm giá đỡ đen theo A.3 che LED nguồn D1, hai đầu Qwiic và mọi chỗ dẫn điện phía da | Vật liệu giá đỡ chắn được ánh sáng 880 nm (thử bằng chính cảm biến trong hộp tối); khi lắp, D1 không lọt sáng ra ngoài, đầu Qwiic không chạm được từ phía da |
 | SparkFun BMI270 | Không cắt jumper `I2C`, `ADR`, `PWR` (A.3) | Ba jumper còn nguyên như lúc nhận |
@@ -216,7 +214,7 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
    dùng để nhận chip (`protocentral_max30001_arduino_library`, `src/protocentral_max30001.cpp`).
 3. Cấu hình theo A.2: 512 sps, gain 20 V/V, `ECG_DLPF` 40,96 Hz, tắt `ECG_DHPF`,
    lead-off DC 10 nA ±400 mV (chốt 2026-10-25), `EN_BIOZ = 0`, **tắt lead
-   bias nội** (cấu hình 3 điện cực, VCM qua R3 và điện trở sleeve của đầu chuyển),
+   bias nội** (cấu hình 3 điện cực, VCM qua R3),
    BioZ tắt hẳn: `BMUX_OPENP/N = 1`, `BIOZ_CGMAG = 000` (thêm 2026-11-19; driver chưa ghi hai
    thanh ghi này), `INTB_TYPE = 01` (CMOS) ở `EN_INT`
    và `EN_INT2`, `EFIT = 15`, `SAMP_IT = 00` (xung `SAMP` mỗi mẫu), `CLR_SAMP = 1`,
@@ -245,7 +243,7 @@ khởi động ([firmware/README.md](../../firmware/README.md) mục "Driver MAX
 5. Tín hiệu nhân tạo qua cáp ECG (mạch chia áp ở
    [sync_10min_test_plan.md](sync_10min_test_plan.md) mục 3), không gắn người. Bước
    này là mức bắt buộc tối thiểu trước khi thử trên người (chốt 2026-10-29). Nút
-   tham chiếu của mạch chia áp là sleeve (RL → đầu chuyển → R3 → VCM), không phải GND (chốt
+   tham chiếu của mạch chia áp là sleeve (RL → R3 → VCM), không phải GND (chốt
    2026-10-25; cách đấu và mức chờ đợi ở mục 3 của kế hoạch đó). Trước khi nối: vẽ
    sơ đồ đấu nối, đo mức vi sai và mức chung ở đầu vào bằng oscilloscope; mức chung
    phải nằm trong khoảng 0,29–1,39 V.
