@@ -386,6 +386,53 @@ Quy tắc chọn mô hình (một lần cho **cả loạt** kiểm định, khô
 - Kết quả đạt chỉ đúng cho cấu hình đã đo. Đổi tốc độ, bộ lọc, độ rộng xung, cực tính `SAMP`
   hay firmware phần thời gian thì đo lại.
 
+**Sửa đổi 2026-11-26: trục thời gian PPG theo đoạn 10 s (chốt trước mọi lần đo xác nhận; qua
+phản biện độc lập; quy tắc chọn duyệt trước khi chạy phép đo dùng để chọn).** Quy tắc cũ ở trên
+giữ nguyên để đối chiếu; với PPG, đoạn dưới đây thay nó.
+
+- **Lý do.** Bring-up (báo cáo 2026-11-20 mục 12.4 và 12.7): tốc độ lấy mẫu của MAX30101 so với
+  đồng hồ ESP32 lệch −336 đến −1 383 ppm tùy ngày, đi xuống khoảng 300 ppm trong vài phút đầu khi bo
+  áp lên da, sau đó dao động khoảng ±100 ppm trong từng 10 s. Trên các mốc đọc FIFO của lượt 20 phút,
+  đường thẳng và đoạn 60 s đều trượt A3 (31,3 ms và 959 µs), nên theo quy tắc cũ A4–A6 và A11 "không
+  đánh giá được". Bản chẩn đoán trên bàn (`esp32s3_devkitc_all_real_fifo_ppg_edge`) neo gói PPG theo
+  cạnh `PPG_RDY` của mẫu mới nhất (thời điểm ISR ghi trên đồng hồ ESP32): trễ đọc trung bình mỗi
+  10 s nằm trong 441–451 µs suốt 20 phút, trong khi mốc theo cạnh vẫn dao động như trên. Trong lượt
+  này phần dao động không do trễ đọc FIFO mà nằm ở nhịp ra mẫu của MAX30101 so với ESP32, nên làm
+  trơn trên 60 s không bù được. Thời điểm cạnh ngắt chưa được đối chiếu với thời điểm lấy mẫu quang.
+- **Quy tắc chọn (duyệt trước khi chạy lượt dùng để chọn):** chọn đoạn **dài nhất** trong 60, 10 và
+  5 s mà sai số của trục thời gian so với thời điểm cạnh `PPG_RDY`, tính bằng trung vị phần dư lớn
+  nhất theo khối 30 s (thang của cửa sổ phân tích chính), không quá 0,2 ms. ECG giữ đường thẳng.
+- **Kết quả** (lượt `2026-11-26_ppg_edge_long20`, bo đặt hờ ở mặt lưng cổ tay, bỏ 90 s đầu gồm
+  lúc đặt bo; 1 127 s): đoạn 60 s cho 806 µs (khối 10 s: 1 083 µs), **10 s cho 77 µs** (khối 10 s:
+  234 µs), 5 s cho 22 µs. ECG với đường thẳng: 38 µs.
+- **Chốt:** cặp mô hình **ECG đường thẳng, PPG `segmented-10s`** (hàm tuyến tính từng đoạn liên
+  tục như mô hình 60 s ở trên, nút cách nhau round(10 s × 200) = 2 000 mẫu, cùng điều kiện hợp lệ:
+  mỗi đoạn ít nhất 3 mốc trải ít nhất nửa đoạn, độ dốc dương; đoạn cuối ngắn hơn 5 s gộp vào đoạn
+  trước). Ba khe PPG dùng chung một trục với khoảng cách khe như cũ. Cặp này cố định cho **cả loạt**
+  kiểm định (10 lượt A5, lượt 120 phút, lượt A11) và cho dữ liệu buổi đo; không đổi theo từng lượt.
+- **A3 của PPG: sửa đổi riêng, ghi sau lượt chọn, áp cho các lượt từ nay.** Quy tắc duyệt trước
+  lượt chỉ là thống kê *chọn mô hình* (khối 30 s); việc đổi *tiêu chí* A3 của PPG sang khối 30 s
+  quyết định sau khi đã thấy lượt đó. Theo A3 gốc (khối 10 s) đoạn 10 s **không đạt** (234 µs); theo
+  A3 sửa đổi (khối 30 s, ± 0,2 ms) đạt (77 µs). Lý do: cửa sổ phân tích chính 30 s. Cả hai là cực đại
+  của trị tuyệt đối trung vị theo khối, không chặn sai số từng mốc hay từng cửa sổ cuff. Báo kèm khối
+  10 s, đường thẳng và đoạn 60 s. Vì nút dày hơn khối, A3 gần như luôn đạt và chỉ bắt lỗi thô (mất
+  mẫu, mốc nhảy); độ đúng của trục thời gian PPG do phép đo có kích thích kiểm (A4–A6 và A11, gồm
+  khớp lại theo từng khối tải); offset theo từng phút chỉ báo cáo. ECG giữ A3 theo khối 10 s như cũ.
+- **Còn phải kiểm trước loạt kiểm định (phản biện vòng 2):** một lượt độc lập ghi từng gói cả lúc
+  đọc FIFO và cạnh ngắt (bản chẩn đoán in dòng `PE` trên UART0), khớp mô hình trên **lúc đọc** như
+  bản nghiên cứu rồi chấm theo cạnh ngắt, báo riêng phần lệch cố định và phần dao động. Nếu sai số
+  khối 30 s vượt 0,2 ms thì xét lại lựa chọn này trước khi đo.
+- **Giới hạn:** chọn trên một lượt, một người, bo chưa có dây đeo, một ngày, trên chính các mốc
+  dùng để chấm (tự khớp thiên về mô hình linh hoạt). Cửa sổ phân tích
+  phụ 10 s có sai số tới khoảng 0,23 ms. Trong bản dùng trên người mốc là lúc đọc FIFO (trễ khoảng
+  0,45 ms, gần như không đổi), không phải cạnh ngắt. Nếu A6 hoặc offset theo từng phút cho thấy trục
+  10 s sai thì xét mốc theo cạnh `PPG_RDY` cho bản nghiên cứu (sửa Packet Schema, quyết định riêng),
+  không nới ngưỡng.
+- **Cần cài trước loạt kiểm định:** `fit_timebase` nhận độ dài đoạn và mô hình theo kênh;
+  `device_session_v2.json` ghi cặp mô hình (thiếu hoặc lạ thì từ chối) cùng nút và giá trị tại nút
+  của từng chuỗi; `scripts/analyze_sync.py` và phép gộp A5 dùng cặp mô hình; khóa cấu hình ở
+  `scripts/run_rq1_analysis.py` cập nhật cùng lúc.
+
 **Cách đo độ trễ (sửa 2026-11-11 sau khi thảo luận).** Thời điểm của đáp ứng lấy ở **tâm
 xung**: trung điểm của hai lần cắt mức 50 % ở sườn lên và sườn xuống của đáp ứng. Tâm xung vào
 bằng mốc sự kiện cộng nửa độ rộng xung, với độ rộng xung đo bằng oscilloscope. Giá trị thiết kế
@@ -499,10 +546,10 @@ Căn cứ của ngưỡng (đề xuất kỹ thuật, chưa có nguồn):
 **Cách đọc.** Cấu hình FIFO **đạt** khi A1–A6, A9, A10 và A11 cùng đạt; A8 ghi "không đánh giá
 được". Không đạt thì không tính PAT từ thiết bị (như mục 9), không nới ngưỡng.
 
-- Các nhánh của mục 9 vẫn áp dụng: A3 không đạt với một đường thẳng thì dùng hồi quy theo đoạn
-  60 s cho cả loạt rồi xét lại A3–A6, A10 với mô hình đó (định nghĩa và quy tắc chọn ở mục 9,
-  "Mô hình theo đoạn"; A10 không phụ thuộc mô hình); A9 không đạt thì A4–A6 và A11 "không đánh giá được",
-  khởi động lại và đo lại.
+- Mô hình thời gian: từ 2026-11-26 dùng cặp cố định ECG đường thẳng, PPG `segmented-10s` cho cả loạt
+  (mục 9, "Sửa đổi 2026-11-26"); không còn chuyển sang đoạn 60 s khi A3 trượt. A3 không đạt với cặp
+  này thì A4–A6 và A11 "không đánh giá được" (A10 không phụ thuộc mô hình); A9 không đạt thì A4–A6
+  và A11 "không đánh giá được", khởi động lại và đo lại.
 - A11: kiểm A9 **riêng cho từng loại tải**, để chênh lệch về pha không thành chênh lệch offset giả.
 - A10 chưa chấm được trong 10 s đầu của mỗi chuỗi (chưa đủ quá khứ). Packet trong khoảng này là
   "chưa kiểm": không tính vào số lần vượt, nhưng báo số packet đã chấm và chưa chấm của mỗi lần

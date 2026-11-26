@@ -274,6 +274,20 @@ Kết luận (trên giấy, 2026-10-22; sửa 2026-10-29 khi bỏ M3, M4):
       (`outside_dc_range`).
    5. Khóa mã của từng màu và ghi vào metadata phiên.
 
+   **Dải ADC (chốt 2026-11-26, sau phản biện độc lập; báo cáo bring-up 2026-11-20 mục 12.6).**
+   `SPO2_ADC_RGE` là một hằng số cho cả nghiên cứu, đặt khi biên dịch firmware và đọc lại trong
+   `0xD2`; không chỉnh theo người. Bring-up cho thấy ở mặt lưng cổ tay, với 16 384 nA, màu xanh
+   chỉ khoảng 0,5 % thang ở mã mặc định và theo ước lượng tuyến tính không đạt 30 % dưới trần.
+   - Chọn dải trước người tham gia đầu tiên: trên cổ tay một thành viên nhóm, đeo bằng dây thật, thử
+     16 384, 8 192 và 4 096 nA; có tháo ra đeo lại, đổi độ chặt dây trong mức dự kiến, cử động cổ
+     tay và đổi ánh sáng. Ghi DC và khoảng cách tới trần từng màu, số mẫu bão hòa, `ALC_OVF`, biên độ
+     và nhiễu trong dải của màu xanh, tỉ lệ nhịp có chân sóng. Không xem huyết áp.
+   - Chọn **dải rộng nhất** mà màu xanh đạt tiêu chí chân sóng ghi trước lần thử (tỉ lệ nhịp có chân
+     sóng và không bão hòa); DC 30–70 % của đỏ và IR là mục tiêu phụ. Giá trị chọn là giá trị tạm
+     cho pilot; kiểm trên nhiều cổ tay ở pilot, ca không đạt vẫn tính vào mẫu số.
+   - Màu xanh vẫn là màu chính. Không thêm vòng chỉnh để đẩy màu xanh lên tới trần: dừng theo bước 4;
+     `outside_dc_range` của màu xanh chỉ để mô tả, không loại dữ liệu.
+
    **Buổi sau lệch thang (chốt 2026-10-29):** giữ nguyên mã đã khóa. Chỉ khi cửa sổ M0 đầu
    tiên có mẫu chạm trần ADC quá 5% thời gian thì mới chỉnh lại **một lần** theo quy trình
    trên. Lần chỉnh này được ghi là sai lệch protocol, và phiên đó mang cờ `led_readjusted`. Biên
