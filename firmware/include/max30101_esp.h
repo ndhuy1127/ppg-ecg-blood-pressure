@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "board_v1_module.h"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -19,3 +20,9 @@ esp_err_t max30101_esp_init(max30101_bus_t *bus, uint32_t clock_hz, TaskHandle_t
 
 /* Stop the INT interrupt before the reader task stops for good. */
 void max30101_esp_stop(void);
+
+#if BOARD_PPG_EDGE_ANCHOR
+#include "ppg_edge.h"
+/* Copy of the PPG_RDY edge times (board_v1_module.h BOARD_PPG_EDGE_ANCHOR). */
+void max30101_esp_edges(ppg_edge_ring_t *out);
+#endif

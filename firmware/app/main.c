@@ -431,6 +431,34 @@ static void ppg_temp_service(die_temp_t *t)
 
 static uint32_t s_ppg_generation; /* successful configurations since boot */
 
+#if BOARD_PPG_EDGE_ANCHOR
+/* Bench diagnostic (board_v1_module.h): last completed 10 s window of the PPG
+ * edge anchoring, written by the reader, printed by log_stats. */
+#define PPG_EDGE_WINDOW_US 10000000LL
+static ppg_edge_stats_t s_ppg_edge_pub;
+static uint32_t s_ppg_edge_windows;
+static portMUX_TYPE s_ppg_edge_mux = portMUX_INITIALIZER_UNLOCKED;
+typedef struct {
+    uint32_t k_last;    /* FIRST_SAMPLE_INDEX + SAMPLE_COUNT - 1, modulo 2^32 */
+    uint64_t t_read_us; /* anchor of the research build (after the pointer burst) */
+    uint64_t t_edge_us; /* PPG_RDY edge of the newest sample, 0 if not used */
+} ppg_edge_rec_t;
+#define PPG_EDGE_QUEUE_LEN 128
+static QueueHandle_t s_ppg_edge_queue;
+static uint32_t s_ppg_edge_logged, s_ppg_edge_dropped;
+
+static void ppg_edge_log_task(void *arg)
+{
+    (void)arg;
+    ppg_edge_rec_t r;
+    for (;;) {
+        if (xQueueReceive(s_ppg_edge_queue, &r, portMAX_DELAY) == pdTRUE) {
+            printf("PE %" PRIu32 " %" PRIu64 " %" PRIu64 "\n", r.k_last, r.t_read_us, r.t_edge_us);
+        }
+    }
+}
+#endif
+
 /* State for 0xD2 and for the LED command: configured with s_ppg_regs, or not. */
 static void ppg_publish(bool configured)
 {
@@ -461,6 +489,17 @@ static void ppg_reader_task(void *arg)
     ESP_ERROR_CHECK(max30101_esp_init(&s_ppg_bus, BOARD_PPG_I2C_HZ,
                                       xTaskGetCurrentTaskHandle()));
     max30101_v1_regs(&s_ppg_regs, BOARD_PPG_LED_PW_US);
+#if BOARD_PPG_EDGE_ANCHOR
+    /* Only PPG_RDY may pull INT low here, so every edge is one sample (review
+     * 2026-11-26); 0xD2 shows the changed Interrupt Enable 1. */
+    s_ppg_regs.int_enable[0] &= (uint8_t)~MAX30101_INT_ALC_OVF;
+    s_ppg_edge_queue = xQueueCreate(PPG_EDGE_QUEUE_LEN, sizeof(ppg_edge_rec_t));
+    if (s_ppg_edge_queue == NULL
+        || xTaskCreate(ppg_edge_log_task, "ppg_edge", 3072, NULL, 2, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "PPG edge log task not started");
+        abort();
+    }
+#endif
     uint8_t rev = 0;
     max30101_err_t err = MAX30101_ERR_BUS;
     for (int i = 0; i < AFE_START_TRIES && err != MAX30101_OK; i++) {
@@ -480,6 +519,12 @@ static void ppg_reader_task(void *arg)
     const uint16_t batch = BOARD_PPG_READ_PERIOD_MS > 0 ? 1 : PPG_BATCH;
     ppg_read_t ppg;
     ppg_read_init(&ppg);
+#if BOARD_PPG_EDGE_ANCHOR
+    ppg_edge_t edge;
+    ppg_edge_init(&edge);
+    int64_t edge_window_end = esp_timer_get_time() + PPG_EDGE_WINDOW_US;
+    ESP_LOGW(TAG, "PPG packets anchored on PPG_RDY edges (bench diagnostic, not a research build)");
+#endif
     die_temp_t temp;
     die_temp_init(&temp, esp_timer_get_time()); /* t0: kept across chip resets */
     TickType_t wake = xTaskGetTickCount();
@@ -504,6 +549,9 @@ static void ppg_reader_task(void *arg)
                 max30101_set_currents(&staged, req.green, req.red, req.ir);
                 die_temp_abort(&temp);
                 ppg.index.reanchor = true;
+#if BOARD_PPG_EDGE_ANCHOR
+                ppg_edge_break(&edge);
+#endif
                 err = max30101_start(&s_ppg_bus, &staged, &rev);
                 if (err == MAX30101_OK) {
                     s_ppg_regs = staged;
@@ -528,6 +576,9 @@ static void ppg_reader_task(void *arg)
             continue;
         }
         max30101_latch_t latch = {0};
+#if BOARD_PPG_EDGE_ANCHOR
+        const uint64_t t_pre = esp_timer_get_time(); /* just before the pointer burst */
+#endif
         if (!ppg.needs_reconfigure) {
             max30101_latch(&s_ppg_bus, &latch);
         }
@@ -536,6 +587,26 @@ static void ppg_reader_task(void *arg)
         static max30101_samples_t samples;
         bool samples_ok = count == 0
                           || max30101_read_samples(&s_ppg_bus, count, &samples) == MAX30101_OK;
+#if BOARD_PPG_EDGE_ANCHOR
+        const uint64_t t_read = anchor;
+        bool from_edge = false;
+        if (count > 0 && samples_ok && latch.status_ok && !latch.full
+            && !(latch.status1 & MAX30101_INT_PWR_RDY)) {
+            static ppg_edge_ring_t ring;
+            max30101_esp_edges(&ring); /* after the read: later edges are dropped by time */
+            anchor = ppg_edge_anchor(&edge, &ring, count, t_pre, t_read, &from_edge);
+        } else if (count > 0 || !latch.pointers_ok) {
+            ppg_edge_break(&edge); /* full FIFO, failed read or reset: count unknown */
+        }
+        if (esp_timer_get_time() >= edge_window_end) {
+            portENTER_CRITICAL(&s_ppg_edge_mux);
+            s_ppg_edge_pub = edge.stats;
+            s_ppg_edge_windows++;
+            portEXIT_CRITICAL(&s_ppg_edge_mux);
+            ppg_edge_stats_reset(&edge);
+            edge_window_end += PPG_EDGE_WINDOW_US;
+        }
+#endif
         ppg_read_plan_t plan = ppg_read_plan(&ppg, &latch, count, samples_ok, anchor,
                                              PPG_FS_NOMINAL_MHZ, PKT_STATUS_LATENCY_UNMEASURED);
         if (plan.reconfigure) {
@@ -546,6 +617,9 @@ static void ppg_reader_task(void *arg)
             }
         }
         if (plan.reconfigure && esp_timer_get_time() >= next_reconfigure_us) {
+#if BOARD_PPG_EDGE_ANCHOR
+            ppg_edge_break(&edge);
+#endif
             next_reconfigure_us = esp_timer_get_time() + PPG_RECONFIGURE_MS * 1000LL;
             err = max30101_start(&s_ppg_bus, &s_ppg_regs, &rev);
             if (err == MAX30101_OK) {
@@ -564,6 +638,19 @@ static void ppg_reader_task(void *arg)
         if (!plan.send) {
             continue;
         }
+#if BOARD_PPG_EDGE_ANCHOR
+        {
+            /* One UART0 line per PPG packet: "PE k_last t_read t_edge" (t_edge 0 when the
+             * packet kept the read time), queued so the reader never waits on UART0. */
+            ppg_edge_rec_t rec = {.k_last = plan.chunk.first_index + plan.chunk.count - 1u,
+                                  .t_read_us = t_read, .t_edge_us = from_edge ? anchor : 0u};
+            if (xQueueSend(s_ppg_edge_queue, &rec, 0) == pdTRUE) {
+                s_ppg_edge_logged++;
+            } else {
+                s_ppg_edge_dropped++;
+            }
+        }
+#endif
         for (unsigned slot = 0; slot < MAX30101_SLOTS; slot++) {
             pkt_t p = {
                 .channel_id = SLOT_CHANNELS[slot],
@@ -1843,6 +1930,22 @@ static void device_info_task(void *arg)
 
 static void log_stats(void)
 {
+#if BOARD_PPG_EDGE_ANCHOR
+    portENTER_CRITICAL(&s_ppg_edge_mux);
+    ppg_edge_stats_t pe = s_ppg_edge_pub;
+    uint32_t pe_windows = s_ppg_edge_windows;
+    portEXIT_CRITICAL(&s_ppg_edge_mux);
+    if (pe_windows > 0) {
+        /* Last 10 s window: read latency = FIFO read time - PPG_RDY edge of the newest sample. */
+        ESP_LOGI(TAG, "PPG edge window %" PRIu32 ": reads %" PRIu32 ", anchored %" PRIu32
+                      ", mismatch %" PRIu32 ", no edge %" PRIu32 ", ambiguous %" PRIu32
+                      ", latency min %" PRId64 " mean %.1f max %" PRId64 " us; PE lines %" PRIu32
+                      ", dropped %" PRIu32,
+                 pe_windows, pe.reads, pe.anchored, pe.mismatch, pe.no_edge, pe.ambiguous,
+                 pe.lat_min_us, pe.anchored ? (double)pe.lat_sum_us / pe.anchored : 0.0,
+                 pe.lat_max_us, s_ppg_edge_logged, s_ppg_edge_dropped);
+    }
+#endif
     for (int k = 0; k < CH_COUNT; k++) {
         const channel_stats_t *s = &s_stats[k];
         if (s->sent || s->tx_timeout || s->queue_drop) {

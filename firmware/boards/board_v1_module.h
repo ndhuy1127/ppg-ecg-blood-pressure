@@ -132,6 +132,17 @@
 #ifndef BOARD_PPG_READ_PERIOD_MS
 #define BOARD_PPG_READ_PERIOD_MS 0
 #endif
+/* Bench diagnostic of the MAX30101 sample clock (bring-up report 12.4, approved
+ * 2026-11-26): the INT interrupt stores the time of every PPG_RDY edge and each
+ * PPG packet is anchored on the edge of its newest sample instead of the read
+ * time; UART0 prints the read latency (read time - edge) every 10 s. Not a
+ * research build: T_ANCHOR_US of PPG means something else here. */
+#ifndef BOARD_PPG_EDGE_ANCHOR
+#define BOARD_PPG_EDGE_ANCHOR 0
+#endif
+#if BOARD_PPG_EDGE_ANCHOR && (!BOARD_PPG_REAL || BOARD_PPG_READ_PERIOD_MS != 0)
+#error "BOARD_PPG_EDGE_ANCHOR needs BOARD_PPG_REAL and the PPG_RDY reader (BOARD_PPG_READ_PERIOD_MS 0)"
+#endif
 
 /* MAX30101 on the PPG I2C bus (I2C_NUM_0). BOARD_PPG_REAL 1 reads it (drivers/max30101.c, not run
  * on a chip yet) instead of the fake PPG source; 400 kHz, 100 kHz if the rising

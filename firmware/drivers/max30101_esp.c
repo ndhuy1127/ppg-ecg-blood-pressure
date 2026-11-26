@@ -9,6 +9,7 @@
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
 #include "esp_attr.h"
+#include "esp_timer.h"
 
 #define PPG_I2C_PORT I2C_NUM_0
 #define PPG_I2C_MAX_WRITE 8 /* register + the longest block written (4 LED bytes) */
@@ -50,9 +51,27 @@ static void delay_ms(void *ctx, uint32_t ms)
     vTaskDelay(pdMS_TO_TICKS(ms) + 1); /* at least `ms`, whatever the tick */
 }
 
+#if BOARD_PPG_EDGE_ANCHOR
+static DRAM_ATTR ppg_edge_ring_t s_edges;
+static portMUX_TYPE s_edges_mux = portMUX_INITIALIZER_UNLOCKED;
+
+void max30101_esp_edges(ppg_edge_ring_t *out)
+{
+    portENTER_CRITICAL(&s_edges_mux);
+    *out = s_edges;
+    portEXIT_CRITICAL(&s_edges_mux);
+}
+#endif
+
 static void IRAM_ATTR int_isr(void *arg)
 {
     (void)arg;
+#if BOARD_PPG_EDGE_ANCHOR
+    const uint64_t t_edge = (uint64_t)esp_timer_get_time(); /* esp_timer in IRAM */
+    portENTER_CRITICAL_ISR(&s_edges_mux);
+    ppg_edge_push(&s_edges, t_edge);
+    portEXIT_CRITICAL_ISR(&s_edges_mux);
+#endif
     TaskHandle_t reader = s_reader;
     if (reader == NULL) {
         return;
