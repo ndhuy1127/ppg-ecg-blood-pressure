@@ -52,10 +52,23 @@ def _finite(value):
         return False
 
 
-def _session_index(text):
-    if not isinstance(text, str) or len(text) != 4 or text[0] != "S" or not text[1:].isdigit():
-        raise ValueError(f"session_id must look like S001, got {text!r}")
-    return int(text[1:])
+# Protocol section 3 (decided 2026-11-19): exactly 2 sessions per subject, no
+# session 3; SAP section 2 (amended 2026-11-21). Any other session_id is refused,
+# not dropped (added 2026-11-27). An exact lookup, not int(): int() also reads
+# non-ASCII digits, so "S００２" would become a second copy of an S002 cuff that
+# the duplicate check (on the original text) does not see.
+SESSIONS = {"S001": 1, "S002": 2}
+
+
+def _session_index(row):
+    text = row["session_id"]
+    if text not in SESSIONS:
+        raise ValueError(
+            f"session_id {text!r} of subject {row['subject_id']!r}, event "
+            f"{row['event_id']!r}, recording {row.get('recording')!r}: only S001 and "
+            "S002 exist (protocol section 3, two sessions per subject). Check the "
+            "session metadata of that recording; raw data are never edited")
+    return SESSIONS[text]
 
 
 def _start_time(row):
@@ -154,7 +167,7 @@ def prepare(rows, config):
         valid = raw["status"] == "valid" and all(_finite(raw[LABELS[t]]) for t in TARGETS)
         flags = set(filter(None, str(raw.get("flags") or "").split(";")))
         cuffs.append({
-            "subject": raw["subject_id"], "session": _session_index(raw["session_id"]),
+            "subject": raw["subject_id"], "session": _session_index(raw),
             "event_id": raw["event_id"], "phase": raw["phase"], "valid": valid,
             **{column: flag01(raw, column) for column in FLAG_COLUMNS},
             "start": _start_time(raw),
@@ -222,10 +235,11 @@ def prepare(rows, config):
         passing = {k for k in {c["session"] for c in mine}
                    if sum(c["main_ok"] for c in mine if c["session"] == k) >= 2
                    and (s, k) not in readjusted}
+        # SAP section 2 (amended 2026-11-21): session 1 AND session 2 must pass.
         if 1 not in passing:
             excluded[s] = "session1_not_passing"
-        elif not any(k >= 2 for k in passing):
-            excluded[s] = "no_later_session_passing"
+        elif 2 not in passing:
+            excluded[s] = "session2_not_passing"
     eligible = [s for s in subjects if s not in excluded]
     for c in cuffs:
         c["eligible"] = c["subject"] in eligible
@@ -561,7 +575,8 @@ def _share(values):
 def _counts(prep):
     """SAP sections 2, 4 and 10: cuffs by subject, session and phase; share of
     ECG-lost cuffs per subject; cuffs of each phase that did not reach the main
-    set and later sessions with no main-set cuff of a phase."""
+    set and later sessions with no main-set cuff of a phase; the ECG/PAT states
+    of session 2 over every non-pilot subject, eligible or not."""
     by = {}
     for c in prep["cuffs"]:
         if c["in_main"]:
@@ -604,9 +619,36 @@ def _counts(prep):
             "led_readjusted_session": sum(c["valid"] and c.get("main_ok", False)
                                           and c["led_session"] for c in rows),
             "later_sessions_without_main_cuff": len(sessions - with_phase)}
+    # The same ECG/PAT states over every non-pilot subject with session-2 rows,
+    # eligible or not (added 2026-11-27 after review). The summaries above cover
+    # eligible subjects only, so someone who lost ECG on every session-2 cuff (and
+    # so failed session 2) would vanish from them. Descriptive only; nothing here
+    # feeds a model, a contrast or eligibility. Denominator: valid cuffs.
+    pilots = {c["subject"] for c in prep["cuffs"] if c["pilot"]}
+    session2 = [c for c in prep["cuffs"] if c["session"] == 2 and c["subject"] not in pilots]
+    all_by_subject, all_by_phase = {}, {p: dict.fromkeys(states, 0) for p in PHASES}
+    for c in session2:
+        entry = all_by_subject.setdefault(
+            c["subject"], {"rows": 0, "valid_cuffs": 0, "ecg_lost": 0,
+                           **dict.fromkeys(states, 0)})
+        entry["rows"] += 1
+        if c["valid"]:
+            entry["valid_cuffs"] += 1
+            entry["ecg_lost"] += not c["ecg_ok"]
+            entry[ecg_state(c)] += 1
+            all_by_phase[c["phase"]][ecg_state(c)] += 1
+    readjusted = set(prep["led_readjusted_sessions"])
+    for s, entry in all_by_subject.items():
+        valid = entry["valid_cuffs"]
+        entry["ecg_loss_share"] = entry["ecg_lost"] / valid if valid else None
+        entry["led_readjusted"] = f"{s}|S002" in readjusted
+        entry["eligible"] = s in prep["eligible"]
+        entry["excluded_reason"] = prep["excluded"].get(s)
     return {"main_cuffs": sum(c["in_main"] for c in prep["cuffs"]),
             "by_subject_session_phase": by, "ecg_loss_share": ecg_loss,
             "ecg_pat_by_subject": ecg_by_subject, "ecg_pat_by_phase": ecg_by_phase,
+            "session2_all_subjects": {"by_subject": all_by_subject,
+                                      "ecg_pat_by_phase": all_by_phase},
             "calibration_counts": prep["calibration_counts"],
             "skipped_by_phase": by_phase,
             # Valid cuffs measured without the locked LED codes, every session.

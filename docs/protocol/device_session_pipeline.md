@@ -205,7 +205,7 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 
 | SAP | Code |
 | --- | --- |
-| Mục 2: lần cuff hợp lệ, người đạt chuẩn, tập phân tích chính | `prepare`: `status = valid`; lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, phiên đạt, tập chính, tập học và endpoint 3, vào lại endpoint 6 (sửa 2026-11-15, chờ duyệt; mục 4.3 ý 19); phiên đạt khi ≥ 2 lần cuff tính được PPG và PAT; một lần cuff có `led_readjusted` ở phiên ≥ 2 thì **cả phiên** không đạt, ra khỏi tập chính và tập học; một dòng có `pilot` thì loại người đó. Ba cột 0/1 đọc qua một hàm `flag01`; dòng không phải SYNTHETIC thiếu cột thì dừng |
+| Mục 2: lần cuff hợp lệ, người đạt chuẩn, tập phân tích chính | `prepare`: `status = valid`; lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, phiên đạt, tập chính, tập học và endpoint 3, vào lại endpoint 6 (sửa 2026-11-15, chờ duyệt; mục 4.3 ý 19); phiên đạt khi ≥ 2 lần cuff tính được PPG và PAT; người đạt chuẩn khi phiên 1 **và phiên 2** đều đạt (lý do loại `session1_not_passing`, `session2_not_passing`; sửa 2026-11-27: code trước đó nhận một phiên ≥ 2 bất kỳ, nên phiên 3 đạt cứu được phiên 2 trượt, trái SAP mục 2 sửa 2026-11-21); dòng có `session_id` khác đúng chữ S001, S002 thì dừng, thông báo kèm người, lần cuff và bản ghi (`_session_index`, tra chính xác vì `int()` đọc cả chữ số không phải ASCII; thêm 2026-11-27, **đề xuất, chờ duyệt**; protocol mục 3 không có phiên 3); một lần cuff có `led_readjusted` ở phiên ≥ 2 thì **cả phiên** không đạt, ra khỏi tập chính và tập học; một dòng có `pilot` thì loại người đó. Ba cột 0/1 đọc qua một hàm `flag01`; dòng không phải SYNTHETIC thiếu cột thì dừng |
 | Mục 2, 9: ≥ 15 người đạt chuẩn | Dưới 15 vẫn chạy, report có `below_min_eligible` và `warnings` |
 | Mục 4: BP₀, đặc trưng nền, Δ | Trung bình M0 hợp lệ phiên 1; trung vị đặc trưng trên các lần M0 đó |
 | Mục 4: Ridge α = 1, không hệ số chặn, chia SD, trọng số 1 / số lần cuff | `loso_ridge`, cùng phép tính với `rq1_holm_loso.loso_ridge` |
@@ -319,6 +319,12 @@ Thêm 2026-11-13 (liệt kê để chốt, chưa sửa theo):
     `ecg_unusable` (có ECG nhưng không ra HR), `pat_failed` (có HR từ ECG nhưng không có PAT hợp
     lệ). Cửa sổ không có ECG vẫn được tính đặc trưng PPG, nên vào được endpoint 3 (SAP mục 10);
     trước đó code dừng trước khi tính PPG.
+    Thêm 2026-11-27 (sau rà soát; đề xuất, chờ duyệt): các số trên chỉ tính người đạt chuẩn, nên
+    người mất ECG ở mọi lần cuff phiên 2 (vì thế phiên 2 trượt) biến mất khỏi chúng. Khối
+    `counts.session2_all_subjects` đếm cùng bốn trường hợp trên **mọi người có dòng phiên 2, trừ
+    pilot**, đạt chuẩn hay không: theo người (`rows`, `valid_cuffs`, `ecg_lost`, `ecg_loss_share`
+    với mẫu số là lần cuff hợp lệ, `led_readjusted`, `eligible`, `excluded_reason`) và theo pha.
+    Chỉ để mô tả: không vào mô hình, phép so sánh hay xét đạt chuẩn.
 14. **"Số lần cuff mỗi pha bị bỏ qua"** (SAP mục 4). Bảng đặc trưng không có lịch đo dự kiến, nên
     code báo các dòng mỗi pha không vào tập chính (không hợp lệ, không tính được, phiên chỉnh LED)
     và số phiên ≥ 2 không có lần cuff chính nào của pha đó. Lần đo không được bấm thì không có

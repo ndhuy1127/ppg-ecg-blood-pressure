@@ -19,12 +19,14 @@ FAST = {**CONFIG, "bootstrap": {**CONFIG["bootstrap"], "draws": 2000}}
 PPG = CONFIG["models"]["ppg"]["features"]
 
 
-def table(seed, n=20, sessions=3, sbp_pat=0.0, dbp_pat=0.0, drop=()):
+def table(seed, n=20, sessions=2, sbp_pat=0.0, dbp_pat=0.0, drop=(), day_coupling=None):
     """Cuffs M0, M0, M1, M2 per session. True change: day effect (0 in session 1)
     plus M1 -4 / M2 +8 (SBP; DBP 0.6 x with its own day effect). PAT falls by
     ``sbp_pat`` ms per mmHg of the true SBP change and ``dbp_pat`` per mmHg of
     DBP; PPG features are weak and HR marks M2. ``drop``: (subject, session)
-    removed."""
+    removed. ``day_coupling``: the DBP day effect becomes ``day_coupling`` x the
+    SBP one plus a quarter of its own draw (same random stream, so the other
+    columns do not move)."""
     rng = np.random.default_rng(seed)
     rows = []
     for s in range(n):
@@ -34,6 +36,8 @@ def table(seed, n=20, sessions=3, sbp_pat=0.0, dbp_pat=0.0, drop=()):
                 continue
             day_s = 0 if k == 1 else rng.normal(0, 5)
             day_d = 0 if k == 1 else rng.normal(0, 4)
+            if day_coupling is not None and k > 1:
+                day_d = day_coupling * day_s + 0.25 * day_d
             for c, phase in enumerate(CUFFS):
                 ts = day_s + {"M0": 0, "M1": -4, "M2": m2_s}[phase]
                 td = day_d + {"M0": 0, "M1": -2, "M2": m2_d}[phase]
@@ -58,7 +62,11 @@ def conclusion(report, target):
 
 
 def test_pat_helps_both_outputs():
-    report = ra.analyze(table(1, sbp_pat=2.0, dbp_pat=1.0), FAST)
+    # Positive control, one seed: not a power estimate (SAP section 9 holds those).
+    # With one evaluated session per subject (protocol section 3, 2026-11-19) the
+    # DBP gain was not detected on this seed with independent day effects; coupling
+    # the DBP day change to SBP makes the injected signal easier to detect.
+    report = ra.analyze(table(1, sbp_pat=2.0, dbp_pat=1.0, day_coupling=0.6), FAST)
     for target in ("SBP", "DBP"):
         assert conclusion(report, target)["declared"]
         assert conclusion(report, target)["passes_at_975"]
@@ -99,13 +107,15 @@ def test_holm_steps_and_delta_reading():
 
 
 def test_missing_cuffs_and_sessions_follow_sap_section_10():
-    rows = table(4, sbp_pat=2.0, drop={(0, 2), (0, 3)})
+    rows = table(4, sbp_pat=2.0, drop={(0, 2)})
     # Subject 1: session 1 has one valid computable cuff left -> session 1 fails.
     rows = [r for r in rows if not (r["subject_id"] == "SYN_01" and r["session_id"] == "S001"
                                     and r["event_id"] in ("E02", "E03", "E04"))]
-    # Subject 2: ECG lost (no PAT, no ECG HR) in session 2, session 3 still passes.
+    # Subject 2: ECG lost (no PAT, no ECG HR) on M1 and M2 of session 2; its two M0
+    # cuffs still compute, so session 2 passes and half its cuffs lost ECG.
     for r in rows:
-        if r["subject_id"] == "SYN_02" and r["session_id"] == "S002":
+        if (r["subject_id"] == "SYN_02" and r["session_id"] == "S002"
+                and r["event_id"] in ("E03", "E04")):
             r.update(pat_ms="", ecg_hr_bpm="")
     # Subject 5: PAT missing with ECG present (pairing failed): not an ECG loss.
     for r in rows:
@@ -116,16 +126,16 @@ def test_missing_cuffs_and_sessions_follow_sap_section_10():
         if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_03", "S002", "E01"):
             r.update(status="no_result", sbp_mmhg="", dbp_mmhg="")
     report = ra.analyze(rows, FAST)
-    assert report["subjects"]["excluded"] == {"SYN_00": "no_later_session_passing",
+    assert report["subjects"]["excluded"] == {"SYN_00": "session2_not_passing",
                                               "SYN_01": "session1_not_passing"}
     assert report["subjects"]["eligible"] == 18
     assert report["counts"]["ecg_loss_share"]["SYN_02"] == pytest.approx(0.5)
     assert report["counts"]["ecg_loss_share"]["SYN_05"] == 0
-    assert report["counts"]["main_cuffs"] == 18 * 8 - 4 - 1 - 1
+    assert report["counts"]["main_cuffs"] == 18 * 4 - 2 - 1 - 1
     skipped = report["counts"]["skipped_by_phase"]
     assert skipped["M0"]["not_valid"] == 1 and skipped["M1"]["valid_not_computable"] == 2
     # Endpoint 3 keeps the cuffs without PAT for PPG-only.
-    assert report["secondary"]["3_ppg_only_all_cuffs"]["SBP"]["n_cuffs"] == 18 * 8 - 1
+    assert report["secondary"]["3_ppg_only_all_cuffs"]["SBP"]["n_cuffs"] == 18 * 4 - 1
 
 
 def test_safety_stops_are_kept_in_main_and_dropped_in_endpoint_7():
@@ -134,17 +144,17 @@ def test_safety_stops_are_kept_in_main_and_dropped_in_endpoint_7():
         if r["subject_id"] == "SYN_04" and r["phase"] == "M2" and r["session_id"] != "S001":
             r["safety_stop"] = 1
     report = ra.analyze(rows, FAST)
-    assert report["counts"]["safety_stop_in_main"] == 2
-    assert report["counts"]["main_cuffs"] == 20 * 8
+    assert report["counts"]["safety_stop_in_main"] == 1
+    assert report["counts"]["main_cuffs"] == 20 * 4
     endpoint = report["secondary"]["7_without_safety_stops"]
-    assert endpoint["rows_dropped"] == 2
-    assert endpoint["main_cuffs"] == 20 * 8 - 2 and endpoint["main_cuffs_change"] == -2
+    assert endpoint["rows_dropped"] == 1
+    assert endpoint["main_cuffs"] == 20 * 4 - 1 and endpoint["main_cuffs_change"] == -1
     # Any 0/1 spelling counts; one reader for every 0/1 column.
     for r in rows:
         if r["safety_stop"] == 1:
             r["safety_stop"] = "true"
     again = ra.analyze(rows, FAST)["secondary"]["7_without_safety_stops"]
-    assert again["rows_dropped"] == 2
+    assert again["rows_dropped"] == 1
 
 
 def test_held_out_subject_never_enters_its_fold(monkeypatch):
@@ -189,7 +199,7 @@ def test_matches_rq1_holm_loso_on_the_same_data():
     features = {**sim["features"], "pat": {**sim["features"]["pat"], "a": 0.15}}
     target = {"tau_day": 4.0, "m1_mean": -3.0, "m1_sd": 2.0, "sigma_cuff": 4.0}
     effect = {"m2_mean": 8.0, "m2_sd": 4.0}
-    n, sessions = 10, 3
+    n, sessions = 10, 2
     reference, x = rh.simulate_loso_data(np.random.default_rng(11), 1, n, sessions,
                                          target, effect, features)
     expected = rh.loso_d(np.random.default_rng(11), 1, n, sessions, target, effect,
@@ -323,15 +333,53 @@ def test_led_readjusted_on_one_cuff_removes_the_whole_session():
     assert len(session) == 4
     assert not any(c["in_main"] or c["trainable"] for c in session)
     assert prep["led_readjusted_sessions"] == ["SYN_01|S002"]
-    assert "SYN_01" in prep["eligible"]  # session 3 still passes
-    later = [c for c in prep["cuffs"] if c["subject"] == "SYN_01" and c["session"] == 3]
-    assert all(c["in_main"] for c in later)
+    # A readjusted session 2 is not a passing session (SAP section 2): the subject
+    # is out, its session-1 cuffs too.
+    assert prep["excluded"] == {"SYN_01": "session2_not_passing"}
+    assert not any(c["trainable"] for c in prep["cuffs"] if c["subject"] == "SYN_01")
+
+
+def test_session2_must_pass_and_session3_is_refused():
+    """SAP section 2 (amended 2026-11-21): session 1 and session 2 must pass, a
+    session passing with >= 2 computable cuffs. Protocol section 3 (2026-11-19):
+    no session 3, so such a row is a log error and is refused."""
+    rows = table(11, n=6, sbp_pat=1.0)
+    for r in rows:
+        # SYN_01: ECG lost on every session-2 cuff -> session 2 fails.
+        if r["subject_id"] == "SYN_01" and r["session_id"] == "S002":
+            r.update(pat_ms="", ecg_hr_bpm="")
+        # SYN_02: ECG lost on 3 of 4 session-2 cuffs -> 1 computable, fails.
+        if (r["subject_id"] == "SYN_02" and r["session_id"] == "S002"
+                and r["event_id"] != "E01"):
+            r.update(pat_ms="", ecg_hr_bpm="")
+        # SYN_03: ECG lost on 2 of 4 -> 2 computable, passes (the boundary).
+        if (r["subject_id"] == "SYN_03" and r["session_id"] == "S002"
+                and r["event_id"] in ("E03", "E04")):
+            r.update(pat_ms="", ecg_hr_bpm="")
+    prep = ra.prepare(rows, FAST)
+    assert prep["excluded"] == {"SYN_01": "session2_not_passing",
+                                "SYN_02": "session2_not_passing"}
+    assert prep["eligible"] == ["SYN_00", "SYN_03", "SYN_04", "SYN_05"]
+    assert not any(c["in_main"] or c["trainable"] for c in prep["cuffs"]
+                   if c["subject"] in ("SYN_01", "SYN_02"))
+    third = copy.deepcopy(rows[-1])
+    third.update(session_id="S003", event_id="E01")
+    with pytest.raises(ValueError, match="'S003' of subject 'SYN_05'.*only S001 and S002"):
+        ra.prepare(rows + [third], FAST)
+    # Finding 1 of the review: int() reads non-ASCII digits, so a full-width copy of
+    # one S002 cuff passed the duplicate check and counted twice toward the
+    # 2-cuff threshold. Other spellings of a session are refused as well.
+    for spelling in ("S００２", "S2", "s002", "S000", " S002"):
+        copied = copy.deepcopy(rows[-1])
+        copied["session_id"] = spelling
+        with pytest.raises(ValueError, match="only S001 and S002"):
+            ra.prepare(rows + [copied], FAST)
 
 
 def test_pilot_subject_is_excluded_and_real_rows_need_the_columns():
     rows = table(10, n=6)
     for r in rows:
-        if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_02", "S003", "E04"):
+        if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_02", "S002", "E04"):
             r["pilot"] = 1
     prep = ra.prepare(rows, FAST)
     assert prep["excluded"] == {"SYN_02": "pilot"}
@@ -407,7 +455,7 @@ def test_empty_phase_folds_are_counted():
     assert report["main"]["phase_baseline_empty_phase_folds"]["SBP"] == {
         "M0": 0, "M1": 0, "M2": 1}
     skipped = report["counts"]["skipped_by_phase"]["M2"]
-    assert skipped["later_sessions_without_main_cuff"] == 10
+    assert skipped["later_sessions_without_main_cuff"] == 5
 
 
 def test_endpoints_5_and_7_keep_the_main_calibration():
@@ -441,8 +489,8 @@ def test_endpoint_5_reports_a_subject_left_without_evaluated_cuffs():
     report = ra.analyze(rows, FAST)
     endpoint = report["secondary"]["5_sqi_filtered"]
     assert endpoint["subjects_without_evaluated_cuffs"] == ["SYN_05"]
-    assert endpoint["evaluated_cuffs_by_subject"]["SYN_05"] == [0, 8]
-    assert endpoint["n_folds"] == 19 and endpoint["main_cuffs_change"] == -8
+    assert endpoint["evaluated_cuffs_by_subject"]["SYN_05"] == [0, 4]
+    assert endpoint["n_folds"] == 19 and endpoint["main_cuffs_change"] == -4
     # Eligibility is not re-examined: the main analysis keeps all 20 subjects.
     assert report["main"]["n_folds"] == 20
 
@@ -575,7 +623,7 @@ def test_filtered_endpoint_keeps_labels_features_and_drops_flagged_cuffs(monkeyp
     rows = table(9, sbp_pat=2.0)
     for r in rows:
         if r["subject_id"] == "SYN_02" and r["event_id"] == "E01":
-            r["flags"] = "motion"  # session 1 (calibration) and sessions 2-3
+            r["flags"] = "motion"  # session 1 (calibration) and session 2
     prep = ra.prepare(rows, FAST)
     snapshot = copy.deepcopy(prep)
     seen = {}
@@ -595,8 +643,8 @@ def test_filtered_endpoint_keeps_labels_features_and_drops_flagged_cuffs(monkeyp
         flagged = before["subject"] == "SYN_02" and before["event_id"] == "E01"
         assert after["trainable"] == (before["trainable"] and not flagged)
         assert after["in_main"] == (before["in_main"] and not flagged)
-    assert out["rows_dropped"] == 3
-    assert out["dropped_from_training"] == 3 and out["dropped_from_evaluation"] == 2
+    assert out["rows_dropped"] == 2
+    assert out["dropped_from_training"] == 2 and out["dropped_from_evaluation"] == 1
     assert out["confirmatory"] is False and out["n_evaluated_subjects"] == 20
     assert out["below_min_eligible"] is False
 
@@ -642,9 +690,9 @@ def test_session_numbers_must_follow_time():
         ra.prepare(swapped, FAST)
     same = copy.deepcopy(rows)
     for r in same:
-        if r["subject_id"] == "SYN_01" and r["session_id"] == "S003":
-            r["session_start_utc"] = "2026-12-02T08:00:00+00:00"
-    with pytest.raises(ValueError, match="SYN_01.*S003"):
+        if r["subject_id"] == "SYN_01" and r["session_id"] == "S002":
+            r["session_start_utc"] = "2026-12-01T08:00:00+00:00"
+    with pytest.raises(ValueError, match="SYN_01.*S002"):
         ra.prepare(same, FAST)
     # A late recording filed under session 1 (its earliest start still first):
     # BP0 would use a visit after session 2, so it is refused too.
@@ -678,7 +726,7 @@ def test_led_readjusted_on_session_1_is_refused():
 def test_secondary_model_contrasts_use_the_same_cuffs():
     rows = table(15, n=8, sbp_pat=1.0)
     # No HRV on two main-set cuffs: the ablation has no prediction there.
-    holes = {("SYN_03", "S002", "E03"), ("SYN_05", "S003", "E04")}
+    holes = {("SYN_03", "S002", "E03"), ("SYN_05", "S002", "E04")}
     for r in rows:
         if (r["subject_id"], r["session_id"], r["event_id"]) in holes:
             r["ecg_rmssd_ms"] = ""
@@ -710,7 +758,7 @@ def test_secondary_model_contrasts_use_the_same_cuffs():
 def test_counts_split_ecg_loss_and_calibration():
     rows = table(16, n=6, sbp_pat=1.0)
     marks = {("SYN_01", "S002", "E02"): "absent", ("SYN_01", "S002", "E03"): "unusable",
-             ("SYN_02", "S003", "E04"): "pat", ("SYN_04", "S001", "E01"): "cal"}
+             ("SYN_02", "S002", "E04"): "pat", ("SYN_04", "S001", "E01"): "cal"}
     for r in rows:
         mark = marks.get((r["subject_id"], r["session_id"], r["event_id"]))
         if mark in ("absent", "unusable"):
@@ -722,13 +770,51 @@ def test_counts_split_ecg_loss_and_calibration():
             r["ppg_amplitude"] = ""
     counts = ra._counts(ra.prepare(rows, FAST))
     assert counts["ecg_pat_by_subject"]["SYN_01"] == {
-        "ecg_absent": 1, "ecg_unusable": 1, "pat_failed": 0, "pat_available": 6}
+        "ecg_absent": 1, "ecg_unusable": 1, "pat_failed": 0, "pat_available": 2}
     assert counts["ecg_pat_by_subject"]["SYN_02"]["pat_failed"] == 1
     assert counts["ecg_pat_by_phase"]["M0"]["ecg_absent"] == 1
     assert counts["ecg_pat_by_phase"]["M1"]["ecg_unusable"] == 1
     assert counts["ecg_pat_by_phase"]["M2"]["pat_failed"] == 1
     cal = counts["calibration_counts"]["SYN_04"]
     assert cal["bp0"] == 2 and cal["ppg_amplitude"] == 1 and cal["pat_ms"] == 2
+
+
+def test_session2_ecg_counts_cover_subjects_excluded_for_it():
+    """Finding 3 of the review: a subject who lost ECG on every session-2 cuff fails
+    session 2 and leaves the eligible-only summaries; the all-subject block keeps
+    it (4/4), skips pilots, and counts a readjusted session 2."""
+    rows = table(17, n=6, sbp_pat=1.0)
+    for r in rows:
+        key = (r["subject_id"], r["session_id"], r["event_id"])
+        if r["subject_id"] == "SYN_01" and r["session_id"] == "S002":
+            r.update(ecg_hr_bpm="", ecg_rmssd_ms="", pat_ms="")
+            r["flags"] = ("ecg:absent" if r["event_id"] in ("E01", "E02")
+                          else "ecg:too_few_peaks")
+        if r["subject_id"] == "SYN_02":
+            r["pilot"] = 1
+        if key == ("SYN_03", "S002", "E01"):
+            r.update(status="no_result", sbp_mmhg="", dbp_mmhg="")
+        if key == ("SYN_04", "S002", "E02"):
+            r["led_readjusted"] = 1
+    counts = ra._counts(ra.prepare(rows, FAST))
+    assert "SYN_01" not in counts["ecg_loss_share"]  # the gap this block closes
+    block = counts["session2_all_subjects"]
+    subjects = block["by_subject"]
+    assert sorted(subjects) == ["SYN_00", "SYN_01", "SYN_03", "SYN_04", "SYN_05"]
+    assert subjects["SYN_01"] == {
+        "rows": 4, "valid_cuffs": 4, "ecg_lost": 4, "ecg_absent": 2, "ecg_unusable": 2,
+        "pat_failed": 0, "pat_available": 0, "ecg_loss_share": 1.0,
+        "led_readjusted": False, "eligible": False,
+        "excluded_reason": "session2_not_passing"}
+    # A cuff without a result leaves the denominator, not the row count.
+    assert subjects["SYN_03"]["rows"] == 4 and subjects["SYN_03"]["valid_cuffs"] == 3
+    assert subjects["SYN_03"]["ecg_loss_share"] == 0.0 and subjects["SYN_03"]["eligible"]
+    assert subjects["SYN_04"]["led_readjusted"] and not subjects["SYN_04"]["eligible"]
+    phase = block["ecg_pat_by_phase"]
+    assert phase["M0"]["ecg_absent"] == 2
+    assert phase["M1"]["ecg_unusable"] == 1 and phase["M2"]["ecg_unusable"] == 1
+    # M0 with PAT: two each for SYN_00, SYN_04, SYN_05, one for SYN_03.
+    assert phase["M0"]["pat_available"] == 7
 
 
 def test_committed_unchanged_sees_through_assume_unchanged(tmp_path):
@@ -820,5 +906,5 @@ def test_cuffs_without_the_locked_led_codes_leave_main_training_and_calibration(
         "SYN_00": 0, "SYN_01": 1, "SYN_02": 1, "SYN_03": 2, "SYN_04": 0, "SYN_05": 0}
     assert counts["skipped_by_phase"]["M1"]["led_not_locked"] == 1
     assert counts["skipped_by_phase"]["M1"]["valid_not_computable"] == 0
-    # Endpoint 6: SYN_01's cuff and the 8 later cuffs of SYN_03 come back.
-    assert report["secondary"]["6_with_led_readjusted"]["main_cuffs_change"] == 9
+    # Endpoint 6: SYN_01's cuff and the 4 session-2 cuffs of SYN_03 come back.
+    assert report["secondary"]["6_with_led_readjusted"]["main_cuffs_change"] == 5

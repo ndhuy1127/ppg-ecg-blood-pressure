@@ -38,6 +38,9 @@
 >   đổi "phiên 2–3"/"ít nhất một phiên sau" thành phiên 2; mục 9 bỏ việc chọn phân bổ phiên sau
 >   pilot (quy tắc chỉ còn chọn số người); mục 13 điểm 6 sửa theo. "Phiên ≥ 2" ở các mục khác
 >   giữ nguyên chữ, nay nghĩa là phiên 2.
+> - **Sửa 2026-11-27 (đề xuất, chờ duyệt), khớp code với mục 2:** code phân tích từng nhận "phiên
+>   1 đạt và có một phiên ≥ 2 bất kỳ đạt", nay đòi đúng phiên 2 đạt. Mục 2 thêm quy tắc: dòng có mã
+>   phiên khác S001, S002 là lỗi nhật ký, phân tích dừng chứ không bỏ qua dòng đó.
 
 ## 1. Câu hỏi và nguyên tắc
 
@@ -66,6 +69,9 @@
 - **Tập phân tích chính:** mọi lần cuff hợp lệ ở phiên ≥ 2 (M0, M1, M2) của người đạt chuẩn,
   tính được cả PAT lẫn đặc trưng PPG. Không lọc theo SQI. Phiên `led_readjusted` không thuộc tập
   này.
+- **Chỉ có phiên 1 và phiên 2 (thêm 2026-11-27, đề xuất, chờ duyệt):** protocol mục 3 không có
+  phiên 3. Dòng có mã phiên khác S001, S002 là lỗi nhật ký: phân tích dừng và báo dòng đó, không
+  bỏ qua và không đưa vào tập nào. Vì vậy một phiên khác không thể thay cho phiên 2 trượt.
 - **Lần cuff không chạy với mã LED đã khóa (sửa 2026-11-15, đề xuất, chờ duyệt):** cờ
   `ppg:led_not_locked` ([SQI v1](sqi_specification_v1.md) mục 3.3) bật khi trạng thái MAX30101
   trong cửa sổ không mang mã LED đã khóa, khi bản ghi của người tham gia không có mã khóa, hay
