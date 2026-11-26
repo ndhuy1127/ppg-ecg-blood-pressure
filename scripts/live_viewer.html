@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Viewer V1</title>
+<!--
+  Live viewer for the V1 device (Packet Schema V0.2, configs/hardware/Packet_Schema_V0.2.md).
+  Reads the USB packet port with the Web Serial API (Chrome or Edge), decodes packets in
+  the page and draws ECG, PPG and IMU; it can also send SET_PPG_LED (section 13).
+  Viewing aid only: it writes no file, so it is not a recording. Recordings go through
+  scripts/packet_logger.py (raw bytes, manifest, provenance). The serial port can be open
+  in one program at a time: close this page's connection before running the logger.
+  Replay of an existing raw.bin is offered for checking the page without the device.
+-->
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2430; --muted: #5f6b7a; --line: #d9dee5;
+    --grid: #eceff3; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030; --accent: #2b6cb0;
+    --ecg: #2b6cb0; --green: #2f9e44; --red: #d6336c; --ir: #7048e8;
+    --x: #e8590c; --y: #2f9e44; --z: #1c7ed6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161c; --panel: #1b2129; --text: #e6e9ee; --muted: #98a2b3; --line: #2c3440;
+      --grid: #232a34; --ecg: #74c0fc; --green: #69db7c; --red: #f783ac; --ir: #b197fc;
+      --x: #ffa94d; --y: #69db7c; --z: #74c0fc;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+           padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+           position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 16px; margin: 0 12px 0 0; }
+  button, select, input { font: inherit; color: var(--text); background: var(--panel);
+           border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  label { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); }
+  #conn { font-weight: 600; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; padding: 12px 16px; }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+  .lane { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+          margin-bottom: 8px; padding: 4px 8px 2px; }
+  .lane .title { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .lane .title b { color: var(--text); }
+  canvas { width: 100%; height: 130px; display: block; }
+  .side section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+                  padding: 8px 10px; margin-bottom: 8px; }
+  .side h2 { font-size: 13px; margin: 0 0 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+  td, th { padding: 2px 4px; text-align: right; border-bottom: 1px solid var(--grid); }
+  td:first-child, th:first-child { text-align: left; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .dc { display: grid; grid-template-columns: 52px 1fr 60px; gap: 6px; align-items: center;
+        font-size: 12px; margin: 3px 0; }
+  .bar { position: relative; height: 12px; background: var(--grid); border-radius: 3px; overflow: hidden; }
+  .bar .target { position: absolute; left: 30%; width: 40%; top: 0; bottom: 0;
+                 background: color-mix(in srgb, var(--ok) 18%, transparent); }
+  .bar .fill { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 2px; }
+  .led { display: grid; grid-template-columns: 52px 70px 1fr; gap: 6px; align-items: center;
+         font-size: 12px; margin: 3px 0; }
+  .led input { width: 70px; padding: 2px 6px; }
+  #log { font: 11px/1.35 ui-monospace, Consolas, monospace; height: 160px; overflow-y: auto;
+         white-space: pre-wrap; color: var(--muted); }
+  .note { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Live Viewer V1</h1>
+  <button id="btnConnect" class="primary">Kết nối cổng</button>
+  <button id="btnDisconnect" disabled>Ngắt</button>
+  <label>Phát lại raw.bin <input type="file" id="fileRaw" accept=".bin"></label>
+  <select id="replaySpeed" title="Tốc độ phát lại">
+    <option value="1">1×</option><option value="5">5×</option><option value="20">20×</option>
+  </select>
+  <label>Cửa sổ
+    <select id="win"><option>5</option><option selected>10</option><option>20</option><option>30</option></select> s
+  </label>
+  <label><input type="checkbox" id="filt" checked> Lọc hiển thị</label>
+  <label><input type="checkbox" id="notch" checked> Notch 50 Hz (ECG)</label>
+  <label><input type="checkbox" id="flip" checked> Lật dấu PPG</label>
+  <button id="btnPause">Tạm dừng</button>
+  <span id="conn">Chưa kết nối</span>
+</header>
+<main>
+  <div id="lanes"></div>
+  <div class="side">
+    <section>
+      <h2>Phiên thiết bị</h2>
+      <div id="session" style="font-size:12px">—</div>
+    </section>
+    <section>
+      <h2>DC PPG (% thang ADC, 5 s gần nhất; mục tiêu 30–70 %)</h2>
+      <div id="dc"></div>
+      <p class="note">Nhịp tim ước lượng từ IR: <b id="hr">—</b></p>
+    </section>
+    <section>
+      <h2>Mã LED MAX30101 (bước 0,2 mA; trần 0x7F)</h2>
+      <div id="ledNow" style="font-size:12px;margin-bottom:4px">Đang dùng: —</div>
+      <div class="led"><span>Xanh</span><input id="ledG" type="number" min="0" max="127" value="18"><span id="ledGmA"></span></div>
+      <div class="led"><span>Đỏ</span><input id="ledR" type="number" min="0" max="127" value="36"><span id="ledRmA"></span></div>
+      <div class="led"><span>IR</span><input id="ledI" type="number" min="0" max="127" value="36"><span id="ledImA"></span></div>
+      <button id="btnLed" disabled>Gửi mã LED</button>
+      <span id="ledAck" style="font-size:12px"></span>
+      <p class="note">Xanh là mã của mỗi khe LED3 và LED4. Không dùng mã vượt 0x7F.</p>
+    </section>
+    <section>
+      <h2>Kênh</h2>
+      <table id="stats"><thead><tr><th>Kênh</th><th>sps</th><th>ppm</th><th>Gói</th><th>Mất</th><th>Cờ</th></tr></thead><tbody></tbody></table>
+      <p class="note">sps tính theo đồng hồ thiết bị trên 10 s gần nhất. Cờ: O tràn FIFO, M tràn bộ đệm MCU,
+        L lead-off chip (trên breakout v2 bật cả khi tiếp xúc tốt, không dùng), R neo lại chỉ số, A tràn ALC.
+        Mở cổng khi thiết bị đã chạy thì gói bị bỏ lúc chưa có máy đọc cũng được đếm là mất.</p>
+      <button id="btnReset">Xóa bộ đếm</button>
+    </section>
+    <section>
+      <h2>Nhật ký</h2>
+      <div id="log"></div>
+    </section>
+  </div>
+</main>
+
+<script id="decoder">
+"use strict";
+// ---- Packet Schema V0.2 codec (mirrors software/data_io/packet_wire.py) ----
+const SYNC0 = 0xA5, SYNC1 = 0x5A, HEADER_SIZE = 40, MAX_SAMPLES = 32;
+const KNOWN_CHANNELS = new Set([0xE1, 0xF1, 0xF2, 0xF3, 0xF4, 0xC1, 0xA1, 0xA2, 0xA3,
+  0xA4, 0xA5, 0xA6, 0xD1, 0xB1, 0xD2, 0xD3]);
+
+const CRC_TABLE = (() => {
+  const t = new Uint16Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i << 8;
+    for (let k = 0; k < 8; k++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    t[i] = c;
+  }
+  return t;
+})();
+
+function crc16(bytes, start, end) {  // CRC-16/CCITT-FALSE
+  let crc = 0xFFFF;
+  for (let i = start; i < end; i++) crc = ((crc << 8) & 0xFFFF) ^ CRC_TABLE[((crc >> 8) ^ bytes[i]) & 0xFF];
+  return crc;
+}
+
+class StreamDecoder {
+  constructor() {
+    this.buf = new Uint8Array(1 << 16); this.len = 0;
+    this.errors = { bad_header: 0, crc_mismatch: 0, unknown_channel: 0 };
+    this.skippedBytes = 0;
+  }
+  feed(chunk) {
+    if (this.len + chunk.length > this.buf.length) {
+      const bigger = new Uint8Array(Math.max(this.buf.length * 2, this.len + chunk.length));
+      bigger.set(this.buf.subarray(0, this.len)); this.buf = bigger;
+    }
+    this.buf.set(chunk, this.len); this.len += chunk.length;
+    const b = this.buf, out = [];
+    let pos = 0;
+    while (true) {
+      let s = -1;
+      for (let i = pos; i + 1 < this.len; i++) if (b[i] === SYNC0 && b[i + 1] === SYNC1) { s = i; break; }
+      if (s < 0) {
+        const keep = this.len > pos && b[this.len - 1] === SYNC0 ? 1 : 0;
+        this.skippedBytes += this.len - keep - pos; pos = this.len - keep; break;
+      }
+      this.skippedBytes += s - pos; pos = s;
+      if (this.len - s < HEADER_SIZE) break;
+      const dv = new DataView(b.buffer, b.byteOffset + s, HEADER_SIZE);
+      const version = b[s + 2], count = dv.getUint16(36, true);
+      if ((version !== 1 && version !== 2) || count < 1 || count > MAX_SAMPLES) {
+        this.errors.bad_header++; this.skippedBytes++; pos = s + 1; continue;
+      }
+      const size = HEADER_SIZE + 4 * count + 2;
+      if (this.len - s < size) break;
+      const crc = b[s + size - 2] | (b[s + size - 1] << 8);
+      if (crc16(b, s + 2, s + size - 2) !== crc) {
+        this.errors.crc_mismatch++; this.skippedBytes++; pos = s + 1; continue;
+      }
+      const channel = b[s + 3];
+      if (!KNOWN_CHANNELS.has(channel)) { this.errors.unknown_channel++; pos = s + size; continue; }
+      const ddv = new DataView(b.buffer, b.byteOffset + s + HEADER_SIZE, 4 * count);
+      const data = new Int32Array(count);
+      for (let i = 0; i < count; i++) data[i] = ddv.getInt32(4 * i, true);
+      out.push({
+        version, channel, session: dv.getUint32(4, true), seq: dv.getUint32(8, true),
+        firstIndex: dv.getUint32(12, true), tAnchor: Number(dv.getBigUint64(16, true)),
+        tFirst: Number(dv.getBigUint64(24, true)), fsMhz: dv.getUint32(32, true),
+        status: dv.getUint16(38, true), data,
+      });
+      pos = s + size;
+    }
+    this.buf.copyWithin(0, pos, this.len); this.len -= pos;
+    return out;
+  }
+}
+
+function encodeCommand(cmdId, seq, params) {  // section 13 frame, PC -> device
+  const f = new Uint8Array(7 + params.length + 2);
+  f[0] = 0xA5; f[1] = 0x5B; f[2] = 1; f[3] = cmdId; f[4] = seq & 0xFF; f[5] = (seq >> 8) & 0xFF;
+  f[6] = params.length; f.set(params, 7);
+  const crc = crc16(f, 2, 7 + params.length);
+  f[7 + params.length] = crc & 0xFF; f[8 + params.length] = crc >> 8;
+  return f;
+}
+
+function ecgCode(word) {  // signed 18-bit code and ETAG of a MAX30001 FIFO word
+  let code = (word >> 6) & 0x3FFFF;
+  if (code >= 1 << 17) code -= 1 << 18;
+  return [code, (word >> 3) & 7];
+}
+
+function wordsToAscii(words) {
+  let s = "";
+  for (const w of words) for (const sh of [24, 16, 8, 0]) {
+    const c = (w >>> sh) & 0xFF; if (c) s += String.fromCharCode(c);
+  }
+  return s;
+}
+
+if (typeof module !== "undefined") module.exports = { StreamDecoder, encodeCommand, ecgCode, crc16 };
+</script>
+
+<script>
+"use strict";
+// ---- Display constants ----
+const ECG_MV_PER_CODE = 50 / (1 << 17);  // VREF 1 V, gain 20 V/V (device_session_v1.json)
+const ECG_LEAD_OFF_MV = 35;              // signal-based lead-off level, decided 2026-11-24
+const ACC_LSB_PER_G = 8192;              // BMI270 ACC_RANGE +-4 g (firmware/drivers/bmi270.c)
+const GYR_LSB_PER_DPS = 65.6;            // BMI270 GYR_RANGE +-500 dps
+const VALID_ETAGS = new Set([0, 2]);
+const BUFFER_S = 35;
+const CH = {
+  0xE1: { name: "ECG", fs: 512, color: "--ecg", unit: "mV" },
+  0xF1: { name: "PPG xanh", fs: 200, color: "--green", unit: "count" },
+  0xF2: { name: "PPG đỏ", fs: 200, color: "--red", unit: "count" },
+  0xF3: { name: "PPG IR", fs: 200, color: "--ir", unit: "count" },
+  0xA1: { name: "Acc X", fs: 100, color: "--x", unit: "g" },
+  0xA2: { name: "Acc Y", fs: 100, color: "--y", unit: "g" },
+  0xA3: { name: "Acc Z", fs: 100, color: "--z", unit: "g" },
+  0xA4: { name: "Gyr X", fs: 100, color: "--x", unit: "°/s" },
+  0xA5: { name: "Gyr Y", fs: 100, color: "--y", unit: "°/s" },
+  0xA6: { name: "Gyr Z", fs: 100, color: "--z", unit: "°/s" },
+};
+const LANES = [
+  { id: "ecg", title: "ECG (mV)", chans: [0xE1] },
+  { id: "g", title: "PPG xanh (khe 1)", chans: [0xF1] },
+  { id: "r", title: "PPG đỏ (khe 2)", chans: [0xF2] },
+  { id: "i", title: "PPG IR (khe 3)", chans: [0xF3] },
+  { id: "acc", title: "Gia tốc (g): X cam, Y lục, Z lam", chans: [0xA1, 0xA2, 0xA3] },
+  { id: "gyr", title: "Con quay (°/s): X cam, Y lục, Z lam", chans: [0xA4, 0xA5, 0xA6] },
+];
+
+// ---- Biquad filters (RBJ cookbook), streamed per channel ----
+function biquad(type, f0, fs, q = Math.SQRT1_2) {
+  const w = 2 * Math.PI * f0 / fs, c = Math.cos(w), al = Math.sin(w) / (2 * q);
+  let b;
+  if (type === "lp") b = [(1 - c) / 2, 1 - c, (1 - c) / 2];
+  else if (type === "hp") b = [(1 + c) / 2, -(1 + c), (1 + c) / 2];
+  else b = [1, -2 * c, 1];  // notch
+  const a0 = 1 + al;
+  return { b0: b[0] / a0, b1: b[1] / a0, b2: b[2] / a0, a1: -2 * c / a0, a2: (1 - al) / a0,
+           x1: 0, x2: 0, y1: 0, y2: 0, primed: false };
+}
+function runBiquad(f, x) {
+  if (!f.primed) {  // start from steady state so a DC level does not ring
+    const g = (f.b0 + f.b1 + f.b2) / (1 + f.a1 + f.a2);
+    f.x1 = f.x2 = x; f.y1 = f.y2 = isFinite(g) ? g * x : 0; f.primed = true;
+  }
+  const y = f.b0 * x + f.b1 * f.x1 + f.b2 * f.x2 - f.a1 * f.y1 - f.a2 * f.y2;
+  f.x2 = f.x1; f.x1 = x; f.y2 = f.y1; f.y1 = y;
+  return y;
+}
+function makeChain(ch) {
+  const fs = CH[ch].fs;
+  if (ch === 0xE1) return { hp: biquad("hp", 0.5, fs), lp: biquad("lp", 40, fs), notch: biquad("notch", 50, fs, 10) };
+  if (ch >= 0xF1 && ch <= 0xF3) return { hp: biquad("hp", 0.5, fs), lp: biquad("lp", 8, fs) };
+  return null;
+}
+
+class Ring {
+  constructor(n) { this.n = n; this.t = new Float64Array(n); this.v = new Float32Array(n);
+                   this.f = new Float32Array(n); this.i = 0; this.len = 0; }
+  push(t, v, f) { this.t[this.i] = t; this.v[this.i] = v; this.f[this.i] = f;
+                  this.i = (this.i + 1) % this.n; if (this.len < this.n) this.len++; }
+  lastT() { return this.len ? this.t[(this.i - 1 + this.n) % this.n] : -Infinity; }
+  *since(t0) {  // indices from oldest to newest with time >= t0
+    for (let k = 0; k < this.len; k++) {
+      const j = (this.i - this.len + k + this.n) % this.n;
+      if (this.t[j] >= t0) yield j;
+    }
+  }
+}
+
+// ---- State ----
+const ui = id => document.getElementById(id);
+let state = null, decoder = new StreamDecoder(), paused = false;
+let port = null, reader = null, writer = null, replayTimer = null;
+let cmdSeq = Math.floor(Math.random() * 65536), pendingCmd = null;
+
+function newState(session) {
+  const s = { session, chans: {}, ledCodes: null, adcCeiling: (1 << 18) - 1, info: null,
+              ecgOverLevel: 0 };
+  for (const k of Object.keys(CH)) {
+    const ch = +k;
+    s.chans[ch] = { ring: new Ring(Math.ceil(CH[ch].fs * BUFFER_S)), chain: makeChain(ch),
+                    packets: 0, lost: 0, lastSeq: null, flags: 0, anchors: [] };
+  }
+  return s;
+}
+
+function log(msg) {
+  const el = ui("log"), line = `${new Date().toLocaleTimeString()}  ${msg}\n`;
+  el.textContent += line;
+  if (el.textContent.length > 20000) el.textContent = el.textContent.slice(-15000);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---- Packet handling ----
+function handlePacket(p) {
+  if (!state || state.session !== p.session) {
+    if (state) log(`SESSION_ID mới ${p.session} (thiết bị khởi động lại): xóa bộ đệm`);
+    state = newState(p.session);
+    ui("session").textContent = `SESSION_ID ${p.session}`;
+  }
+  if (p.channel === 0xD1) return onDeviceInfo(p);
+  if (p.channel === 0xD2) return onAfeConfig(p);
+  if (p.channel === 0xD3) return onCommandAck(p);
+  if (p.channel === 0xC1) { log(`Sự kiện mã ${p.data[0]} (1 = nút SW1, 2/4 = mark từ PC)`); return; }
+  const c = state.chans[p.channel];
+  if (!c) return;
+  if (c.lastSeq !== null && p.seq > c.lastSeq + 1) c.lost += p.seq - c.lastSeq - 1;
+  c.lastSeq = p.seq; c.packets++; c.flags |= p.status;
+  const fs = p.fsMhz / 1000 || CH[p.channel].fs;
+  c.anchors.push([p.tFirst, p.firstIndex]);
+  while (c.anchors.length > 2 && c.anchors[c.anchors.length - 1][0] - c.anchors[0][0] > 10e6) c.anchors.shift();
+  const flip = p.channel >= 0xF1 && p.channel <= 0xF3 && ui("flip").checked ? -1 : 1;
+  // A gap or a jump back of the device time (lost packets, packets queued before the
+  // port was opened) restarts the display filters instead of ringing through the step.
+  const tStart = p.tFirst / 1e6, last = c.ring.lastT();
+  if (c.chain && (tStart < last || tStart - last > 3 / fs + 0.05)) c.chain = makeChain(p.channel);
+  for (let i = 0; i < p.data.length; i++) {
+    let v = p.data[i];
+    if (p.channel === 0xE1) {
+      const [code, etag] = ecgCode(v);
+      if (!VALID_ETAGS.has(etag)) continue;
+      v = code * ECG_MV_PER_CODE;
+      if (Math.abs(v) >= ECG_LEAD_OFF_MV) state.ecgOverLevel = performance.now();
+    } else if (p.channel >= 0xA1 && p.channel <= 0xA3) v /= ACC_LSB_PER_G;
+    else if (p.channel >= 0xA4 && p.channel <= 0xA6) v /= GYR_LSB_PER_DPS;
+    let f = v;
+    if (c.chain) {
+      f = runBiquad(c.chain.hp, v); f = runBiquad(c.chain.lp, f);
+      if (c.chain.notch && ui("notch").checked) f = runBiquad(c.chain.notch, f);
+      f *= flip;
+    }
+    c.ring.push((p.tFirst + i * 1e6 / fs) / 1e6, v, f);  // raw kept unflipped (DC %)
+  }
+}
+
+function onDeviceInfo(p) {
+  const d = Array.from(p.data);
+  if (d[0] !== 1 || d.length < 25) return;
+  const sha = d.slice(1, 9).map(w => (w >>> 0).toString(16).padStart(8, "0")).join("");
+  const app = wordsToAscii(d.slice(9, 17)), idf = wordsToAscii(d.slice(17, 25));
+  const text = `firmware ${app}, ESP-IDF ${idf}, ELF ${sha.slice(0, 8)}…`;
+  if (state.info !== text) { state.info = text; log(text); }
+  ui("session").textContent = `SESSION_ID ${state.session} · ${text}`;
+}
+
+function onAfeConfig(p) {
+  const d = Array.from(p.data, w => w >>> 0);
+  if (d.length < 5 || d[0] !== 1 || d[1] !== 2 || d[3] !== 1) return;  // MAX30101, configured
+  const reg = {};
+  for (const w of d.slice(5)) reg[w >>> 24] = w & 0xFFFFFF;
+  const codes = { red: reg[0x0C], ir: reg[0x0D], g3: reg[0x0E], g4: reg[0x0F] };
+  if (reg[0x0A] !== undefined) state.adcCeiling = (1 << (15 + (reg[0x0A] & 3))) - 1;
+  const hex = v => "0x" + (v ?? 0).toString(16).toUpperCase().padStart(2, "0");
+  const text = `xanh ${hex(codes.g3)}${codes.g3 !== codes.g4 ? "/" + hex(codes.g4) : ""}, `
+             + `đỏ ${hex(codes.red)}, IR ${hex(codes.ir)} (thế hệ ${d[4]})`;
+  if (JSON.stringify(state.ledCodes) !== JSON.stringify(codes)) {
+    state.ledCodes = codes; log(`MAX30101 mã LED: ${text}`);
+    ui("ledG").value = codes.g3; ui("ledR").value = codes.red; ui("ledI").value = codes.ir; ledLabels();
+  }
+  ui("ledNow").textContent = `Đang dùng: ${text}`;
+}
+
+const ACK_RESULTS = ["ok", "lệnh lạ", "sai độ dài", "không có chip", "bận", "lỗi chip",
+                     "CMD_SEQ đã dùng", "sai phiên", "ngoài giới hạn"];
+function onCommandAck(p) {
+  const d = Array.from(p.data, w => w >>> 0);
+  if (d[0] !== 1) return;
+  const [, cmdId, seq, result, gen] = d;
+  if (pendingCmd && pendingCmd.seq === seq && pendingCmd.cmdId === cmdId) {
+    clearTimeout(pendingCmd.timer); pendingCmd = null;
+    ui("ledAck").textContent = result === 0 ? `✓ đã áp dụng (thế hệ ${gen})` : `✗ ${ACK_RESULTS[result] ?? result}`;
+    ui("ledAck").className = result === 0 ? "ok" : "bad";
+  }
+  log(`Xác nhận lệnh 0x${cmdId.toString(16)} CMD_SEQ ${seq}: ${ACK_RESULTS[result] ?? result}`);
+}
+
+function feedBytes(bytes) {
+  for (const p of decoder.feed(bytes)) handlePacket(p);
+}
+
+// ---- Serial ----
+async function connect() {
+  if (!("serial" in navigator)) {
+    alert("Trình duyệt này không có Web Serial. Mở trang bằng Chrome hoặc Edge trên máy tính.");
+    return;
+  }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200, bufferSize: 1 << 16 });
+  } catch (e) { log(`Không mở được cổng: ${e.message}`); port = null; return; }
+  stopReplay(); decoder = new StreamDecoder(); state = null;
+  writer = port.writable.getWriter();
+  ui("conn").textContent = "Đã kết nối"; ui("conn").className = "ok";
+  ui("btnConnect").disabled = true; ui("btnDisconnect").disabled = false; ui("btnLed").disabled = false;
+  log("Đã mở cổng. Nhớ ngắt trước khi chạy packet_logger.py.");
+  readLoop();
+}
+
+async function readLoop() {
+  while (port && port.readable) {
+    reader = port.readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) feedBytes(value);
+      }
+    } catch (e) { log(`Lỗi đọc: ${e.message}`); }
+    finally { reader.releaseLock(); reader = null; }
+  }
+}
+
+async function disconnect() {
+  const p = port; port = null;
+  try { if (reader) await reader.cancel(); } catch (e) { /* closing anyway */ }
+  try { if (writer) { writer.releaseLock(); writer = null; } } catch (e) { /* ignore */ }
+  try { if (p) await p.close(); } catch (e) { log(`Đóng cổng: ${e.message}`); }
+  ui("conn").textContent = "Đã ngắt"; ui("conn").className = "";
+  ui("btnConnect").disabled = false; ui("btnDisconnect").disabled = true; ui("btnLed").disabled = true;
+  log("Đã đóng cổng.");
+}
+navigator.serial?.addEventListener("disconnect", () => { if (port) { log("Thiết bị bị rút ra."); disconnect(); } });
+
+async function sendLed() {
+  if (!writer || !state) { log("Chưa có dữ liệu từ thiết bị: chưa biết SESSION_ID."); return; }
+  const codes = ["ledG", "ledR", "ledI"].map(id => +ui(id).value);
+  if (codes.some(c => !Number.isInteger(c) || c < 0 || c > 0x7F)) {
+    alert("Mã LED phải là số nguyên 0 … 127 (0x7F)."); return;
+  }
+  if (pendingCmd) { clearTimeout(pendingCmd.timer); pendingCmd = null; }
+  cmdSeq = (cmdSeq + 1) & 0xFFFF;
+  const params = new Uint8Array(7);
+  new DataView(params.buffer).setUint32(0, state.session, true);
+  params.set(codes, 4);  // green, red, ir
+  const frame = encodeCommand(0x02, cmdSeq, params);
+  pendingCmd = { seq: cmdSeq, cmdId: 0x02, tries: 0, frame };
+  ui("ledAck").textContent = "đang gửi…"; ui("ledAck").className = "warn";
+  const attempt = async () => {
+    if (!pendingCmd || pendingCmd.frame !== frame) return;
+    if (pendingCmd.tries >= 4) { ui("ledAck").textContent = "✗ không có xác nhận"; ui("ledAck").className = "bad";
+                                  log(`SET_PPG_LED CMD_SEQ ${cmdSeq}: không có xác nhận sau 4 lần gửi`); pendingCmd = null; return; }
+    pendingCmd.tries++;
+    try { await writer.write(frame); } catch (e) { log(`Gửi lệnh lỗi: ${e.message}`); }
+    pendingCmd.timer = setTimeout(attempt, 500);  // same bytes, same CMD_SEQ (section 13)
+  };
+  log(`Gửi SET_PPG_LED xanh ${codes[0]}, đỏ ${codes[1]}, IR ${codes[2]} (CMD_SEQ ${cmdSeq})`);
+  attempt();
+}
+
+// ---- Replay of a raw.bin (device clock paced) ----
+function stopReplay() { if (replayTimer) { clearInterval(replayTimer); replayTimer = null; } }
+async function replay(file) {
+  if (port) await disconnect();
+  stopReplay();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const dec = new StreamDecoder(), packets = [];
+  for (let o = 0; o < bytes.length; o += 4096) packets.push(...dec.feed(bytes.subarray(o, o + 4096)));
+  const counts = {};
+  for (const p of packets) counts[p.channel.toString(16)] = (counts[p.channel.toString(16)] || 0) + 1;
+  log(`Phát lại ${file.name}: ${packets.length} gói, ${JSON.stringify(counts)}, lỗi ${JSON.stringify(dec.errors)}, bỏ qua ${dec.skippedBytes} byte`);
+  decoder = new StreamDecoder(); state = null;
+  ui("conn").textContent = "Phát lại"; ui("conn").className = "warn";
+  let k = 0, t0Dev = null, t0Wall = performance.now(), lastDev = null;
+  replayTimer = setInterval(() => {
+    const speed = +ui("replaySpeed").value;
+    while (k < packets.length) {
+      const p = packets[k];
+      // Re-anchor the pacing on a new session or a jump of the device clock (packets
+      // queued before the logger opened the port are seconds or minutes older).
+      // An older packet is simply due at once; only a forward jump re-anchors.
+      if (t0Dev === null || p.session !== packets[Math.max(k - 1, 0)].session
+          || p.tFirst - lastDev > 2e6) { t0Dev = p.tFirst; t0Wall = performance.now(); }
+      const now = (performance.now() - t0Wall) * 1000 * speed;
+      if (p.tFirst - t0Dev > now) break;
+      lastDev = Math.max(lastDev ?? p.tFirst, p.tFirst);
+      handlePacket(p); k++;
+    }
+    if (k >= packets.length) { stopReplay(); log("Hết file."); ui("conn").textContent = "Hết phát lại"; }
+  }, 50);
+}
+
+// ---- Rendering ----
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function buildLanes() {
+  const host = ui("lanes");
+  for (const L of LANES) {
+    const div = document.createElement("div"); div.className = "lane";
+    div.innerHTML = `<div class="title"><b>${L.title}</b><span id="info_${L.id}"></span></div><canvas id="cv_${L.id}"></canvas>`;
+    host.appendChild(div);
+  }
+}
+
+function drawLane(L, tEnd, win, useFilt) {
+  const cv = ui(`cv_${L.id}`), dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  g.strokeStyle = css("--grid"); g.lineWidth = 1;
+  for (let s = 1; s < win; s++) { const x = w - (s / win) * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+  if (!state) return;
+  const t0 = tEnd - win;
+  const series = L.chans.map(ch => {
+    const c = state.chans[ch], arr = c.ring, idx = [...arr.since(t0)];
+    const vals = useFilt && c.chain ? arr.f : arr.v;
+    return { ch, arr, idx, vals };
+  });
+  // Robust scale: 0.5-99.5 % of the window, so one spike or filter start does not flatten the trace.
+  const pool = [];
+  for (const s of series) {
+    const step = Math.max(1, Math.floor(s.idx.length / 3000));
+    for (let k = 0; k < s.idx.length; k += step) pool.push(s.vals[s.idx[k]]);
+  }
+  if (!pool.length) { ui(`info_${L.id}`).textContent = "không có dữ liệu"; return; }
+  pool.sort((a, b) => a - b);
+  let lo = pool[Math.floor(pool.length * 0.005)], hi = pool[Math.min(pool.length - 1, Math.floor(pool.length * 0.995))];
+  if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
+  const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  for (const s of series) {
+    g.strokeStyle = css(CH[s.ch].color); g.lineWidth = 1.2; g.beginPath();
+    let first = true, prevT = null;
+    for (const j of s.idx) {
+      const t = s.arr.t[j];
+      const x = w - ((tEnd - t) / win) * w, y = h - ((s.vals[j] - lo) / (hi - lo)) * h;
+      if (first || (prevT !== null && t - prevT > 3 / CH[s.ch].fs + 0.05)) g.moveTo(x, y); else g.lineTo(x, y);
+      first = false; prevT = t;
+    }
+    g.stroke();
+  }
+  g.fillStyle = css("--muted"); g.font = "11px system-ui";
+  const fmt = v => Math.abs(hi - lo) >= 100 ? v.toFixed(0) : Math.abs(hi - lo) >= 1 ? v.toFixed(2) : v.toFixed(3);
+  g.fillText(fmt(hi), 4, 11); g.fillText(fmt(lo), 4, h - 3);
+  const last = series.map(s => s.idx.length ? s.vals[s.idx[s.idx.length - 1]] : NaN);
+  ui(`info_${L.id}`).textContent = `${useFilt && state.chans[L.chans[0]].chain ? "đã lọc" : "thô"} · cuối: ${last.map(fmt).join(" / ")}`;
+}
+
+function rate(c) {
+  const a = c.anchors; if (a.length < 2) return null;
+  const [t1, i1] = a[0], [t2, i2] = a[a.length - 1];
+  return t2 > t1 ? ((i2 - i1) >>> 0) / ((t2 - t1) / 1e6) : null;
+}
+
+function updateSide() {
+  if (!state) return;
+  const tb = ui("stats").tBodies[0]; tb.innerHTML = "";
+  for (const k of Object.keys(CH)) {
+    const ch = +k, c = state.chans[ch]; if (!c.packets) continue;
+    const r = rate(c), ppm = r ? (r / CH[ch].fs - 1) * 1e6 : null;
+    const f = c.flags, flags = [[1, "O"], [2, "M"], [4, "L"], [32, "R"], [64, "A"]].filter(([b]) => f & b).map(([, s]) => s).join("");
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${CH[ch].name}</td><td>${r ? r.toFixed(3) : "—"}</td><td>${ppm === null ? "—" : (ppm > 0 ? "+" : "") + ppm.toFixed(0)}</td>`
+      + `<td>${c.packets}</td><td class="${c.lost ? "bad" : ""}">${c.lost}</td><td class="${flags ? "warn" : ""}">${flags || "—"}</td>`;
+    tb.appendChild(tr);
+  }
+  // PPG DC over the last 5 s of each colour, raw counts
+  const dcHost = ui("dc"); dcHost.innerHTML = "";
+  for (const [ch, label] of [[0xF1, "Xanh"], [0xF2, "Đỏ"], [0xF3, "IR"]]) {
+    const c = state.chans[ch], end = c.ring.lastT(); let sum = 0, n = 0;
+    for (const j of c.ring.since(end - 5)) { sum += c.ring.v[j]; n++; }
+    const pct = n ? (sum / n) / state.adcCeiling * 100 : NaN;
+    const cls = !n ? "" : pct >= 30 && pct <= 70 ? "ok" : pct > 90 ? "bad" : "warn";
+    const row = document.createElement("div"); row.className = "dc";
+    row.innerHTML = `<span>${label}</span><div class="bar"><div class="target"></div>`
+      + `<div class="fill" style="width:${Math.min(100, pct || 0)}%;background:var(${CH[ch].color})"></div></div>`
+      + `<span class="${cls}">${n ? pct.toFixed(1) + " %" : "—"}</span>`;
+    dcHost.appendChild(row);
+  }
+  ui("hr").textContent = heartRate(state.chans[0xF3]);
+  const ecgWarn = performance.now() - state.ecgOverLevel < 30000;
+  ui("info_ecg").className = ecgWarn ? "bad" : "";
+  if (ecgWarn) ui("info_ecg").textContent += ` · |ECG| ≥ ${ECG_LEAD_OFF_MV} mV trong 30 s qua: tuột điện cực?`;
+}
+
+function heartRate(c) {
+  // Peaks of the filtered (flipped) IR over the last 10 s: a viewing estimate only.
+  const end = c.ring.lastT(), idx = [...c.ring.since(end - 10)];
+  if (idx.length < 400) return "—";
+  const v = idx.map(j => c.ring.f[j]), t = idx.map(j => c.ring.t[j]);
+  const sorted = [...v].sort((a, b) => a - b);
+  const p5 = sorted[Math.floor(sorted.length * 0.05)], p95 = sorted[Math.floor(sorted.length * 0.95)];
+  const thr = p5 + 0.6 * (p95 - p5);  // above the dicrotic wave of most beats
+  const peaks = [];
+  for (let i = 1; i < v.length - 1; i++) {
+    if (v[i] > thr && v[i] >= v[i - 1] && v[i] > v[i + 1] && (!peaks.length || t[i] - peaks[peaks.length - 1] > 0.4)) peaks.push(t[i]);
+  }
+  if (peaks.length < 3) return "—";
+  const ibi = peaks.slice(1).map((p, i) => p - peaks[i]).sort((a, b) => a - b);
+  const bpm = 60 / ibi[Math.floor(ibi.length / 2)];
+  return bpm > 30 && bpm < 220 ? `${bpm.toFixed(0)} nhịp/phút` : "—";
+}
+
+let lastSide = 0;
+function frame(now) {
+  if (!paused && state) {
+    const win = +ui("win").value, useFilt = ui("filt").checked;
+    let tEnd = -Infinity;
+    for (const ch of [0xE1, 0xF1, 0xF2, 0xF3, 0xA1]) tEnd = Math.max(tEnd, state.chans[ch].ring.lastT());
+    if (isFinite(tEnd)) for (const L of LANES) drawLane(L, tEnd, win, useFilt);
+    if (now - lastSide > 500) { updateSide(); lastSide = now; }
+  }
+  requestAnimationFrame(frame);
+}
+
+function ledLabels() {
+  for (const [id, lab] of [["ledG", "ledGmA"], ["ledR", "ledRmA"], ["ledI", "ledImA"]]) {
+    const v = +ui(id).value;
+    ui(lab).textContent = `0x${v.toString(16).toUpperCase().padStart(2, "0")} · ${(v * 0.2).toFixed(1)} mA`;
+  }
+}
+
+// ---- Wiring ----
+buildLanes(); ledLabels();
+for (const id of ["ledG", "ledR", "ledI"]) ui(id).addEventListener("input", ledLabels);
+ui("btnConnect").onclick = connect;
+ui("btnDisconnect").onclick = disconnect;
+ui("btnLed").onclick = sendLed;
+ui("btnPause").onclick = () => { paused = !paused; ui("btnPause").textContent = paused ? "Tiếp tục" : "Tạm dừng"; };
+ui("btnReset").onclick = () => {
+  if (!state) return;
+  for (const c of Object.values(state.chans)) { c.lost = 0; c.flags = 0; c.packets = 0; }
+  log("Đã xóa bộ đếm gói, mất và cờ.");
+};
+ui("fileRaw").onchange =e => { if (e.target.files[0]) replay(e.target.files[0]); };
+if (!("serial" in navigator)) log("Trình duyệt không có Web Serial: chỉ phát lại được raw.bin. Dùng Chrome/Edge để đọc cổng.");
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
