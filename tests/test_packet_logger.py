@@ -854,6 +854,7 @@ def test_serial_source_waits_through_timeouts_until_the_deadline(tmp_path):
     assert port.reads > 400
     assert manifest["source"] == {"kind": "serial", "name": "COM9", "baudrate": 115200,
                                   "duration_s": 5.0, "stopped_by": "duration",
+                                  "stop_file": None,
                                   "pyserial": __import__("serial").__version__}
     for name in ("decode.json", "packets.csv", "samples.csv"):
         assert manifest["outputs_sha256"][name] == from_file["outputs_sha256"][name]
@@ -948,3 +949,68 @@ def test_cli_replay_detects_changed_input(tmp_path):
     ], cwd=tmp_path, capture_output=True, text=True, check=False)
     assert done.returncode == 1
     assert "input:session_metadata" in done.stdout
+
+
+class WatchedPort(FakePort):
+    """FakePort that runs ``hook(reads)`` before each read."""
+
+    def __init__(self, chunks, hook):
+        super().__init__(chunks)
+        self.hook = hook
+
+    def read(self, n):
+        self.hook(self.reads + 1)
+        return super().read(n)
+
+
+def test_stop_file_ends_the_recording_normally(tmp_path):
+    # Session app spec 3.2, L1 (added 2026-11-27): another program ends the
+    # recording by creating the stop file, also while no bytes arrive.
+    generated = tmp_path / "generated"
+    simulate(SIM_CONFIG, "valid", generated)
+    stream = (generated / "stream.bin").read_bytes()
+    stop = tmp_path / "stop"
+
+    def hook(read):
+        if read == 6:  # after the stream and a few timeouts
+            stop.write_text("")
+
+    port = WatchedPort([stream], hook)
+    source = packet_logger.SerialSource(port, 60.0, "COM9", clock=fake_clock(0.01),
+                                        stop_file=stop)
+    manifest = record(source, tmp_path / "rec", LOGGER_CONFIG,
+                      generated / "session_metadata.json", ROOT, "COM9")
+    assert (tmp_path / "rec" / "raw.bin").read_bytes() == stream
+    assert manifest["source"]["stopped_by"] == "stop_file"
+    assert manifest["source"]["stop_file"] == str(stop)
+    assert port.reads < 10  # long before the 60 s deadline (6 000 reads)
+    with pytest.raises(ValueError, match="exists already"):
+        packet_logger.SerialSource(FakePort([]), 5.0, "COM9", stop_file=stop)
+
+
+def test_raw_bin_can_be_read_while_it_grows(tmp_path):
+    # Session app spec 3.2, L2: each chunk is flushed, so a second reader sees it
+    # while the logger still holds raw.bin open ("xb").
+    generated = tmp_path / "generated"
+    simulate(SIM_CONFIG, "valid", generated)
+    stream = (generated / "stream.bin").read_bytes()
+    chunk = json.loads(LOGGER_CONFIG.read_bytes())["read_chunk_bytes"]
+    raw = tmp_path / "rec" / "raw.bin"
+    seen = []
+
+    def hook(read):
+        if raw.exists():
+            with open(raw, "rb") as handle:
+                seen.append(handle.read())
+
+    port = WatchedPort([stream], hook)
+    source = packet_logger.SerialSource(port, 0.05, "COM9", clock=fake_clock(0.01))
+    record(source, tmp_path / "rec", LOGGER_CONFIG, generated / "session_metadata.json",
+           ROOT, "COM9")
+    # Without the flush a chunk smaller than Python's write buffer would stay in
+    # memory; with it, the first non-empty snapshot is the first chunk exactly.
+    import io
+
+    assert chunk < io.DEFAULT_BUFFER_SIZE
+    assert [s for s in seen if s][0] == stream[:chunk]
+    assert raw.read_bytes() == stream[:len(raw.read_bytes())]

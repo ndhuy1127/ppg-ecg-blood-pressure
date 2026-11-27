@@ -274,16 +274,24 @@ def check_location(output, metadata, repo, raw_root=None, subject_id=None,
 
 
 class SerialSource:
-    """A serial port as a byte source that ends after ``duration_s`` or Ctrl+C.
+    """A serial port as a byte source that ends after ``duration_s``, Ctrl+C, or
+    when ``stop_file`` appears.
 
     pyserial's ``read`` returns b"" on timeout; here that only means no bytes
     yet, so reading continues until the deadline. Ctrl+C during a read ends the
-    session normally (raw, decode and manifest are still written).
+    session normally (raw, decode and manifest are still written). ``stop_file``
+    is how another program (the session app) ends a recording, since Ctrl+C cannot
+    be sent reliably to a child process on Windows; it is checked before every
+    read, with or without bytes, and ends the session the same normal way
+    (session app spec section 3.2, L1; added 2026-11-27).
     """
 
-    def __init__(self, port, duration_s, name, clock=time.monotonic):
+    def __init__(self, port, duration_s, name, clock=time.monotonic, stop_file=None):
         if not duration_s > 0:
             raise ValueError("duration_s must be > 0")
+        self.stop_file = None if stop_file is None else Path(stop_file)
+        if self.stop_file is not None and self.stop_file.exists():
+            raise ValueError(f"Stop file {self.stop_file} exists already")
         self.port, self.name, self.clock = port, name, clock
         self.duration_s = duration_s
         self.deadline = clock() + duration_s
@@ -293,6 +301,9 @@ class SerialSource:
     def read(self, n):
         try:
             while self.clock() < self.deadline:
+                if self.stop_file is not None and self.stop_file.exists():
+                    self.stopped_by = "stop_file"
+                    return b""
                 chunk = self.port.read(n)
                 if chunk:
                     return bytes(chunk)
@@ -314,6 +325,7 @@ class SerialSource:
 
         return {"kind": "serial", "name": self.name, "baudrate": self.port.baudrate,
                 "duration_s": self.duration_s, "stopped_by": self.stopped_by,
+                "stop_file": None if self.stop_file is None else str(self.stop_file),
                 "pyserial": serial.__version__}
 
 
@@ -456,6 +468,10 @@ def record(source, output, config_path, metadata_path, repo, source_name,
                 break
             received = time.monotonic_ns() - origin
             raw.write(chunk)
+            # Each chunk reaches the file at once, so another program can read
+            # raw.bin while it grows (session app spec 3.2, L2; added 2026-11-27).
+            # The bytes and their hash do not change; fsync stays at the end.
+            raw.flush()
             raw_sha256.update(chunk)
             raw_size += len(chunk)
             rx.row((len(starts), decoder.bytes_seen, len(chunk), received))
@@ -656,6 +672,9 @@ def main():
             command.add_argument("--dc-every-s", type=float,
                                  help="Show the PPG DC level (%% of ADC full scale, "
                                       "protocol 6.1) every this many seconds")
+            command.add_argument("--stop-file", type=Path,
+                                 help="End the recording when this file appears "
+                                      "(another program stops it; must not exist yet)")
             command.add_argument("--dc-window-s", type=float, default=10.0,
                                  help="Seconds of samples in each DC mean (default "
                                       "10, protocol 6.1)")
@@ -676,6 +695,8 @@ def main():
         parser.error("--port and --duration-s go together")
     if args.command == "record" and args.commands and args.port is None:
         parser.error("--commands needs --port")
+    if args.command == "record" and args.stop_file is not None and args.port is None:
+        parser.error("--stop-file needs --port")
     if args.command == "record" and (
         (args.dc_every_s is not None and not args.dc_every_s > 0)
         or not args.dc_window_s > 0
@@ -701,7 +722,8 @@ def main():
         if args.command == "record" and args.port is not None:
             port = open_serial(args.port, args.baud)
             try:
-                source = SerialSource(port, args.duration_s, args.port)
+                source = SerialSource(port, args.duration_s, args.port,
+                                      stop_file=args.stop_file)
                 summary = record(source, args.output, args.config, args.metadata,
                                  repo, args.port, commands=args.commands,
                                  **live, **ids)

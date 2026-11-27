@@ -102,7 +102,16 @@ là hết phiên. CLI có hai nguồn:
   qua `SerialSource`. `read` của serial trả `b""` khi hết timeout (0,1 s); ở đây đó
   chỉ là chưa có byte, nên logger đọc tiếp tới khi hết `--duration-s`. Ctrl+C trong
   lúc đọc kết thúc phiên bình thường: raw, decode và manifest vẫn được ghi. Manifest
-  ghi `source = {kind: "serial", name, baudrate, duration_s, stopped_by, pyserial}`.
+  ghi `source = {kind: "serial", name, baudrate, duration_s, stopped_by, stop_file,
+  pyserial}`.
+- `--stop-file <đường dẫn>` (thêm 2026-11-27, [đặc tả ứng dụng buổi đo](session_app_spec_v0.md)
+  mục 3.2, L1): chương trình khác (ứng dụng buổi đo) kết thúc lần ghi bằng cách tạo file này,
+  vì trên Windows không gửi Ctrl+C cho tiến trình con một cách tin cậy được. File được kiểm
+  trước mỗi lần đọc, có byte hay không; thấy file thì kết thúc như hết `--duration-s`, với
+  `stopped_by = "stop_file"`. File phải chưa có lúc bắt đầu; chỉ dùng với `--port`.
+- Từ 2026-11-27 (L2), `raw.bin` được flush sau mỗi chunk, nên chương trình khác đọc được
+  `raw.bin` trong lúc nó đang lớn (test đọc song song khi logger đang giữ file `xb`). Byte và
+  hash không đổi; `fsync` vẫn chỉ ở cuối. Chưa thử trên laptop đo.
   Cổng được mở với DTR và RTS ở mức không kích hoạt, vì USB Serial/JTAG của
   ESP32-S3 khởi động lại chip với một số chuyển trạng thái DTR/RTS (như esptool
   dùng); chưa kiểm trên bo thật. Cổng USB gốc bỏ qua baud. Ghi xuống cổng có
