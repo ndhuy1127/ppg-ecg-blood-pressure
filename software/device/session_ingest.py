@@ -26,6 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from software.data_io.live_monitor import slot_colors
+from software.data_io.output_files import content_sha256, open_text, stored_name
 from software.device.max30101 import SLOT_SPACING_US
 
 VERSION = "device-session-v1"
@@ -122,11 +123,13 @@ def verify_recording(directory):
     for name in REQUIRED_FILES:
         if name not in hashes:
             raise IngestError(f"Manifest does not hash {name}")
+    stored = manifest.get("compressed_outputs") or {}
     for name, expected in sorted(hashes.items()):
-        path = directory / name
+        # A compressed output is hashed on its content (output_files.py).
+        path = directory / stored_name(name, stored)
         if not path.is_file():
-            raise IngestError(f"Missing file {name}")
-        if sha256_file(path) != expected:
+            raise IngestError(f"Missing file {path.name}")
+        if (content_sha256(path) if name in stored else sha256_file(path)) != expected:
             raise IngestError(f"SHA-256 of {name} differs from the manifest")
     if manifest["raw"]["sha256"] != hashes["raw.bin"] or (
             directory / "raw.bin").stat().st_size != manifest["raw"]["bytes"]:
@@ -136,9 +139,9 @@ def verify_recording(directory):
     return manifest
 
 
-def _read_packets(path):
+def _read_packets(directory, stored=None):
     rows = []
-    with open(path, newline="", encoding="utf-8") as handle:
+    with open_text(directory, "packets.csv", stored) as handle:
         for row in csv.DictReader(handle):
             for name in ("session_id", "version", "seq_ext", "t_anchor_us",
                          "fs_nominal_mhz", "sample_count", "status"):
@@ -149,10 +152,10 @@ def _read_packets(path):
     return rows
 
 
-def _read_samples(path):
+def _read_samples(directory, stored=None):
     """{(session, version, channel): (chain, index, value)} as int64 arrays."""
     columns = {}
-    with open(path, newline="", encoding="utf-8") as handle:
+    with open_text(directory, "samples.csv", stored) as handle:
         reader = csv.reader(handle)
         header = next(reader)
         if header != ["session_id", "channel_id", "chain_id", "seq_ext",
@@ -179,8 +182,9 @@ def load_recording(directory):
     manifest = verify_recording(directory)
     metadata = _load_json(directory / "session_metadata.json")
     decode = _load_json(directory / "decode.json")
-    packets = _read_packets(directory / "packets.csv")
-    samples = _read_samples(directory / "samples.csv")
+    stored = manifest.get("compressed_outputs") or {}
+    packets = _read_packets(directory, stored)
+    samples = _read_samples(directory, stored)
     if decode["decode"]["packets_decoded"] != len(packets):
         raise IngestError("packets.csv rows differ from packets_decoded")
     for session in decode["sessions"]:

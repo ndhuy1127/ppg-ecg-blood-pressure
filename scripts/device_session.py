@@ -54,7 +54,8 @@ CODE = ("scripts/device_session.py", "software/__init__.py",
         "software/signal_processing/fiducials.py",
         "software/signal_processing/pat_validity.py", "software/data_io/live_monitor.py",
         "software/data_io/packet_receiver.py", "software/data_io/packet_wire.py",
-        "software/data_io/command_wire.py", "software/_provenance.py")
+        "software/data_io/command_wire.py", "software/data_io/output_files.py",
+        "software/_provenance.py")
 CONFIG = "configs/data/device_session_v1.json"
 
 

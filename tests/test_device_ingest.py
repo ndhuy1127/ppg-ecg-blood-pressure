@@ -374,3 +374,41 @@ def test_cuff_log_v2_short_rows_are_refused(tmp_path):
         handle.write("rec,E02,M0,1,1\n")
     with pytest.raises(si.IngestError, match="wrong number of fields"):
         si.read_cuff_log(log, "rec")
+
+
+def test_compressed_tables_give_the_same_recording(tmp_path):
+    """Logger --compress-tables (2026-11-27): the four large CSV tables are .gz on
+    disk, the manifest hashes their content, and the ingest reads the same data."""
+    import gzip
+
+    from software.data_io.output_files import COMPRESSIBLE, content_sha256
+
+    spec = SessionSpec(duration_s=20.0, events=((1, 8.0), (2, 12.0)))
+    plain, _ = make_recording(tmp_path / "a", spec)
+    packed, _ = make_recording(tmp_path / "b", spec, compress=True)
+    m_plain = json.loads((plain / "session_manifest.json").read_text(encoding="utf-8"))
+    m_packed = json.loads((packed / "session_manifest.json").read_text(encoding="utf-8"))
+    assert m_plain["compressed_outputs"] == {}
+    assert m_packed["compressed_outputs"] == {n: n + ".gz" for n in COMPRESSIBLE}
+    for name in COMPRESSIBLE:
+        assert not (packed / name).exists() and (packed / (name + ".gz")).exists()
+        assert content_sha256(packed / (name + ".gz")) == m_packed["outputs_sha256"][name]
+    # The decode does not depend on the PC: equal content hashes, equal gz bytes.
+    for name in ("decode.json", "packets.csv", "samples.csv"):
+        assert m_packed["outputs_sha256"][name] == m_plain["outputs_sha256"][name]
+    assert gzip.decompress((packed / "packets.csv.gz").read_bytes()) == (
+        plain / "packets.csv").read_bytes()
+    again, _ = make_recording(tmp_path / "c", spec, compress=True)
+    assert (again / "packets.csv.gz").read_bytes() == (packed / "packets.csv.gz").read_bytes()
+    a, b = si.load_recording(plain), si.load_recording(packed)
+    assert a["packets"] == b["packets"]
+    assert a["samples"].keys() == b["samples"].keys()
+    for key in a["samples"]:
+        assert all(np.array_equal(x, y) for x, y in zip(a["samples"][key],
+                                                        b["samples"][key]))
+    # One changed byte inside the compressed table is caught by the content hash.
+    text = gzip.decompress((packed / "samples.csv.gz").read_bytes())
+    (packed / "samples.csv.gz").unlink()
+    (packed / "samples.csv.gz").write_bytes(gzip.compress(text[:-2] + b"9\n"))
+    with pytest.raises(si.IngestError, match="SHA-256 of samples.csv"):
+        si.load_recording(packed)

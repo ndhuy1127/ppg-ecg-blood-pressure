@@ -151,13 +151,17 @@ def _file_sha256(path):
     return sha256.hexdigest()
 
 
-def _write_decode(packets, decoder, config, metadata, output):
+def _write_decode(packets, decoder, config, metadata, output, compress=False):
     """Analyse and write decode.json, packets.csv, samples.csv line by line into
-    ``output`` (exclusive create); returns ``(result, {name: sha256})``."""
+    ``output`` (exclusive create); returns ``(result, {name: sha256})``. With
+    ``compress`` the two CSV tables go to ``<name>.gz``; the hashes are always
+    those of the uncompressed content (software/data_io/output_files.py)."""
+    from software.data_io.output_files import COMPRESSIBLE, open_new
     from software.data_io.packet_receiver import analyze_stream, write_outputs
 
     result, rows, samples = analyze_stream(packets, decoder, config, metadata)
-    hashes = write_outputs(result, rows, samples, lambda name: (output / name).open("xb"))
+    hashes = write_outputs(result, rows, samples, lambda name: open_new(
+        output / name, compress and name in COMPRESSIBLE))
     return result, hashes
 
 
@@ -171,8 +175,11 @@ class _CsvOut:
     The bytes are header and rows, each line ending in ``\n``. A context
     manager: the file is closed on the way out even if the last write fails."""
 
-    def __init__(self, path, columns):
-        self.handle, self.sha256, self.lines = path.open("xb"), hashlib.sha256(), []
+    def __init__(self, path, columns, compress=False):
+        from software.data_io.output_files import open_new
+
+        self.handle, self.sha256, self.lines = (open_new(path, compress),
+                                                hashlib.sha256(), [])
         try:
             self._put((",".join(columns) + "\n").encode("utf-8"))
         except BaseException:
@@ -359,8 +366,13 @@ def _lock_reminder(session_id, lock, output):
 
 def record(source, output, config_path, metadata_path, repo, source_name,
            commands=False, clock=time.monotonic, subject_id=None, session_id=None,
-           raw_root=None, notify=None, dc_every_s=None, dc_window_s=10.0):
+           raw_root=None, notify=None, dc_every_s=None, dc_window_s=10.0,
+           compress=False):
     """Log ``source`` until ``read`` returns b"" (end of session).
+
+    With ``compress`` (added 2026-11-27) packets.csv, samples.csv, rx_chunks.csv
+    and t_rx_packets.csv are stored gzip-compressed as ``<name>.gz``; the manifest
+    lists them in ``compressed_outputs`` and hashes their uncompressed content.
 
     ``source`` is any object with ``read(n) -> bytes``: an open file, or a
     ``SerialSource`` (its ``describe()`` goes into the manifest). With
@@ -427,8 +439,10 @@ def record(source, output, config_path, metadata_path, repo, source_name,
     # Every file of the capture is registered as soon as it is open, so that each
     # is closed (journal after the desk's last lines) whatever fails.
     with ExitStack() as stack:
-        rx = stack.enter_context(_CsvOut(output / "rx_chunks.csv", RX_CHUNKS_COLUMNS))
-        t_rx = stack.enter_context(_CsvOut(output / "t_rx_packets.csv", T_RX_COLUMNS))
+        rx = stack.enter_context(_CsvOut(output / "rx_chunks.csv", RX_CHUNKS_COLUMNS,
+                                         compress))
+        t_rx = stack.enter_context(_CsvOut(output / "t_rx_packets.csv", T_RX_COLUMNS,
+                                           compress))
         desk = None
         if commands:
             from software.data_io.command_desk import CommandDesk
@@ -504,7 +518,8 @@ def record(source, output, config_path, metadata_path, repo, source_name,
     # Offline replay of the stored raw must equal the live chunked decode.
     if offline_digest != live_digest:
         raise ValueError("Offline decode of raw.bin differs from the live decode")
-    result, decode_hashes = _write_decode(packets, offline, config, metadata, output)
+    result, decode_hashes = _write_decode(packets, offline, config, metadata, output,
+                                          compress)
     del packets
 
     # A session that mixes versions appears once per version in the result. The
@@ -558,6 +573,11 @@ def record(source, output, config_path, metadata_path, repo, source_name,
                      if commands else None),
         "inputs_sha256": input_hashes, "outputs_sha256": outputs_sha256,
         "provenance": _provenance(repo),
+        # Name -> file holding it, for outputs stored gzip-compressed (their hash
+        # in outputs_sha256 is that of the uncompressed content).
+        "compressed_outputs": ({name: name + ".gz" for name in (
+            "packets.csv", "samples.csv", "rx_chunks.csv", "t_rx_packets.csv")}
+            if compress else {}),
         "limitations": result["limitations"],
     }
     # The manifest is written last: without it the session is incomplete.
@@ -659,6 +679,9 @@ def main():
                                  help="Recording length for --port (Ctrl+C stops early)")
             command.add_argument("--baud", type=int, default=115200,
                                  help="Baud rate for --port (ignored by native USB)")
+            command.add_argument("--compress-tables", action="store_true",
+                                 help="Store packets/samples/rx CSV tables as .gz "
+                                      "(hashes stay those of the content)")
             command.add_argument("--commands", action="store_true",
                                  help="With --port: send commands written to the "
                                       "recording's command_inbox.jsonl "
@@ -708,7 +731,8 @@ def main():
     ids = ({"subject_id": subject, "session_id": args.session_id}
            if args.command == "record" else {})
     live = ({"notify": None, "dc_every_s": args.dc_every_s,
-             "dc_window_s": args.dc_window_s} if args.command == "record" else {})
+             "dc_window_s": args.dc_window_s, "compress": args.compress_tables}
+            if args.command == "record" else {})
     if args.output is None:
         args.output = default_output(repo, args.command, stamp, **ids)
 

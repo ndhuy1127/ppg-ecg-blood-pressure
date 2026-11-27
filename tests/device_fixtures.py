@@ -14,13 +14,14 @@ LOGGER_CONFIG = ROOT / "configs/hardware/packet_logger.json"
 DEVICE_CONFIG = ROOT / "configs/data/device_session_v1.json"
 
 
-def make_recording(base, spec, name="rec"):
+def make_recording(base, spec, name="rec", compress=False):
     """Record ``spec`` through the logger into ``base/name``; returns (dir, truth)."""
     stream, metadata, truth = generate(spec)
     base.mkdir(parents=True, exist_ok=True)
     meta_path = base / f"{name}_metadata.json"
     meta_path.write_text(json.dumps(metadata), encoding="utf-8")
-    record(io.BytesIO(stream), base / name, LOGGER_CONFIG, meta_path, ROOT, "synthetic")
+    record(io.BytesIO(stream), base / name, LOGGER_CONFIG, meta_path, ROOT, "synthetic",
+           compress=compress)
     return base / name, truth
 
 

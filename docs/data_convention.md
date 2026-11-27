@@ -40,6 +40,14 @@ Không giả định hai kênh dùng chung một tần số lấy mẫu hay mộ
 
 Tính lại khi đổi số mẫu mỗi packet hay tốc độ lấy mẫu.
 
+**Đo thật (2026-11-27, bo cổ tay ba chip, 21 phút ghi):** `raw.bin` 18,0 MB (khoảng 51 MB/giờ,
+khớp ước lượng); `samples.csv` 83,3 MB, `packets.csv` 22,5 MB, `t_rx_packets.csv` 10,5 MB,
+`rx_chunks.csv` 0,4 MB; tổng 134,6 MB. Với `packet_logger.py record --compress-tables` (thêm
+2026-11-27, ứng dụng buổi đo luôn bật) bốn bảng CSV lưu dạng `.gz`: 3,7 + 10,5 + 1,4 + 0,1 MB, tổng
+cả `raw.bin` 33,7 MB, tức khoảng **95 MB mỗi giờ ghi** thay vì khoảng 385 MB. Một buổi khoảng
+70 phút ghi: khoảng 110 MB kể cả đầu ra ingest; 70 buổi của nghiên cứu: khoảng 8 GB. Không file nào
+bị bỏ: `t_rx_packets.csv` (giờ PC nhận từng packet) không sinh lại được từ `raw.bin`.
+
 ## 4. Đầu ra của ingest phiên thiết bị (`device-session-v1`, đề xuất 2026-11-13, định dạng duyệt 2026-11-14)
 
 Giao diện giữa ingest, mốc/PAT và phân tích RQ1. Code:

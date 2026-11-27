@@ -109,6 +109,14 @@ là hết phiên. CLI có hai nguồn:
   vì trên Windows không gửi Ctrl+C cho tiến trình con một cách tin cậy được. File được kiểm
   trước mỗi lần đọc, có byte hay không; thấy file thì kết thúc như hết `--duration-s`, với
   `stopped_by = "stop_file"`. File phải chưa có lúc bắt đầu; chỉ dùng với `--port`.
+- `--compress-tables` (thêm 2026-11-27): `packets.csv`, `samples.csv`, `rx_chunks.csv`,
+  `t_rx_packets.csv` lưu thành `<tên>.gz` (gzip mức 6, header không tên và thời điểm 0, nên cùng
+  nội dung thì cùng byte). `outputs_sha256` của manifest vẫn là SHA-256 của **nội dung chưa nén**;
+  `compressed_outputs` ghi tên nào nằm ở file nào (rỗng khi không nén). `raw.bin`, `decode.json`,
+  manifest và các bản sao đầu vào không nén. Ingest (`session_ingest.verify_recording`,
+  `load_recording`) đọc cả hai dạng và kiểm hash trên nội dung. Trên bản ghi thật 21 phút: 134,6 MB
+  thành 33,7 MB ([quy ước dữ liệu](../data_convention.md) mục 3). Mặc định vẫn không nén; `replay`
+  không nén.
 - Từ 2026-11-27 (L2), `raw.bin` được flush sau mỗi chunk, nên chương trình khác đọc được
   `raw.bin` trong lúc nó đang lớn (test đọc song song khi logger đang giữ file `xb`). Byte và
   hash không đổi; `fsync` vẫn chỉ ở cuối. Chưa thử trên laptop đo.
