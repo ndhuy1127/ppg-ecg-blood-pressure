@@ -106,7 +106,9 @@ email.
   ngược được về dữ liệu gốc, cấu hình và phiên bản mã nguồn đã dùng.
 - Nơi lưu: [thiết bị lưu trữ của phòng thí nghiệm]. Mọi máy tính và ổ đĩa chứa dữ liệu nghiên cứu
   đều được mã hóa toàn ổ [công cụ, ví dụ BitLocker] và có mật khẩu đăng nhập riêng. Bản sao lưu:
-  [nơi, tần suất], cũng được mã hóa. Dữ liệu không được đồng bộ lên dịch vụ đám mây công cộng.
+  ổ cứng ngoài mã hóa BitLocker, chép **sau mỗi buổi đo**; phần mềm ghi buổi đo so mã băm SHA-256
+  của từng tệp trên bản chép với bản gốc, và buổi đo chỉ được coi là đóng khi việc chép và so đã
+  xong (chốt 2026-11-27). Dữ liệu không được đồng bộ lên dịch vụ đám mây công cộng.
 - Phiếu giấy được cất trong tủ có khóa tại [phòng], phiếu đồng thuận và phiếu sàng lọc ở hai bìa
   riêng.
 - Quyền truy cập: dữ liệu nghiên cứu (chỉ mang mã) do các thành viên nhóm nghiên cứu có tên trong hồ
