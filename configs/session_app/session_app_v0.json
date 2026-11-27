@@ -1,0 +1,23 @@
+{
+  "version": "session-app-v0",
+  "status": "APPROVED_NOT_LOCKED",
+  "note": "Operating values of the session app (docs/protocol/session_app_spec_v0.md, decided 2026-11-27). Every key cites its source. Changing a value means a new version of this file, not an edit of a used one.",
+  "slots_per_phase": {"M0": 2, "M1": 1, "M2": 1, "source": "protocol 6.4 'So lan bom': M0 twice, M1 and M2 once each"},
+  "screening_inflations_session1": 2,
+  "screening_source": "protocol 4 and 6.4: two inflations (both arms) at screening in session 1, counted for the cap and safety only",
+  "inflation_cap": {"full": 6, "m0_only": 4, "source": "protocol 6.4: cap 6 per session (4 when only M0), plus the 2 screening inflations in session 1"},
+  "max_repeats": 2,
+  "repeat_phases": ["M0"],
+  "repeat_source": "SAP v1 section 2 and protocol 6.4 (decided 2026-11-27): repeats only at M0, at most 2 per session",
+  "rest_between_inflations_s": 120,
+  "rest_source": "protocol 6.2: at least 2 minutes between two inflations",
+  "safety": {
+    "stop_sbp": 180, "stop_dbp": 110,
+    "skip_maneuvers_m0_mean_sbp": 140, "skip_maneuvers_m0_mean_dbp": 90,
+    "source": "docs/ethics/session_safety_stopping_v0.1.md section 6 (a), (b); any reading incl. screening for (a), mean of the M0 readings for (b); safety only, never a data filter"
+  },
+  "label_ranges": {"sbp_mmhg": [80, 200], "dbp_mmhg": [40, 130], "pulse_rate_bpm": [40, 150],
+                   "source": "spec 10.1 point 15: outside asks for confirmation, never refused"},
+  "reminders_s": {"cuff_end_after_t0": 120, "t0_late_vs_plan": 30, "visit_warn": 6000, "visit_cap": 7200,
+                  "source": "spec 10.1 point 16 and protocol 6.4 (120-minute cap)"}
+}

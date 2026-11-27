@@ -478,8 +478,13 @@ buổi 1 (mục 6.2). Phần phân tích đòi phiên 2 đạt đã sửa trong 
    7–28 ngày, endpoint phụ 12–14~~ (xong 2026-11-27). Ứng dụng phải ghi `cuff-log-v2` và tự kiểm
    "cử động ghi trước `t0`" trên nhật ký buổi, vì ingest không thấy nhật ký đó.
 2. Thêm L1, L2 vào logger, có test; thử đọc song song trên laptop đo.
-3. `software/session_app/`: máy trạng thái lượt, đếm lần bơm, ghép sự kiện, kiểm nhãn và an toàn,
-   nhật ký buổi, có test.
+3. ~~`software/session_app/`: máy trạng thái lượt, đếm lần bơm, ghép sự kiện, kiểm nhãn và an toàn,
+   nhật ký buổi, có test.~~ Xong 2026-11-27: `software/session_app/visit.py` (lớp `Visit`), config
+   `configs/session_app/session_app_v0.json`, test `tests/test_session_app_visit.py` (cuff log sinh ra
+   được `read_cuff_log` đọc lại). Chưa có: ghi nhật ký buổi ra file JSONL và đọc lại (phần I/O của
+   ứng dụng), kiểm chéo ordinal với `decode.json` sau buổi (mục 7), gọi `build_session_index`.
+   Giới hạn đã biết: một sự kiện mã 4 bị mất sau khi lệnh đã được xác nhận làm lệch các mốc sau
+   trong hàng đợi; kiểm chéo với `decode.json` sau buổi bắt được việc này.
 4. Màn hình Ghi (xem trực tiếp, nút cuff, nhập nhãn, hai nút dừng), chạy được với nguồn giả.
 5. Màn hình Chuẩn bị, chỉnh LED hai bản ghi.
 6. Màn hình Sau buổi (ingest mọi phiên MCU) và Danh sách buổi.

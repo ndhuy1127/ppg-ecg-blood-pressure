@@ -46,6 +46,8 @@ chứa `__init__.py`.
 | [pulsedb/visualizer.py](pulsedb/visualizer.py) | Vẽ đoạn tín hiệu PulseDB để xem bằng mắt (notebook) | `PulseSegment` → hình matplotlib |
 | [evaluation/fiducial_gate.py](evaluation/fiducial_gate.py) | Cổng nghiệm thu mốc R/foot đăng ký trước (Tuần 5): nhóm chọn, nhóm xác nhận chỉ chấm phương pháp thắng; độ lặp lại của người đánh dấu | Bảng so khớp mốc tự động/tay → pass/fail theo ngưỡng trong config |
 | [data_io/packet_simulation_v3.py](data_io/packet_simulation_v3.py) | Sinh luồng byte SYNTHETIC `synthetic-packet-v3` đúng layout V0.1, 13 case lỗi | Config/seed → `stream.bin` + metadata phiên |
+| [device/session_index.py](device/session_index.py) | `session-index-v1`: kiểm mỗi lần cuff của nhật ký nằm trong đúng một đầu ra ingest; phân tích RQ1 từ chối bảng đặc trưng thiếu, thừa hay lặp lần cuff | Nhật ký cuff + provenance và bảng đặc trưng → index; dòng RQ1 + index → kiểm |
+| [session_app/visit.py](session_app/visit.py) | Phần lõi của ứng dụng buổi đo (`session-app-v0`): lượt cuff (một lượt mở mỗi lúc), đếm lần bơm và trần, quy tắc đo lại, ghép sự kiện thiết bị vào lượt, kiểm nhãn, quy tắc an toàn, nhắc giờ, nhật ký buổi, sinh `cuff-log-v2` | Thao tác người vận hành + sự kiện `0xC1` (có thời điểm PC) → nhật ký buổi, dòng nhật ký cuff, danh sách ngoại lệ |
 
 Chi tiết đầu vào/đầu ra nằm trong [README models](models/README.md) và
 [README evaluation](evaluation/README.md).
