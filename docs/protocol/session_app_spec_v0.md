@@ -27,7 +27,7 @@ cuff nào vào tập phân tích hay người nào đạt chuẩn (việc của 
 
 ## 2. Nguyên tắc bắt buộc
 
-1. **Mọi byte đều được lưu, kể cả lần đo hỏng.** Không có nút "bỏ lần đo này" hay "xóa bản ghi".
+1. **Mọi byte đều được lưu, kể cả lần đo hỏng.** Không có nút "bỏ lần đo này" hay "xóa bản ghi" với dữ liệu người tham gia. Ngoại lệ (thêm 2026-11-27): lần chạy thử ở chế độ Demo hay Bring-up, trong `runs/session_app/`, có thể kết thúc không lưu (xóa cả thư mục của lần chạy đó, hỏi xác nhận hai lần); chế độ người tham gia chỉ có Lưu.
    Kiểm tra chất lượng chỉ **gắn nhãn**, không quyết định có lưu hay không. Lý do: phân tích chính
    của RQ1 không loại theo SQI ([SQI v1](sqi_specification_v1.md) mục 1). Phân tích phụ và RQ3
    cần cả lần đo xấu, và báo cáo phải nêu số lần bị loại cùng lý do (SAP mục 2, 11).
@@ -171,7 +171,7 @@ thư), rồi mới tạo stop-file. Sau đó chờ logger thoát với mã 0 và
 
 ### 6.1. Hiển thị trực tiếp
 
-- ECG, PPG xanh/đỏ/IR, IMU (độ lớn gia tốc), cửa sổ 10 s, cập nhật khoảng 5 lần mỗi giây.
+- ECG, PPG xanh/đỏ/IR, IMU (độ lớn gia tốc), cửa sổ 10 s, vẽ lại khoảng 10 lần mỗi giây với tối đa khoảng 1 200 điểm mỗi đường (giữ min và max từng đoạn để không mất đỉnh R hay chân sóng), trục Y theo dữ liệu mỗi giây một lần để sóng không giật (sửa 2026-11-27 sau khi chạy với bo thật).
 - Thanh trạng thái: thời gian ghi, đồng hồ buổi, packet mất, tốc độ thực, mã LED đang chạy so với mã
   khóa, cờ `STATUS` mới nhất.
 - **Điều kiện bấm cuff** (chặn nút "Bắt đầu lượt" cho tới khi đủ; mỗi lần chặn đều ghi lý do):
@@ -486,7 +486,22 @@ buổi 1 (mục 6.2). Phần phân tích đòi phiên 2 đạt đã sửa trong 
    Giới hạn đã biết: một sự kiện mã 4 bị mất sau khi lệnh đã được xác nhận làm lệch các mốc sau
    trong hàng đợi; kiểm chéo với `decode.json` sau buổi bắt được việc này.
 4. Màn hình Ghi (xem trực tiếp, nút cuff, nhập nhãn, hai nút dừng), chạy được với nguồn giả.
-5. Màn hình Chuẩn bị, chỉnh LED hai bản ghi.
+   **Bản đầu xong 2026-11-27:** `scripts/session_app.py` (`--demo` với thiết bị giả
+   `software/session_app/fake_device.py`, hoặc `--port --metadata` chạy logger làm tiến trình con
+   ở chế độ bring-up, ngoài `data/raw/`), bộ đọc luồng `software/session_app/live.py`. Có: bốn
+   đồ thị 10 s, trạng thái (thời gian, số lần bơm/trần, gói mất, mã LED, cờ STATUS, nhắc), các nút
+   của mục 6.3–6.4 và mục 4 (hai nút dừng), nhật ký buổi ghi ngay từng dòng, cuối buổi
+   `cuff_log.csv` (v2) và `exceptions.json`. Test không cửa sổ (`tests/test_session_app_screen.py`)
+   và test dựng cửa sổ. **Chưa có:** âm thanh thở chậm (mục 6.3), đèn tuột điện cực và bão hòa
+   theo tín hiệu (mục 6.1; hiện chỉ đếm cờ STATUS), hiện xác nhận `0xD3` của từng lệnh, IMU trong
+   demo (luồng giả không có IMU), mở lại buổi đang dở, kiểm chéo với `decode.json`. Đường logger
+   thật chưa chạy với bo mạch.
+5. Màn hình Chuẩn bị, chỉnh LED hai bản ghi. **Phần đầu xong 2026-11-27:** mở bằng nhấp đúp
+   (`scripts/Ung_dung_buoi_do.cmd`, chạy `pythonw` của `.venv`, không cần gõ lệnh), màn hình khởi
+   động chọn chế độ (Demo, Bring-up; Người tham gia hiện nhưng khóa, kèm danh sách còn thiếu của mục
+   10.1, điểm 19), cổng COM tự dò có nút "Dò lại", file metadata (bring-up), buổi 1/2 và "chỉ M0".
+   Lựa chọn gần nhất nhớ trong `runs/session_app/settings.json` (chỉ cho tiện). **Chưa có:** chọn
+   người và buổi từ danh sách, sinh metadata từ mẫu, checklist, kiểm `0xD1`, chỉnh LED hai bản ghi.
 6. Màn hình Sau buổi (ingest mọi phiên MCU) và Danh sách buổi.
 7. Buổi giả trên bàn ở chế độ bring-up, rồi sửa đặc tả theo những gì thấy được.
 
