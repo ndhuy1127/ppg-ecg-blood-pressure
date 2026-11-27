@@ -28,8 +28,14 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from software._provenance import text_file_sha256  # noqa: E402
+from software.device.session_index import check_session_indexes  # noqa: E402
 from software.device.session_ingest import sha256_file  # noqa: E402
-from software.evaluation.rq1_analysis import TARGETS, analyze  # noqa: E402
+from software.evaluation.rq1_analysis import (  # noqa: E402
+    ADJUDICATION_COLUMNS,
+    TARGETS,
+    analyze,
+    apply_adjudication,
+)
 from scripts.device_session import CODE as FEATURE_CODE  # noqa: E402
 from scripts.device_session import CONFIG as FEATURE_CONFIG  # noqa: E402
 
@@ -38,12 +44,17 @@ ANALYSIS_CODE = ("software/__init__.py", "software/evaluation/__init__.py",
                  "software/evaluation/mean_intervals.py",
                  "software/evaluation/rq1_holm_loso.py",
                  "software/evaluation/rq1_sensitivity.py", "software/_provenance.py",
+                 "software/device/session_index.py",
                  "scripts/run_rq1_analysis.py", "scripts/run_b2_pulsedb.py")
 # The analysis, the feature step that made the tables and its config (added 2026-11-14).
 LOCKED = tuple(dict.fromkeys(("docs/protocol/sap_v1.md", *ANALYSIS_CODE, *FEATURE_CODE,
                               FEATURE_CONFIG)))
 # Config status set by the SAP locking commit (proposed 2026-11-13, approved 2026-11-14).
 LOCKED_STATUS = "LOCKED"
+# SHA-256 of the reviewed session adjudication table, committed before the run (session
+# app spec section 10.1, point 13, decided 2026-11-27); it holds no subject code.
+ADJUDICATION_LOCK = REPO / "configs/data/session_adjudication_lock.json"
+ADJUDICATION_LOCK_VERSION = "session-adjudication-lock-v1"
 
 
 def _git(*args):
@@ -196,7 +207,33 @@ def summary_md(report):
     return "\n".join(lines) + "\n"
 
 
-def run(tables, config_path, output):
+def read_adjudication(path):
+    """The session adjudication table (SAP section 2, decided 2026-11-27): a CSV
+    with exactly ``ADJUDICATION_COLUMNS``."""
+    with open(path, newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        if tuple(reader.fieldnames or ()) != ADJUDICATION_COLUMNS:
+            raise ValueError(f"{path}: columns must be {ADJUDICATION_COLUMNS}")
+        return list(reader)
+
+
+def read_lock(path, real):
+    """The adjudication lock: version, ``sha256``, ``locked_date``. For real data it
+    must be tracked by Git and equal HEAD, like the config."""
+    lock = json.loads(Path(path).read_text(encoding="utf-8"))
+    if lock.get("version") != ADJUDICATION_LOCK_VERSION:
+        raise ValueError(f"{path}: version must be {ADJUDICATION_LOCK_VERSION}")
+    if real:
+        from scripts.run_b2_pulsedb import committed_unchanged
+
+        if not committed_unchanged(REPO, Path(path)):
+            raise ValueError(f"{path}: the adjudication lock must be committed and "
+                             "unchanged (session app spec 10.1, point 13)")
+    return lock
+
+
+def run(tables, config_path, output, adjudication=None, adjudication_lock=None,
+        session_indexes=None):
     output = Path(output)
     if output.exists():
         raise ValueError(f"Output {output} exists; choose a new directory")
@@ -204,11 +241,45 @@ def run(tables, config_path, output):
     by_table = {str(p): read_tables([p]) for p in tables}
     rows = [r for p in tables for r in by_table[str(p)]]
     sources = sorted({r.get("source_type") or "UNKNOWN" for r in rows})
+    # A SYNTHETIC table next to real ones would pass the adjudication table and
+    # the window check unseen (review 2026-11-27): one kind per run.
+    if "SYNTHETIC" in sources and len(sources) > 1:
+        raise ValueError(f"Real and SYNTHETIC tables cannot be analysed together: {sources}")
     committed = None
     if sources != ["SYNTHETIC"]:
         committed = check_committed(config, config_path)
     feature_provenance = check_feature_provenance(tables, by_table)
+    real = sources != ["SYNTHETIC"]
+    if real and not session_indexes:
+        raise ValueError("Real data need the session index of every session "
+                         "(--session-indexes; session app spec 10.1, point 12)")
+    if real and adjudication is None:
+        raise ValueError("Real data need the session adjudication table "
+                         "(--adjudication; SAP section 2)")
+    indexed = None
+    if session_indexes:
+        # On the raw session_id, before the adjudication: a missing or repeated
+        # table of one session stops the run.
+        indexes = [json.loads(Path(p).read_text(encoding="utf-8")) for p in session_indexes]
+        indexed = {"n": check_session_indexes(rows, indexes),
+                   "sha256": {str(p): sha256_file(p) for p in session_indexes}}
+    adjudicated = None
+    if adjudication is not None:
+        # The table is reviewed and frozen before results are released (SAP section
+        # 2): its SHA-256 sits in a committed lock file and must match the file read.
+        lock_path = adjudication_lock or ADJUDICATION_LOCK
+        lock = read_lock(lock_path, real)
+        digest = sha256_file(adjudication)
+        if str(lock.get("sha256", "")).lower() != digest:
+            raise ValueError(f"{adjudication}: SHA-256 {digest} differs from the locked "
+                             f"value in {lock_path}")
+        rows, adjudicated = apply_adjudication(rows, read_adjudication(adjudication),
+                                               config["site_utc_offset"])
+        adjudicated.update(sha256=digest, lock=str(lock_path),
+                           locked_date=lock.get("locked_date"))
     report = analyze(rows, config)
+    report["session_adjudication"] = adjudicated
+    report["session_indexes"] = indexed
     report["source_types"] = sources
     report["provenance"] = {
         "created_utc": datetime.now(timezone.utc).isoformat(),
@@ -236,8 +307,15 @@ def main():
     parser.add_argument("--config", type=Path,
                         default=REPO / "configs/analysis/rq1_analysis_v1.json")
     parser.add_argument("--output", required=True, type=Path, help="New directory")
+    parser.add_argument("--adjudication", type=Path,
+                        help="Session adjudication CSV (required for real data)")
+    parser.add_argument("--adjudication-lock", type=Path, default=ADJUDICATION_LOCK,
+                        help="Committed lock file with the SHA-256 of the adjudication CSV")
+    parser.add_argument("--session-indexes", nargs="+", type=Path,
+                        help="session_index.json of every session (required for real data)")
     args = parser.parse_args()
-    report = run(args.features, args.config, args.output)
+    report = run(args.features, args.config, args.output, args.adjudication,
+                 args.adjudication_lock, args.session_indexes)
     print(json.dumps({t: report["main"]["targets"][t]["main_conclusion"]
                       for t in TARGETS}, indent=2))
 

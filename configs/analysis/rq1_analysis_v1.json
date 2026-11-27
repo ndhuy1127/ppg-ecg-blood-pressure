@@ -19,5 +19,8 @@
   "delta_mmhg": {"SBP": null, "DBP": null},
   "delta_sap": "section 8: delta fixed after the pilot; null gives the reading delta_not_set",
   "sqi_exclusion_flags": ["motion", "ppg:adc_saturation", "ppg:alc_overflow", "ppg:shape_inconsistent", "ppg:led_not_locked", "ecg:lead_off", "afe:fifo_overflow", "stream:gap", "pat:unmatched_beats"],
-  "sqi_exclusion_sap": "section 3 endpoint 5, SQI v1 section 5 (thresholds locked on G2)"
+  "sqi_exclusion_sap": "section 3 endpoint 5, SQI v1 section 5 (thresholds locked on G2)",
+  "session2_window_days": [7, 28],
+  "site_utc_offset": "+07:00",
+  "session_window_sap": "section 2 (decided 2026-11-27): session 2 from 7 to 28 days after session 1, inclusive, on the local calendar dates at the site (UTC+07:00) of the earliest recording start of each session; outside the window the subject leaves the main analysis and comes back in endpoint 14"
 }

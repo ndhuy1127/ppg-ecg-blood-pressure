@@ -40,6 +40,14 @@ CUFF_COLUMNS = ("recording", "event_id", "phase", "device_session_id",
                 "t0_event_ordinal", "phase_mark_event_ordinal",
                 "cuff_end_event_ordinal", "sbp_mmhg", "dbp_mmhg", "pulse_rate_bpm",
                 "status", "safety_stop", "led_readjusted", "pilot", "note")
+# cuff-log-v2 (docs/data_convention.md 4.4, decided 2026-11-27; SAP section 2): the v1
+# columns plus the link of a repeat to the attempt it repeats. Repeats only at M0,
+# at most 2 per log, for no_result or a motion the operator saw and logged before t0.
+CUFF_COLUMNS_V2 = CUFF_COLUMNS + ("repeat_of_event_id", "repeat_reason")
+CUFF_LOG_VERSIONS = {CUFF_COLUMNS: "cuff-log-v1", CUFF_COLUMNS_V2: "cuff-log-v2"}
+REPEAT_REASONS = ("no_result", "observed_motion")
+MAX_REPEATS = 2
+SLOTS_PER_PHASE = {"M0": 2, "M1": 1, "M2": 1}
 # Session- and subject-level 0/1 columns of the cuff log: one cuff log is one study
 # session of one subject, so they must be the same on every row (data_convention 4.4).
 LOG_CONSTANT_COLUMNS = ("led_readjusted", "pilot")
@@ -420,15 +428,85 @@ def _number(text, name, row):
     return value
 
 
+def cuff_log_version(path):
+    """``cuff-log-v1`` or ``cuff-log-v2`` from the header; any other header is an
+    error."""
+    with open(path, newline="", encoding="utf-8") as handle:
+        header = tuple(next(csv.reader(handle), ()))
+    if header not in CUFF_LOG_VERSIONS:
+        raise IngestError(f"cuff_log columns must be {CUFF_COLUMNS} (v1) or "
+                          f"{CUFF_COLUMNS_V2} (v2)")
+    return CUFF_LOG_VERSIONS[header]
+
+
+def _check_repeats(rows):
+    """cuff-log-v2 repeat links over the whole log, every recording (SAP section 2,
+    decided 2026-11-27). Rows are in the order of the attempts. A repeat names the
+    attempt just before it at the same slot: an earlier M0 row of the log that no
+    other repeat names. The motion itself (logged before t0) is in the session
+    journal of the session app, which this function does not see."""
+    position, children, repeats = {}, {}, 0
+    originals = dict.fromkeys(PHASES, 0)
+    for n, row in enumerate(rows, start=2):
+        parent, reason = row["repeat_of_event_id"], row["repeat_reason"]
+        if not parent:
+            # The schedule has M0 x2, M1, M2 (protocol 6.4): an unlinked repeat
+            # would otherwise become a slot of its own.
+            originals[row["phase"]] += 1
+            if originals[row["phase"]] > SLOTS_PER_PHASE[row["phase"]]:
+                raise IngestError(f"cuff_log row {n}: more than "
+                                  f"{SLOTS_PER_PHASE[row['phase']]} scheduled "
+                                  f"{row['phase']} attempts; a repeat needs "
+                                  "repeat_of_event_id")
+        if (parent == "") != (reason == ""):
+            raise IngestError(f"cuff_log row {n}: repeat_of_event_id and repeat_reason "
+                              "are both empty or both set")
+        if parent:
+            repeats += 1
+            if reason not in REPEAT_REASONS:
+                raise IngestError(f"cuff_log row {n}: repeat_reason {REPEAT_REASONS}")
+            if row["phase"] != "M0":
+                raise IngestError(f"cuff_log row {n}: repeats only at M0 (SAP section 2)")
+            if parent not in position:
+                raise IngestError(f"cuff_log row {n}: repeat_of_event_id {parent!r} is "
+                                  "not an earlier row of this log")
+            first = rows[position[parent]]
+            if first["phase"] != "M0" or first["status"] == "device_error":
+                raise IngestError(f"cuff_log row {n}: {parent} is not an M0 attempt that "
+                                  "may be repeated")
+            if reason == "no_result" and first["status"] != "no_result":
+                raise IngestError(f"cuff_log row {n}: reason no_result but {parent} "
+                                  f"has status {first['status']}")
+            if parent in children:
+                raise IngestError(f"cuff_log row {n}: {parent} is already repeated by "
+                                  f"{children[parent]}")
+            # Same recording and MCU session: the event ordinals give the real order.
+            same = all(first[k] == row[k] for k in ("recording", "device_session_id"))
+            if (same and first["t0_event_ordinal"].isdigit()
+                    and row["t0_event_ordinal"].isdigit()
+                    and int(row["t0_event_ordinal"]) <= int(first["t0_event_ordinal"])):
+                raise IngestError(f"cuff_log row {n}: its t0 is not after the t0 of "
+                                  f"{parent}")
+            children[parent] = row["event_id"]
+        position[row["event_id"]] = n - 2
+    if repeats > MAX_REPEATS:
+        raise IngestError(f"cuff_log: {repeats} repeats, at most {MAX_REPEATS} per "
+                          "session (protocol 6.4)")
+
+
 def read_cuff_log(path, recording_name):
     """Rows of ``cuff_log.csv`` (docs/data_convention.md section 4.4) for one
-    recording. Strict: unknown columns, duplicate ``event_id``, unknown phase or
-    status, and labels on rows that are not ``valid`` are errors."""
+    recording, v1 or v2 (``cuff_log_version``). Strict: unknown columns, duplicate
+    ``event_id``, unknown phase or status, labels on rows that are not ``valid``,
+    and on v2 a broken repeat link are errors. v1 rows carry no repeat link
+    (``repeat_of_event_id`` and ``repeat_reason`` None)."""
+    v2 = cuff_log_version(path) == "cuff-log-v2"
     with open(path, newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        if tuple(reader.fieldnames or ()) != CUFF_COLUMNS:
-            raise IngestError(f"cuff_log columns must be {CUFF_COLUMNS}")
-        rows = list(reader)
+        rows = list(csv.DictReader(handle))
+    for n, row in enumerate(rows, start=2):
+        # DictReader fills a short row with None and keeps extra fields under None.
+        if None in row or any(value is None for value in row.values()):
+            raise IngestError(f"cuff_log row {n}: wrong number of fields")
     for name in LOG_CONSTANT_COLUMNS:
         if len({row[name] for row in rows}) > 1:
             raise IngestError(f"cuff_log: {name} must be the same on every row")
@@ -444,12 +522,17 @@ def read_cuff_log(path, recording_name):
         for name in ("safety_stop", *LOG_CONSTANT_COLUMNS):
             if row[name] not in ("0", "1"):
                 raise IngestError(f"cuff_log row {n}: {name} must be 0 or 1")
+    if v2:
+        _check_repeats(rows)
+    for n, row in enumerate(rows, start=2):
         if row["recording"] != recording_name:
             continue
         cuff = {"event_id": row["event_id"], "phase": row["phase"],
                 "status": row["status"], "safety_stop": row["safety_stop"] == "1",
                 "led_readjusted": row["led_readjusted"] == "1",
-                "pilot": row["pilot"] == "1", "note": row["note"]}
+                "pilot": row["pilot"] == "1", "note": row["note"],
+                "repeat_of_event_id": (row["repeat_of_event_id"] or None) if v2 else None,
+                "repeat_reason": (row["repeat_reason"] or None) if v2 else None}
         for name in ("device_session_id", "t0_event_ordinal",
                      "phase_mark_event_ordinal", "cuff_end_event_ordinal"):
             text = row[name]

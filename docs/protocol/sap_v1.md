@@ -38,9 +38,11 @@
 >   đổi "phiên 2–3"/"ít nhất một phiên sau" thành phiên 2; mục 9 bỏ việc chọn phân bổ phiên sau
 >   pilot (quy tắc chỉ còn chọn số người); mục 13 điểm 6 sửa theo. "Phiên ≥ 2" ở các mục khác
 >   giữ nguyên chữ, nay nghĩa là phiên 2.
-> - **Sửa 2026-11-27 (đề xuất, chờ duyệt), khớp code với mục 2:** code phân tích từng nhận "phiên
->   1 đạt và có một phiên ≥ 2 bất kỳ đạt", nay đòi đúng phiên 2 đạt. Mục 2 thêm quy tắc: dòng có mã
->   phiên khác S001, S002 là lỗi nhật ký, phân tích dừng chứ không bỏ qua dòng đó.
+> - **Sửa 2026-11-27 (chốt, báo thầy; sau phản biện độc lập):** code phân tích từng nhận "phiên 1
+>   đạt và có một phiên ≥ 2 bất kỳ đạt", nay đòi đúng phiên 2 đạt. Mục 2 thêm: một nhãn cho mỗi vị
+>   trí trong lịch đo và quy tắc đo lại; xét duyệt mã phiên và khoảng 7–28 ngày trước khi xem kết
+>   quả. Mục 3 thêm endpoint phụ 12–14. Mục 13 thêm điểm 15–17. Code cài cùng ngày (mục 13,
+>   "Còn lại").
 
 ## 1. Câu hỏi và nguyên tắc
 
@@ -57,7 +59,27 @@
 ## 2. Dữ liệu và tập phân tích
 
 - **Lần cuff hợp lệ:** có SBP và DBP từ máy cuff, không bị dừng vì lỗi máy (protocol 6.4, mục
-  "Số lần bơm"). Lần đo lại thay cho lần hỏng, không thêm nhãn.
+  "Số lần bơm").
+- **Một nhãn cho mỗi vị trí trong lịch đo (chốt 2026-11-27).** Mỗi buổi có các vị trí cuff định
+  trước (M0 ×2, M1, M2). Lần bơm đầu ở một vị trí là lượt gốc; lượt đo lại mang
+  `repeat_of_event_id` và `repeat_reason` (`cuff-log-v2`,
+  [quy ước dữ liệu](../data_convention.md) mục 4.4).
+  - *Khi nào được đo lại:* chỉ ở **M0**, và chỉ khi lượt trước là `no_result`, hoặc người vận hành
+    **thấy** người tham gia cử động trong 60 s trước cuff và ghi lại (sự kiện mã 4 loại cử động,
+    có giờ) **trước khi bấm `t0`**, tức lúc chưa biết số đo. Quan sát ghi sau `t0` chỉ là sai lệch,
+    không cho đo lại. Không đo lại vì số huyết áp, vì tín hiệu, SQI, thiếu PAT hay kết quả mô hình.
+  - *Không đo lại ở M1, M2:* lượt đo lại phải chờ ≥ 2 phút, nên rơi vào thời điểm khác của nghiệm
+    pháp (sau phút 15 của thở chậm, sau 90 s tính nhẩm). Vị trí M1 hay M2 không có số thì để trống
+    nhãn.
+  - *Nhãn được chọn:* lượt `valid` **đầu tiên** theo thời gian của vị trí, kể cả lượt gốc có đánh
+    dấu cử động. Lượt gốc `no_result` thì lấy lượt đo lại hợp lệ đầu tiên, với cửa sổ tín hiệu của
+    chính lượt đo lại. Không có lượt hợp lệ thì vị trí đó thiếu nhãn. Chọn nhãn **trước** khi xét
+    tín hiệu: thiếu PAT hay SQI kém không làm đổi lượt được chọn. Mọi phần sau (BP₀, đặc trưng nền,
+    ngưỡng ≥ 2 lần cuff của phiên đạt, tập học, tập đánh giá) chỉ dùng nhãn được chọn. Lượt không
+    được chọn vẫn giữ trong raw và trong bảng đặc trưng.
+  - *An toàn:* mọi số đo, kể cả lượt đo lại và lượt sàng lọc, đều được xét theo ngưỡng an toàn
+    ngay khi có; một số đo sau không gỡ được lệnh dừng hay lệnh bỏ nghiệm pháp.
+  - Phân tích độ nhạy: endpoint phụ 12, 13 (mục 3).
 - **Người đạt chuẩn** (định nghĩa của [kịch bản bài báo](../paper_scenarios_v0.1.md), chép lại
   để khóa):
   - đã qua sàng lọc;
@@ -66,12 +88,29 @@
     được PAT và đặc trưng PPG ([SQI v1](sqi_specification_v1.md) mục 4);
   - phiên 2 có cờ `led_readjusted` không được tính là phiên đạt;
   - người làm pilot không được tính.
-- **Tập phân tích chính:** mọi lần cuff hợp lệ ở phiên ≥ 2 (M0, M1, M2) của người đạt chuẩn,
+- **Tập phân tích chính:** mọi nhãn được chọn ở phiên ≥ 2 (M0, M1, M2) của người đạt chuẩn,
   tính được cả PAT lẫn đặc trưng PPG. Không lọc theo SQI. Phiên `led_readjusted` không thuộc tập
   này.
-- **Chỉ có phiên 1 và phiên 2 (thêm 2026-11-27, đề xuất, chờ duyệt):** protocol mục 3 không có
-  phiên 3. Dòng có mã phiên khác S001, S002 là lỗi nhật ký: phân tích dừng và báo dòng đó, không
-  bỏ qua và không đưa vào tập nào. Vì vậy một phiên khác không thể thay cho phiên 2 trượt.
+- **Xét duyệt mã phiên và khoảng cách phiên (chốt 2026-11-27).** Protocol mục 3: mỗi người đúng
+  2 phiên, phiên 2 cách phiên 1 từ 7 tới 28 ngày.
+  - *Ai, khi nào:* hai người cùng xét, gồm người quản lý dữ liệu và một thành viên không vận hành
+    buổi đó, dựa trên lịch hẹn, phiếu ghi buổi đo và manifest của bản ghi, **trước khi xem** huyết
+    áp, PAT, SQI hay kết quả mô hình. Kết quả ghi vào một bảng xét duyệt có version (mã người, bản
+    ghi, mã phiên gốc và sau xét, ngày và khoảng cách, bằng chứng, quyết định, lý do, hai người xét,
+    ngày xét), khóa trước khi chạy phân tích. Raw và metadata không bao giờ bị sửa.
+  - *Một buổi:* lịch hẹn bị hủy trước khi bắt đầu thủ tục thì không tính là buổi. Đã bắt đầu thì
+    tính, kể cả buổi bị dừng. Nhiều bản ghi của một buổi (MCU khởi động lại) giữ cùng một mã phiên.
+  - *Gõ nhầm mã phiên:* chỉ ánh xạ lại khi bằng chứng cùng lúc chỉ ra đúng một buổi; kiểm lại thứ
+    tự thời gian và trùng `event_id` sau khi ánh xạ. Không chắc thì cách ly bản ghi và báo cáo.
+  - *Buổi thứ ba thật* (ví dụ phiên 2 bị dừng rồi hẹn lại): tính vào an toàn và số lần bơm, loại
+    khỏi mọi mô hình và endpoint của RQ1. Phiên 2 gốc, kể cả khi dở dang, xét theo quy tắc thường;
+    trượt thì người đó không đạt chuẩn. Một buổi sau không thay được phiên 2.
+  - *Phiên 2 ngoài 7–28 ngày* (hiệu số ngày lịch tại nơi đo giữa hai ngày bắt đầu buổi, tính cả
+    ngày 7 và 28): giữ mã S002, gắn cờ sai lệch, người đó ra khỏi tập phân tích chính; endpoint phụ
+    14 đưa họ vào lại.
+  - Code phân tích nhận **bảng đã xét duyệt** và vẫn dừng khi gặp mã khác S001, S002.
+  - Báo: số lần sửa mã, ca chưa giải quyết, buổi thứ ba, buổi bị dừng, sai lệch khoảng cách, và số
+    người mất khỏi phân tích chính vì từng lý do.
 - **Lần cuff không chạy với mã LED đã khóa (sửa 2026-11-15, đề xuất, chờ duyệt):** cờ
   `ppg:led_not_locked` ([SQI v1](sqi_specification_v1.md) mục 3.3) bật khi trạng thái MAX30101
   trong cửa sổ không mang mã LED đã khóa, khi bản ghi của người tham gia không có mã khóa, hay
@@ -127,6 +166,13 @@
       nên không thay phép so chính. Độ nhạy thấp (mục 9, kết quả 10), nên chỉ dùng để mô tả.
   11. Baseline theo pha dùng trung vị thay trung bình (mục 4; chốt 2026-11-12): MAE tối ưu ở trung vị, nên vượt
       trung bình theo pha có thể chỉ nhờ phân bố ΔBP lệch.
+  12. **Chỉ lượt gốc** (chốt 2026-11-27): bỏ mọi lượt đo lại; vị trí có lượt gốc `no_result` thì
+      thiếu nhãn.
+  13. **Thay lượt cử động** (chốt 2026-11-27): ở vị trí M0 có lượt gốc `valid` mang đánh dấu cử
+      động (trước `t0`) và có lượt đo lại hợp lệ, dùng lượt đo lại đầu tiên cùng cửa sổ của nó; các
+      vị trí khác giữ như phân tích chính.
+  14. **Có người phiên 2 ngoài 7–28 ngày** (chốt 2026-11-27): đưa phiên 2 gốc của họ vào, mọi quy
+      tắc khác giữ nguyên; báo số người sớm, muộn và khoảng cách thật. Buổi thứ ba vẫn bị loại.
 - **Cách tính endpoint 5 và 7 (đề xuất và duyệt 2026-11-14).** BP₀, đặc trưng nền và tư cách
   đạt chuẩn giữ nguyên như phân tích chính. Bộ lọc của endpoint (cờ SQI thuộc tập loại; cờ dừng
   an toàn) chỉ bỏ lần cuff khỏi tập học và tập đánh giá, rồi học lại theo mục 4; không xét lại
@@ -136,7 +182,9 @@
   nhắc và không chọn: lọc cả lần cuff hiệu chuẩn (đổi BP₀ nên đổi nhãn ΔBP của mọi lần cuff,
   trộn hai hiệu ứng và có thể loại người); giữ BP₀ nhưng tính lại đặc trưng nền từ lần cuff qua
   lọc (BP₀ và đặc trưng nền lệch mốc với nhau). Endpoint 6 vẫn chạy lại toàn bộ vì nó đổi chính
-  tập phân tích.
+  tập phân tích. Endpoint 12, 13, 14 cũng chạy lại toàn bộ (hiệu chuẩn, tư cách đạt chuẩn, học,
+  đánh giá), vì chúng đổi nhãn hay tập người; báo số người và số vị trí thay đổi so với phân tích
+  chính, riêng ΔSBP và ΔDBP, kèm số lượt đo lại theo lý do và số vị trí thiếu nhãn theo pha.
 
 ## 4. Hiệu chuẩn và đặc trưng
 
@@ -701,6 +749,17 @@ tương ứng):
 14. **Máy cuff:** ưu tiên model có validation và SD lặp lại nhỏ, vì nhiễu cuff làm giảm khả năng
     đạt kết luận chính nhiều hơn mọi lựa chọn thiết kế khác ngoài M6 (kết quả 11.2).
 
+Đã chốt 2026-11-27 (báo thầy; sau phản biện độc lập):
+
+15. **Một nhãn cho mỗi vị trí, đo lại chỉ ở M0** (mục 2). Phương án đã cân nhắc: giữ mọi lượt
+    hợp lệ (bỏ, vì một vị trí có thể đóng góp hai nhãn và lượt đo lại có thể được chọn sau khi
+    thấy số); cho M1 đo lại khi `no_result` bằng cách kéo dài thở chậm (bỏ, vì đổi thời lượng
+    nghiệm pháp đã nộp hội đồng).
+16. **Xét duyệt mã phiên và khoảng 7–28 ngày trước khi xem kết quả** (mục 2). Phương án đã cân
+    nhắc: tự động bỏ dòng có mã lạ (bỏ, vì không phân biệt được gõ nhầm với buổi thứ ba); cho buổi
+    sau thay phiên 2 trượt (bỏ, vì chọn người theo kết quả).
+17. Endpoint phụ 12–14 (mục 3).
+
 Còn lại trước khi khóa (cập nhật 2026-11-12):
 
 - ngưỡng SQI v1, khóa trên bản ghi G2;
@@ -717,6 +776,15 @@ Còn lại trước khi khóa (cập nhật 2026-11-12):
   ghi chỉ được so với mã trong metadata của chính nó (mục 2), cần xong trước pilot;
 - thêm 2026-11-15: đánh giá bộ lọc (mép cửa sổ, độ lệch chân sóng sau lọc) trên bản ghi G2,
   rồi khóa trên pilot (mục 4).
+- ~~thêm 2026-11-27: code cho mục 13 điểm 15–17~~ **xong 2026-11-27**: ingest đọc `cuff-log-v2`,
+  phân tích chọn một nhãn cho mỗi vị trí, nhận bảng xét duyệt phiên, kiểm 7–28 ngày, endpoint 12–14,
+  có test đáp án biết trước ([pipeline](device_session_pipeline.md) mục 1, 4.1). Còn lại: phía ứng
+  dụng buổi đo, kiểm "cử động ghi trước `t0`" trên nhật ký buổi; trước khi chạy RQ1, đối chiếu
+  các bảng đặc trưng với nhật ký cuff đã khóa để không thiếu bản ghi hay phiên MCU nào (thiếu bảng
+  của lượt đo lại thì endpoint 12, 13 đổi mà không báo). Cách làm chốt 2026-11-27: `session_index.json`
+  mỗi buổi và `--session-indexes`; hash của bảng xét duyệt khóa trong
+  `configs/data/session_adjudication_lock.json` được commit ([đặc tả ứng dụng buổi đo](
+  session_app_spec_v0.md) mục 10.1). Đã cài 2026-11-27.
 
 Đề xuất 2026-11-15, chờ duyệt: cờ `ppg:led_not_locked` loại theo từng lần cuff (mục 2, 3, 4);
 phương pháp LoA cho đo lặp (mục 11).

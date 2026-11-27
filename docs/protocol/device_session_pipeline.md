@@ -19,8 +19,34 @@ Ba bước, mỗi bước dùng đầu ra của bước trước:
 # Một bản ghi + nhật ký cuff -> cửa sổ, đặc trưng theo lần cuff
 .\.venv\Scripts\python.exe scripts\device_session.py --recording <thư mục bản ghi> --cuff-log <cuff_log.csv> --output <thư mục mới>
 # Mọi bảng đặc trưng -> RQ1 (G5 chỉ còn lệnh này)
-.\.venv\Scripts\python.exe scripts\run_rq1_analysis.py --features <a>\cuff_features.csv <b>\cuff_features.csv --output <thư mục mới>
+.\.venv\Scripts\python.exe scripts\run_rq1_analysis.py --features <a>\cuff_features.csv <b>\cuff_features.csv --session-indexes <a>\session_index.json <b>\session_index.json --adjudication <session_adjudication.csv> --output <thư mục mới>
 ```
+
+Thêm 2026-11-27 (SAP mục 2, chốt cùng ngày):
+
+- **`cuff-log-v2`.** `device_session.py` đọc cả v1 và v2 (`cuff_log_version` theo dòng tiêu đề),
+  nhưng từ chối v1 với dữ liệu người (`subject_id` dạng `SUB###`), vì thiếu liên kết đo lại thì một
+  lượt đo lại thành một vị trí riêng. `read_cuff_log` kiểm liên kết trên cả nhật ký, mọi bản ghi:
+  chỉ M0, lượt được đo lại phải ở dòng trước, không phải `device_error`, `no_result` chỉ khi lượt
+  trước không ra số, mỗi lượt bị đo lại tối đa một lần, tối đa 2 lượt đo lại mỗi buổi, `t0` của
+  lượt đo lại sau `t0` của lượt nó đo lại khi cùng bản ghi và phiên MCU, không quá số lượt gốc của
+  lịch (M0 hai, M1 một, M2 một), không có dòng thiếu hay thừa cột. Điều kiện
+  "cử động ghi trước `t0`" nằm trong nhật ký buổi của ứng dụng buổi đo, ingest không thấy. Bảng
+  đặc trưng có thêm `repeat_of_event_id`, `repeat_reason`; provenance ghi `cuff_log_version`.
+- **Bảng xét duyệt phiên** (`session-adjudication-v1`, CSV, cột `subject_id, recording,
+  raw_session_id, adjudicated_session_id, visit_date_local, disposition, reason, evidence,
+  reviewer_1, reviewer_2, decided_date`). Bắt buộc với dữ liệu không phải SYNTHETIC; kiểm sau cổng
+  provenance. SHA-256 của bảng ghi lúc khóa bảng (trước khi phát hành kết quả) vào
+  `configs/data/session_adjudication_lock.json` (`session-adjudication-lock-v1`: `version`,
+  `sha256`, `locked_date`; không chứa mã người), file này phải được commit và chưa đổi với dữ liệu
+  thật; hash khác thì dừng. Mỗi (`subject_id`, `recording`) một dòng; mã người, bản ghi
+  và bằng chứng không được trống; hai người xét khác nhau; ngày `YYYY-MM-DD`; `visit_date_local`
+  phải bằng ngày tại nơi đo (UTC+07:00) của lúc bắt đầu bản ghi. Người có `pilot` ở bất kỳ dòng nào,
+  kể cả dòng bị bỏ, vẫn là pilot. Một lượt chạy không được trộn bảng thật với bảng SYNTHETIC. `keep` giữ
+  phiên, `remap` đổi sang phiên còn lại, `extra_visit` và `quarantine` bỏ bản ghi khỏi mọi phân
+  tích RQ1; ba loại sau cần lý do. Dòng thật không có trong bảng, hay có `raw_session_id` khác mã
+  phiên trong bảng đặc trưng, thì dừng. Bảng đặc trưng không bị sửa. Report ghi
+  `session_adjudication` (số dòng theo loại, bản ghi theo loại, mục không có dòng nào, SHA-256).
 
 Dữ liệu người: output của `device_session.py` ghi vào
 `data/interim/<subject_id>/<session_id>/<recording>/`. Script từ chối ghi vào `data/raw/` và từ
@@ -205,7 +231,11 @@ Không resample, không dịch kênh. Một kênh thiếu L thì PAT không đư
 
 | SAP | Code |
 | --- | --- |
-| Mục 2: lần cuff hợp lệ, người đạt chuẩn, tập phân tích chính | `prepare`: `status = valid`; lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, phiên đạt, tập chính, tập học và endpoint 3, vào lại endpoint 6 (sửa 2026-11-15, chờ duyệt; mục 4.3 ý 19); phiên đạt khi ≥ 2 lần cuff tính được PPG và PAT; người đạt chuẩn khi phiên 1 **và phiên 2** đều đạt (lý do loại `session1_not_passing`, `session2_not_passing`; sửa 2026-11-27: code trước đó nhận một phiên ≥ 2 bất kỳ, nên phiên 3 đạt cứu được phiên 2 trượt, trái SAP mục 2 sửa 2026-11-21); dòng có `session_id` khác đúng chữ S001, S002 thì dừng, thông báo kèm người, lần cuff và bản ghi (`_session_index`, tra chính xác vì `int()` đọc cả chữ số không phải ASCII; thêm 2026-11-27, **đề xuất, chờ duyệt**; protocol mục 3 không có phiên 3); một lần cuff có `led_readjusted` ở phiên ≥ 2 thì **cả phiên** không đạt, ra khỏi tập chính và tập học; một dòng có `pilot` thì loại người đó. Ba cột 0/1 đọc qua một hàm `flag01`; dòng không phải SYNTHETIC thiếu cột thì dừng |
+| Mục 2: lần cuff hợp lệ, người đạt chuẩn, tập phân tích chính | `prepare`: `status = valid`; lần cuff có cờ `ppg:led_not_locked` ra khỏi hiệu chuẩn, phiên đạt, tập chính, tập học và endpoint 3, vào lại endpoint 6 (sửa 2026-11-15, chờ duyệt; mục 4.3 ý 19); phiên đạt khi ≥ 2 lần cuff tính được PPG và PAT; người đạt chuẩn khi phiên 1 **và phiên 2** đều đạt (lý do loại `session1_not_passing`, `session2_not_passing`; sửa 2026-11-27: code trước đó nhận một phiên ≥ 2 bất kỳ, nên phiên 3 đạt cứu được phiên 2 trượt, trái SAP mục 2 sửa 2026-11-21); dòng có `session_id` khác đúng chữ S001, S002 thì dừng, thông báo kèm người, lần cuff và bản ghi (`_session_index`, tra chính xác vì `int()` đọc cả chữ số không phải ASCII; thêm 2026-11-27, chốt cùng ngày; protocol mục 3 không có phiên 3; áp sau bảng xét duyệt phiên); một lần cuff có `led_readjusted` ở phiên ≥ 2 thì **cả phiên** không đạt, ra khỏi tập chính và tập học; một dòng có `pilot` thì loại người đó. Ba cột 0/1 đọc qua một hàm `flag01`; dòng không phải SYNTHETIC thiếu cột thì dừng |
+| Mục 2 (chốt 2026-11-27): một nhãn mỗi vị trí | `select_labels` trước mọi bước khác: vị trí là lượt gốc cùng chuỗi lượt đo lại của nó (kiểm lại liên kết như ingest, vì bảng SYNTHETIC vào thẳng); nhãn là lượt `valid` đầu tiên theo chuỗi, không xét tín hiệu. `valid` chỉ đúng ở lượt được chọn, `raw_valid` giữ kết quả cuff thật. Dòng không phải SYNTHETIC thiếu hai cột đo lại thì dừng. `counts.repeats`: lượt đo lại theo lý do, lượt hợp lệ không được chọn, vị trí thiếu nhãn theo pha |
+| Mục 2 (chốt 2026-11-27): phiên 2 cách phiên 1 từ 7 tới 28 ngày | `session_windows`: hiệu ngày lịch tại nơi đo (`site_utc_offset` = +07:00 trong config) giữa lần bắt đầu sớm nhất của hai phiên, tính cả hai đầu (`session2_window_days`); ngoài khoảng thì `session2_outside_window`. `counts.session_windows` ghi số ngày từng người |
+| Mục 3 endpoint 12–14 (chốt 2026-11-27) | Chạy lại toàn bộ qua `_rerun`: 12 bỏ mọi lượt đo lại; 13 `selection="motion_repeat"` (lượt gốc hợp lệ bị đo lại vì cử động thì lấy lượt đo lại hợp lệ đầu tiên); 14 `window_check=False`. Mỗi endpoint báo số người đạt chuẩn, lý do loại, số lần cuff chính thay đổi, số vị trí đổi lượt được chọn so với phân tích chính và người có vị trí đổi (`slots_changed`, `subjects_with_changed_slots`), vị trí thiếu nhãn theo pha. Endpoint 14 báo mọi sai lệch khoảng cách (`timing_deviations`, số ngày) tách khỏi người thật sự được đưa lại (`readmitted`, sớm, muộn); người bị loại vì lý do khác, như pilot, không được đưa lại. `skipped_by_phase` tách `not_valid` (không có kết quả cuff) và `valid_not_chosen` |
+| Còn mở (rà soát 2026-11-27) | Thiếu hẳn một bảng đặc trưng (một bản ghi, hay một phiên MCU chưa ingest) thì phân tích không thấy: thiếu bảng của lượt đo lại thì lượt gốc trông như đủ, endpoint 13 mất lượt thay. Đã cài 2026-11-27 ([đặc tả ứng dụng buổi đo](session_app_spec_v0.md) mục 10.1, điểm 12–13): `scripts/build_session_index.py` lập `session_index.json` mỗi buổi và dừng khi một lần cuff của nhật ký không nằm trong đúng một đầu ra ingest; `run_rq1_analysis.py --session-indexes` (bắt buộc với dữ liệu thật, kiểm trên mã phiên gốc, trước bảng xét duyệt) dừng khi bảng đặc trưng thiếu, thừa hay lặp một `event_id`, hay thuộc buổi không có index; SHA-256 của bảng xét duyệt lấy từ file khóa đã commit |
 | Mục 2, 9: ≥ 15 người đạt chuẩn | Dưới 15 vẫn chạy, report có `below_min_eligible` và `warnings` |
 | Mục 4: BP₀, đặc trưng nền, Δ | Trung bình M0 hợp lệ phiên 1; trung vị đặc trưng trên các lần M0 đó |
 | Mục 4: Ridge α = 1, không hệ số chặn, chia SD, trọng số 1 / số lần cuff | `loso_ridge`, cùng phép tính với `rq1_holm_loso.loso_ridge` |

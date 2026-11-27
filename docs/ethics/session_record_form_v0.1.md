@@ -43,7 +43,7 @@ bìa với phiếu đồng thuận. Số đo được nhập vào tệp nhật k
 ## C. Các lượt đo huyết áp (tay phải)
 
 <!-- cols: 9,14,8,12,10,11,9,27; small -->
-| Mã lượt | Nghiệm pháp (M0/M1/M2) | Đo lại | Giờ bấm nút đánh dấu | Tâm thu (mmHg) | Tâm trương (mmHg) | Mạch (/phút) | Ghi chú (cử động, lỗi máy, dừng) |
+| Mã lượt | Nghiệm pháp (M0/M1/M2) | Đo lại (lượt gốc, lý do) | Giờ bấm nút đánh dấu | Tâm thu (mmHg) | Tâm trương (mmHg) | Mạch (/phút) | Ghi chú (cử động, lỗi máy, dừng) |
 | --- | --- | :---: | --- | --- | --- | --- | --- |
 | E01<br> | | ^☐ | | | | | |
 | E02<br> | | ^☐ | | | | | |
@@ -52,8 +52,14 @@ bìa với phiếu đồng thuận. Số đo được nhập vào tệp nhật k
 | E05<br> | | ^☐ | | | | | |
 | E06<br> | | ^☐ | | | | | |
 
-Trần: 6 lần bơm mỗi buổi, gồm tối đa 2 lần đo lại; buổi chỉ có M0 thì tối đa 4 lần. Giữa hai lần
-bơm nghỉ ít nhất 2 phút.
+Trần: 6 lần bơm mỗi buổi, gồm tối đa 2 lần đo lại; buổi chỉ có M0 thì tối đa 4 lần. Buổi 1 cộng
+thêm 2 lần đo hai tay khi sàng lọc (trần 8, hoặc 6 nếu chỉ có M0). Giữa hai lần bơm nghỉ ít nhất
+2 phút.
+
+Đo lại chỉ ở M0. Ô "Đo lại" ghi mã của lượt **ngay trước** ở cùng vị trí (lần đo lại thứ hai ghi mã
+của lần đo lại thứ nhất) và lý do: **KQ** (máy xả bình thường, không ra kết quả)
+hoặc **CĐ** (thấy cử động trong 60 s trước cuff, đã ghi **trước khi bấm nút đánh dấu**). Không đo lại
+vì số huyết áp hay vì tín hiệu trên màn hình.
 
 **Trung bình M0 của buổi:** ______/______ mmHg
 

@@ -411,6 +411,8 @@ def cuff_row(cuff, result, identity, color):
         "phase": cuff["phase"], "status": cuff["status"],
         "safety_stop": int(cuff["safety_stop"]),
         "led_readjusted": int(cuff["led_readjusted"]), "pilot": int(cuff["pilot"]),
+        "repeat_of_event_id": cuff.get("repeat_of_event_id") or "",
+        "repeat_reason": cuff.get("repeat_reason") or "",
         "sbp_mmhg": cuff["sbp_mmhg"],
         "dbp_mmhg": cuff["dbp_mmhg"], "window_pre_s": result["window_pre_s"],
         "ppg_color": color,

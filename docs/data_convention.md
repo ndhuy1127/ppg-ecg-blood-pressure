@@ -116,6 +116,26 @@ pilot, note`
   thiếu `cuff_end` thì gắn cờ `cuff_end_missing`; M1/M2 thiếu mốc pha thì `phase_mark_missing`.
 - `recording` là tên thư mục bản ghi; một buổi nhiều bản ghi dùng chung một nhật ký.
 
+**`cuff-log-v2` (chốt 2026-11-27, [SAP v1](protocol/sap_v1.md) mục 2; cài cùng ngày trong
+`session_ingest.read_cuff_log`, `device_session.py` từ chối v1 với dữ liệu người).** Giữ nguyên mọi
+cột trên, thêm hai cột ở cuối:
+
+- `repeat_of_event_id`: trống ở lượt gốc; ở lượt đo lại là `event_id` của lượt ngay trước nó ở
+  cùng vị trí trong lịch. Lượt đó phải có trước, cùng người, cùng buổi và cùng `phase`, kể cả khi
+  hai lượt nằm ở hai bản ghi khác nhau (MCU khởi động lại).
+- `repeat_reason`: trống ở lượt gốc; ở lượt đo lại là `no_result` (lượt trước xả bình thường mà
+  không ra số) hoặc `observed_motion` (người vận hành thấy cử động trong 60 s trước cuff và ghi
+  trước `t0`).
+- Chỉ M0 được có lượt đo lại; ingest từ chối lượt đo lại ở M1, M2, liên kết tới lượt không có hay
+  ở dòng sau, lượt `device_error`, `no_result` khi lượt trước có số, một lượt bị đo lại hai lần,
+  quá 2 lượt đo lại mỗi buổi, lượt đo lại có `t0` không sau `t0` của lượt nó đo lại (cùng bản ghi và
+  phiên MCU), quá số lượt gốc của lịch (M0 hai, M1 một, M2 một; một lượt đo lại thiếu liên kết sẽ
+  vượt số này), và dòng thiếu hay thừa cột. Điều kiện "cử động ghi trước `t0`" của `observed_motion` do ứng dụng
+  buổi đo kiểm trên nhật ký buổi; ingest không thấy nhật ký đó.
+- Tên version ghi ở dòng đầu của nhật ký buổi của ứng dụng và trong provenance của ingest; đọc
+  nhầm version thì dừng.
+- Bảng đặc trưng (mục 4.6) mang hai cột này sang để phân tích chọn nhãn cho mỗi vị trí.
+
 `cuffs.json`: mỗi lần cuff có `t0_us`, `cuff_end_us`, cửa sổ lưu `stored_window_us` =
 `[t0 − 60 s, t0)`, các cửa sổ phân tích `pre_10s`, `pre_20s`, `pre_30s`, `pre_60s`
 (protocol 6.2), đoạn bơm `cuff_inflating_us` = `[t0, cuff_end]`, `inflation_s`,
@@ -135,7 +155,8 @@ sự kiện theo mã, số marker, số lần cuff theo `status`, `issue_counts`
 Đầu vào của [run_rq1_analysis.py](../scripts/run_rq1_analysis.py). Một dòng mỗi lần cuff:
 
 `subject_id, session_id, session_start_utc, recording, event_id, phase, status, safety_stop,
-led_readjusted, pilot, sbp_mmhg, dbp_mmhg, window_pre_s, ppg_color, ppg_rise_time_ms,
+led_readjusted, pilot, repeat_of_event_id, repeat_reason, sbp_mmhg, dbp_mmhg, window_pre_s,
+ppg_color, ppg_rise_time_ms,
 ppg_width50_ms, ppg_amplitude, ppg_hr_bpm, ecg_hr_bpm, ecg_rmssd_ms, pat_ms,
 pat_sqi_v2_median_ms, pat_n_valid, flags, source_type`
 

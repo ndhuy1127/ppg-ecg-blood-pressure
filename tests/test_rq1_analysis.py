@@ -2,6 +2,7 @@
 
 import copy
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -262,9 +263,59 @@ def test_device_feature_table_has_every_model_column():
 
 
 def _real(rows):
+    """Rows as the device feature table gives them: cuff-log-v2 columns, session 2
+    14 days after session 1 (inside the 7-28 days of SAP section 2)."""
     return [{**r, "source_type": "DEVICE", "led_readjusted": 0, "pilot": 0,
-             "session_start_utc": f"2026-12-{int(r['session_id'][1:]):02d}T08:00:00+00:00"}
+             "repeat_of_event_id": "", "repeat_reason": "",
+             "recording": f"{r['subject_id']}_{r['session_id']}_rec",
+             "session_start_utc": ("2026-12-01T08:00:00+00:00" if r["session_id"] == "S001"
+                                   else "2026-12-15T08:00:00+00:00")}
             for r in rows]
+
+
+def _adjudication(rows, override=None):
+    """One ``keep`` entry per recording of ``rows`` (two reviewers, one date);
+    ``override`` maps (subject, recording) to changed fields."""
+    out = {}
+    for r in rows:
+        key = (r["subject_id"], r["recording"])
+        # The local date at the site (UTC+07:00) of the recording start.
+        local = (datetime.fromisoformat(r["session_start_utc"])
+                 .astimezone(timezone(timedelta(hours=7))).date().isoformat())
+        out.setdefault(key, {
+            "subject_id": key[0], "recording": key[1], "raw_session_id": r["session_id"],
+            "adjudicated_session_id": r["session_id"], "visit_date_local": local,
+            "disposition": "keep",
+            "reason": "", "evidence": "appointment log", "reviewer_1": "R1",
+            "reviewer_2": "R2", "decided_date": "2027-05-20",
+            **(override or {}).get(key, {})})
+    return list(out.values())
+
+
+def _adjudication_file(path, rows, override=None):
+    import csv
+
+    with open(path, "w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=ra.ADJUDICATION_COLUMNS,
+                                lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(_adjudication(rows, override))
+    return path
+
+
+def _index_files(folder, rows):
+    """One session_index.json per (subject, session) of ``rows``."""
+    folder.mkdir(parents=True, exist_ok=True)
+    events = {}
+    for r in rows:
+        events.setdefault((r["subject_id"], r["session_id"]), []).append(r["event_id"])
+    paths = []
+    for (subject, session), ids in sorted(events.items()):
+        path = folder / f"{subject}_{session}_index.json"
+        path.write_text(json.dumps({"version": "session-index-v1", "subject_id": subject,
+                                    "session_id": session, "event_ids": sorted(ids)}))
+        paths.append(path)
+    return paths
 
 
 def _write(path, rows):
@@ -592,9 +643,40 @@ def test_feature_provenance_gate(tmp_path, monkeypatch):
         assert not (folder / "out").exists()
     good = tmp_path / "good"
     good.mkdir()
-    path = _write(good / "cuff_features.csv", _real(table(8, n=8)))
+    rows = _real(table(8, n=8))
+    path = _write(good / "cuff_features.csv", rows)
     _provenance(path)
-    report = run_rq1_analysis.run([path], config_path, good / "out")
+    adjudication = _adjudication_file(good / "adjudication.csv", rows)
+    indexes = _index_files(good, rows)
+    # Real data also need the session adjudication table (SAP section 2).
+    with pytest.raises(ValueError, match="adjudication table"):
+        run_rq1_analysis.run([path], config_path, good / "out", session_indexes=indexes)
+    from software.device.session_ingest import sha256_file as digest
+
+    # Real data need the session indexes, then the adjudication table.
+    with pytest.raises(ValueError, match="session index of every session"):
+        run_rq1_analysis.run([path], config_path, good / "out", adjudication)
+    lock = good / "lock.json"
+    lock.write_text(json.dumps({"version": "session-adjudication-lock-v1",
+                                "sha256": "0" * 64, "locked_date": "2027-05-20"}))
+    # The table must match the SHA-256 of the committed lock.
+    with pytest.raises(ValueError, match="differs from the locked"):
+        run_rq1_analysis.run([path], config_path, good / "out", adjudication, lock, indexes)
+    lock.write_text(json.dumps({"version": "session-adjudication-lock-v1",
+                                "sha256": digest(adjudication),
+                                "locked_date": "2027-05-20"}))
+    # A missing cuff in one session index stops the run.
+    broken = json.loads(indexes[0].read_text())
+    broken["event_ids"].append("E09")
+    indexes[0].write_text(json.dumps(broken))
+    with pytest.raises(ValueError, match="missing \\['E09'\\]"):
+        run_rq1_analysis.run([path], config_path, good / "out", adjudication, lock, indexes)
+    indexes = _index_files(good / "fixed", rows)
+    report = run_rq1_analysis.run([path], config_path, good / "out", adjudication, lock,
+                                  indexes)
+    assert report["session_indexes"]["n"] == 16
+    assert report["session_adjudication"]["rows_by_disposition"]["keep"] == len(rows)
+    assert len(report["session_adjudication"]["sha256"]) == 64
     entry = report["provenance"]["feature_provenance"][str(path)]
     assert entry["git_dirty"] is False and len(entry["provenance_sha256"]) == 64
 
@@ -699,7 +781,7 @@ def test_session_numbers_must_follow_time():
     late = copy.deepcopy(rows)
     for r in late:
         if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_03", "S001", "E02"):
-            r["session_start_utc"] = "2026-12-02T12:00:00+00:00"
+            r["session_start_utc"] = "2026-12-15T12:00:00+00:00"
     with pytest.raises(ValueError, match="SYN_03.*last recording of S001"):
         ra.prepare(late, FAST)
     for value, message in (("", "session_start_utc.*required"),
@@ -908,3 +990,284 @@ def test_cuffs_without_the_locked_led_codes_leave_main_training_and_calibration(
     assert counts["skipped_by_phase"]["M1"]["valid_not_computable"] == 0
     # Endpoint 6: SYN_01's cuff and the 4 session-2 cuffs of SYN_03 come back.
     assert report["secondary"]["6_with_led_readjusted"]["main_cuffs_change"] == 5
+
+
+def _repeat(rows, subject, session, parent, event_id, reason, **change):
+    """A repeat of ``parent`` appended as a new attempt (cuff-log-v2 link)."""
+    base = next(r for r in rows if (r["subject_id"], r["session_id"], r["event_id"])
+                == (subject, session, parent))
+    row = {**copy.deepcopy(base), "event_id": event_id, "repeat_of_event_id": parent,
+           "repeat_reason": reason, "sbp_mmhg": base["sbp_mmhg"] or 121.0,
+           "dbp_mmhg": base["dbp_mmhg"] or 76.0, "status": "valid", **change}
+    rows.append(row)
+    return row
+
+
+def _slot_table():
+    rows = table(18, n=6, sbp_pat=1.0)
+    for r in rows:
+        if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_00", "S002", "E01"):
+            r.update(status="no_result", sbp_mmhg="", dbp_mmhg="")
+    # SYN_00: the M0 without a result is repeated; the repeat labels the slot.
+    _repeat(rows, "SYN_00", "S002", "E01", "E05", "no_result")
+    # SYN_01: a valid M0 repeated for an observed motion; the original keeps the slot.
+    _repeat(rows, "SYN_01", "S002", "E01", "E05", "observed_motion", sbp_mmhg=150.0)
+    # SYN_02: the same in session 1; BP0 stays the mean of the two scheduled M0.
+    _repeat(rows, "SYN_02", "S001", "E02", "E05", "observed_motion", sbp_mmhg=170.0)
+    return rows
+
+
+def test_one_label_per_slot_and_repeat_endpoints():
+    """SAP sections 2-3 (decided 2026-11-27): the first valid attempt of a slot is
+    its only label, in calibration, eligibility, training and evaluation."""
+    rows = _slot_table()
+    prep = ra.prepare(rows, FAST)
+    cuff = {(c["subject"], c["session"], c["event_id"]): c for c in prep["cuffs"]}
+    assert cuff[("SYN_00", 2, "E05")]["in_main"] and not cuff[("SYN_00", 2, "E01")]["valid"]
+    assert cuff[("SYN_01", 2, "E01")]["in_main"]
+    for key in (("SYN_01", 2, "E05"), ("SYN_02", 1, "E05")):
+        assert cuff[key]["raw_valid"] and not cuff[key]["valid"]
+        assert not cuff[key]["in_main"] and not cuff[key]["trainable"]
+    # BP0 of SYN_02 uses its two scheduled M0, not the 170 mmHg repeat.
+    assert prep["calibration_counts"]["SYN_02"]["bp0"] == 2
+    expected = np.mean([float(r["sbp_mmhg"]) for r in rows
+                        if (r["subject_id"], r["session_id"]) == ("SYN_02", "S001")
+                        and r["event_id"] in ("E01", "E02")])
+    assert cuff[("SYN_02", 1, "E01")]["bp"][0] - cuff[("SYN_02", 1, "E01")]["delta_bp"][0] \
+        == pytest.approx(expected)
+    counts = ra._counts(prep)["repeats"]
+    assert counts == {"by_reason": {"no_result": 1, "observed_motion": 2}, "slots": 48,
+                      "slots_without_label_by_phase": {"M0": 0, "M1": 0, "M2": 0},
+                      "valid_not_chosen": 2}
+    # Endpoint 13: the motion repeat replaces the valid original.
+    motion = ra.prepare(rows, FAST, selection="motion_repeat")
+    cuff = {(c["subject"], c["session"], c["event_id"]): c for c in motion["cuffs"]}
+    assert cuff[("SYN_01", 2, "E05")]["in_main"] and not cuff[("SYN_01", 2, "E01")]["in_main"]
+    assert motion["calibration_counts"]["SYN_02"]["bp0"] == 2  # E01 and the E05 repeat
+    report = ra.analyze(rows, FAST)
+    assert report["counts"]["main_cuffs"] == 6 * 4
+    # Endpoint 12: without repeats SYN_00's first M0 of session 2 has no label.
+    twelve = report["secondary"]["12_originals_only"]
+    assert twelve["rows_dropped"] == 3 and twelve["main_cuffs_change"] == -1
+    # One slot changed: SYN_00's first M0 of session 2 (E05 -> no label).
+    assert twelve["slots_changed"] == 1 and twelve["subjects_with_changed_slots"] == ["SYN_00"]
+    assert twelve["slots_without_label_by_phase"] == {"M0": 1, "M1": 0, "M2": 0}
+    thirteen = report["secondary"]["13_motion_repeat"]
+    assert thirteen["rows_dropped"] == 0 and thirteen["main_cuffs_change"] == 0
+    # Two slots take the motion repeat: SYN_01 S002 and SYN_02 S001 (E05 each).
+    assert thirteen["slots_changed"] == 2
+    assert thirteen["subjects_with_changed_slots"] == ["SYN_01", "SYN_02"]
+    # A valid repeat that was not chosen is not counted as invalid.
+    skipped = report["counts"]["skipped_by_phase"]["M0"]
+    assert skipped["valid_not_chosen"] == 1 and skipped["not_valid"] == 1
+
+
+@pytest.mark.parametrize("change, message", [
+    (dict(phase="M1"), "only at M0"),
+    (dict(repeat_of_event_id="E09"), "not a cuff of the same subject"),
+    (dict(repeat_reason="bad_signal"), "repeat_reason must be"),
+])
+def test_repeat_links_are_checked_in_the_analysis_too(change, message):
+    rows = table(19, n=4)
+    _repeat(rows, "SYN_00", "S002", "E01", "E05", "no_result", **change)
+    with pytest.raises(ValueError, match=message):
+        ra.prepare(rows, FAST)
+
+
+def test_repeat_chains_are_limited():
+    rows = table(19, n=4)
+    _repeat(rows, "SYN_00", "S002", "E01", "E05", "observed_motion")
+    _repeat(rows, "SYN_00", "S002", "E01", "E06", "observed_motion")
+    with pytest.raises(ValueError, match="already repeated"):
+        ra.prepare(rows, FAST)
+    rows = table(19, n=4)
+    _repeat(rows, "SYN_00", "S002", "E01", "E05", "observed_motion")
+    _repeat(rows, "SYN_00", "S002", "E05", "E06", "observed_motion")
+    _repeat(rows, "SYN_00", "S002", "E06", "E07", "observed_motion")
+    with pytest.raises(ValueError, match="more than 2 repeats"):
+        ra.prepare(rows, FAST)
+    # Real rows need the two columns of cuff-log-v2.
+    real = _real(table(19, n=4))
+    del real[0]["repeat_reason"]
+    with pytest.raises(ValueError, match="repeat_reason.*cuff-log-v2"):
+        ra.prepare(real, FAST)
+
+
+def test_session2_window_uses_local_dates_and_endpoint_14():
+    """SAP section 2 (decided 2026-11-27): 7 to 28 days inclusive between the local
+    dates (UTC+07:00) of the two sessions; outside, the subject leaves the main
+    analysis and comes back in endpoint 14."""
+    rows = _real(table(20, n=6, sbp_pat=1.0))
+    starts = {"SYN_01": "2026-12-30T08:00:00+00:00",   # 29 days: late
+              "SYN_02": "2026-12-29T08:00:00+00:00",   # 28 days: inside
+              "SYN_03": "2026-12-08T08:00:00+00:00",   # 7 days: inside
+              # 6 days in UTC, but 2026-12-08 03:00 at the site: 7 days, inside.
+              "SYN_04": "2026-12-07T20:00:00+00:00",
+              "SYN_05": "2026-12-07T08:00:00+00:00"}   # 6 days: early
+    for r in rows:
+        if r["session_id"] == "S002" and r["subject_id"] in starts:
+            r["session_start_utc"] = starts[r["subject_id"]]
+    prep = ra.prepare(rows, FAST)
+    assert {s: w["days"] for s, w in prep["session_windows"].items()} == {
+        "SYN_00": 14, "SYN_01": 29, "SYN_02": 28, "SYN_03": 7, "SYN_04": 7, "SYN_05": 6}
+    assert prep["excluded"] == {"SYN_01": "session2_outside_window",
+                                "SYN_05": "session2_outside_window"}
+    report = ra.analyze(rows, FAST)
+    fourteen = report["secondary"]["14_with_session2_outside_window"]
+    assert fourteen["timing_deviations"] == {"SYN_01": 29, "SYN_05": 6}
+    assert fourteen["readmitted"] == ["SYN_01", "SYN_05"]
+    assert fourteen["readmitted_early"] == ["SYN_05"]
+    assert fourteen["readmitted_late"] == ["SYN_01"]
+    assert fourteen["eligible_subjects"] == 6 and fourteen["main_cuffs_change"] == 8
+    assert fourteen["slots_changed"] == 0
+    # A pilot outside the window is a timing deviation but is not taken back.
+    for r in rows:
+        if r["subject_id"] == "SYN_01":
+            r["pilot"] = 1
+    fourteen = ra.analyze(rows, FAST)["secondary"]["14_with_session2_outside_window"]
+    assert fourteen["timing_deviations"] == {"SYN_01": 29, "SYN_05": 6}
+    assert fourteen["readmitted"] == ["SYN_05"]
+    assert fourteen["excluded"] == {"SYN_01": "pilot"}
+
+
+def test_session_adjudication_maps_and_drops_recordings():
+    """SAP section 2 (decided 2026-11-27): the reviewed table fixes session identity
+    before the analysis; raw rows are not changed."""
+    rows = _real(table(21, n=6, sbp_pat=1.0))
+    for r in rows:
+        if (r["subject_id"], r["session_id"]) == ("SYN_01", "S002"):
+            r["session_id"] = "S003"  # a typo in the session metadata
+    extra = [{**r, "session_id": "S003", "recording": "SYN_02_S003_rec",
+              "session_start_utc": "2026-12-20T08:00:00+00:00"}
+             for r in rows if (r["subject_id"], r["session_id"]) == ("SYN_02", "S002")]
+    rows += extra
+    with pytest.raises(ValueError, match="only S001 and S002"):
+        ra.prepare(rows, FAST)
+    table_rows = _adjudication(rows, {
+        ("SYN_01", "SYN_01_S002_rec"): {"adjudicated_session_id": "S002",
+                                        "disposition": "remap", "reason": "typo"},
+        ("SYN_02", "SYN_02_S003_rec"): {"adjudicated_session_id": "",
+                                        "disposition": "extra_visit",
+                                        "reason": "visit after an aborted S002"},
+        ("SYN_03", "SYN_03_S002_rec"): {"adjudicated_session_id": "",
+                                        "disposition": "quarantine",
+                                        "reason": "identity unclear"}})
+    table_rows.append({**table_rows[0], "recording": "unused_rec"})
+    kept, info = ra.apply_adjudication(rows, table_rows, "+07:00")
+    assert info["rows_by_disposition"] == {"keep": 6 * 8 - 4 - 4, "remap": 4,
+                                           "extra_visit": 4, "quarantine": 4}
+    assert info["recordings"]["remap"] == ["SYN_01|SYN_01_S002_rec"]
+    assert info["entries_without_rows"] == ["SYN_00|unused_rec"]
+    assert len(kept) == 6 * 8 - 4
+    assert rows[8]["session_id"] in ("S001", "S002", "S003")  # inputs untouched
+    assert all(r["session_id"] == "S003" for r in rows
+               if r["recording"] == "SYN_01_S002_rec")
+    prep = ra.prepare(kept, FAST)
+    # The remapped S002 counts; the quarantined one is gone, so SYN_03 has no S002.
+    assert "SYN_01" in prep["eligible"]
+    assert prep["excluded"] == {"SYN_03": "session2_not_passing"}
+
+
+@pytest.mark.parametrize("override, message", [
+    ({"reviewer_2": "R1"}, "two different reviewers"),
+    ({"reviewer_1": ""}, "two different reviewers"),
+    ({"adjudicated_session_id": "S002"}, "keep needs the same session"),
+    ({"disposition": "remap", "reason": "x"}, "remap needs the other"),
+    ({"disposition": "quarantine"}, "has no adjudicated session"),
+    ({"disposition": "quarantine", "adjudicated_session_id": ""}, "needs a reason"),
+    ({"disposition": "drop"}, "disposition must be"),
+    ({"decided_date": "20/05/2027"}, "YYYY-MM-DD"),
+    ({"raw_session_id": "S002", "adjudicated_session_id": "S002"}, "raw session"),
+    ({"evidence": " "}, "evidence is empty"),
+    ({"visit_date_local": "2026-12-02"}, "the adjudication table says 2026-12-02"),
+    ({"visit_date_local": ""}, "visit_date_local must be"),
+])
+def test_session_adjudication_is_strict(override, message):
+    rows = _real(table(22, n=2))
+    entries = _adjudication(rows, {("SYN_00", "SYN_00_S001_rec"): override})
+    with pytest.raises(ValueError, match=message):
+        ra.apply_adjudication(rows, entries, "+07:00")
+
+
+def test_session_adjudication_needs_every_real_recording():
+    rows = _real(table(22, n=2))
+    entries = [e for e in _adjudication(rows) if e["recording"] != "SYN_01_S002_rec"]
+    with pytest.raises(ValueError, match="not in the session adjudication table"):
+        ra.apply_adjudication(rows, entries, "+07:00")
+    with pytest.raises(ValueError, match="appears twice"):
+        ra.apply_adjudication(rows, _adjudication(rows) + _adjudication(rows)[:1],
+                              "+07:00")
+    # SYNTHETIC rows may stay out of the table.
+    synthetic = table(22, n=2)
+    kept, info = ra.apply_adjudication(synthetic, [], "+07:00")
+    assert kept == synthetic and info["rows_by_disposition"]["keep"] == 0
+
+
+def test_pilot_on_a_dropped_visit_still_marks_the_subject():
+    """Review 2026-11-27: pilot status is per subject, so it survives when the
+    recording that carries it is an extra visit taken out of the analysis."""
+    rows = _real(table(23, n=4, sbp_pat=1.0))
+    extra = [{**r, "session_id": "S003", "recording": "SYN_01_S003_rec", "pilot": 1,
+              "session_start_utc": "2026-12-20T08:00:00+00:00"}
+             for r in rows if (r["subject_id"], r["session_id"]) == ("SYN_01", "S002")]
+    entries = _adjudication(rows + extra, {
+        ("SYN_01", "SYN_01_S003_rec"): {"adjudicated_session_id": "",
+                                        "disposition": "extra_visit", "reason": "x"}})
+    kept, _ = ra.apply_adjudication(rows + extra, entries, "+07:00")
+    assert ra.prepare(kept, FAST)["excluded"] == {"SYN_01": "pilot"}
+
+
+def test_real_and_synthetic_tables_are_not_mixed(tmp_path):
+    real = _write(tmp_path / "real.csv", _real(table(8, n=4)))
+    synthetic = _write(tmp_path / "syn.csv", table(9, n=4))
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(FAST))
+    with pytest.raises(ValueError, match="cannot be analysed together"):
+        run_rq1_analysis.run([real, synthetic], config_path, tmp_path / "out")
+
+
+@pytest.mark.parametrize("parent_status, reason, message", [
+    ("device_error", "observed_motion", "never repeated"),
+    ("valid", "no_result", "has status valid"),
+])
+def test_repeat_reason_must_fit_the_repeated_attempt(parent_status, reason, message):
+    rows = table(24, n=4)
+    for r in rows:
+        if (r["subject_id"], r["session_id"], r["event_id"]) == ("SYN_00", "S002", "E01"):
+            r["status"] = parent_status
+            if parent_status != "valid":
+                r.update(sbp_mmhg="", dbp_mmhg="")
+    _repeat(rows, "SYN_00", "S002", "E01", "E05", reason)
+    with pytest.raises(ValueError, match=message):
+        ra.prepare(rows, FAST)
+
+
+def test_an_unlinked_repeat_is_not_a_slot_of_its_own():
+    rows = table(24, n=4)
+    extra = _repeat(rows, "SYN_00", "S002", "E01", "E05", "observed_motion")
+    extra.update(repeat_of_event_id="", repeat_reason="")  # the link was left out
+    with pytest.raises(ValueError, match="more than 2 scheduled M0"):
+        ra.prepare(rows, FAST)
+
+
+def test_the_label_never_looks_at_the_signal_and_chains_cross_tables():
+    rows = table(25, n=4, sbp_pat=1.0)
+    for r in rows:
+        key = (r["subject_id"], r["session_id"], r["event_id"])
+        if key == ("SYN_00", "S002", "E01"):
+            r["pat_ms"] = ""  # valid but not computable
+        if key == ("SYN_01", "S002", "E01"):
+            r.update(status="no_result", sbp_mmhg="", dbp_mmhg="")
+    # SYN_00: the valid original keeps the slot although its repeat has PAT.
+    _repeat(rows, "SYN_00", "S002", "E01", "E05", "observed_motion", pat_ms=200.0)
+    # SYN_01: two links, the rows of the chain shuffled as if from other tables.
+    _repeat(rows, "SYN_01", "S002", "E01", "E05", "no_result", status="no_result",
+            sbp_mmhg="", dbp_mmhg="")
+    _repeat(rows, "SYN_01", "S002", "E05", "E06", "no_result")
+    rows = rows[-1:] + rows[:-1]
+    prep = ra.prepare(rows, FAST)
+    cuff = {(c["subject"], c["session"], c["event_id"]): c for c in prep["cuffs"]}
+    assert cuff[("SYN_00", 2, "E01")]["selected"]
+    assert not cuff[("SYN_00", 2, "E01")]["in_main"]  # no PAT: out, not replaced
+    assert not cuff[("SYN_00", 2, "E05")]["selected"]
+    assert cuff[("SYN_01", 2, "E06")]["selected"] and cuff[("SYN_01", 2, "E06")]["in_main"]

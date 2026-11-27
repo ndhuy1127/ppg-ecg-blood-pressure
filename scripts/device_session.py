@@ -30,12 +30,14 @@ if str(REPO) not in sys.path:
 
 from software._provenance import text_file_sha256  # noqa: E402
 from software.device import features as fe  # noqa: E402
+from software.data_io.packet_receiver import is_participant  # noqa: E402
 from software.device import session_ingest as si  # noqa: E402
 
 FEATURE_COLUMNS = (
     "subject_id", "session_id", "session_start_utc", "recording", "event_id", "phase",
     "status",
-    "safety_stop", "led_readjusted", "pilot", "sbp_mmhg", "dbp_mmhg", "window_pre_s", "ppg_color",
+    "safety_stop", "led_readjusted", "pilot", "repeat_of_event_id", "repeat_reason",
+    "sbp_mmhg", "dbp_mmhg", "window_pre_s", "ppg_color",
     "ppg_rise_time_ms", "ppg_width50_ms", "ppg_amplitude", "ppg_hr_bpm", "ecg_hr_bpm",
     "ecg_rmssd_ms", "pat_ms", "pat_sqi_v2_median_ms", "pat_n_valid", "flags",
     "source_type",
@@ -97,6 +99,11 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
         raise ValueError(f"Config version must be {si.VERSION}")
     recording = si.load_recording(recording_dir)
     manifest = recording["manifest"]
+    # Participant data need the repeat links of cuff-log-v2 (SAP section 2, decided
+    # 2026-11-27): without them a repeat would count as a slot of its own.
+    log_version = si.cuff_log_version(cuff_log)
+    if log_version != "cuff-log-v2" and is_participant(recording["metadata"]):
+        raise ValueError(f"{cuff_log}: participant data need cuff-log-v2, got {log_version}")
     series, timebase, flags = si.session_series(recording, session_index)
     events = si.session_events(recording, session_index)
     name = Path(recording_dir).resolve().name
@@ -152,7 +159,7 @@ def run(recording_dir, cuff_log, config_path, output, session_index=0, raw_root=
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "recording": str(Path(recording_dir)), "raw_sha256": manifest["raw"]["sha256"],
         "manifest_sha256": si.sha256_file(Path(recording_dir) / "session_manifest.json"),
-        "cuff_log_sha256": si.sha256_file(cuff_log),
+        "cuff_log_sha256": si.sha256_file(cuff_log), "cuff_log_version": log_version,
         "config_sha256": text_file_sha256(config_path),
         "code_sha256": {c: text_file_sha256(REPO / c) for c in CODE},
         # Binds this provenance to the tables it describes (checked by run_rq1_analysis).

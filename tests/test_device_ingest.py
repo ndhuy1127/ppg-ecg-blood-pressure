@@ -145,6 +145,114 @@ def test_cuff_log_session_columns_are_constant(tmp_path):
     assert all(c["pilot"] and not c["led_readjusted"] for c in cuffs)
 
 
+def _v2(tmp_path, rows, name="log.csv"):
+    return write_cuff_log(tmp_path / name, rows, v2=True)
+
+
+def test_cuff_log_v2_reads_repeat_links(tmp_path):
+    # SAP section 2 (decided 2026-11-27): repeats only at M0, each naming the attempt
+    # just before it at the same slot; the chain may cross recordings.
+    rows = [cuff_row("E01", "M0", 0, status="no_result"),
+            cuff_row("E02", "M0", 1, repeat_of="E01", reason="no_result", recording="b"),
+            cuff_row("E03", "M0", 2),
+            cuff_row("E04", "M0", 3, repeat_of="E03", reason="observed_motion"),
+            cuff_row("E05", "M1", 4)]
+    log = _v2(tmp_path, rows)
+    assert si.cuff_log_version(log) == "cuff-log-v2"
+    cuffs = {c["event_id"]: c for c in si.read_cuff_log(log, "rec")}
+    assert sorted(cuffs) == ["E01", "E03", "E04", "E05"]  # E02 is in recording b
+    assert cuffs["E04"]["repeat_of_event_id"] == "E03"
+    assert cuffs["E04"]["repeat_reason"] == "observed_motion"
+    assert cuffs["E01"]["repeat_of_event_id"] is None and cuffs["E01"]["repeat_reason"] is None
+    # A v1 log carries no link.
+    v1 = write_cuff_log(tmp_path / "v1.csv", [cuff_row("E01", "M0", 0)])
+    assert si.cuff_log_version(v1) == "cuff-log-v1"
+    assert si.read_cuff_log(v1, "rec")[0]["repeat_of_event_id"] is None
+
+
+@pytest.mark.parametrize("rows, message", [
+    # A repeat at M1 (the stressor would be sampled at another time).
+    ([cuff_row("E01", "M1", 0, status="no_result"),
+      cuff_row("E02", "M1", 1, repeat_of="E01", reason="no_result")], "only at M0"),
+    # The repeated attempt must come earlier in the log.
+    ([cuff_row("E01", "M0", 0, repeat_of="E02", reason="no_result"),
+      cuff_row("E02", "M0", 1, status="no_result")], "not an earlier row"),
+    ([cuff_row("E01", "M0", 0, repeat_of="E09", reason="no_result")], "not an earlier row"),
+    # no_result names an attempt that had no result.
+    ([cuff_row("E01", "M0", 0),
+      cuff_row("E02", "M0", 1, repeat_of="E01", reason="no_result")], "has status valid"),
+    # A device error stops the session: never repeated.
+    ([cuff_row("E01", "M0", 0, status="device_error"),
+      cuff_row("E02", "M0", 1, repeat_of="E01", reason="observed_motion")], "may be repeated"),
+    # One repeat per attempt: a second one names the first repeat instead.
+    ([cuff_row("E01", "M0", 0, status="no_result"),
+      cuff_row("E02", "M0", 1, repeat_of="E01", reason="no_result"),
+      cuff_row("E03", "M0", 2, repeat_of="E01", reason="no_result")], "already repeated"),
+    # At most two repeats per session.
+    ([cuff_row("E01", "M0", 0, status="no_result"),
+      cuff_row("E02", "M0", 1, repeat_of="E01", reason="no_result", status="no_result"),
+      cuff_row("E03", "M0", 2, repeat_of="E02", reason="no_result", status="no_result"),
+      cuff_row("E04", "M0", 3, repeat_of="E03", reason="no_result")], "at most 2"),
+    ([cuff_row("E01", "M0", 0), cuff_row("E02", "M0", 1, repeat_of="E01")], "both empty"),
+    # A repeat whose t0 comes before the t0 it repeats (same recording and session).
+    ([cuff_row("E01", "M0", 3, status="no_result"),
+      cuff_row("E02", "M0", 1, repeat_of="E01", reason="no_result")], "not after the t0"),
+    # A third M0 without a link would be a slot of its own.
+    ([cuff_row("E01", "M0", 0), cuff_row("E02", "M0", 1), cuff_row("E03", "M0", 2)],
+     "more than 2 scheduled M0"),
+    ([cuff_row("E01", "M0", 0),
+      cuff_row("E02", "M0", 1, repeat_of="E01", reason="bad_signal")], "repeat_reason"),
+])
+def test_cuff_log_v2_repeat_links_are_strict(tmp_path, rows, message):
+    with pytest.raises(si.IngestError, match=message):
+        si.read_cuff_log(_v2(tmp_path, rows), "rec")
+
+
+def test_cuff_log_header_must_be_v1_or_v2(tmp_path):
+    path = tmp_path / "log.csv"
+    path.write_text(",".join(si.CUFF_COLUMNS + ("repeat_of_event_id",)) + "\n",
+                    encoding="utf-8")
+    with pytest.raises(si.IngestError, match="cuff_log columns"):
+        si.cuff_log_version(path)
+
+
+def test_participant_data_need_cuff_log_v2(lossy, tmp_path, monkeypatch):
+    _, directory, _ = lossy
+    monkeypatch.setattr(device_session, "is_participant", lambda metadata: True)
+    v1 = write_cuff_log(tmp_path / "v1.csv", [cuff_row("E01", "M0", 0, 1)])
+    with pytest.raises(ValueError, match="need cuff-log-v2"):
+        device_session.run(directory, v1, DEVICE_CONFIG, tmp_path / "a")
+    assert not (tmp_path / "a").exists()
+    v2 = _v2(tmp_path, [cuff_row("E01", "M0", 0, 1)], "v2.csv")
+    _, rows = device_session.run(directory, v2, DEVICE_CONFIG, tmp_path / "b")
+    assert rows[0]["repeat_of_event_id"] == "" and rows[0]["repeat_reason"] == ""
+    prov = json.loads((tmp_path / "b" / "provenance.json").read_text(encoding="utf-8"))
+    assert prov["cuff_log_version"] == "cuff-log-v2"
+
+
+def test_session_index_script_end_to_end(lossy, tmp_path):
+    from scripts import build_session_index
+
+    _, directory, _ = lossy
+    rows = [cuff_row("E01", "M0", 0, 1), cuff_row("E02", "M0", 0, 1, recording="other")]
+    log = _v2(tmp_path, rows)
+    device_session.run(directory, log, DEVICE_CONFIG, tmp_path / "ingest")
+    # E02 belongs to a recording that was not ingested: no index.
+    with pytest.raises(ValueError, match=r"not ingested \['E02'\]"):
+        build_session_index.run(log, [tmp_path / "ingest"], tmp_path / "index.json")
+    assert not (tmp_path / "index.json").exists()
+    log = _v2(tmp_path, rows[:1], "one.csv")
+    device_session.run(directory, log, DEVICE_CONFIG, tmp_path / "ingest1")
+    index = build_session_index.run(log, [tmp_path / "ingest1"], tmp_path / "index.json")
+    assert index["event_ids"] == ["E01"]
+    assert index["ingests"] == [{"recording": Path(directory).name, "session_index": 0,
+                                 "table_sha256": si.sha256_file(
+                                     tmp_path / "ingest1" / "cuff_features.csv")}]
+    assert index["cuff_log_sha256"] == si.sha256_file(log)
+    with pytest.raises(ValueError, match="exists"):
+        build_session_index.run(log, [tmp_path / "ingest1"], tmp_path / "index.json")
+
+
 def test_script_writes_outputs_and_refuses_overwrite_and_raw(lossy, tmp_path):
     _, directory, _ = lossy
     log = write_cuff_log(tmp_path / "log.csv", [cuff_row("E01", "M0", 0, 1, pilot=1)])
@@ -258,3 +366,11 @@ def test_script_applies_the_ecg_timing_rule_end_to_end(tmp_path):
     for row in rows:
         assert row["ppg_hr_bpm"] is not None and row["ppg_rise_time_ms"] is not None
         assert row["ecg_hr_bpm"] is not None
+
+
+def test_cuff_log_v2_short_rows_are_refused(tmp_path):
+    log = _v2(tmp_path, [cuff_row("E01", "M0", 0)])
+    with open(log, "a", encoding="utf-8") as handle:
+        handle.write("rec,E02,M0,1,1\n")
+    with pytest.raises(si.IngestError, match="wrong number of fields"):
+        si.read_cuff_log(log, "rec")

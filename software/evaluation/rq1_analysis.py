@@ -19,7 +19,7 @@ weights, the Ridge fit or the phase baseline of its fold. Its own calibration
 No file I/O, no printing. Results on SYNTHETIC tables only verify code.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 from scipy import stats
@@ -141,7 +141,231 @@ def derive(row, name):
     return float(value) if _finite(value) else None
 
 
-def prepare(rows, config):
+ADJUDICATION_VERSION = "session-adjudication-v1"
+ADJUDICATION_COLUMNS = ("subject_id", "recording", "raw_session_id",
+                        "adjudicated_session_id", "visit_date_local", "disposition",
+                        "reason", "evidence", "reviewer_1", "reviewer_2", "decided_date")
+DISPOSITIONS = ("keep", "remap", "extra_visit", "quarantine")
+
+
+def site_timezone(offset):
+    """``+07:00`` -> a fixed-offset timezone (config ``site_utc_offset``)."""
+    sign = -1 if offset.startswith("-") else 1
+    hours, minutes = offset.lstrip("+-").split(":")
+    return timezone(sign * timedelta(hours=int(hours), minutes=int(minutes)))
+
+
+def _date(text, what):
+    try:
+        return datetime.strptime(str(text), "%Y-%m-%d").date()
+    except ValueError:
+        raise ValueError(f"{what} must be YYYY-MM-DD, got {text!r}") from None
+
+
+def apply_adjudication(rows, table, site_utc_offset):
+    """Session identity from the adjudication table (SAP section 2, decided
+    2026-11-27), applied before anything else. ``table``: rows of
+    ``ADJUDICATION_COLUMNS``, one per (subject_id, recording), decided by two
+    reviewers before any result was seen. ``keep`` leaves the session, ``remap``
+    sets it to the other of S001/S002, ``extra_visit`` and ``quarantine`` take the
+    recording out of every RQ1 model and endpoint (reported). Every non-SYNTHETIC
+    row needs an entry whose ``raw_session_id`` is its own session_id and whose
+    ``visit_date_local`` is the local date at the site of the recording start;
+    raw data and the feature tables are not changed (new dicts). A subject with
+    ``pilot`` on any row, kept or not, stays a pilot on the rows kept. Returns the
+    rows kept and a report."""
+    site = site_timezone(site_utc_offset)
+    entries = {}
+    for n, e in enumerate(table, start=2):
+        missing = [c for c in ADJUDICATION_COLUMNS if c not in e]
+        if missing:
+            raise ValueError(f"Adjudication row {n}: missing columns {missing}")
+        key = (e["subject_id"], e["recording"])
+        for column in ("subject_id", "recording", "evidence"):
+            if not str(e[column]).strip():
+                raise ValueError(f"Adjudication row {n}: {column} is empty")
+        _date(e["visit_date_local"], f"Adjudication row {n}: visit_date_local")
+        if key in entries:
+            raise ValueError(f"Adjudication row {n}: {key} appears twice")
+        if e["disposition"] not in DISPOSITIONS:
+            raise ValueError(f"Adjudication row {n}: disposition must be one of "
+                             f"{DISPOSITIONS}")
+        one, two = (str(e[c]).strip() for c in ("reviewer_1", "reviewer_2"))
+        if not one or not two or one == two:
+            raise ValueError(f"Adjudication row {n}: two different reviewers are needed")
+        _date(e["decided_date"], f"Adjudication row {n}: decided_date")
+        raw, new = e["raw_session_id"], e["adjudicated_session_id"]
+        if e["disposition"] == "keep" and new != raw:
+            raise ValueError(f"Adjudication row {n}: keep needs the same session")
+        if e["disposition"] == "remap" and (new == raw or new not in SESSIONS):
+            raise ValueError(f"Adjudication row {n}: remap needs the other of S001/S002")
+        if e["disposition"] in ("extra_visit", "quarantine") and new:
+            raise ValueError(f"Adjudication row {n}: {e['disposition']} has no "
+                             "adjudicated session")
+        if e["disposition"] != "keep" and not str(e["reason"]).strip():
+            raise ValueError(f"Adjudication row {n}: {e['disposition']} needs a reason")
+        entries[key] = e
+    pilots = {row.get("subject_id") for row in rows if flag01(row, "pilot")}
+    kept, used, dropped = [], set(), {d: 0 for d in DISPOSITIONS}
+    for row in rows:
+        key = (row.get("subject_id"), row.get("recording"))
+        e = entries.get(key)
+        if e is None:
+            if row.get("source_type") == "SYNTHETIC":
+                kept.append(row)
+                continue
+            raise ValueError(f"Cuff {row.get('subject_id')}/{row.get('session_id')}/"
+                             f"{row.get('event_id')}: recording {row.get('recording')!r} "
+                             "is not in the session adjudication table")
+        if e["raw_session_id"] != row.get("session_id"):
+            raise ValueError(f"Recording {key}: the adjudication table says raw session "
+                             f"{e['raw_session_id']!r}, the feature table "
+                             f"{row.get('session_id')!r}")
+        start = _start_time(row)
+        if start is not None and start.astimezone(site).date() != _date(
+                e["visit_date_local"], "visit_date_local"):
+            raise ValueError(f"Recording {key}: starts on "
+                             f"{start.astimezone(site).date()} at the site, the "
+                             f"adjudication table says {e['visit_date_local']}")
+        used.add(key)
+        dropped[e["disposition"]] += 1
+        if e["disposition"] in ("keep", "remap"):
+            kept.append({**row, "session_id": e["adjudicated_session_id"],
+                         "raw_session_id": e["raw_session_id"],
+                         **({"pilot": 1} if row.get("subject_id") in pilots else {})})
+    by_disposition = {d: sorted(f"{s}|{r}" for (s, r), e in entries.items()
+                                if e["disposition"] == d) for d in DISPOSITIONS}
+    return kept, {"version": ADJUDICATION_VERSION, "recordings": by_disposition,
+                  "rows_by_disposition": dropped,
+                  "entries_without_rows": sorted(f"{s}|{r}" for s, r in entries
+                                                 if (s, r) not in used)}
+
+
+REPEAT_COLUMNS = ("repeat_of_event_id", "repeat_reason")
+REPEAT_REASONS = ("no_result", "observed_motion")
+MAX_REPEATS = 2
+SLOTS_PER_PHASE = {"M0": 2, "M1": 1, "M2": 1}
+SELECTIONS = ("first_valid", "motion_repeat")
+
+
+def _repeat_text(row, column):
+    """``repeat_of_event_id`` / ``repeat_reason`` of cuff-log-v2 (SAP section 2,
+    decided 2026-11-27). Empty on an original attempt. The column may be absent
+    only on SYNTHETIC rows; on any other row a missing column is an error, so a
+    repeat cannot pass for a slot of its own."""
+    if column not in row:
+        if row.get("source_type") == "SYNTHETIC":
+            return ""
+        raise ValueError(f"Column {column!r} is required on non-SYNTHETIC rows "
+                         f"(cuff {row.get('subject_id')}/{row.get('session_id')}/"
+                         f"{row.get('event_id')}); the feature table needs cuff-log-v2")
+    value = row[column]
+    return "" if value is None else str(value).strip()
+
+
+def select_labels(cuffs, selection="first_valid"):
+    """One label per scheduled slot (SAP section 2, decided 2026-11-27).
+
+    A slot is an original attempt and the chain of repeats that name it. The
+    links are checked again here (the ingest checks them per cuff log; SYNTHETIC
+    tables come straight in): repeats only at M0, of an attempt of the same
+    subject, session and phase, each attempt repeated at most once, at most
+    ``MAX_REPEATS`` per session. ``first_valid`` (main analysis) labels the slot
+    with its first attempt with a valid cuff result, in chain order; the choice
+    never looks at the signal. ``motion_repeat`` (endpoint 13): when the
+    original is valid and was repeated for an observed motion, the first valid
+    repeat is chosen instead. Sets ``selected`` and ``slot`` on every cuff and
+    returns the slots as lists of cuffs in chain order."""
+    if selection not in SELECTIONS:
+        raise ValueError(f"selection must be one of {SELECTIONS}")
+    by_key = {(c["subject"], c["session"], c["event_id"]): c for c in cuffs}
+    child, repeats = {}, {}
+    for c in cuffs:
+        if not c["repeat_of"]:
+            if c["repeat_reason"]:
+                raise ValueError(f"Cuff {c['subject']}/S{c['session']:03d}/{c['event_id']}:"
+                                 " repeat_reason without repeat_of_event_id")
+            continue
+        what = f"Cuff {c['subject']}/S{c['session']:03d}/{c['event_id']}"
+        parent = by_key.get((c["subject"], c["session"], c["repeat_of"]))
+        if c["repeat_reason"] not in REPEAT_REASONS:
+            raise ValueError(f"{what}: repeat_reason must be one of {REPEAT_REASONS}")
+        if parent is None or parent is c:
+            raise ValueError(f"{what}: repeats {c['repeat_of']!r}, not a cuff of the "
+                             "same subject and session")
+        if c["phase"] != "M0" or parent["phase"] != "M0":
+            raise ValueError(f"{what}: repeats only at M0 (SAP section 2)")
+        if parent["status"] == "device_error":
+            raise ValueError(f"{what}: a device_error attempt is never repeated "
+                             "(protocol 6.4)")
+        if c["repeat_reason"] == "no_result" and parent["status"] != "no_result":
+            raise ValueError(f"{what}: reason no_result but {c['repeat_of']} has status "
+                             f"{parent['status']}")
+        if id(parent) in child:
+            raise ValueError(f"{what}: {c['repeat_of']} is already repeated")
+        child[id(parent)] = c
+        key = (c["subject"], c["session"])
+        repeats[key] = repeats.get(key, 0) + 1
+        if repeats[key] > MAX_REPEATS:
+            raise ValueError(f"{c['subject']}/S{c['session']:03d}: more than "
+                             f"{MAX_REPEATS} repeats (protocol 6.4)")
+    slots, originals = [], {}
+    for c in cuffs:
+        if c["repeat_of"]:
+            continue
+        # The schedule (protocol 6.4): M0 x2, M1, M2 per session; an unlinked
+        # repeat would otherwise become a slot of its own.
+        key = (c["subject"], c["session"], c["phase"])
+        originals[key] = originals.get(key, 0) + 1
+        if originals[key] > SLOTS_PER_PHASE[c["phase"]]:
+            raise ValueError(f"{c['subject']}/S{c['session']:03d}: more than "
+                             f"{SLOTS_PER_PHASE[c['phase']]} scheduled {c['phase']} "
+                             "attempts; a repeat needs repeat_of_event_id")
+        chain, node = [c], child.get(id(c))
+        while node is not None:
+            if len(chain) > MAX_REPEATS:
+                raise ValueError(f"Cuff {c['subject']}/S{c['session']:03d}/"
+                                 f"{c['event_id']}: repeat chain too long")
+            chain.append(node)
+            node = child.get(id(node))
+        slots.append(chain)
+    if sum(len(chain) for chain in slots) != len(cuffs):
+        raise ValueError("Repeat links form a cycle")
+    for n, chain in enumerate(slots):
+        valid = [c for c in chain if c["raw_valid"]]
+        chosen = valid[0] if valid else None
+        if (selection == "motion_repeat" and len(chain) > 1 and chain[0]["raw_valid"]
+                and chain[1]["repeat_reason"] == "observed_motion"):
+            later = [c for c in chain[1:] if c["raw_valid"]]
+            chosen = later[0] if later else chosen
+        for c in chain:
+            c["slot"], c["selected"] = n, c is chosen
+    return slots
+
+
+def session_windows(cuffs, config):
+    """Days from session 1 to session 2 per subject (SAP section 2, decided
+    2026-11-27): the difference of the local calendar dates at the site
+    (``site_utc_offset``) of the earliest recording start of each session, days
+    ``session2_window_days`` inclusive. Subjects without both start times
+    (SYNTHETIC only) are not checked."""
+    site = site_timezone(config["site_utc_offset"])
+    low, high = config["session2_window_days"]
+    first = {}
+    for c in cuffs:
+        if c["start"] is not None:
+            key = (c["subject"], c["session"])
+            first[key] = min(first.get(key, c["start"]), c["start"])
+    out = {}
+    for s in sorted({k[0] for k in first}):
+        if (s, 1) in first and (s, 2) in first:
+            days = (first[(s, 2)].astimezone(site).date()
+                    - first[(s, 1)].astimezone(site).date()).days
+            out[s] = {"days": days, "inside": low <= days <= high}
+    return out
+
+
+def prepare(rows, config, selection="first_valid", window_check=True):
     """Calibration, delta features, computability and eligibility (SAP 2, 4, 10).
 
     ``rows``: one dict per cuff with subject_id, session_id (S###), event_id,
@@ -151,7 +375,14 @@ def prepare(rows, config):
     on the whole session and the whole subject (SAP section 2), whatever cuff
     carries them. A cuff with ``ppg:led_not_locked`` is out of the calibration
     (BP0, feature baseline), the main set and the training set, on its own
-    (SAP sections 2 and 4, amended 2026-11-15)."""
+    (SAP sections 2 and 4, amended 2026-11-15).
+
+    One label per slot (decided 2026-11-27, ``select_labels``): ``valid`` is True
+    only on the chosen attempt of each slot, so every later step (BP0, the
+    feature baseline, the 2-cuff rule, training, evaluation, counts) sees one
+    label per slot; ``raw_valid`` keeps the cuff result itself. With
+    ``window_check`` a subject whose session 2 lies outside the 7-28 days of SAP
+    section 2 is excluded (``session2_outside_window``); endpoint 14 turns it off."""
     models = config["models"]
     names = sorted({f for spec in models.values() for f in spec["features"]})
     main_ppg = models[config["comparison"]["base"]]["features"]
@@ -168,7 +399,10 @@ def prepare(rows, config):
         flags = set(filter(None, str(raw.get("flags") or "").split(";")))
         cuffs.append({
             "subject": raw["subject_id"], "session": _session_index(raw),
-            "event_id": raw["event_id"], "phase": raw["phase"], "valid": valid,
+            "event_id": raw["event_id"], "phase": raw["phase"], "raw_valid": valid,
+            "status": raw["status"],
+            **dict(zip(("repeat_of", "repeat_reason"),
+                       (_repeat_text(raw, column) for column in REPEAT_COLUMNS))),
             **{column: flag01(raw, column) for column in FLAG_COLUMNS},
             "start": _start_time(raw),
             "ecg_ok": _finite(raw.get("ecg_hr_bpm")),
@@ -178,6 +412,10 @@ def prepare(rows, config):
             "raw": {name: derive(raw, name) for name in names},
         })
     check_session_order(cuffs)
+    slots = select_labels(cuffs, selection)
+    for c in cuffs:
+        c["valid"] = c["raw_valid"] and c["selected"]
+    windows = session_windows(cuffs, config)
     # led_readjusted marks a later session whose LED codes were set again
     # (protocol 6.1); session 1 sets them first, so the flag there is a log error
     # and is refused rather than ignored (added 2026-11-14).
@@ -232,6 +470,9 @@ def prepare(rows, config):
         if s in pilots:
             excluded[s] = "pilot"
             continue
+        if window_check and s in windows and not windows[s]["inside"]:
+            excluded[s] = "session2_outside_window"
+            continue
         passing = {k for k in {c["session"] for c in mine}
                    if sum(c["main_ok"] for c in mine if c["session"] == k) >= 2
                    and (s, k) not in readjusted}
@@ -249,7 +490,9 @@ def prepare(rows, config):
     return {"cuffs": cuffs, "subjects": subjects, "eligible": eligible,
             "excluded": excluded, "names": names,
             "calibration_counts": calibration_counts,
-            "led_readjusted_sessions": sorted(f"{s}|S{k:03d}" for s, k in readjusted)}
+            "led_readjusted_sessions": sorted(f"{s}|S{k:03d}" for s, k in readjusted),
+            "slots": slots, "session_windows": windows, "selection": selection,
+            "window_check": window_check}
 
 
 def phase_columns(cuff):
@@ -612,7 +855,8 @@ def _counts(prep):
         with_phase = {(c["subject"], c["session"]) for c in rows if c["in_main"]}
         by_phase[p] = {
             "rows": len(rows), "main": sum(c["in_main"] for c in rows),
-            "not_valid": sum(not c["valid"] for c in rows),
+            "not_valid": sum(not c["raw_valid"] for c in rows),
+            "valid_not_chosen": sum(c["raw_valid"] and not c["selected"] for c in rows),
             "led_not_locked": sum(c["valid"] and not c["led_ok"] for c in rows),
             "valid_not_computable": sum(c["valid"] and c["led_ok"]
                                         and not c.get("main_ok", False) for c in rows),
@@ -657,7 +901,27 @@ def _counts(prep):
                        if c["subject"] == s) for s in prep["subjects"]},
             "led_readjusted_sessions": prep["led_readjusted_sessions"],
             "safety_stop_in_main": sum(c["in_main"] and c["safety_stop"]
-                                       for c in prep["cuffs"])}
+                                       for c in prep["cuffs"]),
+            "repeats": _repeat_counts(prep),
+            "session_windows": prep["session_windows"]}
+
+
+def _repeat_counts(prep):
+    """SAP sections 2 and 3 (decided 2026-11-27): repeats by reason and phase,
+    valid attempts not chosen for their slot, and slots without a label by phase
+    (every subject, descriptive)."""
+    reasons = dict.fromkeys(REPEAT_REASONS, 0)
+    for c in prep["cuffs"]:
+        if c["repeat_of"]:
+            reasons[c["repeat_reason"]] += 1
+    missing = dict.fromkeys(PHASES, 0)
+    for chain in prep["slots"]:
+        if not any(c["selected"] for c in chain):
+            missing[chain[0]["phase"]] += 1
+    return {"by_reason": reasons, "slots": len(prep["slots"]),
+            "slots_without_label_by_phase": missing,
+            "valid_not_chosen": sum(c["raw_valid"] and not c["selected"]
+                                    for c in prep["cuffs"])}
 
 
 def _without(flags, name):
@@ -665,18 +929,39 @@ def _without(flags, name):
     return ";".join(f for f in str(flags or "").split(";") if f and f != name)
 
 
-def _rerun(rows, config, keep, main_cuffs):
+def _chosen(prep):
+    """Slot (subject, session, original event_id) -> chosen event_id or None."""
+    return {(chain[0]["subject"], chain[0]["session"], chain[0]["event_id"]):
+            next((c["event_id"] for c in chain if c["selected"]), None)
+            for chain in prep["slots"]}
+
+
+def _rerun(rows, config, keep, main_cuffs, main_prep=None, **options):
     """A sensitivity endpoint: the full analysis on the rows ``keep`` retains,
-    with the rows dropped and the main-set cuffs it loses against the main run."""
+    with the rows dropped and the main-set cuffs it loses against the main run.
+    ``options`` go to ``prepare`` (label selection, window check). With
+    ``main_prep`` the slots whose chosen attempt differs from the main analysis
+    are reported (SAP section 3, endpoints 12-14)."""
     sub = [r for r in rows if keep(r)]
     try:
-        prep = prepare(sub, config)
+        prep = prepare(sub, config, **options)
         out = _core(prep, config)
     except ValueError as exc:
         return {"rows_dropped": len(rows) - len(sub), "not_computed": str(exc)}
     kept = sum(c["in_main"] for c in prep["cuffs"])
+    changed = {}
+    if main_prep is not None:
+        before, after = _chosen(main_prep), _chosen(prep)
+        changed = {k: (before.get(k), after.get(k)) for k in before.keys() | after.keys()
+                   if before.get(k) != after.get(k)}
     return {"rows_dropped": len(rows) - len(sub), "main_cuffs": kept,
-            "main_cuffs_change": kept - main_cuffs, **out}
+            "main_cuffs_change": kept - main_cuffs,
+            "eligible_subjects": len(prep["eligible"]),
+            "excluded": prep["excluded"],
+            "slots_changed": len(changed),
+            "subjects_with_changed_slots": sorted({k[0] for k in changed}),
+            "slots_without_label_by_phase": _repeat_counts(prep)[
+                "slots_without_label_by_phase"], **out}
 
 
 def _filtered(prep, config, drop, main_cuffs):
@@ -790,6 +1075,25 @@ def _secondary(rows, prep, config, main):
          for r in rows], config, lambda r: True, main_cuffs)
     out["7_without_safety_stops"] = _filtered(prep, config, lambda c: c["safety_stop"],
                                               main_cuffs)
+    # Endpoints 12-14 (SAP section 3, decided 2026-11-27) rerun everything:
+    # they change labels or the set of subjects.
+    out["12_originals_only"] = _rerun(
+        rows, config, lambda r: not _repeat_text(r, "repeat_of_event_id"), main_cuffs,
+        prep)
+    out["13_motion_repeat"] = _rerun(rows, config, lambda r: True, main_cuffs, prep,
+                                     selection="motion_repeat")
+    # Every timing deviation is reported; only the subjects the window alone
+    # excluded are taken back (a pilot outside the window stays out).
+    outside = {s: w for s, w in prep["session_windows"].items() if not w["inside"]}
+    back = sorted(s for s, why in prep["excluded"].items()
+                  if why == "session2_outside_window")
+    low, _ = config["session2_window_days"]
+    out["14_with_session2_outside_window"] = {
+        "timing_deviations": {s: w["days"] for s, w in sorted(outside.items())},
+        "readmitted": back,
+        "readmitted_early": [s for s in back if outside[s]["days"] < low],
+        "readmitted_late": [s for s in back if outside[s]["days"] >= low],
+        **_rerun(rows, config, lambda r: True, main_cuffs, prep, window_check=False)}
     out["8_rq2b"] = {"not_computed": "RQ2b same- vs other-session is not part of v1"}
     return out
 
