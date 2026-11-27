@@ -147,9 +147,9 @@
 /* MAX30101 on the PPG I2C bus (I2C_NUM_0). BOARD_PPG_REAL 1 reads it (drivers/max30101.c, not run
  * on a chip yet) instead of the fake PPG source; 400 kHz, 100 kHz if the rising
  * edges through the cable are too slow (custom_board_proposal.md A.2). LED pulse
- * width 411 or 215 us, chosen at bring-up (A.6 section 3) and passed at build
- * time like the SAMP edge above; any other value does not build (the driver
- * would silently take 411). */
+ * width 411 or 215 us, passed at build time like the SAMP edge above; 411 us is
+ * the default and was decided at bring-up on 2026-11-27 (bring-up report 12.8).
+ * Any other value does not build (the driver would silently take 411). */
 #ifndef BOARD_PPG_REAL
 #define BOARD_PPG_REAL 0
 #endif

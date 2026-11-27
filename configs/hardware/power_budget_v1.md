@@ -20,7 +20,7 @@
   USB–UART CH343 (log UART0) và USB native `303A:1001` (packet). Cả hai luôn chạy khi
   cắm cáp ([bring-up](../../hardware/test_reports/v1_bringup_procedure.md) mục 2).
 - MAX30001: chỉ ECG, 512 sps, lead-off DC 10 nA, BioZ tắt (`max30001_v1_regs`).
-- MAX30101: ba khe, 200 sps mỗi khe, độ rộng xung 411 hay 215 µs (còn mở). Mã LED mặc
+- MAX30101: ba khe, 200 sps mỗi khe, độ rộng xung 411 µs (chốt 2026-11-27). Mã LED mặc
   định đỏ = IR = 0x24 (7,2 mA), xanh 0x12 (3,6 mA) ở **cả** LED3 và LED4
   (`max30101_v1_regs`); lệnh từ PC cho tới 0x7F (25,4 mA, `CMD_LED_CODE_MAX`, trần
   tạm).

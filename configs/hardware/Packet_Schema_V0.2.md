@@ -517,9 +517,11 @@ sau.
   - Δ suy từ độ rộng xung trong `SPO2_CONFIG` của packet `0xD2` (MAX30101) của phiên;
   - quy ước gắn với version của feature hay config dùng nó.
 
-  Chỉ còn mở giá trị Δ: nó phụ thuộc độ rộng xung, mà độ rộng xung chờ bring-up mục 8.
-  Danh định 1 107 µs (411 µs) và 720 µs (215 µs), theo
-  [custom_board_proposal.md](custom_board_proposal.md) A.6 mục 3.
+  Độ rộng xung chốt **411 µs** ngày 2026-11-27
+  ([báo cáo bring-up](../../hardware/test_reports/2026-11-20_v1_bringup.md) mục 12.8), nên Δ danh
+  định là **1 107 µs** ([custom_board_proposal.md](custom_board_proposal.md) A.6 mục 3; MAX30101
+  Rev 2, Bảng 14, tr. 26). Δ dùng thật vẫn suy từ `SPO2_CONFIG` của từng phiên; giá trị đo được
+  kiểm ở phép đo đồng bộ.
 
 ## 11. Kênh nhiệt độ `0xB1` (sửa đổi 2026-10-25)
 

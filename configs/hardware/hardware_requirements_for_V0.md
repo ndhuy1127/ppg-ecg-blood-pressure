@@ -43,7 +43,7 @@ Kiểm tra mức nhiễu và các thành phần nhiễu trong tín hiệu.
 ### 3.2 PPG
 Hệ thống PPG của V1-module sử dụng:
 MAX30101 làm cảm biến PPG.
-> Ghi chú: linh kiện PPG đã chốt ngày 2026-10-22 là MAX30101 trên bo SparkFun SEN-16474 (`custom_board_proposal.md` A.3–A.4). BOM V1 và schematic V1 cũ trên nhánh `dev/ducanh` ghi MAX30102 và không dùng nữa. Chế độ LED và tốc độ PPG: mục 4.1; độ rộng xung còn mở, luật chọn viết trước ở `interface_power_sampling_v0.md` mục 6.
+> Ghi chú: linh kiện PPG đã chốt ngày 2026-10-22 là MAX30101 trên bo SparkFun SEN-16474 (`custom_board_proposal.md` A.3–A.4). BOM V1 và schematic V1 cũ trên nhánh `dev/ducanh` ghi MAX30102 và không dùng nữa. Chế độ LED và tốc độ PPG: mục 4.1; độ rộng xung chốt 411 µs ngày 2026-11-27 theo luật viết trước ở `interface_power_sampling_v0.md` mục 6.
 Bo Waveshare ESP32-S3-DEV-KIT-N8R8-M làm MCU.
 
 Luồng dữ liệu:

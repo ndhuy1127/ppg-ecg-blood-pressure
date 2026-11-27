@@ -40,7 +40,8 @@ dùng PAT hay mốc sinh lý để suy ra lệch clock.
   mục 6, từ số đo bring-up mục 8. Chưa chốt thì chưa đo: khoảng lệch giữa các khe PPG
   và `L_PPG` phụ thuộc độ rộng xung. `sync10` mặc định 411 µs; chọn 215 µs thì build
   với `-DBOARD_PPG_LED_PW_US=215` (mục 3). Kiểm `SPO2_CONFIG` trong `0xD2` của phiên
-  khớp độ rộng xung đã chọn.
+  khớp độ rộng xung đã chọn. **Đã chốt 411 µs ngày 2026-11-27** (bring-up mục 12.8), nên điều
+  kiện này đã đủ.
 - **Cực tính `SAMP` đã kiểm** ở bring-up mục 7 bước 4, cùng việc xung `SAMP` đầu tiên
   ứng với mẫu đầu tiên của FIFO (mục 3).
 - **Không gắn điện cực lên người.** Mọi đo đạc dùng tín hiệu nhân tạo.

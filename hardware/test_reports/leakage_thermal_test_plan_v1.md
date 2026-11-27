@@ -123,7 +123,20 @@ Tiêu chí cũ "4,5–5,0 V cho cả ba LED" (bring-up mục 8 bước 3,
 | V4 | Đỏ/IR khi VLED+ ở 5,0–5,3 V | **Đạt có ghi chú:** ngoài dải bảo đảm PSRR nhưng dưới giới hạn tuyệt đối; không phải lỗi an toàn. Ở G2, ghi nhiễu nền PPG đỏ/IR lúc ngồi yên để xem có ảnh hưởng không | — |
 
 Không đạt V1–V3 thì không dùng bo đó, tìm nguyên nhân (boost, tụ, nguồn USB) trước khi đi
-tiếp. Đo 3V3 tại bo cổ tay cùng lúc với V3, như bring-up mục 8 bước 3.
+tiếp.
+
+**Kết quả 2026-11-27, bộ thiết bị V1 đang dùng:**
+
+| Phép | Kết quả | Đạt |
+| --- | --- | --- |
+| V1 | 5,12 V | đạt |
+| V2 | khoảng 5,32 V | đạt |
+| V3 | ở `0x7F`, 60 s không ra ngoài 4,5–5,5 V | đạt |
+| V4 | — | đạt có ghi chú |
+| 3V3 tại M1 | không xuống dưới 3,14 V trong 60 s | đạt |
+
+Số đo và cách đo ở [báo cáo bring-up](2026-11-20_v1_bringup.md) mục 12.8. Các phép này chưa
+phải biên bản có chữ ký theo mục 5. Đo 3V3 tại bo cổ tay cùng lúc với V3, như bring-up mục 8 bước 3.
 
 ## 4. Thử nhiệt
 

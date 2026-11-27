@@ -126,10 +126,13 @@ dịch mức, nên chỉ được bật một đầu ra. `boards/board_v1_module
 `-DBOARD_ECG_INT_SHORTED=0` (qua `PLATFORMIO_BUILD_FLAGS`, như dưới đây) với một breakout đã kiểm
 hai chân ngắt riêng. `app/main.c` còn `abort()` nếu ảnh thanh ghi bật cả hai đầu ra khi cờ bằng 1.
 
-**Giá trị đo ở bring-up truyền lúc build, không sửa `platformio.ini`.** Hai giá trị
-chưa chốt: cực tính cạnh `SAMP` (`BOARD_SAMP_RISING_EDGE`, 0 cạnh xuống là mặc định,
-1 cạnh lên; đo ở bring-up mục 7 bước 4) và độ rộng xung LED (`BOARD_PPG_LED_PW_US`,
-411 mặc định hay 215; chọn ở bring-up mục 8). PlatformIO nối biến môi trường
+**Giá trị đo ở bring-up truyền lúc build, không sửa `platformio.ini`.** Có hai giá trị:
+- cực tính cạnh `SAMP` (`BOARD_SAMP_RISING_EDGE`; 0 là cạnh xuống, mặc định; 1 là cạnh lên),
+  đo ở bring-up mục 7 bước 4;
+- độ rộng xung LED (`BOARD_PPG_LED_PW_US`). Đã **chốt 411 µs, là mặc định**, ngày 2026-11-27
+  (báo cáo bring-up mục 12.8), nên bản nghiên cứu không cần cờ này.
+
+PlatformIO nối biến môi trường
 `PLATFORMIO_BUILD_FLAGS` vào `build_flags` của env, nên:
 
 ```powershell
@@ -556,8 +559,8 @@ và IMU vẫn là nguồn giả. Dùng ở bring-up mục 8. Datasheet MAX30101 
   2026-10-24/25):
   - multi-LED: `SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR; 200 sps; `SMP_AVE = 1`;
   - FIFO không ghi đè khi đầy; dải ADC 16 384 nA;
-  - độ rộng xung 411 µs (18 bit). Đổi bằng `-DBOARD_PPG_LED_PW_US=215`; giá trị cuối
-    chọn ở bring-up;
+  - độ rộng xung 411 µs (18 bit), chốt 2026-11-27 (báo cáo bring-up mục 12.8). Cờ
+    `-DBOARD_PPG_LED_PW_US=215` vẫn còn, chỉ để thử;
   - ngắt `PPG_RDY` và `ALC_OVF`.
 
   Dòng LED mặc định 7,2 mA mỗi màu, chỉ là điểm xuất phát: đỏ và IR mã `0x24`; xanh

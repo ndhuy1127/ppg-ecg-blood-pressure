@@ -114,8 +114,8 @@ Lưu ý khi chốt:
   số 40,96 Hz, tắt lọc thông cao số, phát hiện rời điện cực DC 10 nA, ±400 mV (chốt
   2026-10-25, `custom_board_proposal.md` A.2).
 - **PPG 200 sps mỗi khe**, multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR),
-  `SMP_AVE = 1` (chốt 2026-10-24, A.6 mục 3); độ rộng xung (411 hay 215 µs) còn mở
-  (mục 6; luật chọn viết trước ngày 2026-10-29). Dải ADC 16 384 nA; dòng LED hiệu chuẩn theo người ở buổi đầu rồi khóa
+  `SMP_AVE = 1` (chốt 2026-10-24, A.6 mục 3); độ rộng xung **411 µs** (chốt 2026-11-27 theo
+  luật viết trước ngày 2026-10-29, mục 6). Dải ADC 16 384 nA; dòng LED hiệu chuẩn theo người ở buổi đầu rồi khóa
   (chốt 2026-10-25, `custom_board_proposal.md` A.3). Lý do:
   - MAX3010x không có 500 sps; ba khe chạy tới mức 200 sps (A.6 mục 3).
   - `SMP_AVE = 1` không thêm trễ lấy trung bình vào PAT.
@@ -167,7 +167,16 @@ tham số mô phỏng. Nguồn giả của firmware chạy PPG 200 sps, 8 mẫu 
 
 ## 6. Quyết định còn mở
 
-1. Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up. V1 chốt
+1. **Độ rộng xung LED PPG: chốt 411 µs ngày 2026-11-27** (không còn mở). Ở mã LED `0x7F`, cả ba
+   điều kiện dưới đều đạt ([báo cáo bring-up](../../hardware/test_reports/2026-11-20_v1_bringup.md)
+   mục 12.8):
+   - (a) `SPO2_CONFIG` đọc lại `0x6B`;
+   - (b) mỗi khe 199,63 sps trên 790 s;
+   - (c) VLED+ đạt V1–V4, và 3V3 tại M1 không xuống dưới 3,14 V trong 60 s.
+
+   Firmware giữ mặc định 411 µs. Phần dưới giữ nguyên làm hồ sơ của luật chọn.
+
+   Độ rộng xung LED PPG: 411 hay 215 µs, chọn bằng số đo bring-up. V1 chốt
    multi-LED ba khe (`SLOT1` xanh, `SLOT2` đỏ, `SLOT3` IR) ở 200 sps, `SMP_AVE = 1`
    (2026-10-24, `custom_board_proposal.md` A.6 mục 3).
 
